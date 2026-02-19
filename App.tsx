@@ -119,6 +119,7 @@ export default function App() {
     const [currentView, setCurrentView] = useState('home');
     const [isAdmin, setIsAdmin] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null); // Auth user ID for Supabase ops
     const [selectedPlayer, setSelectedPlayer] = useState<RankingPlayer | null>(null);
 
     // User State
@@ -324,6 +325,7 @@ export default function App() {
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (session) {
                 setIsLoggedIn(true);
+                setCurrentUserId(session.user.id);
                 fetchProfile(session.user.id);
             }
         });
@@ -334,9 +336,11 @@ export default function App() {
         } = supabase.auth.onAuthStateChange((_event, session) => {
             if (session) {
                 setIsLoggedIn(true);
+                setCurrentUserId(session.user.id);
                 fetchProfile(session.user.id);
             } else {
                 setIsLoggedIn(false);
+                setCurrentUserId(null);
                 setCurrentUser({});
                 setIsAdmin(false);
             }
@@ -367,11 +371,13 @@ export default function App() {
                     city: data.city || '',
                     bio: data.bio || '',
                     social: data.social || {},
-                    // Default RPG values if not in DB yet
-                    level: 1,
-                    currentExp: 0,
-                    nextLevelExp: 1000,
-                    dailyStreak: 0
+                    playStyles: data.play_styles || [],
+                    gallery: data.gallery || [],
+                    level: data.level || 1,
+                    currentExp: data.current_exp || 0,
+                    nextLevelExp: data.next_level_exp || 1000,
+                    lastDailyClaim: data.last_daily_claim || null,
+                    dailyStreak: data.daily_streak || 0
                 });
             }
         } catch (error: any) {
@@ -616,8 +622,8 @@ export default function App() {
     };
 
     // --- PROFILE UPDATE HANDLER ---
-    const handleProfileUpdate = (originalName: string, updatedData: PlayerStats) => {
-        // Update local current user if needed
+    const handleProfileUpdate = async (originalName: string, updatedData: PlayerStats) => {
+        // 1. Update local current user if it's the logged-in user
         if (originalName === currentUser.name) {
             setCurrentUser(prev => ({
                 ...prev,
@@ -628,7 +634,6 @@ export default function App() {
                 playStyles: updatedData.playStyles,
                 gallery: updatedData.gallery,
                 social: updatedData.social,
-                // Persist logic data
                 level: updatedData.level,
                 currentExp: updatedData.currentExp,
                 nextLevelExp: updatedData.nextLevelExp,
@@ -637,7 +642,7 @@ export default function App() {
             }));
         }
 
-        // Update in ALL rankings
+        // 2. Update in ALL rankings
         setRankings(prev => prev.map(ranking => ({
             ...ranking,
             players: ranking.players.map(p => {
@@ -651,7 +656,6 @@ export default function App() {
                         social: updatedData.social,
                         playStyles: updatedData.playStyles,
                         gallery: updatedData.gallery,
-                        // Logic props
                         level: updatedData.level,
                         currentExp: updatedData.currentExp,
                         nextLevelExp: updatedData.nextLevelExp,
@@ -677,6 +681,34 @@ export default function App() {
                 nextLevelExp: updatedData.nextLevelExp,
                 lastDailyClaim: updatedData.lastDailyClaim
             } : null);
+        }
+
+        // 3. Persist to Supabase (if user is logged in)
+        if (currentUserId) {
+            try {
+                const { error } = await supabase
+                    .from('profiles')
+                    .update({
+                        name: updatedData.name,
+                        avatar_url: updatedData.avatar,
+                        city: updatedData.city,
+                        bio: updatedData.bio,
+                        social: updatedData.social || {},
+                        play_styles: updatedData.playStyles || [],
+                        gallery: updatedData.gallery || [],
+                        level: updatedData.level || 1,
+                        current_exp: updatedData.currentExp || 0,
+                        next_level_exp: updatedData.nextLevelExp || 1000,
+                        last_daily_claim: updatedData.lastDailyClaim || null,
+                        daily_streak: updatedData.dailyStreak || 0
+                    })
+                    .eq('id', currentUserId);
+
+                if (error) throw error;
+            } catch (e: any) {
+                console.error('Error saving profile to DB:', e);
+                alert('Erro ao salvar perfil: ' + (e.message || JSON.stringify(e)));
+            }
         }
     };
 
