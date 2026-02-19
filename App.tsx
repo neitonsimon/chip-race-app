@@ -642,8 +642,9 @@ export default function App() {
                 if (error) throw error;
                 setEvents(prev => prev.map(e => e.id === event.id ? event : e));
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error('Error saving event to Supabase:', e);
+            alert('Falha ao salvar no Supabase: ' + (e.message || 'Erro desconhecido. Verifique se você é Administrador e se a internet está ok.'));
             // Fallback: update local state anyway
             setEvents(prev => {
                 const idx = prev.findIndex(e => e.id === event.id);
@@ -666,8 +667,9 @@ export default function App() {
                     .delete()
                     .eq('id', eventId);
                 if (error) throw error;
-            } catch (e) {
+            } catch (e: any) {
                 console.error('Error deleting event from Supabase:', e);
+                alert('Falha ao excluir no Supabase: ' + (e.message || 'Erro desconhecido.'));
             }
         }
     };
@@ -704,8 +706,9 @@ export default function App() {
                     })
                     .eq('id', eventId);
                 if (error) throw error;
-            } catch (e) {
+            } catch (e: any) {
                 console.error('Error updating closed event in Supabase:', e);
+                alert('Falha ao encerrar evento no Supabase: ' + (e.message || 'Erro desconhecido.'));
             }
         }
 
