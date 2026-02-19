@@ -469,7 +469,7 @@ export default function App() {
                 const currentIds = schemas.map(s => s.id);
                 const idsToDelete = dbSchemas
                     .map(d => d.id)
-                    .filter(id => !currentIds.includes(id));
+                    .filter((id: string) => !currentIds.includes(id));
 
                 if (idsToDelete.length > 0) {
                     const { error: delError } = await supabase
@@ -480,33 +480,42 @@ export default function App() {
                 }
             }
 
-            // 3. Upsert remaining schemas
+            // 3. Insert or Update each schema
             for (const schema of schemas) {
-                const isTempId = schema.id.startsWith('schema-');
+                // Schemas with temp IDs (schema-*, default) get inserted as new rows
+                const isTempId = schema.id.startsWith('schema-') || schema.id === 'default';
+
                 const schemaData: any = {
                     name: schema.name,
-                    criteria: schema.criteria,
-                    position_points: schema.positionPoints
+                    criteria: schema.criteria || [],
+                    position_points: schema.positionPoints || {}
                 };
 
                 if (!isTempId) {
+                    // Existing schemas: upsert using their real ID
                     schemaData.id = schema.id;
-                }
-
-                const { data, error } = await supabase
-                    .from('scoring_schemas')
-                    .upsert([schemaData], { onConflict: 'id' })
-                    .select();
-
-                if (error) throw error;
-
-                // If it was a temp ID, update local state with the new UUID
-                if (isTempId && data && data[0]) {
-                    setGlobalScoringSchemas(prev => prev.map(p => p.id === schema.id ? { ...p, id: data[0].id } : p));
+                    const { error } = await supabase
+                        .from('scoring_schemas')
+                        .upsert([schemaData], { onConflict: 'id' })
+                        .select();
+                    if (error) throw error;
+                } else {
+                    // New schemas: let the DB generate a UUID
+                    const { data, error } = await supabase
+                        .from('scoring_schemas')
+                        .insert([schemaData])
+                        .select();
+                    if (error) throw error;
+                    // Update local state with the real DB-generated ID
+                    if (data && data[0]) {
+                        const newId = data[0].id;
+                        setGlobalScoringSchemas(prev => prev.map(p => p.id === schema.id ? { ...p, id: newId } : p));
+                    }
                 }
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error('Error updating schemas in DB:', e);
+            alert('Erro ao salvar fórmula: ' + (e.message || JSON.stringify(e)));
         }
     };
 
