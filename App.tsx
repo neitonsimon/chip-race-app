@@ -133,6 +133,7 @@ export default function App() {
 
     const [contentDB, setContentDB] = useState<ContentDB>(INITIAL_DB);
     const [globalScoringSchemas, setGlobalScoringSchemas] = useState<ScoringSchema[]>([]);
+    const [allProfiles, setAllProfiles] = useState<RankingPlayer[]>([]);
 
     // Load from LocalStorage on mount
     useEffect(() => {
@@ -294,6 +295,24 @@ export default function App() {
                     }
                 });
             }
+
+            // 5. Fetch All Profiles for Autocomplete
+            const { data: profilesData, error: profilesError } = await supabase
+                .from('profiles')
+                .select('name, avatar_url, city');
+
+            if (profilesError) throw profilesError;
+            if (profilesData) {
+                const formattedProfiles: RankingPlayer[] = profilesData.map(p => ({
+                    rank: 0,
+                    name: p.name || 'Usuário',
+                    avatar: p.avatar_url || `https://ui-avatars.com/api/?name=${p.name || 'U'}&background=random`,
+                    city: p.city || '',
+                    points: 0,
+                    change: 'same'
+                }));
+                setAllProfiles(formattedProfiles);
+            }
         } catch (error) {
             console.error('Error fetching Supabase data:', error);
         }
@@ -337,10 +356,10 @@ export default function App() {
             if (error) throw error;
 
             if (data) {
-                // Check if admin (simple check, improve later)
-                if (data.email === 'admin@chiprace.com' || data.role === 'admin') {
-                    setIsAdmin(true);
-                }
+                // Check if admin (role must be 'admin')
+                const userIsAdmin = data.role === 'admin';
+                setIsAdmin(userIsAdmin);
+                console.log(`User profile loaded: ${data.email}, Role: ${data.role}, IsAdmin: ${userIsAdmin}`);
 
                 setCurrentUser({
                     name: data.name || 'User',
@@ -355,8 +374,9 @@ export default function App() {
                     dailyStreak: 0
                 });
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error fetching profile:', error);
+            alert('Erro ao carregar perfil: ' + (error.message || 'Erro desconhecido.'));
         }
     };
 
@@ -418,30 +438,17 @@ export default function App() {
     // --- RANKING MANAGEMENT FUNCTIONS ---
 
     const handleUpdateRankingMeta = async (rankingId: string, updates: Partial<RankingInstance>) => {
-        // Local Update
-        setRankings(prev => prev.map(r => r.id === rankingId ? { ...r, ...updates } : r));
+        const ranking = rankings.find(r => r.id === rankingId);
+        if (!ranking) return;
 
-        // DB Update
-        if (!isAdmin) return;
-        try {
-            const dbUpdates: any = {};
-            if (updates.label) dbUpdates.label = updates.label;
-            if (updates.description) dbUpdates.description = updates.description;
-            if (updates.rules) dbUpdates.rules = updates.rules;
-            if (updates.startDate) dbUpdates.start_date = updates.startDate;
-            if (updates.endDate) dbUpdates.end_date = updates.endDate;
-            if (updates.prizeInfoTitle) dbUpdates.prize_info_title = updates.prizeInfoTitle;
-            if (updates.prizeInfoDetail) dbUpdates.prize_info_detail = updates.prizeInfoDetail;
-            if (updates.scoringSchemaMap) dbUpdates.scoring_schema_map = updates.scoringSchemaMap;
+        const fullRanking = { ...ranking, ...updates };
 
-            const { error } = await supabase
-                .from('rankings')
-                .update(dbUpdates)
-                .eq('id', rankingId);
+        // 1. Local Update
+        setRankings(prev => prev.map(r => r.id === rankingId ? fullRanking : r));
 
-            if (error) throw error;
-        } catch (e) {
-            console.error('Error updating ranking in DB:', e);
+        // 2. DB Update (Outside of setter for reliability)
+        if (isAdmin) {
+            await handleSaveRanking(fullRanking);
         }
     };
 
@@ -450,40 +457,52 @@ export default function App() {
         if (!isAdmin) return;
 
         try {
-            // Upsert all schemas
-            const upsertData = schemas.map(s => ({
-                id: s.id.includes('schema-') ? undefined : s.id, // Let DB generate UUID if it's a local temp ID
-                name: s.name,
-                criteria: s.criteria,
-                position_points: s.positionPoints
-            }));
+            // 1. Fetch current schema IDs from DB to detect deletions
+            const { data: dbSchemas, error: fetchError } = await supabase
+                .from('scoring_schemas')
+                .select('id');
 
-            // Since we don't have a reliable way to know which were deleted without a full sync, 
-            // for now we just upsert the ones we have.
+            if (fetchError) throw fetchError;
+
+            // 2. Identify and Delete schemas that are no longer in the list
+            if (dbSchemas) {
+                const currentIds = schemas.map(s => s.id);
+                const idsToDelete = dbSchemas
+                    .map(d => d.id)
+                    .filter(id => !currentIds.includes(id));
+
+                if (idsToDelete.length > 0) {
+                    const { error: delError } = await supabase
+                        .from('scoring_schemas')
+                        .delete()
+                        .in('id', idsToDelete);
+                    if (delError) throw delError;
+                }
+            }
+
+            // 3. Upsert remaining schemas
             for (const schema of schemas) {
                 const isTempId = schema.id.startsWith('schema-');
-                const schemaData = {
+                const schemaData: any = {
                     name: schema.name,
                     criteria: schema.criteria,
                     position_points: schema.positionPoints
                 };
 
-                if (isTempId) {
-                    const { data, error } = await supabase
-                        .from('scoring_schemas')
-                        .insert([schemaData])
-                        .select();
-                    if (error) throw error;
-                    // Update local ID with the one from DB
-                    if (data && data[0]) {
-                        setGlobalScoringSchemas(prev => prev.map(p => p.id === schema.id ? { ...p, id: data[0].id } : p));
-                    }
-                } else {
-                    const { error } = await supabase
-                        .from('scoring_schemas')
-                        .update(schemaData)
-                        .eq('id', schema.id);
-                    if (error) throw error;
+                if (!isTempId) {
+                    schemaData.id = schema.id;
+                }
+
+                const { data, error } = await supabase
+                    .from('scoring_schemas')
+                    .upsert([schemaData], { onConflict: 'id' })
+                    .select();
+
+                if (error) throw error;
+
+                // If it was a temp ID, update local state with the new UUID
+                if (isTempId && data && data[0]) {
+                    setGlobalScoringSchemas(prev => prev.map(p => p.id === schema.id ? { ...p, id: data[0].id } : p));
                 }
             }
         } catch (e) {
@@ -491,7 +510,59 @@ export default function App() {
         }
     };
 
-    const handleAddRanking = () => {
+    const handleSaveRanking = async (ranking: RankingInstance) => {
+        if (!isAdmin) {
+            return;
+        }
+
+        try {
+            const isCustomId = ranking.id.startsWith('custom-');
+            const dbData: any = {
+                label: ranking.label,
+                description: ranking.description,
+                rules: ranking.rules,
+                start_date: ranking.startDate || null,
+                end_date: ranking.endDate || null,
+                prize_info_title: ranking.prizeInfoTitle || '',
+                prize_info_detail: ranking.prizeInfoDetail || '',
+                scoring_schema_map: ranking.scoringSchemaMap || {}
+            };
+
+            let result;
+            if (isCustomId) {
+                // Now that ID column is TEXT, Supabase will generate a UUID by default if omitted,
+                // but we can also send our custom ID if we want. Let's let it generate for clean UUIDs.
+                result = await supabase
+                    .from('rankings')
+                    .insert([dbData])
+                    .select();
+            } else {
+                dbData.id = ranking.id;
+                result = await supabase
+                    .from('rankings')
+                    .upsert([dbData], { onConflict: 'id' })
+                    .select();
+            }
+
+            const { data, error } = result;
+
+            if (error) {
+                console.error('Supabase save error:', error);
+                alert('FALHA AO SALVAR (' + ranking.label + '): ' + error.message);
+                throw error;
+            }
+
+            if (isCustomId && data && data[0]) {
+                const newId = data[0].id;
+                setRankings(prev => prev.map(r => r.id === ranking.id ? { ...r, id: newId } : r));
+            }
+        } catch (e: any) {
+            console.error('Exception during ranking save:', e);
+            alert('ERRO TÉCNICO AO SALVAR: ' + e.message);
+        }
+    };
+
+    const handleAddRanking = async () => {
         const newRanking: RankingInstance = {
             id: `custom-${Date.now()}`,
             label: 'Novo Ranking',
@@ -500,11 +571,26 @@ export default function App() {
             players: []
         };
         setRankings(prev => [...prev, newRanking]);
+
+        if (isAdmin) {
+            await handleSaveRanking(newRanking);
+        }
     };
 
-    const handleDeleteRanking = (id: string) => {
+    const handleDeleteRanking = async (id: string) => {
         if (window.confirm('Tem certeza? Isso apagará todo o histórico deste ranking.')) {
             setRankings(prev => prev.filter(r => r.id !== id));
+            if (isAdmin && !id.startsWith('custom-')) {
+                try {
+                    const { error } = await supabase
+                        .from('rankings')
+                        .delete()
+                        .eq('id', id);
+                    if (error) throw error;
+                } catch (e) {
+                    console.error('Error deleting ranking from Supabase:', e);
+                }
+            }
         }
     };
 
@@ -972,11 +1058,15 @@ export default function App() {
 
     // Helper para obter lista completa e única de jogadores (Simulando DB completo)
     const getAllUniquePlayers = () => {
-        const allPlayers = rankings.flatMap(r => r.players);
+        // 1. Inicia com jogadores que já estão nos rankings
+        const playersFromRankings = rankings.flatMap(r => r.players);
 
-        // Adiciona o usuário atual se estiver logado e tiver nome
+        // 2. Combina com todos os perfis do sistema (allProfiles)
+        const combinedPlayers = [...playersFromRankings, ...allProfiles];
+
+        // 3. Adiciona o usuário atual se estiver logado
         if (isLoggedIn && currentUser.name) {
-            allPlayers.push({
+            combinedPlayers.push({
                 rank: 0,
                 name: currentUser.name,
                 avatar: currentUser.avatar || '',
@@ -986,9 +1076,17 @@ export default function App() {
             });
         }
 
-        // Remove duplicatas baseado no nome
-        const uniquePlayers = Array.from(new Map(allPlayers.map(item => [item.name, item])).values());
-        return uniquePlayers;
+        // 4. Remove duplicatas baseado no nome (Case Insensitive para segurança)
+        const uniqueMap = new Map();
+        combinedPlayers.forEach(p => {
+            if (!p.name) return;
+            const key = p.name.toLowerCase().trim();
+            if (!uniqueMap.has(key)) {
+                uniqueMap.set(key, p);
+            }
+        });
+
+        return Array.from(uniqueMap.values());
     };
 
     const renderContent = () => {

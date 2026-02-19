@@ -12,9 +12,11 @@ export const calculatePoints = (
 ): number => {
     if (players <= 0 || schemaId === 'null') return 0;
 
+    const schemas = Array.isArray(globalSchemas) ? globalSchemas : [];
+
     // 1. Try to use Global Schema if available
-    if (schemaId && globalSchemas) {
-        const schema = globalSchemas.find(s => s.id === schemaId);
+    if (schemaId && schemas.length > 0) {
+        const schema = schemas.find(s => s.id === schemaId);
         if (schema) {
             let points = 0;
 

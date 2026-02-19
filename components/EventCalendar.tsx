@@ -1092,21 +1092,32 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                             />
 
                                             <div className="w-12 text-center flex flex-col items-center">
-                                                {Object.keys(p.pointsPerRanking || {}).length > 0 ? (
-                                                    Object.entries(p.pointsPerRanking || {}).map(([rId, pts], i) => {
-                                                        const ranking = rankings.find(r => r.id === rId);
-                                                        return (
-                                                            <div key={rId} className="flex flex-col leading-tight">
-                                                                <span className="text-primary font-black">{pts}</span>
-                                                                {Object.keys(p.pointsPerRanking || {}).length > 1 && (
-                                                                    <span className="text-[8px] text-gray-500 font-bold uppercase">{ranking?.name.split(' ')[0]}</span>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    })
-                                                ) : (
-                                                    <span className="text-primary font-black">{p.calculatedPoints}</span>
-                                                )}
+                                                {(() => {
+                                                    try {
+                                                        const pointsEntries = Object.entries(p.pointsPerRanking || {});
+                                                        if (pointsEntries.length > 0) {
+                                                            return pointsEntries.map(([rId, pts], i) => {
+                                                                const ranking = rankings.find(r => r.id === rId);
+                                                                const label = ranking?.label || ranking?.id || '---';
+                                                                const displayLabel = label.split(' ')[0] || label;
+
+                                                                return (
+                                                                    <div key={rId} className="flex flex-col leading-tight">
+                                                                        <span className="text-primary font-black">{pts}</span>
+                                                                        {pointsEntries.length > 1 && (
+                                                                            <span className="text-[8px] text-gray-500 font-bold uppercase">{displayLabel}</span>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            });
+                                                        } else {
+                                                            return <span className="text-primary font-black">{p.calculatedPoints || 0}</span>;
+                                                        }
+                                                    } catch (e) {
+                                                        console.error("Error rendering points for player:", p.name, e);
+                                                        return <span className="text-primary font-black">--</span>;
+                                                    }
+                                                })()}
                                             </div>
                                             <button onClick={() => removePlayerResult(p.id)} className="text-red-500 hover:text-red-400 w-6 flex justify-end">x</button>
                                         </div>
