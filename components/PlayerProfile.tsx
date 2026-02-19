@@ -115,6 +115,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     const [canClaimDaily, setCanClaimDaily] = useState(false);
     const [showClaimModal, setShowClaimModal] = useState(false);
     const [claimAnimation, setClaimAnimation] = useState(false);
+    const claimedRewardRef = useRef<{ xp: number; item: string | null }>({ xp: 0, item: null });
 
     // --- EDITOR DE IMAGEM (CROP) STATES ---
     const [editorImage, setEditorImage] = useState<string | null>(null);
@@ -314,6 +315,9 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         const streakIndex = player.dailyStreak % 7;
         const reward = DAILY_REWARDS[streakIndex];
 
+        // Store claimed reward values BEFORE state update (to show correct values in success screen)
+        claimedRewardRef.current = { xp: reward.xp, item: reward.item ?? null };
+
         // 2. Logic: Update XP & Level
         let newExp = player.currentExp + reward.xp;
         let newLevel = player.level;
@@ -345,10 +349,11 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             onUpdateProfile(originalNameRef.current, newPlayerData);
         }
 
-        // 4. Show Animation/Modal effect then close
+        // 4. Show animation then close modal automatically
         setTimeout(() => {
             setClaimAnimation(false);
-        }, 3000); // Animation duration inside modal
+            setShowClaimModal(false); // Close the modal after animation
+        }, 3000);
     };
 
     const handleUpdate = (field: keyof PlayerStats, value: any) => {
@@ -1087,12 +1092,12 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                 </div>
                                 <h3 className="text-3xl font-black text-white mb-2 tracking-tight">RESGATADO!</h3>
                                 <div className="text-5xl font-black text-primary mb-4 animate-pulse drop-shadow-[0_0_15px_rgba(250,204,21,0.5)]">
-                                    +{DAILY_REWARDS[player.dailyStreak % 7].xp} XP
+                                    +{claimedRewardRef.current.xp} XP
                                 </div>
-                                {DAILY_REWARDS[player.dailyStreak % 7].item && (
+                                {claimedRewardRef.current.item && (
                                     <div className="text-xl font-bold text-secondary mb-6 flex items-center justify-center gap-2">
                                         <span className="material-icons-outlined">card_giftcard</span>
-                                        {DAILY_REWARDS[player.dailyStreak % 7].item}
+                                        {claimedRewardRef.current.item}
                                     </div>
                                 )}
                                 <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden mb-8 max-w-[200px] mx-auto">
