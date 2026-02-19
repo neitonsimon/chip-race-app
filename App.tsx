@@ -222,6 +222,56 @@ export default function App() {
                     positionPoints: s.position_points || {}
                 })));
             }
+
+            // 3. Fetch Events
+            const { data: eventsData, error: eventsError } = await supabase
+                .from('events')
+                .select('*')
+                .order('date', { ascending: true });
+
+            if (eventsError) throw eventsError;
+            if (eventsData) {
+                const formattedEvents: Event[] = eventsData.map(e => ({
+                    id: e.id,
+                    title: e.title,
+                    date: e.date,
+                    time: e.time,
+                    type: e.type,
+                    buyin: e.buyin,
+                    guaranteed: e.guaranteed,
+                    status: e.status,
+                    rankingType: e.ranking_type,
+                    includedRankings: e.included_rankings,
+                    description: e.description,
+                    stack: e.stack,
+                    blinds: e.blinds,
+                    lateReg: e.late_reg,
+                    location: e.location,
+                    rebuyValue: e.rebuy_value,
+                    rebuyChips: e.rebuy_chips,
+                    addonValue: e.addon_value,
+                    addonChips: e.addon_chips,
+                    staffBonusValue: e.staff_bonus_value,
+                    staffBonusChips: e.staff_bonus_chips,
+                    timeChipValue: e.time_chip_value,
+                    timeChipChips: e.time_chip_chips,
+                    flyerUrl: e.flyer_url,
+                    doubleRebuyValue: e.double_rebuy_value,
+                    doubleRebuyChips: e.double_rebuy_chips,
+                    doubleAddonValue: e.double_addon_value,
+                    doubleAddonChips: e.double_addon_chips,
+                    parallelProducts: e.parallel_products,
+                    results: e.results,
+                    totalRebuys: e.total_rebuys,
+                    totalAddons: e.total_addons,
+                    totalPrize: e.total_prize,
+                    scoringSchemaId: e.scoring_schema_id
+                }));
+
+                if (formattedEvents.length > 0) {
+                    setEvents(formattedEvents);
+                }
+            }
         } catch (error) {
             console.error('Error fetching Supabase data:', error);
         }
@@ -529,18 +579,135 @@ export default function App() {
         alert(`Usuário de teste "${randomName}" criado com sucesso!`);
     };
 
+    // --- EVENT MANAGEMENT HANDLERS ---
+    const handleSaveEvent = async (event: Event) => {
+        // GUIDs (from Supabase) are usually 36 chars. Local temporary IDs are timestamps (13 chars).
+        const isNew = !events.some(e => e.id === event.id) || event.id.length < 20;
+
+        const dbData: any = {
+            title: event.title,
+            date: event.date,
+            time: event.time,
+            type: event.type,
+            buyin: event.buyin,
+            guaranteed: event.guaranteed,
+            status: event.status,
+            ranking_type: event.rankingType,
+            included_rankings: event.includedRankings,
+            description: event.description,
+            stack: event.stack,
+            blinds: event.blinds,
+            late_reg: event.lateReg,
+            location: event.location,
+            rebuy_value: event.rebuyValue,
+            rebuy_chips: event.rebuyChips,
+            addon_value: event.addonValue,
+            addon_chips: event.addonChips,
+            staff_bonus_value: event.staffBonusValue,
+            staff_bonus_chips: event.staffBonusChips,
+            time_chip_value: event.timeChipValue,
+            time_chip_chips: event.timeChipChips,
+            flyer_url: event.flyerUrl,
+            double_rebuy_value: event.doubleRebuyValue,
+            double_rebuy_chips: event.doubleRebuyChips,
+            double_addon_value: event.doubleAddonValue,
+            double_addon_chips: event.doubleAddonChips,
+            parallel_products: event.parallelProducts,
+            results: event.results,
+            total_rebuys: event.totalRebuys,
+            total_addons: event.totalAddons,
+            total_prize: event.totalPrize,
+            scoring_schema_id: event.scoringSchemaId
+        };
+
+        try {
+            let savedEvent = { ...event };
+            if (isNew) {
+                // Remove local id to let DB generate one
+                const { id, ...dataToInsert } = dbData;
+                const { data, error } = await supabase
+                    .from('events')
+                    .insert([dataToInsert])
+                    .select();
+                if (error) throw error;
+                if (data && data[0]) {
+                    savedEvent = { ...event, id: data[0].id };
+                    setEvents(prev => [...prev.filter(e => e.id !== event.id), savedEvent]);
+                }
+            } else {
+                const { error } = await supabase
+                    .from('events')
+                    .update(dbData)
+                    .eq('id', event.id);
+                if (error) throw error;
+                setEvents(prev => prev.map(e => e.id === event.id ? event : e));
+            }
+        } catch (e) {
+            console.error('Error saving event to Supabase:', e);
+            // Fallback: update local state anyway
+            setEvents(prev => {
+                const idx = prev.findIndex(e => e.id === event.id);
+                if (idx >= 0) return prev.map(e => e.id === event.id ? event : e);
+                return [...prev, event];
+            });
+        }
+    };
+
+    const handleDeleteEventAcrossApp = async (eventId: string) => {
+        // Simple logic for local IDs
+        const isLocal = eventId.length < 10;
+
+        setEvents(prev => prev.filter(e => e.id !== eventId));
+
+        if (!isLocal && isAdmin) {
+            try {
+                const { error } = await supabase
+                    .from('events')
+                    .delete()
+                    .eq('id', eventId);
+                if (error) throw error;
+            } catch (e) {
+                console.error('Error deleting event from Supabase:', e);
+            }
+        }
+    };
+
     // --- LOGIC TO CLOSE EVENT AND RECALCULATE RANKINGS ---
-    const handleEventClosure = (eventId: string, results: PlayerResult[], stats: { totalRebuys: number, totalAddons: number, totalPrize: number }) => {
-        const updatedEvents = events.map(e => e.id === eventId ? {
-            ...e,
+    const handleEventClosure = async (eventId: string, results: PlayerResult[], stats: { totalRebuys: number, totalAddons: number, totalPrize: number }) => {
+        const eventToUpdate = events.find(e => e.id === eventId);
+        if (!eventToUpdate) return;
+
+        const updatedEvent: Event = {
+            ...eventToUpdate,
             status: 'closed' as const,
             results: results,
             totalRebuys: stats.totalRebuys,
             totalAddons: stats.totalAddons,
             totalPrize: stats.totalPrize
-        } : e);
+        };
 
+        // LOCAL UPDATE
+        const updatedEvents = events.map(e => e.id === eventId ? updatedEvent : e);
         setEvents(updatedEvents);
+
+        // DB UPDATE
+        if (isAdmin && eventId.length >= 10) {
+            try {
+                const { error } = await supabase
+                    .from('events')
+                    .update({
+                        status: 'closed',
+                        results: results,
+                        total_rebuys: stats.totalRebuys,
+                        total_addons: stats.totalAddons,
+                        total_prize: stats.totalPrize
+                    })
+                    .eq('id', eventId);
+                if (error) throw error;
+            } catch (e) {
+                console.error('Error updating closed event in Supabase:', e);
+            }
+        }
 
         // Extract all unique players across all rankings to preserve metadata
         const allPlayers = rankings.flatMap(r => r.players);
@@ -796,6 +963,8 @@ export default function App() {
                     events={events}
                     setEvents={setEvents}
                     onCloseEvent={handleEventClosure}
+                    onSaveEvent={handleSaveEvent}
+                    onDeleteEvent={handleDeleteEventAcrossApp}
                     rankingPlayers={getAllUniquePlayers()}
                     rankings={rankings}
                     scoringSchemas={globalScoringSchemas}

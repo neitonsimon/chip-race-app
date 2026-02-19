@@ -13,6 +13,8 @@ interface EventCalendarProps {
     events: Event[];
     setEvents: React.Dispatch<React.SetStateAction<Event[]>>;
     onCloseEvent: (eventId: string, results: PlayerResult[], stats: EventStats) => void;
+    onSaveEvent?: (event: Event) => Promise<void>;
+    onDeleteEvent?: (eventId: string) => Promise<void>;
     rankingPlayers: RankingPlayer[]; // Para autocomplete
     rankings: RankingInstance[]; // Rankings dinâmicos passados pelo App
     scoringSchemas: ScoringSchema[]; // Global scoring formulas
@@ -36,6 +38,8 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
     events,
     setEvents,
     onCloseEvent,
+    onSaveEvent,
+    onDeleteEvent,
     rankingPlayers,
     rankings,
     scoringSchemas
@@ -216,8 +220,15 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
             totalAddons: undefined,
             totalPrize: undefined
         };
-        setEvents(prev => [...prev, duplicatedEvent]);
-        alert('Evento duplicado com sucesso!');
+
+        if (onSaveEvent) {
+            onSaveEvent(duplicatedEvent).then(() => {
+                alert('Evento duplicado com sucesso!');
+            });
+        } else {
+            setEvents(prev => [...prev, duplicatedEvent]);
+            alert('Evento duplicado com sucesso!');
+        }
     };
 
     // Lógica corrigida de exclusão com Confirmação e StopPropagation
@@ -228,26 +239,39 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
         const confirmDelete = window.confirm('Tem certeza que deseja excluir este evento permanentemente? Esta ação não pode ser desfeita.');
 
         if (confirmDelete) {
-            setEvents(currentEvents => {
-                // Retorna uma nova lista SEM o evento selecionado
-                return currentEvents.filter(e => e.id !== eventId);
-            });
+            if (onDeleteEvent) {
+                onDeleteEvent(eventId);
+            } else {
+                setEvents(currentEvents => {
+                    // Retorna uma nova lista SEM o evento selecionado
+                    return currentEvents.filter(e => e.id !== eventId);
+                });
+            }
         }
     };
 
     const handleSaveEvent = (e: React.FormEvent) => {
         e.preventDefault();
         if (editingEvent) {
-            setEvents(currentEvents => {
-                const existingIndex = currentEvents.findIndex(ev => ev.id === editingEvent.id);
-                if (existingIndex >= 0) {
-                    // Edit existing - map return new array
-                    return currentEvents.map(ev => ev.id === editingEvent.id ? editingEvent : ev);
-                } else {
-                    // Create new
-                    return [...currentEvents, editingEvent];
+            if (onSaveEvent) {
+                // Basic validation before saving to cloud
+                if (!editingEvent.title || !editingEvent.date || !editingEvent.time) {
+                    alert('Por favor, preencha o título, data e hora do evento.');
+                    return;
                 }
-            });
+                onSaveEvent(editingEvent);
+            } else {
+                setEvents(currentEvents => {
+                    const existingIndex = currentEvents.findIndex(ev => ev.id === editingEvent.id);
+                    if (existingIndex >= 0) {
+                        // Edit existing - map return new array
+                        return currentEvents.map(ev => ev.id === editingEvent.id ? editingEvent : ev);
+                    } else {
+                        // Create new
+                        return [...currentEvents, editingEvent];
+                    }
+                });
+            }
             setEditingEvent(null);
         }
     };
