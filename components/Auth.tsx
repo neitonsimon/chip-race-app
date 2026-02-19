@@ -4,12 +4,11 @@ import { supabase } from '../src/lib/supabase';
 interface AuthProps {
     onLogin: () => void; // No args needed, session handled in App
     onCancel: () => void;
-    onDevAdminLogin?: () => void; // New prop for Dev Admin
 }
 
 type AuthMode = 'login' | 'signup' | 'forgot';
 
-export const Auth: React.FC<AuthProps> = ({ onLogin, onCancel, onDevAdminLogin }) => {
+export const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
     const [mode, setMode] = useState<AuthMode>('login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -118,40 +117,6 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onCancel, onDevAdminLogin }
                     </div>
                 )}
 
-                {/* Social Login Buttons */}
-                {mode !== 'forgot' && (
-                    <div className="space-y-3 mb-6">
-                        <button type="button" onClick={() => handleSocialLogin('google')} className="w-full flex items-center justify-center gap-3 bg-white dark:bg-white/5 border border-gray-300 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 text-gray-700 dark:text-white py-3 rounded-full transition-colors font-medium text-sm">
-                            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="" className="w-5 h-5" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                            {/* Fallback icon if image fails */}
-                            <span className="material-icons-outlined text-red-500" style={{ display: 'none' }}>g_translate</span>
-                            Continuar com Google
-                        </button>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <button type="button" onClick={() => handleSocialLogin('apple')} className="flex items-center justify-center gap-2 bg-black text-white py-3 rounded-full hover:bg-gray-900 transition-colors font-medium text-sm">
-                                <span className="material-icons-outlined">apple</span>
-                                Apple
-                            </button>
-                            <button type="button" onClick={() => handleSocialLogin('facebook')} className="flex items-center justify-center gap-2 bg-[#1877F2] text-white py-3 rounded-full hover:bg-[#166fe5] transition-colors font-medium text-sm">
-                                <span className="material-icons-outlined">facebook</span>
-                                Facebook
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {mode !== 'forgot' && (
-                    <div className="relative mb-6">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-gray-300 dark:border-white/10"></div>
-                        </div>
-                        <div className="relative flex justify-center text-sm">
-                            <span className="px-2 bg-white dark:bg-surface-dark text-gray-500">ou continue com e-mail</span>
-                        </div>
-                    </div>
-                )}
-
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {mode === 'signup' && (
                         <div>
@@ -204,18 +169,6 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onCancel, onDevAdminLogin }
                             </>
                         )}
                     </button>
-
-                    {/* Force Admin Button (Dev Only) */}
-                    {mode === 'login' && onDevAdminLogin && (
-                        <button
-                            type="button"
-                            onClick={onDevAdminLogin}
-                            className="w-full mt-4 bg-gray-800 hover:bg-gray-700 text-gray-400 text-xs py-2 rounded border border-gray-700 transition-colors flex items-center justify-center gap-2"
-                        >
-                            <span className="material-icons-outlined text-sm">admin_panel_settings</span>
-                            Force Admin Login (Dev Only)
-                        </button>
-                    )}
                 </form>
 
                 <div className="mt-6 text-center text-base text-gray-500">

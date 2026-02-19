@@ -920,22 +920,6 @@ export default function App() {
         handleUpdateMonth(index, 'status', nextStatus);
     };
 
-    // --- DEV ADMIN LOGIN (BYPASS) ---
-    const handleDevAdminLogin = () => {
-        setIsLoggedIn(true);
-        setIsAdmin(true);
-        setCurrentUser({
-            name: 'Dev Admin',
-            avatar: 'https://ui-avatars.com/api/?name=Dev+Admin&background=random&color=fff',
-            city: 'Dev City',
-            level: 99,
-            currentExp: 99999,
-            nextLevelExp: 100000
-        });
-        handleNavigate('home');
-        // Add a small notification
-        alert('Modo Admin (Dev) Ativado!');
-    };
 
     // Helper para obter lista completa e única de jogadores (Simulando DB completo)
     const getAllUniquePlayers = () => {
@@ -1000,9 +984,9 @@ export default function App() {
                     onCreateTestUser={handleCreateTestUser}
                 />;
             case 'register':
-                return isLoggedIn ? <EventRegistration isAdmin={isAdmin} /> : <Auth onLogin={handleLogin} onCancel={() => handleNavigate('home')} onDevAdminLogin={handleDevAdminLogin} />;
+                return isLoggedIn ? <EventRegistration isAdmin={isAdmin} /> : <Auth onLogin={handleLogin} onCancel={() => handleNavigate('home')} />;
             case 'login':
-                return <Auth onLogin={handleLogin} onCancel={() => handleNavigate('home')} onDevAdminLogin={handleDevAdminLogin} />;
+                return <Auth onLogin={handleLogin} onCancel={() => handleNavigate('home')} />;
             case 'the-chosen-details':
                 return <TheChosenDetails
                     isAdmin={isAdmin}
