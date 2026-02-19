@@ -272,6 +272,28 @@ export default function App() {
                     setEvents(formattedEvents);
                 }
             }
+
+            // 4. Fetch Content DB (UI Strings, Categories, Evolution Timeline)
+            const { data: contentData, error: contentError } = await supabase
+                .from('content_db')
+                .select('*');
+
+            if (contentError) throw contentError;
+            if (contentData) {
+                contentData.forEach(item => {
+                    if (item.key === 'hero') {
+                        setContentDB(prev => ({ ...prev, hero: item.value }));
+                    } else if (item.key === 'details') {
+                        setContentDB(prev => ({ ...prev, details: item.value }));
+                    } else if (item.key === 'categories') {
+                        setContentDB(prev => ({ ...prev, categories: item.value }));
+                    } else if (item.key === 'months') {
+                        setMonths(item.value);
+                    } else if (item.key === 'total_qualifiers') {
+                        setCustomTotalQualifiers(item.value);
+                    }
+                });
+            }
         } catch (error) {
             console.error('Error fetching Supabase data:', error);
         }
@@ -357,20 +379,40 @@ export default function App() {
     }, [currentUser]);
 
     // Generic Update Function
-    const updateContent = (section: keyof ContentDB, field: string, value: any) => {
+    const updateContent = async (section: keyof ContentDB, field: string, value: any) => {
+        const newSection = {
+            ...contentDB[section],
+            [field]: value
+        };
         setContentDB(prev => ({
             ...prev,
-            [section]: {
-                ...prev[section],
-                [field]: value
-            }
+            [section]: newSection
         }));
+
+        if (isAdmin) {
+            await saveToContentDB(section, newSection);
+        }
     };
 
-    const updateCategory = (index: number, field: keyof TournamentCategory, value: any) => {
+    const updateCategory = async (index: number, field: keyof TournamentCategory, value: any) => {
         const newCats = [...contentDB.categories];
         newCats[index] = { ...newCats[index], [field]: value };
         setContentDB(prev => ({ ...prev, categories: newCats }));
+
+        if (isAdmin) {
+            await saveToContentDB('categories', newCats);
+        }
+    };
+
+    const saveToContentDB = async (key: string, value: any) => {
+        try {
+            const { error } = await supabase
+                .from('content_db')
+                .upsert({ key, value }, { onConflict: 'key' });
+            if (error) throw error;
+        } catch (e) {
+            console.error(`Error saving ${key} to content_db:`, e);
+        }
     };
 
     // --- RANKING MANAGEMENT FUNCTIONS ---
@@ -817,8 +859,11 @@ export default function App() {
         setUnreadCount(prev => Math.max(0, prev - 1));
     };
 
-    const handleUpdateTotalQualifiers = (value: number | null) => {
+    const handleUpdateTotalQualifiers = async (value: number | null) => {
         setCustomTotalQualifiers(value);
+        if (isAdmin) {
+            await saveToContentDB('total_qualifiers', value);
+        }
     };
 
     const [months, setMonths] = useState<MonthData[]>([
@@ -900,13 +945,17 @@ export default function App() {
         window.scrollTo(0, 0);
     };
 
-    const handleUpdateMonth = (index: number, field: keyof MonthData, value: any) => {
+    const handleUpdateMonth = async (index: number, field: keyof MonthData, value: any) => {
         const newMonths = [...months];
         if (field === 'qualifiers' && !isNaN(Number(value)) && value !== '') {
             value = Number(value);
         }
         newMonths[index] = { ...newMonths[index], [field]: value };
         setMonths(newMonths);
+
+        if (isAdmin) {
+            await saveToContentDB('months', newMonths);
+        }
     };
 
     const handleToggleMonthStatus = (index: number) => {
