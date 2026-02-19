@@ -133,8 +133,13 @@ export const RankingTable: React.FC<RankingTableProps> = ({
             .filter(e => e.status === 'closed' && e.results && (!e.includedRankings || e.includedRankings.includes(activeRankingId)))
             .map(e => {
                 const res = e.results?.find(r => r.name.toLowerCase() === playerName.toLowerCase());
-                return res && res.calculatedPoints > 0
-                    ? { date: e.date, points: res.calculatedPoints }
+                if (!res) return null;
+
+                // Prioritize ranking-specific points, fallback to generic calculatedPoints
+                const points = res.pointsPerRanking?.[activeRankingId] ?? res.calculatedPoints;
+
+                return points > 0
+                    ? { date: e.date, points }
                     : null;
             })
             .filter(item => item !== null)
