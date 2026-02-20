@@ -193,21 +193,11 @@ export default function App() {
                     prizeInfoTitle: r.prize_info_title,
                     prizeInfoDetail: r.prize_info_detail,
                     scoringSchemaMap: r.scoring_schema_map || {},
-                    players: [] // Players will be loaded/calculated separately if needed, or kept in local for now
+                    players: [] // Players will be loaded/calculated separately se needed, or kept in local for now
                 }));
-                // Merge with initial data to ensure we have standard IDs like 'annual' if not in DB
-                setRankings(prev => {
-                    const merged = [...prev];
-                    formattedRankings.forEach(dbR => {
-                        const idx = merged.findIndex(m => m.id === dbR.id);
-                        if (idx >= 0) {
-                            merged[idx] = { ...merged[idx], ...dbR };
-                        } else {
-                            merged.push(dbR as any);
-                        }
-                    });
-                    return merged;
-                });
+                // Substituir os rankings APENAS pelos salvos no Supabase.
+                // Ignorar lixo cacheado em localStorage ou os Iniciais Mocks
+                setRankings(formattedRankings);
             }
 
             // 2. Fetch Global Scoring Schemas
@@ -399,10 +389,78 @@ export default function App() {
         localStorage.setItem('chiprace_rankings', JSON.stringify(rankings));
     }, [rankings]);
 
-    // Persist User Changes (Level, XP, Profile Edits)
     useEffect(() => {
         localStorage.setItem('chiprace_current_user', JSON.stringify(currentUser));
     }, [currentUser]);
+
+    // --- RECALCULAR RANKINGS COM BASE NOS EVENTOS ---
+    useEffect(() => {
+        if (!events || events.length === 0 || !allProfiles || allProfiles.length === 0 || !rankings || rankings.length === 0) return;
+
+        const metadataMap = new Map<string, Partial<RankingPlayer>>();
+        allProfiles.forEach(p => metadataMap.set(p.name, p));
+
+        let hasChanges = false;
+
+        const updatedRankings = rankings.map(ranking => {
+            const playerMap = new Map<string, RankingPlayer>();
+
+            events.forEach(ev => {
+                const included = ev.includedRankings || ['annual', 'quarterly', 'legacy'];
+                if (ev.status === 'closed' && ev.results && included.includes(ranking.id)) {
+                    const mappedSchemaId = (ev.rankingType && ranking.scoringSchemaMap)
+                        ? ranking.scoringSchemaMap[ev.rankingType]
+                        : ev.scoringSchemaId;
+
+                    ev.results.forEach((r: any) => {
+                        if (!playerMap.has(r.name)) {
+                            const meta = metadataMap.get(r.name) || {};
+                            playerMap.set(r.name, {
+                                rank: 0,
+                                name: r.name,
+                                avatar: meta.avatar || `https://ui-avatars.com/api/?name=${r.name.replace(' ', '+')}&background=random`,
+                                city: meta.city || 'Venâncio Aires - RS',
+                                points: 0,
+                                change: 'same',
+                                ...meta
+                            });
+                        }
+                        const p = playerMap.get(r.name)!;
+
+                        const pts = calculatePoints(
+                            ev.rankingType || 'weekly',
+                            ev.results?.length || 0,
+                            Number((ev.buyin?.toString() || '0').replace(/[^0-9]/g, '')) || 0,
+                            r.position,
+                            r.prize,
+                            r.isVip,
+                            mappedSchemaId,
+                            globalScoringSchemas
+                        );
+
+                        p.points += pts;
+                    });
+                }
+            });
+
+            const sortedPlayers = Array.from(playerMap.values())
+                .sort((a, b) => b.points - a.points)
+                .map((p, i) => ({ ...p, rank: i + 1 }));
+
+            // Se for idêntico, não muda a referência (evita infinite limits)
+            if (JSON.stringify(sortedPlayers) !== JSON.stringify(ranking.players)) {
+                hasChanges = true;
+                return { ...ranking, players: sortedPlayers };
+            }
+
+            return ranking;
+        });
+
+        if (hasChanges) {
+            setRankings(updatedRankings);
+        }
+
+    }, [events, allProfiles, globalScoringSchemas, rankings]);
 
     // Generic Update Function
     const updateContent = async (section: keyof ContentDB, field: string, value: any) => {
