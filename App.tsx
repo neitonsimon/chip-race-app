@@ -1088,7 +1088,23 @@ export default function App() {
                 .from('polls')
                 .select('*')
                 .eq('active', true);
-            if (data) setPolls(data);
+
+            if (!data) return;
+
+            // Aggregate vote counts per option for each poll
+            const { data: allVotes } = await supabase
+                .from('poll_votes')
+                .select('poll_id, option_index')
+                .in('poll_id', data.map(p => p.id));
+
+            const enriched = data.map(poll => {
+                const pollVotes = (allVotes || []).filter(v => v.poll_id === poll.id);
+                const opts: string[] = Array.isArray(poll.options) ? poll.options : [];
+                const vote_counts = opts.map((_, i) => pollVotes.filter(v => v.option_index === i).length);
+                return { ...poll, vote_counts };
+            });
+
+            setPolls(enriched);
         } catch (e) {
             console.error('Error fetching polls:', e);
         }

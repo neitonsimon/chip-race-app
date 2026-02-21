@@ -1544,54 +1544,132 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                             </div>
 
                             {/* POLL SPECIFIC UI */}
-                            {viewedMessage.category === 'poll' && polls && (
-                                <div className="bg-black/20 border border-white/5 rounded-3xl p-6 mb-8">
-                                    {polls.filter(p => p.messageId === viewedMessage.id || p.id === viewedMessage.id).map(poll => {
-                                        const totalVotes = poll.options.reduce((acc, opt) => acc + opt.votes, 0);
-                                        const userVote = userVotes ? userVotes[poll.id] : undefined;
+                            {viewedMessage.category === 'poll' && polls && (() => {
+                                const poll = polls.find(p => p.id === viewedMessage.pollId);
+                                if (!poll) return (
+                                    <div className="bg-black/20 border border-purple-500/20 rounded-3xl p-6 mb-8 text-center">
+                                        <span className="material-icons-outlined text-purple-400 text-3xl block mb-2">how_to_vote</span>
+                                        <p className="text-gray-400 text-sm">Esta enquete não está mais disponível.</p>
+                                    </div>
+                                );
 
-                                        return (
-                                            <div key={poll.id} className="space-y-4">
-                                                <h4 className="text-white font-bold mb-4 flex items-center gap-2">
-                                                    <span className="material-icons-outlined text-purple-400">how_to_vote</span>
-                                                    {poll.question}
-                                                </h4>
-                                                <div className="space-y-3">
-                                                    {poll.options.map((opt, idx) => {
-                                                        const pct = totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0;
-                                                        const isSelected = userVote === idx;
-                                                        return (
-                                                            <div key={idx} className="relative">
-                                                                <button
-                                                                    disabled={userVote !== undefined}
-                                                                    onClick={() => onVotePoll && onVotePoll(poll.id, idx)}
-                                                                    className={`w-full p-4 rounded-xl border transition-all text-left relative z-10 overflow-hidden ${isSelected ? 'border-purple-500 bg-purple-500/10' : 'border-white/10 hover:border-white/20'
-                                                                        } ${userVote !== undefined ? 'cursor-default' : 'hover:scale-[1.02]'}`}
-                                                                >
-                                                                    <div className="flex justify-between items-center relative z-20">
-                                                                        <span className="text-white font-bold">{opt.text}</span>
-                                                                        <span className="text-gray-400 text-sm">{pct}%</span>
-                                                                    </div>
-                                                                    {userVote !== undefined && (
-                                                                        <div
-                                                                            className="absolute inset-0 bg-purple-500/10 transition-all duration-1000"
-                                                                            style={{ width: `${pct}%` }}
-                                                                        ></div>
+                                // Compute vote counts from poll_votes (passed via userVotes keys — admin sees all, user sees theirs)
+                                const userVote = userVotes ? userVotes[poll.id] : undefined;
+                                const opts: string[] = Array.isArray(poll.options) ? poll.options : [];
+
+                                // For vote percentages, count based on what's available
+                                // poll.vote_counts should come from DB aggregate — fallback to 0 if missing
+                                const voteCounts: number[] = opts.map((_, i) =>
+                                    (poll.vote_counts && poll.vote_counts[i]) ? poll.vote_counts[i] : 0
+                                );
+                                const totalVotes = voteCounts.reduce((a, b) => a + b, 0);
+
+                                return (
+                                    <div className="bg-gradient-to-b from-purple-900/20 to-black/30 border border-purple-500/20 rounded-3xl p-6 mb-8">
+                                        <div className="flex items-center gap-3 mb-6">
+                                            <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                                                <span className="material-icons-outlined text-purple-400">how_to_vote</span>
+                                            </div>
+                                            <div>
+                                                <div className="text-xs text-purple-400 font-black uppercase tracking-widest mb-0.5">Enquete Ativa</div>
+                                                <h4 className="text-white font-bold text-lg leading-tight">{poll.question}</h4>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            {opts.map((opt, idx) => {
+                                                const count = voteCounts[idx] || 0;
+                                                const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+                                                const isSelected = userVote === idx;
+                                                const hasVoted = userVote !== undefined;
+
+                                                return (
+                                                    <div key={idx} className="relative">
+                                                        <button
+                                                            disabled={hasVoted}
+                                                            onClick={() => onVotePoll && onVotePoll(poll.id, idx)}
+                                                            className={`w-full text-left p-4 rounded-2xl border transition-all relative overflow-hidden
+                                                                ${isSelected
+                                                                    ? 'border-purple-500 bg-purple-500/10 text-white'
+                                                                    : hasVoted
+                                                                        ? 'border-white/10 bg-black/20 text-gray-400 cursor-default'
+                                                                        : 'border-white/10 bg-black/20 hover:border-purple-400/50 hover:bg-purple-500/5 text-white cursor-pointer hover:scale-[1.01]'
+                                                                }`}
+                                                        >
+                                                            {/* Progress bar */}
+                                                            {hasVoted && (
+                                                                <div
+                                                                    className={`absolute inset-0 transition-all duration-1000 rounded-2xl ${isSelected ? 'bg-purple-500/15' : 'bg-white/5'}`}
+                                                                    style={{ width: `${pct}%` }}
+                                                                />
+                                                            )}
+                                                            <div className="relative z-10 flex items-center justify-between">
+                                                                <div className="flex items-center gap-3">
+                                                                    {isSelected && (
+                                                                        <span className="material-icons-outlined text-purple-400 text-sm">check_circle</span>
                                                                     )}
-                                                                </button>
-                                                                {isSelected && (
-                                                                    <span className="absolute -right-2 -top-2 bg-purple-500 text-white text-[10px] px-2 py-0.5 rounded-full z-30 shadow-lg font-black">SEU VOTO</span>
+                                                                    {!isSelected && !hasVoted && (
+                                                                        <span className="w-5 h-5 rounded-full border-2 border-white/20 flex-shrink-0"></span>
+                                                                    )}
+                                                                    {!isSelected && hasVoted && (
+                                                                        <span className="w-5 h-5 rounded-full border-2 border-white/10 flex-shrink-0"></span>
+                                                                    )}
+                                                                    <span className="font-bold text-sm">{opt}</span>
+                                                                </div>
+                                                                {hasVoted && (
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className={`text-sm font-black ${isSelected ? 'text-purple-400' : 'text-gray-500'}`}>{pct}%</span>
+                                                                        <span className="text-[10px] text-gray-600">{count} votos</span>
+                                                                    </div>
                                                                 )}
+                                                            </div>
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        <div className="mt-4 flex items-center justify-between">
+                                            <p className="text-[10px] text-gray-600 uppercase tracking-widest">
+                                                {userVote !== undefined ? `Seu voto: "${opts[userVote]}" · ` : 'Clique para votar · '}
+                                                {totalVotes} {totalVotes === 1 ? 'voto' : 'votos'} registrados
+                                            </p>
+                                            {!poll.active && (
+                                                <span className="text-[9px] font-black text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-full uppercase">Encerrada</span>
+                                            )}
+                                        </div>
+
+                                        {/* ADMIN: Results table */}
+                                        {isAdmin && (
+                                            <div className="mt-6 pt-6 border-t border-white/10">
+                                                <div className="text-xs text-purple-400 font-black uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                    <span className="material-icons-outlined text-sm">bar_chart</span>
+                                                    Resultados (Admin)
+                                                </div>
+                                                <div className="space-y-2">
+                                                    {opts.map((opt, idx) => {
+                                                        const count = voteCounts[idx] || 0;
+                                                        const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+                                                        return (
+                                                            <div key={idx} className="flex items-center gap-3">
+                                                                <span className="text-xs text-gray-400 w-32 truncate">{opt}</span>
+                                                                <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                                                                    <div
+                                                                        className="h-full bg-gradient-to-r from-purple-500 to-purple-300 rounded-full transition-all duration-700"
+                                                                        style={{ width: `${pct}%` }}
+                                                                    />
+                                                                </div>
+                                                                <span className="text-xs font-bold text-white w-12 text-right">{count} ({pct}%)</span>
                                                             </div>
                                                         );
                                                     })}
                                                 </div>
-                                                <p className="text-[10px] text-gray-600 uppercase tracking-widest text-center mt-4">Total de {totalVotes} votos registrados</p>
+                                                <p className="text-[10px] text-gray-600 mt-3">Total: {totalVotes} respondentes</p>
                                             </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
+                                        )}
+                                    </div>
+                                );
+                            })()}
 
                             {/* REPLY UI */}
                             {viewedMessage.category === 'private' && (
@@ -1735,7 +1813,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                                         <div
                                                             key={i}
                                                             className={`flex items-center justify-between px-4 py-2.5 transition-colors ${isCurrentDay ? 'bg-primary/10 border-l-2 border-primary' :
-                                                                    isPast ? 'opacity-40' : ''
+                                                                isPast ? 'opacity-40' : ''
                                                                 }`}
                                                         >
                                                             <div className="flex items-center gap-3">
@@ -1744,7 +1822,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                                                     Dia {reward.day ?? i + 1}
                                                                 </span>
                                                                 <span className={`material-icons-outlined text-sm ${reward.reward_type === 'brl' ? 'text-green-400' :
-                                                                        reward.reward_type === 'chipz' ? 'text-secondary' : 'text-blue-400'
+                                                                    reward.reward_type === 'chipz' ? 'text-secondary' : 'text-blue-400'
                                                                     }`}>
                                                                     {reward.reward_type === 'brl' ? 'payments' :
                                                                         reward.reward_type === 'chipz' ? 'toll' : 'auto_awesome'}
@@ -1752,7 +1830,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                                             </div>
                                                             <div className="flex items-center gap-2">
                                                                 <span className={`text-sm font-black ${isCurrentDay ? 'text-primary' :
-                                                                        isPast ? 'text-gray-600' : 'text-white'
+                                                                    isPast ? 'text-gray-600' : 'text-white'
                                                                     }`}>
                                                                     {reward.reward_label}
                                                                 </span>
