@@ -2,19 +2,14 @@ import React from 'react';
 
 export const Footer: React.FC = () => {
   return (
-    <footer className="bg-white dark:bg-background-dark border-t border-gray-200 dark:border-white/5 pt-16 pb-8">
+    <footer className="bg-white dark:bg-[#050821] border-t border-gray-200 dark:border-white/5 pt-16 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
-          
+
           {/* Brand Column */}
           <div>
-            <a href="#" className="flex items-center gap-2 mb-6 group">
-               <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center text-white shadow-neon-pink group-hover:scale-110 transition-transform duration-300">
-                    <span className="material-icons-outlined text-2xl">token</span>
-               </div>
-               <span className="text-2xl font-display font-black text-gray-900 dark:text-white tracking-tighter">
-                    CHIP<span className="text-primary">RACE</span>
-               </span>
+            <a href="#" className="flex items-center mb-6 group">
+              <img src="/cr-logo.png" alt="Chip Race" className="h-16 w-auto group-hover:scale-105 transition-transform duration-300" />
             </a>
             <p className="text-gray-500 dark:text-gray-400 text-base leading-relaxed mb-6">
               Organização, premiação real e diversão. O destino final para amantes do poker no sul do Brasil.

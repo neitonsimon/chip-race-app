@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { PlayerStats, RankingPlayer, TournamentResult, Event } from '../types';
+import { PlayerStats, RankingPlayer, TournamentResult, Event, ExperienceLevel, Message, Poll, MessageCategory, DailyReward } from '../types';
+import { supabase } from '../src/lib/supabase';
 
 interface PlayerProfileProps {
     isAdmin?: boolean;
     isLoggedIn?: boolean;
-    initialData?: RankingPlayer; // Se existir, estou vendo o perfil de OUTRA pessoa
+    initialData?: RankingPlayer;
     onSendMessage?: (to: string, content: string) => void;
     onUpdateProfile?: (originalName: string, updatedData: PlayerStats) => void;
     currentUser?: {
+        id?: string;
         name: string;
         avatar: string;
         city?: string;
@@ -21,8 +23,21 @@ interface PlayerProfileProps {
         lastDailyClaim?: string | null;
         dailyStreak?: number;
     };
-    events?: Event[]; // Lista de eventos para histórico
-    onCreateTestUser?: () => void; // Nova função para criar usuário de teste
+    events?: Event[];
+    experienceLevels?: ExperienceLevel[];
+    setExperienceLevels?: React.Dispatch<React.SetStateAction<ExperienceLevel[]>>;
+    dailyRewards?: DailyReward[];
+    setDailyRewards?: React.Dispatch<React.SetStateAction<DailyReward[]>>;
+
+    // Novas props para Mensagens e Enquetes
+    messages?: Message[];
+    polls?: Poll[];
+    userVotes?: Record<string, number>;
+    onVotePoll?: (pollId: string, optionIndex: number) => void;
+    onCreatePoll?: (question: string, options: string[]) => void;
+    onSendAdminMessage?: (subject: string, content: string, category: MessageCategory, pollId?: string, targetUserId?: string) => void;
+    onMarkAsRead?: (id: string) => void;
+    onReply?: (id: string, text: string) => void;
 }
 
 // Dicionário de Estilos de Jogo com Descrições
@@ -69,27 +84,18 @@ const ALL_PLAY_STYLES = Object.keys(PLAY_STYLE_DEFINITIONS);
 const DEFAULT_AVATAR = "https://ui-avatars.com/api/?name=User&background=333&color=fff";
 
 // Daily Reward Config
-const DAILY_REWARDS = [
-    { day: 1, xp: 50, item: 'Ticket SNG' },
-    { day: 2, xp: 75, item: null },
-    { day: 3, xp: 100, item: 'Bônus 5k Fichas' },
-    { day: 4, xp: 150, item: null },
-    { day: 5, xp: 200, item: null },
-    { day: 6, xp: 300, item: null },
-    { day: 7, xp: 1000, item: 'Baú Épico' }
+const FALLBACK_DAILY_REWARDS: DailyReward[] = [
+    { day: 1, reward_type: 'xp', reward_value: 100, reward_label: '100 XP' },
+    { day: 2, reward_type: 'xp', reward_value: 200, reward_label: '200 XP' },
+    { day: 3, reward_type: 'chipz', reward_value: 50, reward_label: '50 Chipz' },
+    { day: 4, reward_type: 'xp', reward_value: 400, reward_label: '400 XP' },
+    { day: 5, reward_type: 'chipz', reward_value: 100, reward_label: '100 Chipz' },
+    { day: 6, reward_type: 'xp', reward_value: 800, reward_label: '800 XP' },
+    { day: 7, reward_type: 'brl', reward_value: 10, reward_label: 'R$ 10,00' }
 ];
 
-// Mock Data para o Log de Torneios
-const mockTournamentLog: TournamentResult[] = [
-    { date: '15/03/2026', eventName: 'Deepstack Chip Race', position: 3, points: 450, prize: 'R$ 1.200,00' },
-    { date: '10/03/2026', eventName: 'Warm-up Estadual', position: 12, points: 120, prize: '-' },
-    { date: '05/03/2026', eventName: 'Mystery Bounty Online', position: 1, points: 1500, prize: 'R$ 3.500,00' },
-    { date: '28/02/2026', eventName: 'High Roller QG', position: 5, points: 300, prize: 'R$ 800,00' },
-    { date: '20/02/2026', eventName: 'Turbo Deep', position: 45, points: 10, prize: '-' },
-    { date: '15/02/2026', eventName: 'Sunday Million Sat', position: 2, points: 0, prize: 'Vaga 30K+' },
-];
 
-type TabView = 'overview' | 'edit';
+type TabView = 'overview' | 'edit' | 'inbox';
 
 export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     isAdmin,
@@ -99,13 +105,39 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     onUpdateProfile,
     currentUser,
     events,
-    onCreateTestUser
+    experienceLevels = [],
+    setExperienceLevels,
+    dailyRewards = [],
+    setDailyRewards,
+    messages,
+    polls,
+    userVotes,
+    onVotePoll,
+    onCreatePoll,
+    onSendAdminMessage,
+    onMarkAsRead,
+    onReply
 }) => {
     const [activeTab, setActiveTab] = useState<TabView>('overview');
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [showMessageModal, setShowMessageModal] = useState(false);
     const [messageText, setMessageText] = useState('');
     const [messageSent, setMessageSent] = useState(false);
+
+    // States para Inbox e Mensagens
+    const [inboxFilter, setInboxFilter] = useState<MessageCategory | 'all'>('all');
+    const [viewedMessage, setViewedMessage] = useState<Message | null>(null);
+    const [replyMode, setReplyMode] = useState(false);
+    const [replyContent, setReplyContent] = useState('');
+
+    // Admin Message Box state
+    const [adminSubject, setAdminSubject] = useState('');
+    const [adminMsgContent, setAdminMsgContent] = useState('');
+    const [adminMsgCategory, setAdminMsgCategory] = useState<MessageCategory>('admin');
+
+    // Admin Poll state
+    const [pollQuestion, setPollQuestion] = useState('');
+    const [pollOptions, setPollOptions] = useState(['', '']);
 
     // States para Upload de Imagem
     const [showUploadModal, setShowUploadModal] = useState(false);
@@ -115,7 +147,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     const [canClaimDaily, setCanClaimDaily] = useState(false);
     const [showClaimModal, setShowClaimModal] = useState(false);
     const [claimAnimation, setClaimAnimation] = useState(false);
-    const claimedRewardRef = useRef<{ xp: number; item: string | null }>({ xp: 0, item: null });
+    const claimedRewardRef = useRef<DailyReward | null>(null);
 
     // --- EDITOR DE IMAGEM (CROP) STATES ---
     const [editorImage, setEditorImage] = useState<string | null>(null);
@@ -125,6 +157,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     const dragStartRef = useRef({ x: 0, y: 0 });
     const imageRef = useRef<HTMLImageElement>(null);
     // -------------------------------------
+
+    const [isSavingExp, setIsSavingExp] = useState(false);
 
     // Ref para guardar o nome original para fins de update no "banco"
     const originalNameRef = useRef<string>('');
@@ -143,6 +177,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         bio: "Este é o seu perfil pessoal. Seus dados e estatísticas aparecerão aqui.",
         rank: 0,
         points: 0,
+        balanceBrl: 0,
+        balanceChipz: 0,
         winnings: 'R$ 0,00',
         titles: 0,
         itm: '0%',
@@ -154,7 +190,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         currentExp: 0,
         nextLevelExp: 1000,
         lastDailyClaim: null,
-        dailyStreak: 0
+        dailyStreak: 0,
+        isVip: false
     };
 
     const [player, setPlayer] = useState<PlayerStats>(myProfileData);
@@ -268,19 +305,195 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
         } else {
             // Fallback / Default
-            if (initialData) {
-                baseData.tournamentLog = mockTournamentLog;
-            } else {
-                // Welcome log for new user with no history
-                baseData.tournamentLog = [
-                    { date: '15/03/2026', eventName: 'Torneio de Boas Vindas', position: 10, points: 50, prize: '-' }
-                ];
-            }
+            baseData.tournamentLog = [];
         }
 
         setPlayer(baseData);
 
     }, [initialData, currentUser, events]);
+
+    const handleAddPollOption = () => setPollOptions([...pollOptions, '']);
+    const handleUpdatePollOption = (index: number, val: string) => {
+        const updated = [...pollOptions];
+        updated[index] = val;
+        setPollOptions(updated);
+    };
+
+    const handleSendBroadcast = () => {
+        if (onSendAdminMessage && adminSubject && adminMsgContent) {
+            onSendAdminMessage(adminSubject, adminMsgContent, adminMsgCategory);
+            setAdminSubject('');
+            setAdminMsgContent('');
+            alert('Comunicado Global enviado!');
+        }
+    };
+
+    const handleCreatePollSubmit = () => {
+        const validOptions = pollOptions.filter(o => o.trim());
+        if (onCreatePoll && pollQuestion && validOptions.length >= 2) {
+            onCreatePoll(pollQuestion, validOptions);
+            setPollQuestion('');
+            setPollOptions(['', '']);
+            alert('Enquete publicada!');
+        }
+    };
+
+    const renderInbox = () => {
+        const mList = messages || [];
+        const filtered = inboxFilter === 'all' ? mList : mList.filter(m => m.category === inboxFilter);
+
+        return (
+            <div className="space-y-8 animate-in fade-in duration-500 p-8">
+                {/* ÁREA ADMIN */}
+                {isAdmin && isOwnProfile && (
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
+                        <div className="bg-surface-dark/50 p-6 rounded-3xl border border-white/10 shadow-2xl">
+                            <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                                <span className="material-icons-outlined text-primary">campaign</span>
+                                Comunicado Global
+                            </h3>
+                            <div className="space-y-4">
+                                <input
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-white outline-none focus:border-primary transition-all"
+                                    placeholder="Assunto do Comunicado"
+                                    value={adminSubject}
+                                    onChange={e => setAdminSubject(e.target.value)}
+                                />
+                                <textarea
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-white h-32 outline-none focus:border-primary transition-all resize-none"
+                                    placeholder="Conteúdo da mensagem..."
+                                    value={adminMsgContent}
+                                    onChange={e => setAdminMsgContent(e.target.value)}
+                                />
+                                <div className="flex gap-4">
+                                    <select
+                                        className="bg-black/40 border border-white/10 rounded-xl px-4 text-white outline-none focus:border-primary"
+                                        value={adminMsgCategory}
+                                        onChange={e => setAdminMsgCategory(e.target.value as any)}
+                                    >
+                                        <option value="admin">📣 Admin</option>
+                                        <option value="system">⚙️ Sistema</option>
+                                        <option value="bonus">🎁 Bônus</option>
+                                        <option value="tournament">🏆 Torneio</option>
+                                    </select>
+                                    <button
+                                        onClick={handleSendBroadcast}
+                                        className="flex-grow bg-primary hover:bg-white hover:text-black text-white font-bold py-3 rounded-xl transition-all shadow-neon-pink"
+                                    >
+                                        Enviar Msg
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-surface-dark/50 p-6 rounded-3xl border border-white/10 shadow-2xl">
+                            <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                                <span className="material-icons-outlined text-secondary">poll</span>
+                                Criar Nova Enquete
+                            </h3>
+                            <div className="space-y-4">
+                                <input
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-white outline-none focus:border-secondary transition-all"
+                                    placeholder="Qual a pergunta?"
+                                    value={pollQuestion}
+                                    onChange={e => setPollQuestion(e.target.value)}
+                                />
+                                <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                                    {pollOptions.map((opt, i) => (
+                                        <input
+                                            key={i}
+                                            className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-secondary transition-all"
+                                            placeholder={`Opção ${i + 1}`}
+                                            value={opt}
+                                            onChange={e => handleUpdatePollOption(i, e.target.value)}
+                                        />
+                                    ))}
+                                    <button onClick={handleAddPollOption} className="text-secondary text-sm font-bold flex items-center gap-1 hover:underline p-1">
+                                        <span className="material-icons-outlined text-sm">add</span> Adicionar Opção
+                                    </button>
+                                </div>
+                                <button
+                                    onClick={handleCreatePollSubmit}
+                                    className="w-full bg-secondary hover:bg-white text-black font-bold py-3 rounded-xl transition-all shadow-neon-blue"
+                                >
+                                    Publicar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* FILTROS */}
+                <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                    {['all', 'system', 'admin', 'private', 'bonus', 'tournament', 'poll'].map(cat => (
+                        <button
+                            key={cat}
+                            onClick={() => setInboxFilter(cat as any)}
+                            className={`px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${inboxFilter === cat ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+                        >
+                            {cat === 'all' ? '📬 Todas' :
+                                cat === 'system' ? '⚙️ Sistema' :
+                                    cat === 'admin' ? '📣 Admin' :
+                                        cat === 'private' ? '💬 Privadas' :
+                                            cat === 'bonus' ? '🎁 Bônus' :
+                                                cat === 'tournament' ? '🏆 Torneio' :
+                                                    cat === 'poll' ? '📊 Enquetes' : cat}
+                        </button>
+                    ))}
+                </div>
+
+                {/* LISTA DE MENSAGENS */}
+                <div className="grid grid-cols-1 gap-4">
+                    {filtered.length === 0 ? (
+                        <div className="py-24 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
+                            <span className="material-icons-outlined text-6xl text-gray-700 mb-4 block">mail_outline</span>
+                            <p className="text-gray-500 text-lg">Sua caixa de entrada está vazia.</p>
+                        </div>
+                    ) : (
+                        filtered.map(msg => (
+                            <div
+                                key={msg.id}
+                                onClick={() => {
+                                    setViewedMessage(msg);
+                                    if (!msg.read && onMarkAsRead) onMarkAsRead(msg.id);
+                                }}
+                                className={`p-6 rounded-3xl border transition-all cursor-pointer group flex gap-6 items-center ${msg.read ? 'bg-black/20 border-white/5 opacity-80' : 'bg-surface-dark border-primary/30 shadow-[0_0_30px_rgba(217,0,255,0.05)] hover:border-primary/60'}`}
+                            >
+                                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${msg.category === 'poll' ? 'bg-purple-500/20 text-purple-400' :
+                                    msg.category === 'private' ? 'bg-secondary/20 text-secondary' :
+                                        msg.category === 'bonus' ? 'bg-green-500/20 text-green-400' :
+                                            msg.category === 'admin' ? 'bg-red-500/20 text-red-400' :
+                                                'bg-primary/20 text-primary'
+                                    }`}>
+                                    <span className="material-icons-outlined text-3xl">
+                                        {msg.category === 'poll' ? 'poll' :
+                                            msg.category === 'private' ? 'chat' :
+                                                msg.category === 'bonus' ? 'redeem' :
+                                                    msg.category === 'tournament' ? 'stars' :
+                                                        'notifications'}
+                                    </span>
+                                </div>
+                                <div className="flex-grow min-w-0">
+                                    <div className="flex justify-between items-start mb-1">
+                                        <span className="text-sm font-bold text-gray-400 flex items-center gap-2">
+                                            {msg.from}
+                                            {!msg.read && <span className="w-2 h-2 bg-primary rounded-full animate-pulse"></span>}
+                                        </span>
+                                        <span className="text-[10px] text-gray-600 font-mono tracking-tighter uppercase">{msg.date}</span>
+                                    </div>
+                                    <h4 className="text-xl font-bold text-white mb-2 group-hover:text-primary transition-colors truncate">{msg.subject}</h4>
+                                    <p className="text-base text-gray-500 line-clamp-1 leading-relaxed">{msg.content}</p>
+                                </div>
+                                <div className="text-gray-600 group-hover:text-primary transition-colors">
+                                    <span className="material-icons-outlined">chevron_right</span>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
+        );
+    };
 
     // Lógica de Verificação de Resgate (Reset às 21h)
     const checkClaimAvailability = (lastClaim: string | null) => {
@@ -310,34 +523,57 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         }
     };
 
-    const handleClaimDaily = () => {
+    const activeDailyRewards = dailyRewards.length > 0 ? dailyRewards : FALLBACK_DAILY_REWARDS;
+
+    const handleClaimToday = () => {
         // 1. Calculate Rewards
-        const streakIndex = player.dailyStreak % 7;
-        const reward = DAILY_REWARDS[streakIndex];
+        const streakIndex = Math.min(player.dailyStreak, activeDailyRewards.length - 1);
+        const reward = activeDailyRewards[streakIndex];
 
-        // Store claimed reward values BEFORE state update (to show correct values in success screen)
-        claimedRewardRef.current = { xp: reward.xp, item: reward.item ?? null };
+        // Store claimed reward values BEFORE state update
+        claimedRewardRef.current = reward;
 
-        // 2. Logic: Update XP & Level
-        let newExp = player.currentExp + reward.xp;
+        // 2. Logic: Update relevant balances
+        let newExp = player.currentExp;
         let newLevel = player.level;
         let requiredExp = player.nextLevelExp;
+        let newBalanceBrl = player.balanceBrl || 0;
+        let newBalanceChipz = player.balanceChipz || 0;
 
-        // Level Up Logic (Simple)
-        while (newExp >= requiredExp) {
-            newExp -= requiredExp;
-            newLevel++;
-            requiredExp = Math.floor(requiredExp * 1.2); // Increase difficulty
+        if (reward.reward_type === 'xp') {
+            newExp += reward.reward_value;
+            // Level Up Logic using table
+            if (experienceLevels && experienceLevels.length > 0) {
+                let nextLvl = experienceLevels.find(l => l.level === newLevel + 1);
+                while (nextLvl && newExp >= nextLvl.required_exp) {
+                    newLevel++;
+                    nextLvl = experienceLevels.find(l => l.level === newLevel + 1);
+                }
+                requiredExp = nextLvl ? nextLvl.required_exp : (experienceLevels[experienceLevels.length - 1].required_exp + 1000);
+            } else {
+                // Fallback legacy logic if table not loaded
+                while (newExp >= requiredExp) {
+                    newExp -= requiredExp;
+                    newLevel++;
+                    requiredExp = Math.floor(requiredExp * 1.2);
+                }
+            }
+        } else if (reward.reward_type === 'chipz') {
+            newBalanceChipz += reward.reward_value;
+        } else if (reward.reward_type === 'brl') {
+            newBalanceBrl += reward.reward_value;
         }
 
-        // 3. Update Player State
+        // 3. Update Player State -> RESET STREAK TO 0 ON CLAIM
         const newPlayerData = {
             ...player,
             level: newLevel,
             currentExp: newExp,
             nextLevelExp: requiredExp,
+            balanceBrl: newBalanceBrl,
+            balanceChipz: newBalanceChipz,
             lastDailyClaim: new Date().toISOString(),
-            dailyStreak: player.dailyStreak + 1
+            dailyStreak: 0
         };
 
         setPlayer(newPlayerData);
@@ -354,6 +590,26 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             setClaimAnimation(false);
             setShowClaimModal(false); // Close the modal after animation
         }, 3000);
+    };
+
+    const handleSkipToday = () => {
+        // Advance streak day (don't give XP or item)
+        // Cap streak at max days so it doesn't break
+        const streakIndex = Math.min(player.dailyStreak + 1, activeDailyRewards.length - 1);
+
+        const newPlayerData = {
+            ...player,
+            lastDailyClaim: new Date().toISOString(),
+            dailyStreak: streakIndex
+        };
+
+        setPlayer(newPlayerData);
+        setCanClaimDaily(false);
+        setShowClaimModal(false);
+
+        if (onUpdateProfile) {
+            onUpdateProfile(originalNameRef.current, newPlayerData);
+        }
     };
 
     const handleUpdate = (field: keyof PlayerStats, value: any) => {
@@ -532,7 +788,77 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         setActiveTab('overview');
     };
 
-    const xpPercentage = Math.min(100, (player.currentExp / player.nextLevelExp) * 100);
+    const handleExpConfigChange = (index: number, newRequiredExp: string) => {
+        if (!setExperienceLevels || !experienceLevels) return;
+        const val = parseInt(newRequiredExp, 10);
+        const updated = [...experienceLevels];
+        updated[index] = { ...updated[index], required_exp: isNaN(val) ? 0 : val };
+        setExperienceLevels(updated);
+    };
+
+    const handleSaveExpConfig = async () => {
+        if (!experienceLevels || experienceLevels.length === 0) return;
+        setIsSavingExp(true);
+        try {
+            const { error } = await supabase
+                .from('experience_levels')
+                .upsert(experienceLevels, { onConflict: 'level' });
+            if (error) throw error;
+            alert('Tabela de XP atualizada no banco de dados!');
+        } catch (err: any) {
+            console.error('Erro ao salvar experiência:', err);
+            alert('Falha ao salvar. Tente novamente.');
+        } finally {
+            setIsSavingExp(false);
+        }
+    };
+
+    const [isSavingRewards, setIsSavingRewards] = useState(false);
+
+    const handleUpdateActiveReward = (index: number, field: keyof DailyReward, value: any) => {
+        if (!setDailyRewards) return;
+        const updated = [...activeDailyRewards];
+
+        let finalValue = value;
+        if (field === 'reward_value') {
+            finalValue = parseFloat(value);
+            if (isNaN(finalValue)) finalValue = 0;
+        }
+
+        updated[index] = { ...updated[index], [field]: finalValue };
+        setDailyRewards(updated);
+    };
+
+    const handleSaveDailyRewardsConfig = async () => {
+        if (!setDailyRewards || !activeDailyRewards.length) return;
+        setIsSavingRewards(true);
+        try {
+            const { error } = await supabase
+                .from('daily_rewards')
+                .upsert(activeDailyRewards, { onConflict: 'day' });
+            if (error) throw error;
+            alert('Recompensas Diárias atualizadas no banco de dados!');
+        } catch (err: any) {
+            console.error('Erro ao salvar recompensas:', err);
+            alert('Falha ao salvar recompensas. Tente novamente.');
+        } finally {
+            setIsSavingRewards(false);
+        }
+    };
+
+    // Calculate real nextLevelExp based on experienceLevels table
+    const currentLvlObj = experienceLevels?.find(l => l.level === player.level);
+    const nextLvlObj = experienceLevels?.find(l => l.level === player.level + 1);
+
+    // Fallbacks if table is empty or player is max level
+    const currentTierBaseExp = currentLvlObj ? currentLvlObj.required_exp : 0;
+    let nextTierExp = nextLvlObj ? nextLvlObj.required_exp : (currentTierBaseExp + 1000);
+
+    // Update player's virtual next level exp so UI shows it right
+    const displayNextExp = nextTierExp - currentTierBaseExp;
+    const currentExpInTier = Math.max(0, player.currentExp - currentTierBaseExp);
+
+    const xpPercentage = Math.min(100, (currentExpInTier / displayNextExp) * 100);
 
     return (
         <div className="py-12 bg-background-light dark:bg-background-dark min-h-screen">
@@ -561,19 +887,25 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                 <span className="material-icons-outlined text-base">edit</span> Editar Perfil
                             </button>
                         )}
+                        {isOwnProfile && (
+                            <button
+                                onClick={() => setActiveTab('inbox')}
+                                className={`pb-3 px-4 text-base font-bold uppercase tracking-wider transition-all border-b-2 flex items-center gap-2 ${activeTab === 'inbox'
+                                    ? 'border-primary text-primary'
+                                    : 'border-transparent text-gray-500 hover:text-white'
+                                    }`}
+                            >
+                                <span className="material-icons-outlined text-base">notifications</span> Mensagens
+                                {messages && messages.filter(m => !m.read).length > 0 && (
+                                    <span className="bg-primary text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">
+                                        {messages.filter(m => !m.read).length}
+                                    </span>
+                                )}
+                            </button>
+                        )}
                     </div>
-
-                    {/* Create Test User Button (Admin Only) */}
-                    {isAdmin && onCreateTestUser && (
-                        <button
-                            onClick={onCreateTestUser}
-                            className="flex items-center gap-2 bg-purple-500/20 text-purple-400 border border-purple-500/50 px-4 py-2 rounded-lg text-sm font-bold hover:bg-purple-500 hover:text-white transition-all"
-                        >
-                            <span className="material-icons-outlined text-lg">person_add</span>
-                            Gerar Usuário Teste
-                        </button>
-                    )}
                 </div>
+
 
                 {/* ======================= OVERVIEW TAB ======================= */}
                 {activeTab === 'overview' && (
@@ -589,9 +921,12 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                         alt={player.name}
                                         className="w-40 h-40 rounded-full border-4 border-gray-100 dark:border-white/10 p-1 mx-auto object-cover"
                                     />
-                                    <div className="absolute bottom-2 right-2 bg-primary text-white text-xs font-bold px-3 py-1 rounded-full border-2 border-surface-dark z-20">
-                                        PRO
-                                    </div>
+                                    {player.isVip && (
+                                        <div className="absolute bottom-2 right-2 bg-primary text-white text-[10px] md:text-xs font-black px-2 md:px-3 py-1 rounded-full border-2 border-surface-dark z-20 shadow-neon-pink flex items-center gap-1">
+                                            <span className="material-icons-outlined text-[10px] md:text-xs">diamond</span>
+                                            VIP
+                                        </div>
+                                    )}
                                 </div>
 
                                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{player.name}</h1>
@@ -647,7 +982,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                                     style={{ width: `${xpPercentage}%` }}
                                                 ></div>
                                             </div>
-                                            <div className="text-[9px] text-gray-400 mt-1">{player.currentExp} / {player.nextLevelExp} XP</div>
+                                            <div className="text-[9px] text-gray-400 mt-1">{currentExpInTier} / {displayNextExp} XP</div>
                                         </div>
                                     </div>
                                 </div>
@@ -669,13 +1004,32 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                 {/* Glow Effect if Claim Available */}
                                 {isOwnProfile && canClaimDaily && <div className="absolute inset-0 bg-primary/5 animate-pulse pointer-events-none"></div>}
 
-                                <div className="flex justify-between items-center mb-4">
+                                <div className="flex justify-between items-center mb-4 w-full">
                                     <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                         <span className="material-icons-outlined text-yellow-400">calendar_today</span>
                                         Login Diário
                                     </h3>
-                                    <div className="text-xs bg-black/20 px-2 py-1 rounded text-gray-400">
-                                        Reset: 21:00
+                                    <div className="flex items-center gap-2">
+                                        {isAdmin && isOwnProfile && (
+                                            <button
+                                                onClick={() => {
+                                                    const yesterday = new Date();
+                                                    yesterday.setDate(yesterday.getDate() - 1);
+                                                    const newLastClaim = yesterday.toISOString();
+                                                    const newPlayerData = { ...player, lastDailyClaim: newLastClaim };
+                                                    setPlayer(newPlayerData);
+                                                    checkClaimAvailability(newLastClaim);
+                                                    if (onUpdateProfile) onUpdateProfile(originalNameRef.current, newPlayerData);
+                                                }}
+                                                className="px-2 py-1 bg-purple-600/20 text-purple-400 text-[10px] font-bold rounded uppercase hover:bg-purple-600 hover:text-white transition-colors flex items-center gap-1"
+                                                title="DEV: Forçar reset de 24h"
+                                            >
+                                                <span className="material-icons-outlined text-[12px]">fast_forward</span> DEV: +1 DIA
+                                            </button>
+                                        )}
+                                        <div className="text-xs bg-black/20 px-2 py-1 rounded text-gray-400">
+                                            Reset: 21:00
+                                        </div>
                                     </div>
                                 </div>
 
@@ -879,6 +1233,9 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                 )}
 
                 {/* ... (EDIT TAB CONTENT - Remains unchanged) ... */}
+                {activeTab === 'inbox' && isOwnProfile && renderInbox()}
+
+                {/* EDIT TAB CONTENT */}
                 {activeTab === 'edit' && canEdit && (
                     <div className="bg-surface-dark border border-white/10 rounded-3xl p-8 lg:p-12 shadow-2xl animate-in slide-in-from-right duration-300">
                         <div className="flex flex-col md:flex-row gap-8">
@@ -1048,6 +1405,83 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                             </div>
                         </div>
 
+
+                        {isAdmin && isOwnProfile && (
+                            <div className="mt-12 bg-black/40 border border-primary/30 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-accent"></div>
+                                <h3 className="text-xl font-bold text-primary mb-6 flex items-center gap-2">
+                                    <span className="material-icons-outlined">admin_panel_settings</span>
+                                    Administração: Recompensas Diárias
+                                </h3>
+
+                                <div className="overflow-x-auto custom-scrollbar pb-4">
+                                    <table className="w-full text-left text-sm text-gray-300 min-w-[600px]">
+                                        <thead className="bg-white/5 uppercase text-xs font-bold text-gray-500 rounded-lg">
+                                            <tr>
+                                                <th className="px-4 py-3 rounded-tl-lg">Dia</th>
+                                                <th className="px-4 py-3">Tipo de Recompensa</th>
+                                                <th className="px-4 py-3">Valor</th>
+                                                <th className="px-4 py-3 rounded-tr-lg">Rótulo Exibição</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-white/5">
+                                            {activeDailyRewards.map((reward, idx) => (
+                                                <tr key={reward.day} className="hover:bg-white/5 transition-colors">
+                                                    <td className="px-4 py-3 font-bold text-white">Dia {reward.day}</td>
+                                                    <td className="px-4 py-3">
+                                                        <select
+                                                            value={reward.reward_type}
+                                                            onChange={(e) => handleUpdateActiveReward(idx, 'reward_type', e.target.value)}
+                                                            className="bg-black/50 border border-white/10 rounded px-3 py-2 text-white outline-none focus:border-primary"
+                                                        >
+                                                            <option value="xp">Experiência (XP)</option>
+                                                            <option value="chipz">Moeda Chipz</option>
+                                                            <option value="brl">Real (BRL)</option>
+                                                        </select>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <input
+                                                            type="number"
+                                                            value={reward.reward_value}
+                                                            onChange={(e) => handleUpdateActiveReward(idx, 'reward_value', e.target.value)}
+                                                            className="w-24 bg-black/50 border border-white/10 rounded px-3 py-2 text-white outline-none focus:border-primary text-right"
+                                                        />
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <input
+                                                            type="text"
+                                                            value={reward.reward_label || ''}
+                                                            onChange={(e) => handleUpdateActiveReward(idx, 'reward_label', e.target.value)}
+                                                            className="w-full bg-black/50 border border-white/10 rounded px-3 py-2 text-white outline-none focus:border-primary"
+                                                            placeholder="Ex: 50 Chipz"
+                                                        />
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div className="mt-6 flex justify-end">
+                                    <button
+                                        onClick={handleSaveDailyRewardsConfig}
+                                        disabled={isSavingRewards}
+                                        className="px-6 py-3 bg-primary hover:bg-primary/80 text-white font-bold rounded-xl transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {isSavingRewards ? (
+                                            <>
+                                                <span className="material-icons-outlined animate-spin">refresh</span> Salvando...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span className="material-icons-outlined">save</span> Salvar Recompensas no BD
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="border-t border-white/10 pt-8 mt-8 flex justify-end gap-4">
                             <button onClick={() => setActiveTab('overview')} className="px-6 py-3 rounded-lg text-gray-400 font-bold hover:bg-white/5 transition-colors">Cancelar</button>
                             <button onClick={handleSaveProfile} className="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-emerald-600 hover:to-green-500 text-white font-bold rounded-lg shadow-lg transform hover:scale-105 transition-all flex items-center gap-2">
@@ -1077,281 +1511,436 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                 </div>
             )}
 
-            {/* --- DAILY CLAIM MODAL --- */}
-            {showClaimModal && (
-                <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-surface-dark border border-white/10 rounded-2xl w-full max-w-sm p-8 text-center animate-float shadow-[0_0_50px_rgba(250,204,21,0.2)]">
-                        <div className="w-24 h-24 bg-gradient-to-br from-yellow-400 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-neon-pink">
-                            <span className="material-icons-outlined text-5xl text-white">redeem</span>
-                        </div>
-
-                        {claimAnimation ? (
-                            <div className="animate-in zoom-in duration-500 py-4">
-                                <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/50 shadow-[0_0_30px_rgba(34,197,94,0.3)]">
-                                    <span className="material-icons-outlined text-4xl text-green-500">check_circle</span>
-                                </div>
-                                <h3 className="text-3xl font-black text-white mb-2 tracking-tight">RESGATADO!</h3>
-                                <div className="text-5xl font-black text-primary mb-4 animate-pulse drop-shadow-[0_0_15px_rgba(250,204,21,0.5)]">
-                                    +{claimedRewardRef.current.xp} XP
-                                </div>
-                                {claimedRewardRef.current.item && (
-                                    <div className="text-xl font-bold text-secondary mb-6 flex items-center justify-center gap-2">
-                                        <span className="material-icons-outlined">card_giftcard</span>
-                                        {claimedRewardRef.current.item}
-                                    </div>
-                                )}
-                                <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden mb-8 max-w-[200px] mx-auto">
-                                    <div className="bg-gradient-to-r from-green-500 to-emerald-400 h-full transition-all duration-1000" style={{ width: '100%' }}></div>
-                                </div>
-                                <p className="text-gray-400 text-sm font-medium">Volte amanhã às <span className="text-white font-bold">21:00</span> para mais!</p>
-                            </div>
-                        ) : (
-                            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                <div className="mb-6">
-                                    <h3 className="text-2xl font-black text-white mb-1 uppercase tracking-tighter">Bônus Diário</h3>
-                                    <div className="flex items-center justify-center gap-2 text-primary text-xs font-bold uppercase tracking-[0.2em]">
-                                        <span className="w-8 h-[1px] bg-primary/30"></span>
-                                        Dia {(player.dailyStreak % 7) + 1} de 7
-                                        <span className="w-8 h-[1px] bg-primary/30"></span>
-                                    </div>
-                                </div>
-
-                                <div className="bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 rounded-3xl p-8 mb-8 relative overflow-hidden group">
-                                    {/* Animated Background Glow */}
-                                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/20 rounded-full blur-3xl group-hover:bg-primary/30 transition-colors duration-700"></div>
-
-                                    <div className="relative z-10">
-                                        <div className="text-sm text-gray-400 font-bold uppercase tracking-widest mb-4 opacity-60">Sua Recompensa</div>
-                                        <div className="text-6xl font-black text-white mb-2 tracking-tighter drop-shadow-2xl">
-                                            <span className="text-primary">+{DAILY_REWARDS[player.dailyStreak % 7].xp}</span>
-                                            <span className="text-2xl ml-2 text-gray-500">XP</span>
-                                        </div>
-
-                                        {DAILY_REWARDS[player.dailyStreak % 7].item && (
-                                            <div className="mt-4 flex items-center justify-center gap-3 py-3 px-6 bg-secondary/10 border border-secondary/20 rounded-2xl text-secondary animate-bounce-subtle">
-                                                <span className="material-icons-outlined text-2xl">auto_awesome</span>
-                                                <span className="text-lg font-black tracking-tight">{DAILY_REWARDS[player.dailyStreak % 7].item}</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col items-center gap-4 mb-8">
-                                    <div className="flex items-center gap-2 px-4 py-2 bg-black/40 border border-white/5 rounded-full text-gray-400 text-[10px] font-bold uppercase tracking-widest leading-none">
-                                        <span className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span>
-                                        Reset Diário: <span className="text-white ml-1">21:00H</span>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-3">
-                                    <button
-                                        onClick={handleClaimDaily}
-                                        className="w-full py-5 bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_auto] hover:bg-right text-white font-black text-lg rounded-2xl shadow-[0_10px_30px_rgba(250,204,21,0.3)] transition-all duration-500 active:scale-95 uppercase tracking-wider"
-                                    >
-                                        RESGATAR AGORA
-                                    </button>
-                                    <button
-                                        onClick={() => setShowClaimModal(false)}
-                                        className="w-full py-3 text-gray-500 hover:text-white font-bold text-sm transition-colors"
-                                    >
-                                        DEIXAR PARA DEPOIS
-                                    </button>
+            {/* MESSAGE DETAILS MODAL */}
+            {viewedMessage && (
+                <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+                    <div className="bg-surface-dark border border-white/10 rounded-[2.5rem] w-full max-w-2xl overflow-hidden animate-in zoom-in duration-300 shadow-[0_0_100px_rgba(0,0,0,0.5)]">
+                        {/* Header */}
+                        <div className={`p-8 flex justify-between items-center ${viewedMessage.category === 'poll' ? 'bg-purple-600/20' :
+                            viewedMessage.category === 'private' ? 'bg-secondary/20' :
+                                viewedMessage.category === 'bonus' ? 'bg-green-600/20' :
+                                    'bg-primary/20'
+                            }`}>
+                            <div className="flex items-center gap-4">
+                                <span className="material-icons-outlined text-3xl">
+                                    {viewedMessage.category === 'poll' ? 'poll' :
+                                        viewedMessage.category === 'private' ? 'chat' :
+                                            viewedMessage.category === 'bonus' ? 'redeem' :
+                                                'notifications'}
+                                </span>
+                                <div>
+                                    <h3 className="text-2xl font-black text-white leading-tight">{viewedMessage.subject}</h3>
+                                    <p className="text-gray-400 text-sm font-bold uppercase tracking-widest">{viewedMessage.from} • {viewedMessage.date}</p>
                                 </div>
                             </div>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {/* ... (Restante dos modais: CROP, UPLOAD, MESSAGE permanecem iguais) ... */}
-            {/* CROP IMAGE MODAL */}
-            {editorImage && (
-                <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex items-center justify-center p-4">
-                    <div className="bg-surface-dark border border-white/10 rounded-2xl w-full max-w-md p-6 animate-float shadow-2xl flex flex-col items-center">
-                        <h3 className="text-xl font-bold text-white mb-4">Ajustar Foto do Perfil</h3>
-                        <div
-                            className="relative w-[280px] h-[280px] rounded-full overflow-hidden border-4 border-white/20 cursor-move bg-black mb-6 select-none touch-none"
-                            onMouseDown={onMouseDown}
-                            onMouseMove={onMouseMove}
-                            onMouseUp={onMouseUp}
-                            onMouseLeave={onMouseUp}
-                            onTouchStart={onMouseDown}
-                            onTouchMove={onMouseMove}
-                            onTouchEnd={onMouseUp}
-                        >
-                            <img
-                                ref={imageRef}
-                                src={editorImage}
-                                alt="Edit"
-                                className="absolute max-w-none origin-center select-none pointer-events-none"
-                                style={{
-                                    transform: `translate(-50%, -50%) translate(${cropOffset.x}px, ${cropOffset.y}px) scale(${zoom})`,
-                                    left: '50%',
-                                    top: '50%'
-                                }}
-                            />
-                        </div>
-                        <div className="w-full px-4 mb-6">
-                            <label className="flex items-center gap-3 text-sm text-gray-400 mb-2">
-                                <span className="material-icons-outlined text-sm">zoom_in</span> Zoom
-                            </label>
-                            <input
-                                type="range"
-                                min="0.1"
-                                max="3"
-                                step="0.05"
-                                value={zoom}
-                                onChange={(e) => setZoom(parseFloat(e.target.value))}
-                                className="w-full accent-primary h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-                            />
-                        </div>
-                        <div className="flex gap-4 w-full">
-                            <button
-                                onClick={() => setEditorImage(null)}
-                                className="flex-1 py-3 rounded-lg border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 font-bold transition-colors"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={handleSaveCrop}
-                                className="flex-1 py-3 rounded-lg bg-primary hover:bg-primary/90 text-white font-bold shadow-lg transition-colors"
-                            >
-                                Salvar Foto
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* UPLOAD PHOTO MODAL (GALLERY) */}
-            {showUploadModal && (
-                <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-surface-dark border border-white/10 rounded-2xl w-full max-w-md p-6 animate-float shadow-2xl">
-                        <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
-                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                                <span className="material-icons-outlined text-primary">add_a_photo</span>
-                                Selecionar Foto
-                            </h3>
-                            <button onClick={() => setShowUploadModal(false)} className="text-gray-400 hover:text-white">
+                            <button onClick={() => { setViewedMessage(null); setReplyMode(false); }} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-white">
                                 <span className="material-icons-outlined">close</span>
                             </button>
                         </div>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-bold text-gray-500 uppercase mb-2">Opção 1: Colar URL da Imagem</label>
-                                <input
-                                    type="text"
-                                    value={newPhotoUrl}
-                                    onChange={(e) => setNewPhotoUrl(e.target.value)}
-                                    className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white focus:border-secondary outline-none placeholder-gray-600"
-                                    placeholder="https://exemplo.com/foto.jpg"
-                                />
+
+                        {/* Content */}
+                        <div className="p-8 lg:p-10">
+                            <div className="text-gray-300 text-lg leading-relaxed mb-10 whitespace-pre-wrap">
+                                {viewedMessage.content}
                             </div>
-                            <div className="flex items-center gap-4">
-                                <div className="h-px flex-1 bg-white/10"></div>
-                                <span className="text-xs text-gray-500">OU</span>
-                                <div className="h-px flex-1 bg-white/10"></div>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-500 uppercase mb-2">Opção 2: Upload Local (Simulado)</label>
-                                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-white/10 rounded-lg cursor-pointer hover:bg-white/5 transition-colors">
-                                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                        <span className="material-icons-outlined text-3xl text-gray-400 mb-2">cloud_upload</span>
-                                        <p className="text-xs text-gray-400">Clique para selecionar arquivo</p>
-                                    </div>
-                                    <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-                                </label>
-                            </div>
-                            {newPhotoUrl && (
-                                <div className="mt-4 p-2 bg-black/20 rounded border border-white/5">
-                                    <p className="text-sm text-gray-500 mb-2">Pré-visualização:</p>
-                                    <img src={newPhotoUrl} alt="Preview" className="w-full h-40 object-cover rounded" />
+
+                            {/* POLL SPECIFIC UI */}
+                            {viewedMessage.category === 'poll' && polls && (
+                                <div className="bg-black/20 border border-white/5 rounded-3xl p-6 mb-8">
+                                    {polls.filter(p => p.messageId === viewedMessage.id || p.id === viewedMessage.id).map(poll => {
+                                        const totalVotes = poll.options.reduce((acc, opt) => acc + opt.votes, 0);
+                                        const userVote = userVotes ? userVotes[poll.id] : undefined;
+
+                                        return (
+                                            <div key={poll.id} className="space-y-4">
+                                                <h4 className="text-white font-bold mb-4 flex items-center gap-2">
+                                                    <span className="material-icons-outlined text-purple-400">how_to_vote</span>
+                                                    {poll.question}
+                                                </h4>
+                                                <div className="space-y-3">
+                                                    {poll.options.map((opt, idx) => {
+                                                        const pct = totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0;
+                                                        const isSelected = userVote === idx;
+                                                        return (
+                                                            <div key={idx} className="relative">
+                                                                <button
+                                                                    disabled={userVote !== undefined}
+                                                                    onClick={() => onVotePoll && onVotePoll(poll.id, idx)}
+                                                                    className={`w-full p-4 rounded-xl border transition-all text-left relative z-10 overflow-hidden ${isSelected ? 'border-purple-500 bg-purple-500/10' : 'border-white/10 hover:border-white/20'
+                                                                        } ${userVote !== undefined ? 'cursor-default' : 'hover:scale-[1.02]'}`}
+                                                                >
+                                                                    <div className="flex justify-between items-center relative z-20">
+                                                                        <span className="text-white font-bold">{opt.text}</span>
+                                                                        <span className="text-gray-400 text-sm">{pct}%</span>
+                                                                    </div>
+                                                                    {userVote !== undefined && (
+                                                                        <div
+                                                                            className="absolute inset-0 bg-purple-500/10 transition-all duration-1000"
+                                                                            style={{ width: `${pct}%` }}
+                                                                        ></div>
+                                                                    )}
+                                                                </button>
+                                                                {isSelected && (
+                                                                    <span className="absolute -right-2 -top-2 bg-purple-500 text-white text-[10px] px-2 py-0.5 rounded-full z-30 shadow-lg font-black">SEU VOTO</span>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                                <p className="text-[10px] text-gray-600 uppercase tracking-widest text-center mt-4">Total de {totalVotes} votos registrados</p>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
-                            <div className="pt-4 flex justify-end gap-3">
+
+                            {/* REPLY UI */}
+                            {viewedMessage.category === 'private' && (
+                                <div className="mt-8 pt-8 border-t border-white/5">
+                                    {!replyMode ? (
+                                        <button
+                                            onClick={() => setReplyMode(true)}
+                                            className="flex items-center gap-2 text-secondary font-bold hover:underline"
+                                        >
+                                            <span className="material-icons-outlined">reply</span> Responder esta mensagem
+                                        </button>
+                                    ) : (
+                                        <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
+                                            <textarea
+                                                className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-white resize-none h-32 focus:border-secondary outline-none transition-all"
+                                                placeholder="Escreva sua resposta..."
+                                                value={replyContent}
+                                                onChange={e => setReplyContent(e.target.value)}
+                                            ></textarea>
+                                            <div className="flex gap-4">
+                                                <button onClick={() => setReplyMode(false)} className="px-6 py-2 text-gray-500 font-bold hover:text-white transition-colors">Cancelar</button>
+                                                <button
+                                                    onClick={() => {
+                                                        if (onReply && replyContent.trim()) {
+                                                            onReply(viewedMessage.id, replyContent);
+                                                            setReplyContent('');
+                                                            setReplyMode(false);
+                                                            setViewedMessage(null);
+                                                            alert('Resposta enviada!');
+                                                        }
+                                                    }}
+                                                    className="flex-grow bg-secondary hover:bg-white text-black font-bold py-2 rounded-xl transition-all shadow-neon-blue"
+                                                >
+                                                    Enviar Resposta
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* ACTION BUTTONS */}
+                            <div className="mt-10 flex justify-center">
                                 <button
-                                    onClick={() => setShowUploadModal(false)}
-                                    className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+                                    onClick={() => setViewedMessage(null)}
+                                    className="px-12 py-3 bg-white/5 hover:bg-white/10 text-white font-bold rounded-2xl transition-all"
+                                >
+                                    Fechar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* --- DAILY CLAIM MODAL --- */}
+            {
+                showClaimModal && (
+                    <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+                        <div className="bg-surface-dark border border-white/10 rounded-2xl w-full max-w-sm p-8 text-center animate-float shadow-[0_0_50px_rgba(250,204,21,0.2)]">
+                            <div className="w-24 h-24 bg-gradient-to-br from-yellow-400 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-neon-pink">
+                                <span className="material-icons-outlined text-5xl text-white">redeem</span>
+                            </div>
+
+                            {claimAnimation ? (
+                                <div className="animate-in zoom-in duration-500 py-4">
+                                    <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/50 shadow-[0_0_30px_rgba(34,197,94,0.3)]">
+                                        <span className="material-icons-outlined text-4xl text-green-500">check_circle</span>
+                                    </div>
+                                    <h3 className="text-3xl font-black text-white mb-2 tracking-tight">RESGATADO!</h3>
+                                    <div className="text-5xl font-black text-primary mb-4 animate-pulse drop-shadow-[0_0_15px_rgba(250,204,21,0.5)]">
+                                        +{claimedRewardRef.current?.reward_label}
+                                    </div>
+                                    <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden mb-8 max-w-[200px] mx-auto">
+                                        <div className="bg-gradient-to-r from-green-500 to-emerald-400 h-full transition-all duration-1000" style={{ width: '100%' }}></div>
+                                    </div>
+                                    <p className="text-gray-400 text-sm font-medium">Volte amanhã às <span className="text-white font-bold">21:00</span> para mais!</p>
+                                </div>
+                            ) : (
+                                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                    <div className="mb-6">
+                                        <h3 className="text-2xl font-black text-white mb-1 uppercase tracking-tighter">Bônus Diário</h3>
+                                        <div className="flex items-center justify-center gap-2 text-primary text-xs font-bold uppercase tracking-[0.2em]">
+                                            <span className="w-8 h-[1px] bg-primary/30"></span>
+                                            Dia {activeDailyRewards ? Math.min(player.dailyStreak + 1, activeDailyRewards.length) : (player.dailyStreak % 7) + 1}
+
+                                            <span className="w-8 h-[1px] bg-primary/30"></span>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 rounded-3xl p-8 mb-8 relative overflow-hidden group">
+                                        {/* Animated Background Glow */}
+                                        <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/20 rounded-full blur-3xl group-hover:bg-primary/30 transition-colors duration-700"></div>
+
+                                        <div className="relative z-10">
+                                            <div className="text-sm text-gray-400 font-bold uppercase tracking-widest mb-4 opacity-60">Sua Recompensa Atual</div>
+                                            <div className="text-6xl font-black text-white mb-2 tracking-tighter drop-shadow-2xl">
+                                                <span className="text-primary">
+                                                    {activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)]?.reward_type === 'brl' ? 'R$' : '+'}
+                                                    {activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)]?.reward_value}
+                                                </span>
+                                                <span className="text-2xl ml-2 text-gray-500">
+                                                    {activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)]?.reward_type === 'xp' ? 'XP' :
+                                                        activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)]?.reward_type === 'chipz' ? 'CHIPZ' : ''}
+                                                </span>
+                                            </div>
+
+                                            {activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)]?.reward_label && (
+                                                <div className="mt-4 flex items-center justify-center gap-3 py-3 px-6 bg-secondary/10 border border-secondary/20 rounded-2xl text-secondary animate-bounce-subtle">
+                                                    <span className="material-icons-outlined text-2xl">
+                                                        {activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)].reward_type === 'brl' ? 'payments' :
+                                                            activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)].reward_type === 'chipz' ? 'toll' : 'auto_awesome'}
+                                                    </span>
+                                                    <span className="text-lg font-black tracking-tight">{activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)].reward_label}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col items-center gap-4 mb-8">
+                                        <div className="flex items-center gap-2 px-4 py-2 bg-black/40 border border-white/5 rounded-full text-gray-400 text-[10px] font-bold uppercase tracking-widest leading-none">
+                                            <span className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span>
+                                            Reset Diário: <span className="text-white ml-1">21:00H</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <button
+                                            onClick={handleClaimToday}
+                                            className="w-full py-5 bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_auto] hover:bg-right text-white font-black text-lg rounded-2xl shadow-[0_10px_30px_rgba(250,204,21,0.3)] transition-all duration-500 active:scale-95 uppercase tracking-wider"
+                                        >
+                                            RESGATAR HOJE E ZERAR
+                                        </button>
+                                        <button
+                                            onClick={handleSkipToday}
+                                            className="w-full py-3 text-gray-400 hover:text-white border border-gray-600 hover:border-white font-bold text-sm rounded-xl transition-colors active:scale-95 mb-2"
+                                        >
+                                            PULAR RECOMPENSA E MELHORAR AMANHÃ
+                                        </button>
+                                        <button
+                                            onClick={() => setShowClaimModal(false)}
+                                            className="w-full py-3 text-gray-500 hover:text-white font-bold text-xs transition-colors uppercase tracking-widest"
+                                        >
+                                            FECHAR (O Bônus continua disponível)
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* ... (Restante dos modais: CROP, UPLOAD, MESSAGE permanecem iguais) ... */}
+            {/* CROP IMAGE MODAL */}
+            {
+                editorImage && (
+                    <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex items-center justify-center p-4">
+                        <div className="bg-surface-dark border border-white/10 rounded-2xl w-full max-w-md p-6 animate-float shadow-2xl flex flex-col items-center">
+                            <h3 className="text-xl font-bold text-white mb-4">Ajustar Foto do Perfil</h3>
+                            <div
+                                className="relative w-[280px] h-[280px] rounded-full overflow-hidden border-4 border-white/20 cursor-move bg-black mb-6 select-none touch-none"
+                                onMouseDown={onMouseDown}
+                                onMouseMove={onMouseMove}
+                                onMouseUp={onMouseUp}
+                                onMouseLeave={onMouseUp}
+                                onTouchStart={onMouseDown}
+                                onTouchMove={onMouseMove}
+                                onTouchEnd={onMouseUp}
+                            >
+                                <img
+                                    ref={imageRef}
+                                    src={editorImage}
+                                    alt="Edit"
+                                    className="absolute max-w-none origin-center select-none pointer-events-none"
+                                    style={{
+                                        transform: `translate(-50%, -50%) translate(${cropOffset.x}px, ${cropOffset.y}px) scale(${zoom})`,
+                                        left: '50%',
+                                        top: '50%'
+                                    }}
+                                />
+                            </div>
+                            <div className="w-full px-4 mb-6">
+                                <label className="flex items-center gap-3 text-sm text-gray-400 mb-2">
+                                    <span className="material-icons-outlined text-sm">zoom_in</span> Zoom
+                                </label>
+                                <input
+                                    type="range"
+                                    min="0.1"
+                                    max="3"
+                                    step="0.05"
+                                    value={zoom}
+                                    onChange={(e) => setZoom(parseFloat(e.target.value))}
+                                    className="w-full accent-primary h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                                />
+                            </div>
+                            <div className="flex gap-4 w-full">
+                                <button
+                                    onClick={() => setEditorImage(null)}
+                                    className="flex-1 py-3 rounded-lg border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 font-bold transition-colors"
                                 >
                                     Cancelar
                                 </button>
                                 <button
-                                    onClick={confirmAddImage}
-                                    disabled={!newPhotoUrl}
-                                    className={`px-6 py-2 rounded-lg font-bold text-white transition-all ${newPhotoUrl
-                                        ? 'bg-primary hover:bg-primary/90 shadow-lg'
-                                        : 'bg-gray-700 cursor-not-allowed'
-                                        }`}
+                                    onClick={handleSaveCrop}
+                                    className="flex-1 py-3 rounded-lg bg-primary hover:bg-primary/90 text-white font-bold shadow-lg transition-colors"
                                 >
-                                    Adicionar à Galeria
+                                    Salvar Foto
                                 </button>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
-            {/* MESSAGE MODAL */}
-            {showMessageModal && (
-                <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-surface-dark border border-white/10 rounded-2xl w-full max-w-lg p-6 animate-float shadow-2xl">
-                        {messageSent ? (
-                            <div className="text-center py-8">
-                                <span className="material-icons-outlined text-green-500 text-5xl mb-4">check_circle</span>
-                                <h3 className="text-xl font-bold text-white mb-2">Mensagem Enviada!</h3>
-                                <p className="text-gray-400">Sua mensagem foi entregue para {player.name}.</p>
+            {/* UPLOAD PHOTO MODAL (GALLERY) */}
+            {
+                showUploadModal && (
+                    <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                        <div className="bg-surface-dark border border-white/10 rounded-2xl w-full max-w-md p-6 animate-float shadow-2xl">
+                            <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
+                                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                    <span className="material-icons-outlined text-primary">add_a_photo</span>
+                                    Selecionar Foto
+                                </h3>
+                                <button onClick={() => setShowUploadModal(false)} className="text-gray-400 hover:text-white">
+                                    <span className="material-icons-outlined">close</span>
+                                </button>
                             </div>
-                        ) : (
-                            <form onSubmit={handleSendMessageSubmit}>
-                                <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
-                                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                                        <span className="material-icons-outlined text-primary">mail</span>
-                                        Nova Mensagem
-                                    </h3>
-                                    <button type="button" onClick={() => setShowMessageModal(false)} className="text-gray-400 hover:text-white">
-                                        <span className="material-icons-outlined">close</span>
-                                    </button>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-500 uppercase mb-2">Opção 1: Colar URL da Imagem</label>
+                                    <input
+                                        type="text"
+                                        value={newPhotoUrl}
+                                        onChange={(e) => setNewPhotoUrl(e.target.value)}
+                                        className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white focus:border-secondary outline-none placeholder-gray-600"
+                                        placeholder="https://exemplo.com/foto.jpg"
+                                    />
                                 </div>
-                                <div className="mb-4">
-                                    <p className="text-sm text-gray-400 mb-1">Para:</p>
-                                    <div className="text-white font-bold text-lg flex items-center gap-2">
-                                        <img src={player.avatar} className="w-8 h-8 rounded-full border border-white/10" alt="" />
-                                        {player.name}
+                                <div className="flex items-center gap-4">
+                                    <div className="h-px flex-1 bg-white/10"></div>
+                                    <span className="text-xs text-gray-500">OU</span>
+                                    <div className="h-px flex-1 bg-white/10"></div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-500 uppercase mb-2">Opção 2: Upload Local (Simulado)</label>
+                                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-white/10 rounded-lg cursor-pointer hover:bg-white/5 transition-colors">
+                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                            <span className="material-icons-outlined text-3xl text-gray-400 mb-2">cloud_upload</span>
+                                            <p className="text-xs text-gray-400">Clique para selecionar arquivo</p>
+                                        </div>
+                                        <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                                    </label>
+                                </div>
+                                {newPhotoUrl && (
+                                    <div className="mt-4 p-2 bg-black/20 rounded border border-white/5">
+                                        <p className="text-sm text-gray-500 mb-2">Pré-visualização:</p>
+                                        <img src={newPhotoUrl} alt="Preview" className="w-full h-40 object-cover rounded" />
                                     </div>
-                                </div>
-                                <div className="mb-6">
-                                    <textarea
-                                        value={messageText}
-                                        onChange={(e) => setMessageText(e.target.value)}
-                                        placeholder={`Escreva algo para ${player.name.split(' ')[0]}...`}
-                                        className="w-full h-32 bg-black/20 border border-white/10 rounded-lg p-3 text-white focus:border-primary outline-none resize-none"
-                                        autoFocus
-                                    ></textarea>
-                                </div>
-                                <div className="flex justify-end gap-3">
+                                )}
+                                <div className="pt-4 flex justify-end gap-3">
                                     <button
-                                        type="button"
-                                        onClick={() => setShowMessageModal(false)}
+                                        onClick={() => setShowUploadModal(false)}
                                         className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
                                     >
                                         Cancelar
                                     </button>
                                     <button
-                                        type="submit"
-                                        disabled={!messageText.trim()}
-                                        className={`px-6 py-2 rounded-lg font-bold text-white transition-all ${messageText.trim()
+                                        onClick={confirmAddImage}
+                                        disabled={!newPhotoUrl}
+                                        className={`px-6 py-2 rounded-lg font-bold text-white transition-all ${newPhotoUrl
                                             ? 'bg-primary hover:bg-primary/90 shadow-lg'
                                             : 'bg-gray-700 cursor-not-allowed'
                                             }`}
                                     >
-                                        Enviar
+                                        Adicionar à Galeria
                                     </button>
                                 </div>
-                            </form>
-                        )}
+                            </div>
+                        </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+
+            {/* MESSAGE MODAL */}
+            {
+                showMessageModal && (
+                    <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                        <div className="bg-surface-dark border border-white/10 rounded-2xl w-full max-w-lg p-6 animate-float shadow-2xl">
+                            {messageSent ? (
+                                <div className="text-center py-8">
+                                    <span className="material-icons-outlined text-green-500 text-5xl mb-4">check_circle</span>
+                                    <h3 className="text-xl font-bold text-white mb-2">Mensagem Enviada!</h3>
+                                    <p className="text-gray-400">Sua mensagem foi entregue para {player.name}.</p>
+                                </div>
+                            ) : (
+                                <form onSubmit={handleSendMessageSubmit}>
+                                    <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
+                                        <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                            <span className="material-icons-outlined text-primary">mail</span>
+                                            Nova Mensagem
+                                        </h3>
+                                        <button type="button" onClick={() => setShowMessageModal(false)} className="text-gray-400 hover:text-white">
+                                            <span className="material-icons-outlined">close</span>
+                                        </button>
+                                    </div>
+                                    <div className="mb-4">
+                                        <p className="text-sm text-gray-400 mb-1">Para:</p>
+                                        <div className="text-white font-bold text-lg flex items-center gap-2">
+                                            <img src={player.avatar} className="w-8 h-8 rounded-full border border-white/10" alt="" />
+                                            {player.name}
+                                        </div>
+                                    </div>
+                                    <div className="mb-6">
+                                        <textarea
+                                            value={messageText}
+                                            onChange={(e) => setMessageText(e.target.value)}
+                                            placeholder={`Escreva algo para ${player.name.split(' ')[0]}...`}
+                                            className="w-full h-32 bg-black/20 border border-white/10 rounded-lg p-3 text-white focus:border-primary outline-none resize-none"
+                                            autoFocus
+                                        ></textarea>
+                                    </div>
+                                    <div className="flex justify-end gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowMessageModal(false)}
+                                            className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+                                        >
+                                            Cancelar
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={!messageText.trim()}
+                                            className={`px-6 py-2 rounded-lg font-bold text-white transition-all ${messageText.trim()
+                                                ? 'bg-primary hover:bg-primary/90 shadow-lg'
+                                                : 'bg-gray-700 cursor-not-allowed'
+                                                }`}
+                                        >
+                                            Enviar
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
+                        </div>
+                    </div>
+                )
+            }
+        </div >
     );
 };

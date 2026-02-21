@@ -81,7 +81,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
     };
 
     return (
-        <div className="min-h-screen pt-24 pb-12 flex items-center justify-center bg-background-light dark:bg-background-dark px-4">
+        <div className="min-h-screen pt-24 pb-12 flex items-center justify-center bg-[#050821] px-4">
             <div className="w-full max-w-md bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/10 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
 
                 {/* Glow Effect */}
@@ -89,9 +89,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
 
                 <div className="relative z-10 text-center mb-8">
                     <div className="flex items-center justify-center mb-6">
-                        <div className="w-16 h-16 bg-gradient-to-br from-primary to-accent rounded-2xl flex items-center justify-center text-white shadow-neon-pink">
-                            <span className="material-icons-outlined text-4xl">token</span>
-                        </div>
+                        <img src="/cr-logo.png" alt="Chip Race" className="h-20 w-auto drop-shadow-2xl" />
                     </div>
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                         {mode === 'login' && 'Acesse sua Conta'}

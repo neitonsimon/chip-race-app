@@ -58,6 +58,14 @@ export interface Event {
   staffBonusChips?: string;
   timeChipValue?: string;
   timeChipChips?: string;
+  // --- New Cash Game Properties ---
+  gameMode?: 'tournament' | 'cash_game';
+  cashGameType?: 'omaha4' | 'omaha5' | 'texas';
+  cashGameBlinds?: string;
+  cashGameCapacity?: string;
+  cashGameMinMax?: string;
+  cashGameDinner?: boolean;
+  cashGameNotes?: string;
   flyerUrl?: string;
   // Double Options (Novos campos)
   doubleRebuyValue?: string;
@@ -96,6 +104,18 @@ export interface RankingPlayer {
   currentExp?: number;
   nextLevelExp?: number;
   lastDailyClaim?: string; // ISO Date String
+  isVip?: boolean;
+  balanceBrl?: number;
+  balanceChipz?: number;
+}
+
+export interface ChipzPackage {
+  id: string;
+  amount: number;
+  price: number;
+  stock: number;
+  popular: boolean;
+  active: boolean;
 }
 
 // NOVA INTERFACE PARA RANKINGS DINÂMICOS
@@ -164,6 +184,9 @@ export interface PlayerStats {
   nextLevelExp: number;
   lastDailyClaim: string | null; // ISO timestamp do último resgate
   dailyStreak: number;
+  isVip: boolean;
+  balanceBrl: number;
+  balanceChipz: number;
 }
 
 export interface MonthData {
@@ -173,16 +196,57 @@ export interface MonthData {
   status: 'active' | 'completed' | 'locked';
 }
 
+export type MessageCategory = 'system' | 'admin' | 'private' | 'bonus' | 'tournament' | 'poll';
+
 export interface Message {
   id: string;
   from: string;
+  senderId?: string;
   subject: string;
   content: string;
   date: string;
   read: boolean;
+  category: MessageCategory;
+  pollId?: string;
 }
 
+export interface Poll {
+  id: string;
+  question: string;
+  options: string[];
+  active: boolean;
+  createdAt: string;
+}
+
+export interface PollVote {
+  poll_id: string;
+  user_id: string;
+  option_index: number;
+}
+
+export interface ExperienceLevel {
+  level: number;
+  required_exp: number;
+}
+
+export interface DailyReward {
+  day: number;
+  reward_type: 'xp' | 'chipz' | 'brl';
+  reward_value: number;
+  reward_label: string | null;
+}
+
+
 export type RankingFormula = 'weekly' | 'monthly' | 'special' | 'cash_online' | 'mtt_online' | 'sit_n_go' | 'satellite';
+
+export type QualificationMode = 'rankings' | 'jackpot' | 'last_longer' | 'bet' | 'bet_up' | 'sng_sat' | 'quests' | 'vip';
+
+export interface TheChosenQualifier {
+  id: string;
+  player_name: string;
+  mode: QualificationMode;
+  created_at: string;
+}
 
 // SIMULAÇÃO DO BANCO DE DADOS DE CONTEÚDO
 export interface ContentDB {

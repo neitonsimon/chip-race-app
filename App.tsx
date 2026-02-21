@@ -12,8 +12,10 @@ import { TheChosenRegulations } from './components/TheChosenRegulations';
 import { VipPage } from './components/VipPage';
 import { Newsletter } from './components/Newsletter';
 import { Auth } from './components/Auth';
+// Force Vite HMR
+import { RechargePage } from './components/RechargePage';
 import { supabase } from './src/lib/supabase';
-import { RankingPlayer, MonthData, Message, ContentDB, TournamentCategory, Event, PlayerResult, PlayerStats, RankingInstance, ScoringSchema, RankingFormula } from './types';
+import { RankingPlayer, MonthData, Message, ContentDB, TournamentCategory, Event, PlayerResult, PlayerStats, RankingInstance, ScoringSchema, RankingFormula, ExperienceLevel, DailyReward, Poll, PollVote, MessageCategory } from './types';
 import { calculatePoints } from './utils/scoring';
 
 // DADOS MOCKADOS INICIAIS
@@ -135,6 +137,8 @@ export default function App() {
     const [contentDB, setContentDB] = useState<ContentDB>(INITIAL_DB);
     const [globalScoringSchemas, setGlobalScoringSchemas] = useState<ScoringSchema[]>([]);
     const [allProfiles, setAllProfiles] = useState<RankingPlayer[]>([]);
+    const [experienceLevels, setExperienceLevels] = useState<ExperienceLevel[]>([]);
+    const [dailyRewards, setDailyRewards] = useState<DailyReward[]>([]);
 
     // Load from LocalStorage on mount
     useEffect(() => {
@@ -290,7 +294,7 @@ export default function App() {
             // 5. Fetch All Profiles for Autocomplete
             const { data: profilesData, error: profilesError } = await supabase
                 .from('profiles')
-                .select('name, avatar_url, city');
+                .select('name, avatar_url, city, is_vip');
 
             if (profilesError) throw profilesError;
             if (profilesData) {
@@ -300,10 +304,34 @@ export default function App() {
                     avatar: p.avatar_url || `https://ui-avatars.com/api/?name=${p.name || 'U'}&background=random`,
                     city: p.city || '',
                     points: 0,
-                    change: 'same'
+                    change: 'same',
+                    isVip: p.is_vip || false
                 }));
                 setAllProfiles(formattedProfiles);
             }
+
+            // 6. Fetch Experience Levels
+            const { data: expLevelsData, error: expLevelsError } = await supabase
+                .from('experience_levels')
+                .select('*')
+                .order('level', { ascending: true });
+
+            if (expLevelsError) throw expLevelsError;
+            if (expLevelsData) {
+                setExperienceLevels(expLevelsData);
+            }
+
+            // 7. Fetch Daily Rewards
+            const { data: dailyRewardsData, error: dailyRewardsError } = await supabase
+                .from('daily_rewards')
+                .select('*')
+                .order('day', { ascending: true });
+
+            if (dailyRewardsError) throw dailyRewardsError;
+            if (dailyRewardsData) {
+                setDailyRewards(dailyRewardsData);
+            }
+
         } catch (error) {
             console.error('Error fetching Supabase data:', error);
         }
@@ -367,7 +395,10 @@ export default function App() {
                     currentExp: data.current_exp || 0,
                     nextLevelExp: data.next_level_exp || 1000,
                     lastDailyClaim: data.last_daily_claim || null,
-                    dailyStreak: data.daily_streak || 0
+                    dailyStreak: data.daily_streak || 0,
+                    isVip: data.is_vip || false,
+                    balanceBrl: data.balance_brl ? Number(data.balance_brl) : 0,
+                    balanceChipz: data.balance_chipz || 0
                 });
             }
         } catch (error: any) {
@@ -696,7 +727,10 @@ export default function App() {
                 currentExp: updatedData.currentExp,
                 nextLevelExp: updatedData.nextLevelExp,
                 lastDailyClaim: updatedData.lastDailyClaim,
-                dailyStreak: updatedData.dailyStreak
+                dailyStreak: updatedData.dailyStreak,
+                isVip: updatedData.isVip,
+                balanceBrl: updatedData.balanceBrl,
+                balanceChipz: updatedData.balanceChipz
             }));
         }
 
@@ -758,7 +792,10 @@ export default function App() {
                         current_exp: updatedData.currentExp || 0,
                         next_level_exp: updatedData.nextLevelExp || 1000,
                         last_daily_claim: updatedData.lastDailyClaim || null,
-                        daily_streak: updatedData.dailyStreak || 0
+                        daily_streak: updatedData.dailyStreak || 0,
+                        is_vip: updatedData.isVip || false,
+                        balance_brl: updatedData.balanceBrl || 0,
+                        balance_chipz: updatedData.balanceChipz || 0
                     })
                     .eq('id', currentUserId);
 
@@ -770,41 +807,6 @@ export default function App() {
         }
     };
 
-    // --- CREATE TEST USER (ADMIN TOOL) ---
-    const handleCreateTestUser = () => {
-        const names = ["Gabriel Silva", "Lucas Poker", "Ana Paula", "Felipe D.", "Roberto K.", "Juliana S.", "Pedro H.", "Mariana T."];
-        const randomName = names[Math.floor(Math.random() * names.length)] + " " + Math.floor(Math.random() * 100);
-        const styles = ["Agressivo", "Tight", "GTO Wizard", "Bluffer", "Calling Station", "Loose"];
-
-        const newUser: RankingPlayer = {
-            rank: 0,
-            name: randomName,
-            avatar: `https://ui-avatars.com/api/?name=${randomName.replace(' ', '+')}&background=random&color=fff`,
-            city: "Porto Alegre - RS",
-            points: Math.floor(Math.random() * 500) + 50,
-            change: "same",
-            bio: "Perfil de teste gerado pelo administrador para validação do sistema.",
-            playStyles: [styles[Math.floor(Math.random() * styles.length)]],
-            social: {
-                instagram: "@" + randomName.replace(' ', '').toLowerCase(),
-            },
-            gallery: [],
-            level: 1,
-            currentExp: 0,
-            nextLevelExp: 1000
-        };
-
-        // Add to Annual, Quarterly and Legacy by default (preserving logic)
-        setRankings(prev => prev.map(r => {
-            if (['annual', 'quarterly', 'legacy'].includes(r.id)) {
-                const newPlayers = [...r.players, newUser].sort((a, b) => b.points - a.points).map((p, i) => ({ ...p, rank: i + 1 }));
-                return { ...r, players: newPlayers };
-            }
-            return r;
-        }));
-
-        alert(`Usuário de teste "${randomName}" criado com sucesso!`);
-    };
 
     // --- EVENT MANAGEMENT HANDLERS ---
     const handleSaveEvent = async (event: Event) => {
@@ -1011,37 +1013,160 @@ export default function App() {
 
     const [messages, setMessages] = useState<Message[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [polls, setPolls] = useState<Poll[]>([]);
+    const [pollVotesByCurrentUser, setPollVotesByCurrentUser] = useState<Record<string, number>>({});
 
     useEffect(() => {
-        if (isLoggedIn && messages.length === 0) {
+        if (isLoggedIn) {
             const timer = setTimeout(() => {
-                const newMsg: Message = {
-                    id: 'msg-1',
-                    from: 'Admin Chip Race',
-                    subject: 'Bem-vindo ao The Chosen!',
-                    content: 'Parabéns por se juntar à plataforma. Complete seu perfil para ganhar pontos extras no ranking de engajamento.',
-                    date: new Date().toLocaleDateString(),
-                    read: false
-                };
-                setMessages([newMsg]);
-                setUnreadCount(1);
-            }, 5000);
+                if (currentUserId) {
+                    fetchMessages(currentUserId);
+                    fetchPolls();
+                    fetchUserPollVotes(currentUserId);
+                }
+            }, 1000);
             return () => clearTimeout(timer);
         }
-    }, [isLoggedIn]);
+    }, [isLoggedIn, currentUserId]);
 
-    const handleSendMessage = (toPlayer: string, content: string) => {
-        console.log(`Mensagem enviada para ${toPlayer}: ${content}`);
+    const fetchMessages = async (userId: string) => {
+        try {
+            const { data, error } = await supabase
+                .from('messages')
+                .select('*')
+                .or(`user_id.eq.${userId},category.eq.admin`)
+                .order('created_at', { ascending: false });
+
+            if (data) {
+                const formatted: Message[] = data.map(m => ({
+                    id: m.id,
+                    from: m.sender || 'Chip Race',
+                    senderId: m.sender_id,
+                    subject: m.subject || 'Notificação',
+                    content: m.content || '',
+                    date: new Date(m.created_at || Date.now()).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }),
+                    read: m.is_read || false,
+                    category: (m.category as MessageCategory) || 'system',
+                    pollId: m.poll_id
+                }));
+                setMessages(formatted);
+                setUnreadCount(formatted.filter(m => !m.read).length);
+            }
+        } catch (e) {
+            console.error('Error fetching messages:', e);
+        }
+    };
+
+    const fetchPolls = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('polls')
+                .select('*')
+                .eq('active', true);
+            if (data) setPolls(data);
+        } catch (e) {
+            console.error('Error fetching polls:', e);
+        }
+    };
+
+    const fetchUserPollVotes = async (userId: string) => {
+        try {
+            const { data, error } = await supabase
+                .from('poll_votes')
+                .select('poll_id, option_index')
+                .eq('user_id', userId);
+
+            if (data) {
+                const votesMap: Record<string, number> = {};
+                data.forEach(v => {
+                    votesMap[v.poll_id] = v.option_index;
+                });
+                setPollVotesByCurrentUser(votesMap);
+            }
+        } catch (e) {
+            console.error('Error fetching user votes:', e);
+        }
+    };
+
+    const handleCreatePoll = async (question: string, options: string[]) => {
+        if (!isAdmin) return;
+        try {
+            const { data, error } = await supabase
+                .from('polls')
+                .insert([{ question, options, active: true }])
+                .select();
+            if (data && data[0]) {
+                setPolls(prev => [...prev, data[0]]);
+                await handleSendAdminMessage('Nova Enquete!', `Uma nova enquete foi criada: "${question}"`, 'poll', data[0].id);
+            }
+        } catch (e) {
+            console.error('Error creating poll:', e);
+        }
+    };
+
+    const handleVoteOnPoll = async (pollId: string, optionIndex: number) => {
+        if (!isLoggedIn || !currentUserId) return;
+        try {
+            const { error } = await supabase
+                .from('poll_votes')
+                .upsert([{ poll_id: pollId, user_id: currentUserId, option_index: optionIndex }], { onConflict: 'poll_id,user_id' });
+
+            if (!error) {
+                setPollVotesByCurrentUser(prev => ({ ...prev, [pollId]: optionIndex }));
+                alert('Voto computado com sucesso!');
+            }
+        } catch (e) {
+            console.error('Error voting on poll:', e);
+        }
+    };
+
+    const handleSendAdminMessage = async (subject: string, content: string, category: MessageCategory = 'admin', pollId?: string, targetUserId?: string) => {
+        if (!isAdmin) return;
+        try {
+            const { error } = await supabase
+                .from('messages')
+                .insert([{
+                    sender: 'Admin Chip Race',
+                    subject,
+                    content,
+                    category,
+                    poll_id: pollId,
+                    user_id: targetUserId,
+                    is_read: false
+                }]);
+
+            if (!error) {
+                if (currentUserId) fetchMessages(currentUserId);
+            }
+        } catch (e) {
+            console.error('Error sending message:', e);
+        }
+    };
+
+    const handleSendMessage = (toPlayerId: string, content: string) => {
+        // Mensagem privada entre players
+        if (!currentUserId) return;
+        handleSendAdminMessage('Nova Mensagem Privada', content, 'private', undefined, toPlayerId);
     };
 
     const handleReplyMessage = (messageId: string, replyText: string) => {
-        console.log(`Respondendo à mensagem ${messageId}: ${replyText}`);
-        alert('Sua resposta foi enviada com sucesso!');
+        // Lógica de resposta: encontrar o remetente original
+        const origMsg = messages.find(m => m.id === messageId);
+        if (origMsg && origMsg.senderId) {
+            handleSendMessage(origMsg.senderId, replyText);
+            alert('Sua resposta foi enviada com sucesso!');
+        }
     };
 
-    const handleMarkAsRead = (id: string) => {
+    const handleMarkAsRead = async (id: string) => {
         setMessages(prev => prev.map(msg => msg.id === id ? { ...msg, read: true } : msg));
         setUnreadCount(prev => Math.max(0, prev - 1));
+
+        try {
+            await supabase.from('messages').update({ is_read: true }).eq('id', id);
+        } catch (e) {
+            console.error('Error marking as read:', e);
+        }
     };
 
     const handleUpdateTotalQualifiers = async (value: number | null) => {
@@ -1188,6 +1313,26 @@ export default function App() {
         return Array.from(uniqueMap.values());
     };
 
+    const handleNavigateToPlayerByName = (name: string) => {
+        const players = getAllUniquePlayers();
+        const player = players.find(p => p.name.toLowerCase() === name.toLowerCase());
+        if (player) {
+            setSelectedPlayer(player);
+            handleNavigate('profile');
+        } else {
+            // Se não encontrou no ranking, tenta criar um objeto básico com o nome
+            setSelectedPlayer({
+                rank: 0,
+                name: name,
+                avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+                city: '',
+                points: 0,
+                change: 'same'
+            });
+            handleNavigate('profile');
+        }
+    };
+
     const renderContent = () => {
         switch (currentView) {
             case 'calendar':
@@ -1227,7 +1372,18 @@ export default function App() {
                     onUpdateProfile={handleProfileUpdate}
                     currentUser={currentUser as any}
                     events={events}
-                    onCreateTestUser={handleCreateTestUser}
+                    experienceLevels={experienceLevels}
+                    setExperienceLevels={setExperienceLevels}
+                    dailyRewards={dailyRewards}
+                    setDailyRewards={setDailyRewards}
+                    messages={messages}
+                    polls={polls}
+                    userVotes={pollVotesByCurrentUser}
+                    onVotePoll={handleVoteOnPoll}
+                    onCreatePoll={handleCreatePoll}
+                    onSendAdminMessage={handleSendAdminMessage}
+                    onMarkAsRead={handleMarkAsRead}
+                    onReply={handleReplyMessage}
                 />;
             case 'register':
                 return isLoggedIn ? <EventRegistration isAdmin={isAdmin} /> : <Auth onLogin={handleLogin} onCancel={() => handleNavigate('home')} />;
@@ -1242,11 +1398,18 @@ export default function App() {
                     onUpdateContent={(field, val) => updateContent('details', field, val)}
                     categories={contentDB.categories}
                     onUpdateCategory={updateCategory}
+                    onNavigatePlayer={handleNavigateToPlayerByName}
+                    allPlayers={getAllUniquePlayers()}
                 />;
             case 'the-chosen-regulations':
                 return <TheChosenRegulations prizeLabel={prizeLabel} onBack={() => handleNavigate('the-chosen-details')} />;
             case 'vip':
                 return <VipPage onNavigate={handleNavigate} />;
+            case 'recharge':
+                // TODO: Import and return RechargePage later when implemented. Falling back to a temp text if not ready
+                // but actually, we will create RechargePage now, so let's import and return it.
+                // We will add the import at the top of the file in another chunk.
+                return <RechargePage currentUser={currentUser as any} onNavigate={handleNavigate} onUpdateProfile={handleProfileUpdate} />;
             case 'home':
             default:
                 return (
@@ -1298,6 +1461,8 @@ export default function App() {
                 unreadCount={unreadCount}
                 onMarkAsRead={handleMarkAsRead}
                 onReply={handleReplyMessage}
+                balanceBrl={currentUser.balanceBrl}
+                balanceChipz={currentUser.balanceChipz}
             />
 
             <main className="flex-grow pt-20 pb-20">

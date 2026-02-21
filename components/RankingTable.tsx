@@ -48,7 +48,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
     const [simType, setSimType] = useState<string>('weekly');
     const [simPlayers, setSimPlayers] = useState<number>(0);
     const [simBuyin, setSimBuyin] = useState<number>(0);
-    const [simIsFt, setSimIsFt] = useState<boolean>(false);
+    const [simPosition, setSimPosition] = useState<number>(1);
     const [simIsVip, setSimIsVip] = useState<boolean>(false);
     const [simPrize, setSimPrize] = useState<number>(0);
     const [simResult, setSimResult] = useState<number>(0);
@@ -67,6 +67,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
         let points = 0;
         const p = simPlayers || 0;
         const b = simBuyin || 0;
+        const pos = simPosition || 1;
         const z = simPrize || 0;
         const spent = 0; // Simulator doesn't have input for spent yet
         const rake = 0; // Simulator doesn't have input for rake yet
@@ -83,7 +84,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                 simType as RankingFormula,
                 p,
                 b,
-                simIsFt ? 1 : 10, // Default to 1st if FT for simplicity in sim, or add position input
+                pos,
                 z,
                 simIsVip,
                 schema?.id || mappedSchemaId,
@@ -91,11 +92,11 @@ export const RankingTable: React.FC<RankingTableProps> = ({
             );
         } else {
             // Fallback to utility's legacy logic
-            points = calculatePoints(simType as RankingFormula, p, b, simIsFt ? 1 : 10, z, simIsVip);
+            points = calculatePoints(simType as RankingFormula, p, b, pos, z, simIsVip);
         }
 
         setSimResult(Math.round(points));
-    }, [simType, simPlayers, simBuyin, simIsFt, simIsVip, simPrize, activeRanking]);
+    }, [simType, simPlayers, simBuyin, simPosition, simIsVip, simPrize, activeRanking]);
 
     // Filtragem e Dropdown
     const getSuggestions = () => {
@@ -272,6 +273,10 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                                 <option value="weekly">Semanal (Padrão)</option>
                                                 <option value="monthly">Mensal (Padrão)</option>
                                                 <option value="special">Especial (Padrão)</option>
+                                                <option value="cash_online">Cash Game</option>
+                                                <option value="mtt_online">MTT Online</option>
+                                                <option value="sit_n_go">Sit & Go</option>
+                                                <option value="satellite">Satélite</option>
                                             </>
                                         )}
                                     </select>
@@ -311,15 +316,16 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                             {/* Checkboxes & Result */}
                             <div className="lg:col-span-1 flex flex-col justify-between h-full gap-4">
                                 <div className="flex gap-4">
-                                    <label className="flex items-center gap-2 cursor-pointer group">
+                                    <div className="flex flex-col gap-1 w-24">
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase">Posição Final</label>
                                         <input
-                                            type="checkbox"
-                                            checked={simIsFt}
-                                            onChange={(e) => setSimIsFt(e.target.checked)}
-                                            className="w-4 h-4 accent-secondary bg-black border-white/20 rounded"
+                                            type="number"
+                                            value={simPosition || ''}
+                                            onChange={(e) => setSimPosition(parseInt(e.target.value) || 1)}
+                                            min="1"
+                                            className="w-full bg-black/40 border border-white/10 rounded px-2 py-1 text-white text-sm focus:border-secondary outline-none text-center"
                                         />
-                                        <span className="text-xs font-bold text-gray-400 group-hover:text-white transition-colors">Mesa Final?</span>
-                                    </label>
+                                    </div>
                                     <label className="flex items-center gap-2 cursor-pointer group">
                                         <input
                                             type="checkbox"
