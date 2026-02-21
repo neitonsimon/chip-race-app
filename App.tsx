@@ -1175,10 +1175,48 @@ export default function App() {
         }
     };
 
-    const handleSendMessage = (toPlayerId: string, content: string) => {
-        // Mensagem privada entre players
-        if (!currentUserId) return;
-        handleSendAdminMessage('Nova Mensagem Privada', content, 'private', undefined, toPlayerId);
+    const handleSendMessage = async (toPlayerName: string, content: string) => {
+        // Private message between players
+        if (!currentUserId || !currentUser?.name) return;
+        try {
+            // 1. Look up recipient's UUID by name in profiles table
+            const { data: recipientProfile, error: lookupError } = await supabase
+                .from('profiles')
+                .select('id, name')
+                .ilike('name', toPlayerName.trim())
+                .single();
+
+            if (lookupError || !recipientProfile) {
+                console.error('Recipient not found:', lookupError);
+                alert(`Não foi possível encontrar o perfil de "${toPlayerName}" no sistema.`);
+                return;
+            }
+
+            // 2. Insert private message using recipient's real UUID
+            const { error } = await supabase
+                .from('messages')
+                .insert([{
+                    sender: currentUser.name,
+                    sender_id: currentUserId,
+                    subject: `Mensagem de ${currentUser.name}`,
+                    content,
+                    category: 'private',
+                    user_id: recipientProfile.id,  // recipient's UUID
+                    is_read: false
+                }]);
+
+            if (error) {
+                console.error('Error sending private message:', error);
+                alert('Erro ao enviar mensagem: ' + error.message);
+                return;
+            }
+
+            // Refresh messages for current user too
+            if (currentUserId) fetchMessages(currentUserId);
+        } catch (e: any) {
+            console.error('Error sending private message:', e);
+            alert('Erro inesperado: ' + (e.message || JSON.stringify(e)));
+        }
     };
 
     const handleReplyMessage = (messageId: string, replyText: string) => {
