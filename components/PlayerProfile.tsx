@@ -148,6 +148,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     const [showClaimModal, setShowClaimModal] = useState(false);
     const [claimAnimation, setClaimAnimation] = useState(false);
     const claimedRewardRef = useRef<DailyReward | null>(null);
+    const [showRewardsTable, setShowRewardsTable] = useState(false);
 
     // --- EDITOR DE IMAGEM (CROP) STATES ---
     const [editorImage, setEditorImage] = useState<string | null>(null);
@@ -1124,7 +1125,6 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                                 <th className="px-3 md:px-6 py-3 hidden sm:table-cell">Data</th>
                                                 <th className="px-3 md:px-6 py-3">Evento</th>
                                                 <th className="px-2 md:px-6 py-3 text-center">Pos</th>
-                                                <th className="px-2 md:px-6 py-3 text-center">Pts</th>
                                                 <th className="px-3 md:px-6 py-3 text-right">Prêmio</th>
                                             </tr>
                                         </thead>
@@ -1146,13 +1146,12 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                                                 {log.position}º
                                                             </span>
                                                         </td>
-                                                        <td className="px-2 md:px-6 py-4 text-center font-display text-secondary text-xs md:text-base">{log.points > 0 ? `+${log.points}` : '-'}</td>
                                                         <td className="px-3 md:px-6 py-4 text-right text-white text-xs md:text-base">{log.prize}</td>
                                                     </tr>
                                                 ))
                                             ) : (
                                                 <tr>
-                                                    <td colSpan={5} className="px-6 py-8 text-center text-gray-600 italic">
+                                                    <td colSpan={4} className="px-6 py-8 text-center text-gray-600 italic">
                                                         Nenhum torneio registrado nesta temporada.
                                                     </td>
                                                 </tr>
@@ -1683,40 +1682,94 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                         </div>
                                     </div>
 
-                                    <div className="bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 rounded-3xl p-8 mb-8 relative overflow-hidden group">
-                                        {/* Animated Background Glow */}
-                                        <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/20 rounded-full blur-3xl group-hover:bg-primary/30 transition-colors duration-700"></div>
-
-                                        <div className="relative z-10">
-                                            <div className="text-sm text-gray-400 font-bold uppercase tracking-widest mb-4 opacity-60">Sua Recompensa Atual</div>
-                                            <div className="text-6xl font-black text-white mb-2 tracking-tighter drop-shadow-2xl">
-                                                <span className="text-primary">
-                                                    {activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)]?.reward_type === 'brl' ? 'R$' : '+'}
-                                                    {activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)]?.reward_value}
-                                                </span>
-                                                <span className="text-2xl ml-2 text-gray-500">
-                                                    {activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)]?.reward_type === 'xp' ? 'XP' :
-                                                        activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)]?.reward_type === 'chipz' ? 'CHIPZ' : ''}
+                                    {/* Reward Card - compact */}
+                                    <div className="bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 rounded-3xl p-6 mb-6 relative overflow-hidden">
+                                        <div className="absolute -top-8 -right-8 w-28 h-28 bg-primary/20 rounded-full blur-3xl pointer-events-none"></div>
+                                        <div className="relative z-10 flex items-center justify-between gap-4">
+                                            <div>
+                                                <div className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-1">Sua Recompensa Hoje</div>
+                                                <div className="text-4xl font-black tracking-tighter">
+                                                    <span className="text-primary">
+                                                        {activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)]?.reward_type === 'brl' ? 'R$ ' : '+'}
+                                                        {activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)]?.reward_value}
+                                                    </span>
+                                                    <span className="text-lg ml-1 text-gray-400">
+                                                        {activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)]?.reward_type === 'xp' ? 'XP' :
+                                                            activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)]?.reward_type === 'chipz' ? 'CHIPZ' : ''}
+                                                    </span>
+                                                </div>
+                                                <div className="text-xs text-gray-600 mt-1">
+                                                    {activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)]?.reward_label}
+                                                </div>
+                                            </div>
+                                            <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
+                                                <span className="material-icons-outlined text-2xl text-primary">
+                                                    {activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)]?.reward_type === 'brl' ? 'payments' :
+                                                        activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)]?.reward_type === 'chipz' ? 'toll' : 'auto_awesome'}
                                                 </span>
                                             </div>
-
-                                            {activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)]?.reward_label && (
-                                                <div className="mt-4 flex items-center justify-center gap-3 py-3 px-6 bg-secondary/10 border border-secondary/20 rounded-2xl text-secondary animate-bounce-subtle">
-                                                    <span className="material-icons-outlined text-2xl">
-                                                        {activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)].reward_type === 'brl' ? 'payments' :
-                                                            activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)].reward_type === 'chipz' ? 'toll' : 'auto_awesome'}
-                                                    </span>
-                                                    <span className="text-lg font-black tracking-tight">{activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)].reward_label}</span>
-                                                </div>
-                                            )}
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-col items-center gap-4 mb-8">
-                                        <div className="flex items-center gap-2 px-4 py-2 bg-black/40 border border-white/5 rounded-full text-gray-400 text-[10px] font-bold uppercase tracking-widest leading-none">
-                                            <span className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span>
-                                            Reset Diário: <span className="text-white ml-1">21:00H</span>
+                                    {/* Rewards Table Toggle */}
+                                    <button
+                                        onClick={() => setShowRewardsTable(prev => !prev)}
+                                        className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold text-gray-400 hover:text-white transition-all mb-4"
+                                    >
+                                        <span className="material-icons-outlined text-sm text-secondary">calendar_month</span>
+                                        {showRewardsTable ? 'Ocultar tabela de recompensas' : 'Ver tabela completa de recompensas'}
+                                        <span className={`material-icons-outlined text-sm transition-transform duration-300 ${showRewardsTable ? 'rotate-180' : ''}`}>expand_more</span>
+                                    </button>
+
+                                    {showRewardsTable && (
+                                        <div className="mb-6 overflow-hidden rounded-2xl border border-white/10 animate-in slide-in-from-top-2 duration-300">
+                                            <div className="bg-black/40 px-4 py-2.5 border-b border-white/10 flex items-center gap-2">
+                                                <span className="material-icons-outlined text-sm text-secondary">emoji_events</span>
+                                                <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Recompensas por Dia</span>
+                                            </div>
+                                            <div className="divide-y divide-white/5 max-h-56 overflow-y-auto custom-scrollbar">
+                                                {activeDailyRewards.map((reward, i) => {
+                                                    const isCurrentDay = i === Math.min(player.dailyStreak, activeDailyRewards.length - 1);
+                                                    const isPast = i < player.dailyStreak;
+                                                    return (
+                                                        <div
+                                                            key={i}
+                                                            className={`flex items-center justify-between px-4 py-2.5 transition-colors ${isCurrentDay ? 'bg-primary/10 border-l-2 border-primary' :
+                                                                    isPast ? 'opacity-40' : ''
+                                                                }`}
+                                                        >
+                                                            <div className="flex items-center gap-3">
+                                                                <span className={`text-xs font-black w-12 ${isCurrentDay ? 'text-primary' : isPast ? 'text-gray-600' : 'text-gray-500'
+                                                                    }`}>
+                                                                    Dia {reward.day ?? i + 1}
+                                                                </span>
+                                                                <span className={`material-icons-outlined text-sm ${reward.reward_type === 'brl' ? 'text-green-400' :
+                                                                        reward.reward_type === 'chipz' ? 'text-secondary' : 'text-blue-400'
+                                                                    }`}>
+                                                                    {reward.reward_type === 'brl' ? 'payments' :
+                                                                        reward.reward_type === 'chipz' ? 'toll' : 'auto_awesome'}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className={`text-sm font-black ${isCurrentDay ? 'text-primary' :
+                                                                        isPast ? 'text-gray-600' : 'text-white'
+                                                                    }`}>
+                                                                    {reward.reward_label}
+                                                                </span>
+                                                                {isPast && <span className="material-icons-outlined text-xs text-green-500">check_circle</span>}
+                                                                {isCurrentDay && <span className="text-[9px] font-black text-primary bg-primary/10 border border-primary/30 px-1.5 py-0.5 rounded-full uppercase">Hoje</span>}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
+                                    )}
+
+                                    {/* Reset timer */}
+                                    <div className="flex items-center justify-center gap-2 mb-6 px-4 py-2 bg-black/40 border border-white/5 rounded-full text-gray-400 text-[10px] font-bold uppercase tracking-widest">
+                                        <span className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span>
+                                        Reset Diário: <span className="text-white ml-1">21:00H</span>
                                     </div>
 
                                     <div className="space-y-3">

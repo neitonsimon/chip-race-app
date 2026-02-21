@@ -35,6 +35,7 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
     const [qualifiers, setQualifiers] = useState<TheChosenQualifier[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showAddModal, setShowAddModal] = useState(false);
+    const [avatarMap, setAvatarMap] = useState<Record<string, string>>({});
 
     // Form state
     const [newPlayerName, setNewPlayerName] = useState('');
@@ -69,7 +70,27 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-            setQualifiers(data || []);
+            const rows = data || [];
+            setQualifiers(rows);
+
+            // Fetch avatars for all unique player names
+            const uniqueNames = [...new Set(rows.map((q: any) => q.player_name as string))];
+            if (uniqueNames.length > 0) {
+                const { data: profiles } = await supabase
+                    .from('profiles')
+                    .select('name, avatar_url')
+                    .in('name', uniqueNames);
+
+                if (profiles) {
+                    const map: Record<string, string> = {};
+                    profiles.forEach((p: any) => {
+                        if (p.name && p.avatar_url) {
+                            map[p.name] = p.avatar_url;
+                        }
+                    });
+                    setAvatarMap(map);
+                }
+            }
         } catch (err) {
             console.error('Error fetching qualifiers:', err);
         } finally {
@@ -210,7 +231,18 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
                                         onClick={() => onNavigatePlayer?.(player.name)}
                                         className="flex items-center gap-3 text-left hover:text-primary transition-colors"
                                     >
-                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center text-xs font-bold text-white shadow-lg border border-white/10">
+                                        {avatarMap[player.name] ? (
+                                            <img
+                                                src={avatarMap[player.name]}
+                                                alt={player.name}
+                                                className="w-10 h-10 rounded-full object-cover border-2 border-primary/30 shadow-lg shadow-primary/20 flex-shrink-0"
+                                                onError={(e) => {
+                                                    (e.target as HTMLImageElement).style.display = 'none';
+                                                    (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                                                }}
+                                            />
+                                        ) : null}
+                                        <div className={`w-10 h-10 rounded-full bg-gradient-to-br from-primary/40 to-accent/40 flex items-center justify-center text-xs font-bold text-white shadow-lg border border-white/10 flex-shrink-0 ${avatarMap[player.name] ? 'hidden' : ''}`}>
                                             {player.name.substring(0, 2).toUpperCase()}
                                         </div>
                                         <span className="font-bold text-white">{player.name}</span>
