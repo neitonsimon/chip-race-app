@@ -334,7 +334,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                 )}
             </nav>
 
-            {/* MESSAGE DETAIL MODAL */}
+            {/* MESSAGE DETAIL MODAL — read-only, no reply box */}
             {selectedMessage && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
                     <div className="bg-surface-dark border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl relative animate-float flex flex-col max-h-[90vh]">
@@ -357,28 +357,24 @@ export const Navigation: React.FC<NavigationProps> = ({
                                 </button>
                             </div>
 
-                            <div className="bg-black/20 p-4 rounded-xl border border-white/5 text-gray-300 text-sm leading-relaxed mb-6 max-h-60 overflow-y-auto custom-scrollbar">
+                            <div className="bg-black/20 p-4 rounded-xl border border-white/5 text-gray-300 text-sm leading-relaxed max-h-64 overflow-y-auto custom-scrollbar">
                                 {selectedMessage.content}
                             </div>
 
-                            <div className="mt-4">
-                                <label className="block text-xs font-bold text-primary uppercase mb-2">Sua Resposta</label>
-                                <div className="relative">
-                                    <textarea
-                                        value={replyText}
-                                        onChange={(e) => setReplyText(e.target.value)}
-                                        className="w-full h-24 bg-black/40 border border-white/10 rounded-lg p-3 text-white text-sm focus:border-secondary outline-none resize-none"
-                                        placeholder="Escreva sua resposta..."
-                                    ></textarea>
-                                    <button
-                                        onClick={handleSendReply}
-                                        disabled={!replyText.trim()}
-                                        className="absolute bottom-2 right-2 bg-secondary text-black p-2 rounded-full hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-                                        title="Enviar Resposta"
-                                    >
-                                        <span className="material-icons-outlined text-sm font-bold">send</span>
-                                    </button>
+                            {selectedMessage.category === 'poll' && (
+                                <div className="mt-4 flex items-center gap-2 text-yellow-400 text-xs font-bold bg-yellow-400/10 border border-yellow-400/20 rounded-xl px-4 py-2">
+                                    <span className="material-icons-outlined text-sm">how_to_vote</span>
+                                    Acesse a aba Mensagens no seu perfil para votar nesta enquete.
                                 </div>
+                            )}
+
+                            <div className="mt-6 flex justify-end">
+                                <button
+                                    onClick={() => setSelectedMessage(null)}
+                                    className="px-6 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold rounded-xl transition-colors"
+                                >
+                                    Fechar
+                                </button>
                             </div>
                         </div>
                     </div>

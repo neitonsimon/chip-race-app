@@ -1059,7 +1059,7 @@ export default function App() {
             const { data, error } = await supabase
                 .from('messages')
                 .select('*')
-                .or(`user_id.eq.${userId},category.eq.admin`)
+                .or(`user_id.eq.${userId},user_id.is.null`)
                 .order('created_at', { ascending: false });
 
             if (data) {
