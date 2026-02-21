@@ -1152,19 +1152,26 @@ export default function App() {
                 .from('messages')
                 .insert([{
                     sender: 'Admin Chip Race',
+                    sender_id: currentUserId,
                     subject,
                     content,
                     category,
-                    poll_id: pollId,
-                    user_id: targetUserId,
+                    poll_id: pollId || null,
+                    user_id: targetUserId || null,   // NULL = broadcast para todos
                     is_read: false
                 }]);
 
-            if (!error) {
-                if (currentUserId) fetchMessages(currentUserId);
+            if (error) {
+                console.error('Erro ao inserir mensagem:', error);
+                alert('Erro ao enviar mensagem: ' + error.message);
+                return;
             }
-        } catch (e) {
+
+            // Refresh messages for admin too
+            if (currentUserId) fetchMessages(currentUserId);
+        } catch (e: any) {
             console.error('Error sending message:', e);
+            alert('Erro inesperado: ' + (e.message || JSON.stringify(e)));
         }
     };
 
