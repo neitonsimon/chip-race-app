@@ -132,6 +132,69 @@ export const Navigation: React.FC<NavigationProps> = ({
                                         </div>
                                     </div>
 
+                                    {/* Notification Bell */}
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => setMessagesOpen(prev => !prev)}
+                                            className="relative w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 hover:border-primary/50 transition-all duration-300"
+                                            title="Notificações"
+                                        >
+                                            <span className="material-icons-outlined text-gray-300 text-xl">notifications</span>
+                                            {unreadCount > 0 && (
+                                                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-gradient-to-r from-primary to-accent text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 shadow-neon-pink animate-bounce">
+                                                    {unreadCount > 9 ? '9+' : unreadCount}
+                                                </span>
+                                            )}
+                                        </button>
+
+                                        {/* Messages Dropdown */}
+                                        {messagesOpen && (
+                                            <div className="absolute right-0 top-12 w-80 bg-surface-dark border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden">
+                                                <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-black/30">
+                                                    <span className="text-sm font-bold text-white flex items-center gap-2">
+                                                        <span className="material-icons-outlined text-primary text-sm">notifications_active</span>
+                                                        Notificações
+                                                        {unreadCount > 0 && (
+                                                            <span className="bg-primary/20 text-primary text-xs font-bold px-2 py-0.5 rounded-full">{unreadCount} não lidas</span>
+                                                        )}
+                                                    </span>
+                                                    <button onClick={() => setMessagesOpen(false)} className="text-gray-400 hover:text-white">
+                                                        <span className="material-icons-outlined text-sm">close</span>
+                                                    </button>
+                                                </div>
+                                                <div className="max-h-80 overflow-y-auto custom-scrollbar">
+                                                    {messages.length === 0 ? (
+                                                        <div className="py-8 text-center">
+                                                            <span className="material-icons-outlined text-4xl text-white/20 block mb-2">notifications_none</span>
+                                                            <p className="text-gray-500 text-sm">Nenhuma notificação</p>
+                                                        </div>
+                                                    ) : (
+                                                        messages.map(msg => (
+                                                            <button
+                                                                key={msg.id}
+                                                                onClick={() => handleOpenMessage(msg)}
+                                                                className={`w-full text-left px-4 py-3 border-b border-white/5 hover:bg-white/5 transition-colors flex gap-3 items-start ${!msg.read ? 'bg-primary/5' : ''
+                                                                    }`}
+                                                            >
+                                                                <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${!msg.read ? 'bg-primary shadow-neon-pink' : 'bg-white/20'
+                                                                    }`} />
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className={`text-sm font-semibold truncate ${!msg.read ? 'text-white' : 'text-gray-400'
+                                                                        }`}>{msg.subject}</p>
+                                                                    <p className="text-xs text-gray-500 truncate">{msg.from} · {msg.date}</p>
+                                                                    <p className="text-xs text-gray-600 truncate mt-0.5">{msg.content}</p>
+                                                                </div>
+                                                                {msg.category === 'poll' && (
+                                                                    <span className="material-icons-outlined text-yellow-400 text-sm flex-shrink-0">how_to_vote</span>
+                                                                )}
+                                                            </button>
+                                                        ))
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
                                     <button
                                         onClick={() => onNavigate('profile')}
                                         className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-accent p-[2px] hover:shadow-neon-pink transition-all duration-300"
@@ -229,6 +292,21 @@ export const Navigation: React.FC<NavigationProps> = ({
                                         className="block w-full text-left px-3 py-4 text-lg font-medium text-gray-300 hover:text-white hover:bg-white/5 border-b border-white/5 flex items-center gap-2"
                                     >
                                         <span className="material-icons-outlined">person</span> Meu Perfil
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setMobileMenuOpen(false);
+                                            setMessagesOpen(prev => !prev);
+                                        }}
+                                        className="block w-full text-left px-3 py-4 text-lg font-medium text-gray-300 hover:text-white hover:bg-white/5 border-b border-white/5 flex items-center justify-between"
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            <span className="material-icons-outlined">notifications</span>
+                                            Notificações
+                                        </span>
+                                        {unreadCount > 0 && (
+                                            <span className="bg-primary text-white text-xs font-bold px-2 py-0.5 rounded-full">{unreadCount}</span>
+                                        )}
                                     </button>
                                     <button
                                         onClick={() => {

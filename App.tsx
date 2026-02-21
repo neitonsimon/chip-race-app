@@ -1017,16 +1017,41 @@ export default function App() {
     const [pollVotesByCurrentUser, setPollVotesByCurrentUser] = useState<Record<string, number>>({});
 
     useEffect(() => {
-        if (isLoggedIn) {
-            const timer = setTimeout(() => {
-                if (currentUserId) {
+        if (!isLoggedIn || !currentUserId) return;
+
+        // Initial fetch
+        fetchMessages(currentUserId);
+        fetchPolls();
+        fetchUserPollVotes(currentUserId);
+
+        // Real-time subscription for new messages (admin broadcasts + private)
+        const msgChannel = supabase
+            .channel('realtime-messages')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'messages' },
+                (_payload) => {
                     fetchMessages(currentUserId);
-                    fetchPolls();
-                    fetchUserPollVotes(currentUserId);
                 }
-            }, 1000);
-            return () => clearTimeout(timer);
-        }
+            )
+            .subscribe();
+
+        // Real-time subscription for polls
+        const pollChannel = supabase
+            .channel('realtime-polls')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'polls' },
+                (_payload) => {
+                    fetchPolls();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(msgChannel);
+            supabase.removeChannel(pollChannel);
+        };
     }, [isLoggedIn, currentUserId]);
 
     const fetchMessages = async (userId: string) => {
