@@ -22,6 +22,7 @@ interface PlayerProfileProps {
         nextLevelExp?: number;
         lastDailyClaim?: string | null;
         dailyStreak?: number;
+        badges?: any[];
     };
     events?: Event[];
     experienceLevels?: ExperienceLevel[];
@@ -149,29 +150,71 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     const [viewingReceipt, setViewingReceipt] = useState<any | null>(null);
     const [receiptItems, setReceiptItems] = useState<any[]>([]);
 
+    // Auto-update viewing receipt
+    const viewingReceiptRef = useRef<any | null>(null);
+    useEffect(() => { viewingReceiptRef.current = viewingReceipt; }, [viewingReceipt]);
+
     useEffect(() => {
-        if (activeTab === 'comprovantes' && initialData?.id && currentUser?.id === initialData.id) {
+        let interval: NodeJS.Timeout;
+        let channel: any;
+
+        if (activeTab === 'comprovantes' && targetIdRef.current) {
             fetchPlayerCommands();
+
+            // Polling para "tempo real" garantido
+            interval = setInterval(() => {
+                fetchPlayerCommands();
+                if (viewingReceiptRef.current) {
+                    handleViewReceipt(viewingReceiptRef.current, true);
+                }
+            }, 5000);
+
+            // Realtime listener
+            channel = supabase.channel('commands_realtime_profile_' + targetIdRef.current)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'commands', filter: `user_id=eq.${targetIdRef.current}` }, () => {
+                    fetchPlayerCommands();
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'command_items' }, () => {
+                    fetchPlayerCommands();
+                    if (viewingReceiptRef.current) {
+                        handleViewReceipt(viewingReceiptRef.current, true);
+                    }
+                })
+                .subscribe();
         }
-    }, [activeTab, initialData?.id, currentUser?.id]);
+
+        return () => {
+            if (interval) clearInterval(interval);
+            if (channel) supabase.removeChannel(channel);
+        };
+    }, [activeTab]);
 
     const fetchPlayerCommands = async () => {
-        if (!initialData?.id) return;
+        if (!targetIdRef.current) return;
         const { data } = await supabase.from('commands')
             .select('*, events(title, date)')
-            .eq('user_id', initialData.id)
-            .eq('status', 'closed')
-            .order('closed_at', { ascending: false });
+            .eq('user_id', targetIdRef.current)
+            .in('status', ['open', 'closed'])
+            .order('created_at', { ascending: false });
         if (data) setPlayerCommands(data);
     };
 
-    const handleViewReceipt = async (cmd: any) => {
+    const handleViewReceipt = async (cmd: any, isSilentUpdate = false) => {
         const { data } = await supabase.from('command_items')
             .select('*, products(name, category)')
             .eq('command_id', cmd.id)
             .order('created_at', { ascending: true });
         setReceiptItems(data || []);
-        setViewingReceipt(cmd);
+
+        // Atualiza os totais mais recentes
+        const { data: latestCmd } = await supabase.from('commands')
+            .select('*, events(title, date)')
+            .eq('id', cmd.id)
+            .single();
+
+        if (!isSilentUpdate || (viewingReceiptRef.current && viewingReceiptRef.current.id === cmd.id)) {
+            setViewingReceipt(latestCmd || cmd);
+        }
     };
 
     const handleOpenFlyer = (log: TournamentResult) => {
@@ -219,6 +262,13 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     const claimedRewardRef = useRef<DailyReward | null>(null);
     const [showRewardsTable, setShowRewardsTable] = useState(false);
 
+    // --- BADGE MANAGEMENT STATES (Admin only) ---
+    const [newBadgeTitle, setNewBadgeTitle] = useState('');
+    const [newBadgeDesc, setNewBadgeDesc] = useState('');
+    const [newBadgeIcon, setNewBadgeIcon] = useState('stars');
+    const [newBadgeRankingId, setNewBadgeRankingId] = useState('');
+    const [isAddingBadge, setIsAddingBadge] = useState(false);
+
     // --- EDITOR DE IMAGEM (CROP) STATES ---
     const [editorImage, setEditorImage] = useState<string | null>(null);
     const [zoom, setZoom] = useState(1);
@@ -264,7 +314,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         dailyStreak: 0,
         isVip: false,
         vipStatus: 'nao_vip',
-        vipExpiresAt: null
+        vipExpiresAt: null,
+        badges: []
     };
 
     const [player, setPlayer] = useState<PlayerStats>(myProfileData);
@@ -304,7 +355,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                 nextLevelExp: initialData.nextLevelExp || 1000,
                 isVip: initialData.isVip || false,
                 vipStatus: initialData.vipStatus || 'nao_vip',
-                vipExpiresAt: initialData.vipExpiresAt || null
+                vipExpiresAt: initialData.vipExpiresAt || null,
+                badges: (initialData as any).badges || []
             };
             setActiveTab('overview');
         } else if (currentUser) {
@@ -330,6 +382,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             baseData.isVip = currentUser.isVip || false;
             baseData.vipStatus = currentUser.vipStatus || 'nao_vip';
             baseData.vipExpiresAt = currentUser.vipExpiresAt || null;
+            baseData.badges = currentUser.badges || [];
 
             originalNameRef.current = baseData.name;
 
@@ -953,6 +1006,56 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         }
     };
 
+    const handleAddBadge = async () => {
+        if (!newBadgeTitle || !newBadgeIcon) {
+            alert("Título e Ícone são obrigatórios.");
+            return;
+        }
+        setIsAddingBadge(true);
+        try {
+            const newBadge = {
+                user_id: targetIdRef.current,
+                ranking_id: newBadgeRankingId || null,
+                title: newBadgeTitle,
+                description: newBadgeDesc,
+                icon: newBadgeIcon
+            };
+            const { data, error } = await supabase.from('user_badges').insert(newBadge).select().single();
+            if (error) throw error;
+
+            setPlayer(prev => ({
+                ...prev,
+                badges: [data, ...(prev.badges || [])]
+            }));
+
+            setNewBadgeTitle('');
+            setNewBadgeDesc('');
+            setNewBadgeIcon('stars');
+            setNewBadgeRankingId('');
+            alert("Insígnia concedida com sucesso!");
+        } catch (err: any) {
+            console.error('Erro ao adicionar badge:', err);
+            alert('Falha ao conceder insignía: ' + err.message);
+        } finally {
+            setIsAddingBadge(false);
+        }
+    };
+
+    const handleDeleteBadge = async (badgeId: string) => {
+        if (!window.confirm("Tem certeza que deseja remover esta insígnia permanentemente?")) return;
+        try {
+            const { error } = await supabase.from('user_badges').delete().eq('id', badgeId);
+            if (error) throw error;
+            setPlayer(prev => ({
+                ...prev,
+                badges: (prev.badges || []).filter(b => b.id !== badgeId)
+            }));
+        } catch (err: any) {
+            console.error('Erro ao deletar badge:', err);
+            alert('Falha ao remover insígnia.');
+        }
+    };
+
     // Calculate real nextLevelExp based on experienceLevels table
     const currentLvlObj = experienceLevels?.find(l => l.level === player.level);
     const nextLvlObj = experienceLevels?.find(l => l.level === player.level + 1);
@@ -1067,6 +1170,22 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                     ID: {player.numericId ? `CR#${String(player.numericId).padStart(3, '0')}` : 'CR#GUEST'}
                                 </div>
                                 <p className="text-gray-500 dark:text-gray-400 text-base mb-6">{player.city}</p>
+
+                                {/* Badges Section */}
+                                {player.badges && player.badges.length > 0 && (
+                                    <div className="mb-6 flex flex-wrap justify-center gap-2">
+                                        {player.badges.map(badge => (
+                                            <div key={badge.id} title={`${badge.title} - ${badge.description}`} className="group relative w-12 h-12 bg-gradient-to-br from-[#1a1438] to-[#0f0a28] border border-yellow-500/50 rounded-lg flex items-center justify-center shadow-[0_0_10px_rgba(234,179,8,0.2)] hover:shadow-[0_0_20px_rgba(234,179,8,0.5)] transition-all cursor-help transform hover:scale-110">
+                                                <span className="material-icons-outlined text-yellow-400 text-2xl filter drop-shadow-[0_0_5px_rgba(234,179,8,0.8)]">{badge.icon}</span>
+                                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-black/90 text-white text-[10px] p-2 rounded border border-white/10 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
+                                                    <p className="font-bold text-yellow-400 mb-1">{badge.title}</p>
+                                                    <p className="text-gray-300 relative z-50 whitespace-normal break-words">{badge.description}</p>
+                                                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-black/90 border-b border-r border-white/10 transform rotate-45"></div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
 
 
                                 {/* Social Media Section */}
@@ -1411,44 +1530,98 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                             </div>
                         </div>
 
-                        {playerCommands.length === 0 ? (
-                            <div className="bg-white/5 border border-white/10 rounded-3xl p-12 text-center flex flex-col items-center justify-center mt-8">
-                                <div className="w-20 h-20 bg-gray-500/10 rounded-full flex items-center justify-center mb-4">
-                                    <span className="material-icons-outlined text-4xl text-gray-500 block">receipt_long</span>
-                                </div>
-                                <h4 className="text-xl font-bold text-white mb-2">Nenhum comprovante</h4>
-                                <p className="text-gray-400 max-w-sm">Você ainda não possui comandas encerradas em eventos do Chip Race.</p>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {playerCommands.map(cmd => (
-                                    <div key={cmd.id} className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:border-green-400/50 hover:shadow-[0_4px_20px_rgba(74,222,128,0.1)] transition-all group cursor-pointer"
-                                        onClick={() => handleViewReceipt(cmd)}>
-                                        <div className="p-5">
-                                            <div className="flex justify-between items-start mb-4">
-                                                <div className="w-10 h-10 rounded-xl bg-black/40 border border-white/5 flex items-center justify-center shrink-0">
-                                                    <span className="material-icons-outlined text-green-400 text-xl">point_of_sale</span>
-                                                </div>
-                                                <span className="text-3xl font-display font-black text-white">R$ {Number(cmd.total_brl).toFixed(2)}</span>
-                                            </div>
+                        {(() => {
+                            const openCommands = playerCommands.filter(c => c.status === 'open');
+                            const closedCommands = playerCommands.filter(c => c.status === 'closed');
 
-                                            <h4 className="text-base font-bold text-white leading-tight mb-1">{cmd.events?.title || 'Torneio'}</h4>
-                                            <div className="flex items-center gap-2 text-xs text-gray-400 mb-4">
-                                                <span className="material-icons-outlined text-xs">calendar_today</span>
-                                                {cmd.closed_at ? new Date(cmd.closed_at).toLocaleDateString('pt-BR') : (cmd.events?.date ? new Date(cmd.events.date).toLocaleDateString('pt-BR') : '')}
-                                                <span className="w-1 h-1 rounded-full bg-gray-600"></span>
-                                                {cmd.closed_at ? new Date(cmd.closed_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
-                                            </div>
-
-                                            <div className="pt-4 border-t border-white/10 flex items-center justify-between text-xs font-bold text-green-400 group-hover:text-green-300 transition-colors">
-                                                <span className="uppercase tracking-widest">Ver Detalhes</span>
-                                                <span className="material-icons-outlined text-sm transform group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                            return (
+                                <div className="space-y-8">
+                                    {/* SEÇÃO COMANDA EM ABERTO */}
+                                    {openCommands.length > 0 && (
+                                        <div>
+                                            <h4 className="text-sm font-bold text-red-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                                                Comanda em Aberto (Tempo Real)
+                                            </h4>
+                                            <div className="grid grid-cols-1 gap-4">
+                                                {openCommands.map(cmd => (
+                                                    <div key={cmd.id} className="bg-gradient-to-r from-red-900/40 to-black/40 border border-red-500/30 rounded-3xl overflow-hidden hover:border-red-400 p-6 transition-all group cursor-pointer relative"
+                                                        onClick={() => handleViewReceipt(cmd)}>
+                                                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-600 to-orange-500"></div>
+                                                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="w-14 h-14 rounded-2xl bg-red-500/20 flex flex-col items-center justify-center shadow-[0_0_15px_rgba(239,68,68,0.4)]">
+                                                                    <span className="material-icons-outlined text-red-500 animate-bounce">restaurant</span>
+                                                                </div>
+                                                                <div>
+                                                                    <div className="text-xs text-red-400 font-bold uppercase tracking-widest mb-0.5 animate-pulse">Consumo Ativo</div>
+                                                                    <h4 className="text-xl font-bold text-white">{cmd.events?.title || 'Clube Chip Race'}</h4>
+                                                                </div>
+                                                            </div>
+                                                            <div className="sm:text-right bg-black/40 sm:bg-transparent p-3 sm:p-0 rounded-xl">
+                                                                <div className="text-xs text-gray-400 uppercase font-bold tracking-widest mb-1">Total Parcial</div>
+                                                                <span className="text-4xl font-display font-black text-red-400">R$ {Number(cmd.total_brl).toFixed(2)}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center justify-between bg-black/40 rounded-xl py-3 px-4 border border-white/5 group-hover:bg-red-500/10 transition-colors">
+                                                            <span className="text-sm text-gray-300 font-medium">Acompanhar lançamentos ao vivo</span>
+                                                            <span className="material-icons-outlined text-red-400">arrow_forward</span>
+                                                        </div>
+                                                    </div>
+                                                ))}
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                                    )}
+
+                                    {/* SEÇÃO HISTÓRICO DE CONSUMO (FECHADAS) */}
+                                    {closedCommands.length > 0 && (
+                                        <div>
+                                            <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">
+                                                Histórico Fechado
+                                            </h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                {closedCommands.map(cmd => (
+                                                    <div key={cmd.id} className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:border-green-400/50 hover:shadow-[0_4px_20px_rgba(74,222,128,0.1)] transition-all group cursor-pointer"
+                                                        onClick={() => handleViewReceipt(cmd)}>
+                                                        <div className="p-5">
+                                                            <div className="flex justify-between items-start mb-4">
+                                                                <div className="w-10 h-10 rounded-xl bg-black/40 border border-white/5 flex items-center justify-center shrink-0">
+                                                                    <span className="material-icons-outlined text-green-400 text-xl">point_of_sale</span>
+                                                                </div>
+                                                                <span className="text-3xl font-display font-black text-white">R$ {Number(cmd.total_brl).toFixed(2)}</span>
+                                                            </div>
+
+                                                            <h4 className="text-base font-bold text-white leading-tight mb-1">{cmd.events?.title || 'Torneio'}</h4>
+                                                            <div className="flex items-center gap-2 text-xs text-gray-400 mb-4">
+                                                                <span className="material-icons-outlined text-xs">calendar_today</span>
+                                                                {cmd.closed_at ? new Date(cmd.closed_at).toLocaleDateString('pt-BR') : (cmd.events?.date ? new Date(cmd.events.date).toLocaleDateString('pt-BR') : '')}
+                                                                <span className="w-1 h-1 rounded-full bg-gray-600"></span>
+                                                                {cmd.closed_at ? new Date(cmd.closed_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
+                                                            </div>
+
+                                                            <div className="pt-4 border-t border-white/10 flex items-center justify-between text-xs font-bold text-green-400 group-hover:text-green-300 transition-colors">
+                                                                <span className="uppercase tracking-widest">Ver Detalhes</span>
+                                                                <span className="material-icons-outlined text-sm transform group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {playerCommands.length === 0 && (
+                                        <div className="bg-white/5 border border-white/10 rounded-3xl p-12 text-center flex flex-col items-center justify-center mt-8">
+                                            <div className="w-20 h-20 bg-gray-500/10 rounded-full flex items-center justify-center mb-4">
+                                                <span className="material-icons-outlined text-4xl text-gray-500 block">receipt_long</span>
+                                            </div>
+                                            <h4 className="text-xl font-bold text-white mb-2">Nenhum comprovante</h4>
+                                            <p className="text-gray-400 max-w-sm">Você ainda não possui comandas registradas em eventos do Chip Race.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
                     </div>
                 )}
 
@@ -1587,6 +1760,103 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                         })}
                                     </div>
                                 </div>
+
+                                {/* Badge Management (Admin Only) */}
+                                {isAdmin && (
+                                    <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-2xl p-6 space-y-4 mb-6">
+                                        <h4 className="text-lg font-bold text-yellow-500 flex items-center gap-2">
+                                            <span className="material-icons-outlined">military_tech</span>
+                                            Gerenciar Insígnias de Honra
+                                        </h4>
+                                        <p className="text-xs text-gray-500 mb-4 italic">Apenas administradores podem conceder ou remover insígnias raras.</p>
+
+                                        {/* List Current Badges */}
+                                        {player.badges && player.badges.length > 0 && (
+                                            <div className="space-y-2 mb-6 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                                                {player.badges.map(badge => (
+                                                    <div key={badge.id} className="flex items-center justify-between bg-black/40 border border-white/10 rounded-xl p-3">
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="material-icons-outlined text-yellow-400">{badge.icon}</span>
+                                                            <div>
+                                                                <p className="text-sm font-bold text-white">{badge.title}</p>
+                                                                <p className="text-[10px] text-gray-500">{badge.description}</p>
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => handleDeleteBadge(badge.id)}
+                                                            className="text-red-500 hover:text-red-400 p-2"
+                                                            title="Remover Insígnia"
+                                                        >
+                                                            <span className="material-icons-outlined text-sm">delete</span>
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Add New Badge Form */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="md:col-span-2">
+                                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Título da Conquista</label>
+                                                <input
+                                                    type="text"
+                                                    value={newBadgeTitle}
+                                                    onChange={e => setNewBadgeTitle(e.target.value)}
+                                                    placeholder="Ex: Campeão O Legado 2025"
+                                                    className="w-full bg-black/30 border border-white/10 rounded p-2.5 text-sm text-white focus:border-yellow-500 outline-none"
+                                                />
+                                            </div>
+                                            <div className="md:col-span-2">
+                                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Descrição</label>
+                                                <input
+                                                    type="text"
+                                                    value={newBadgeDesc}
+                                                    onChange={e => setNewBadgeDesc(e.target.value)}
+                                                    placeholder="Ex: Vencedor do Ranking Geral anual"
+                                                    className="w-full bg-black/30 border border-white/10 rounded p-2.5 text-sm text-white focus:border-yellow-500 outline-none"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Ícone (Material Icon)</label>
+                                                <select
+                                                    value={newBadgeIcon}
+                                                    onChange={e => setNewBadgeIcon(e.target.value)}
+                                                    className="w-full bg-black/30 border border-white/10 rounded p-2.5 text-sm text-white focus:border-yellow-500 outline-none"
+                                                >
+                                                    <option value="stars">⭐ Estrela</option>
+                                                    <option value="emoji_events">🏆 Troféu</option>
+                                                    <option value="military_tech">🎖️ Medalha</option>
+                                                    <option value="workspace_premium">📜 Premium</option>
+                                                    <option value="diamond">💎 Diamante</option>
+                                                    <option value="auto_awesome">✨ Brilho</option>
+                                                    <option value="rocket_launch">🚀 Foguete</option>
+                                                    <option value="crown">👑 Coroa</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Vincular Ranking (Opcional)</label>
+                                                <select
+                                                    value={newBadgeRankingId}
+                                                    onChange={e => setNewBadgeRankingId(e.target.value)}
+                                                    className="w-full bg-black/30 border border-white/10 rounded p-2.5 text-sm text-white focus:border-yellow-500 outline-none"
+                                                >
+                                                    <option value="">Nenhum</option>
+                                                    {rankings && rankings.map(r => (
+                                                        <option key={r.id} value={r.id}>{r.label}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={handleAddBadge}
+                                            disabled={isAddingBadge}
+                                            className="w-full bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 text-black font-black py-3 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 mt-2"
+                                        >
+                                            {isAddingBadge ? 'Concedendo...' : 'Conceder Insígnia'}
+                                            {!isAddingBadge && <span className="material-icons-outlined text-sm">add_circle</span>}
+                                        </button>
+                                    </div>
+                                )}
 
                                 {/* Gallery Manager */}
                                 <div>
@@ -2403,8 +2673,12 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                         </div>
 
                         <div className="px-5 py-4 border-t border-white/10 flex-shrink-0 flex items-center justify-between bg-black/20">
-                            <span className="text-sm font-black text-gray-400 uppercase tracking-widest">Total Pago</span>
-                            <span className="text-xl font-display font-black text-green-400">R$ {Number(viewingReceipt.total_brl).toFixed(2)}</span>
+                            <span className="text-sm font-black text-gray-400 uppercase tracking-widest">
+                                {viewingReceipt.status === 'open' ? 'Total Parcial (Aberto)' : 'Total Pago'}
+                            </span>
+                            <span className={`text-xl font-display font-black ${viewingReceipt.status === 'open' ? 'text-red-400' : 'text-green-400'}`}>
+                                R$ {Number(viewingReceipt.total_brl).toFixed(2)}
+                            </span>
                         </div>
                     </div>
                 </div>

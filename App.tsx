@@ -18,7 +18,7 @@ import { FAQSection } from './components/FAQSection';
 import { AdminPanel } from './components/AdminPanel';
 import { SponsorsSection } from './components/SponsorsSection';
 import { supabase } from './src/lib/supabase';
-import { RankingPlayer, MonthData, Message, ContentDB, TournamentCategory, Event, PlayerResult, PlayerStats, RankingInstance, ScoringSchema, RankingFormula, ExperienceLevel, DailyReward, Poll, PollVote, MessageCategory } from './types';
+import { RankingPlayer, MonthData, Message, ContentDB, TournamentCategory, Event, PlayerResult, PlayerStats, RankingInstance, ScoringSchema, RankingFormula, ExperienceLevel, DailyReward, Poll, PollVote, MessageCategory, BadgeTemplate } from './types';
 import { calculatePoints } from './utils/scoring';
 
 // DADOS MOCKADOS INICIAIS
@@ -148,6 +148,7 @@ export default function App() {
     const [allProfiles, setAllProfiles] = useState<RankingPlayer[]>([]);
     const [experienceLevels, setExperienceLevels] = useState<ExperienceLevel[]>([]);
     const [dailyRewards, setDailyRewards] = useState<DailyReward[]>([]);
+    const [badgeTemplates, setBadgeTemplates] = useState<BadgeTemplate[]>([]);
 
     // Load from LocalStorage on mount
     useEffect(() => {
@@ -206,12 +207,22 @@ export default function App() {
                     prizeInfoTitle: r.prize_info_title,
                     prizeInfoDetail: r.prize_info_detail,
                     scoringSchemaMap: r.scoring_schema_map || {},
+                    rewardBadgeTitle: r.reward_badge_title,
+                    rewardBadgeDesc: r.reward_badge_desc,
+                    rewardBadgeIcon: r.reward_badge_icon,
+                    rewardBrl: r.reward_brl || 0,
+                    rewardChipz: r.reward_chipz || 0,
+                    isActive: r.is_active !== false,
                     players: [] // Players will be loaded/calculated separately se needed, or kept in local for now
                 }));
                 // Substituir os rankings APENAS pelos salvos no Supabase.
                 // Ignorar lixo cacheado em localStorage ou os Iniciais Mocks
                 setRankings(formattedRankings);
             }
+
+            // 1b. Fetch Badge Templates
+            const { data: templatesData } = await supabase.from('badge_templates').select('*');
+            if (templatesData) setBadgeTemplates(templatesData);
 
             // 2. Fetch Global Scoring Schemas
             const { data: schemasData, error: schemasError } = await supabase
@@ -417,7 +428,7 @@ export default function App() {
                 setIsAdmin(userIsAdmin);
                 console.log(`User profile loaded: ${data.email}, Role: ${data.role}, IsAdmin: ${userIsAdmin}`);
 
-                setCurrentUser({
+                const userData: any = {
                     id: userId,
                     numericId: data.numeric_id,
                     name: data.name || 'User',
@@ -436,8 +447,20 @@ export default function App() {
                     vipStatus: data.vip_status || 'nao_vip',
                     vipExpiresAt: data.vip_expires_at || null,
                     balanceBrl: data.balance_brl ? Number(data.balance_brl) : 0,
-                    balanceChipz: data.balance_chipz || 0
-                });
+                    balanceChipz: data.balance_chipz || 0,
+                    badges: []
+                };
+
+                try {
+                    const { data: userBadges } = await supabase.from('user_badges').select('*').eq('user_id', userId).order('awarded_at', { ascending: false });
+                    if (userBadges) {
+                        userData.badges = userBadges;
+                    }
+                } catch (badgeErr) {
+                    console.error('Error fetching badges: ', badgeErr);
+                }
+
+                setCurrentUser(userData);
             }
         } catch (error: any) {
             console.error('Error fetching profile:', error);
@@ -696,7 +719,13 @@ export default function App() {
                 end_date: ranking.endDate || null,
                 prize_info_title: ranking.prizeInfoTitle || '',
                 prize_info_detail: ranking.prizeInfoDetail || '',
-                scoring_schema_map: ranking.scoringSchemaMap || {}
+                scoring_schema_map: ranking.scoringSchemaMap || {},
+                reward_badge_title: ranking.rewardBadgeTitle || null,
+                reward_badge_desc: ranking.rewardBadgeDesc || null,
+                reward_badge_icon: ranking.rewardBadgeIcon || null,
+                reward_brl: ranking.rewardBrl || 0,
+                reward_chipz: ranking.rewardChipz || 0,
+                is_active: ranking.isActive !== false
             };
 
             let result;
@@ -762,6 +791,82 @@ export default function App() {
                     console.error('Error deleting ranking from Supabase:', e);
                 }
             }
+        }
+    };
+
+    const handleAwardBadge = async (badge: { user_id: string; title: string; description: string; icon: string; ranking_id: string }) => {
+        if (!isAdmin) return;
+        try {
+            const { error } = await supabase.from('user_badges').insert(badge);
+            if (error) throw error;
+        } catch (err: any) {
+            console.error('Error awarding ranking badge:', err);
+            throw err;
+        }
+    };
+
+    const handleFinalizeRanking = async (rankingId: string) => {
+        if (!isAdmin) return;
+        const ranking = rankings.find(r => r.id === rankingId);
+        if (!ranking || ranking.isActive === false) {
+            alert("Este ranking já foi encerrado ou não foi encontrado.");
+            return;
+        }
+
+        const winner = ranking.players.find(p => p.rank === 1);
+        if (!winner || !winner.id) {
+            alert("Vencedor não identificado (ou sem ID vinculado) no Rank #1.");
+            return;
+        }
+
+        if (!window.confirm(`Encerrar o ranking "${ranking.label}" e premiar ${winner.name}?\n\nIsso irá:\n- Conceder a insígnia: ${ranking.rewardBadgeTitle || 'Nenhuma'}\n- Adicionar R$ ${ranking.rewardBrl || 0}\n- Adicionar ${ranking.rewardChipz || 0} Chipz\n\nEsta ação é permanente.`)) return;
+
+        try {
+            // 1. Award Badge
+            if (ranking.rewardBadgeTitle) {
+                await supabase.from('user_badges').insert({
+                    user_id: winner.id,
+                    title: ranking.rewardBadgeTitle,
+                    description: ranking.rewardBadgeDesc || '',
+                    icon: ranking.rewardBadgeIcon || 'stars',
+                    ranking_id: ranking.id
+                });
+            }
+
+            // 2. Award BRL/Chipz
+            if ((ranking.rewardBrl && ranking.rewardBrl > 0) || (ranking.rewardChipz && ranking.rewardChipz > 0)) {
+                const { data: profile, error: pErr } = await supabase.from('profiles').select('balance_brl, balance_chipz').eq('id', winner.id).single();
+                if (pErr) throw pErr;
+
+                if (profile) {
+                    const { error: uErr } = await supabase.from('profiles').update({
+                        balance_brl: (profile.balance_brl || 0) + (ranking.rewardBrl || 0),
+                        balance_chipz: (profile.balance_chipz || 0) + (ranking.rewardChipz || 0)
+                    }).eq('id', winner.id);
+                    if (uErr) throw uErr;
+                }
+            }
+
+            // 3. Mark ranking as inactive in DB
+            const { error: rErr } = await supabase.from('rankings').update({ is_active: false }).eq('id', ranking.id);
+            if (rErr) throw rErr;
+
+            // 4. Update Local State
+            setRankings(prev => prev.map(r => r.id === rankingId ? { ...r, isActive: false } : r));
+
+            // 5. System Message
+            await supabase.from('messages').insert({
+                user_id: winner.id,
+                from: 'Sistema Chip Race',
+                subject: '🏆 Premiação de Ranking!',
+                content: `Parabéns! Você foi o grande vencedor do ranking ${ranking.label}.\n\nRecompensas:\n${ranking.rewardBadgeTitle ? `- Insígnia: ${ranking.rewardBadgeTitle}\n` : ''}${ranking.rewardBrl && ranking.rewardBrl > 0 ? `- Créditos: R$ ${ranking.rewardBrl.toFixed(2)}\n` : ''}${ranking.rewardChipz && ranking.rewardChipz > 0 ? `- Fichas: ${ranking.rewardChipz} Chipz\n` : ''}`,
+                category: 'bonus'
+            });
+
+            alert("Sucesso! Ranking encerrado e prêmios distribuídos.");
+        } catch (err: any) {
+            console.error('Erro ao encerrar ranking:', err);
+            alert('Falha técnica: ' + err.message);
         }
     };
 
@@ -1573,6 +1678,9 @@ export default function App() {
                     currentUser={currentUser}
                     events={events}
                     globalScoringSchemas={globalScoringSchemas}
+                    onAwardBadge={handleAwardBadge}
+                    onFinalizeRanking={handleFinalizeRanking}
+                    badgeTemplates={badgeTemplates}
                 />;
             case 'profile':
                 return <PlayerProfile

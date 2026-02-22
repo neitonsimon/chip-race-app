@@ -20,6 +20,23 @@ export interface CountdownTime {
   seconds: number;
 }
 
+export interface Badge {
+  id: string;
+  user_id: string;
+  ranking_id?: string;
+  title: string;
+  description: string;
+  icon: string;
+  awarded_at: string;
+}
+
+export interface BadgeTemplate {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+}
+
 // Interface para resultados de fechamento de evento (Movida para cima para ser usada em Event)
 export interface PlayerResult {
   id: string;
@@ -114,6 +131,7 @@ export interface RankingPlayer {
   vipExpiresAt?: string;
   balanceBrl?: number;
   balanceChipz?: number;
+  badges?: Badge[];
 }
 
 export interface ChipzPackage {
@@ -156,6 +174,12 @@ export interface RankingInstance {
   players: RankingPlayer[];
   scoringSchemas?: ScoringSchema[]; // Fallback schemas
   scoringSchemaMap?: Record<string, string>; // Maps event.rankingType (weekly, monthly, special) to scoringSchemaId
+  rewardBadgeTitle?: string;
+  rewardBadgeDesc?: string;
+  rewardBadgeIcon?: string;
+  rewardBrl?: number;
+  rewardChipz?: number;
+  isActive?: boolean;
 }
 
 export interface TournamentResult {
@@ -197,6 +221,7 @@ export interface PlayerStats {
   vipExpiresAt: string | null;
   balanceBrl: number;
   balanceChipz: number;
+  badges?: Badge[];
 }
 
 export interface MonthData {

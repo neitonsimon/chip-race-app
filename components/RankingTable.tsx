@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RankingPlayer, Event, RankingInstance, ScoringSchema, RankingFormula } from '../types';
+import { RankingPlayer, Event, RankingInstance, ScoringSchema, RankingFormula, BadgeTemplate } from '../types';
 import { ScoringFormulaEditor } from './ScoringFormulaEditor';
 import { calculatePoints } from '../utils/scoring';
 
@@ -13,9 +13,11 @@ interface RankingTableProps {
     onUpdatePrize?: (rankingId: string, playerName: string, newPrize: string) => void;
     onNavigate?: (view: string) => void;
     currentUser?: { name?: string };
-    events?: Event[];
     globalScoringSchemas?: ScoringSchema[];
     onUpdateGlobalSchemas?: (schemas: ScoringSchema[]) => void;
+    onAwardBadge?: (badge: { user_id: string; title: string; description: string; icon: string; ranking_id: string }) => Promise<void>;
+    onFinalizeRanking?: (rankingId: string) => Promise<void>;
+    badgeTemplates?: BadgeTemplate[];
 }
 
 type SimType = 'weekly' | 'monthly' | 'special';
@@ -32,7 +34,10 @@ export const RankingTable: React.FC<RankingTableProps> = ({
     currentUser,
     events,
     globalScoringSchemas,
-    onUpdateGlobalSchemas
+    onUpdateGlobalSchemas,
+    onAwardBadge,
+    onFinalizeRanking,
+    badgeTemplates
 }) => {
     const [activeRankingId, setActiveRankingId] = useState<string>('annual');
     const [searchTerm, setSearchTerm] = useState('');
@@ -220,6 +225,49 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                             >
                                 <span className="material-icons-outlined">functions</span>
                             </button>
+                            {activeRanking.rewardBadgeTitle && (
+                                <button
+                                    onClick={async () => {
+                                        const winner = activeRanking.players.find(p => p.rank === 1);
+                                        if (!winner || !winner.id) {
+                                            alert("Vendedor (Rank 1) não identificado ou sem ID.");
+                                            return;
+                                        }
+                                        if (!window.confirm(`Deseja conceder a insígnia "${activeRanking.rewardBadgeTitle}" para o campeão ${winner.name}?`)) return;
+
+                                        if (onAwardBadge) {
+                                            await onAwardBadge({
+                                                user_id: winner.id,
+                                                title: activeRanking.rewardBadgeTitle,
+                                                description: activeRanking.rewardBadgeDesc || '',
+                                                icon: activeRanking.rewardBadgeIcon || 'stars',
+                                                ranking_id: activeRanking.id
+                                            });
+                                            alert("Insígnia concedida ao campeão!");
+                                        }
+                                    }}
+                                    className="bg-yellow-500/10 p-2 rounded-full hover:bg-yellow-500 hover:text-white text-yellow-500 transition-colors border border-yellow-500/20"
+                                    title={`Premiar Campeão (${activeRanking.rewardBadgeTitle})`}
+                                >
+                                    <span className="material-icons-outlined">military_tech</span>
+                                </button>
+                            )}
+
+                            {activeRanking.isActive !== false && (
+                                <button
+                                    onClick={() => onFinalizeRanking && onFinalizeRanking(activeRanking.id)}
+                                    className="bg-red-500/10 p-2 rounded-full hover:bg-red-500 hover:text-white text-red-500 transition-colors border border-red-500/20"
+                                    title="Encerrar Ranking e Distribuir Prêmios"
+                                >
+                                    <span className="material-icons-outlined">lock</span>
+                                </button>
+                            )}
+
+                            {activeRanking.isActive === false && (
+                                <div className="bg-gray-500/10 p-2 rounded-full text-gray-500 border border-gray-500/20" title="Ranking Encerrado">
+                                    <span className="material-icons-outlined">lock_clock</span>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -735,23 +783,93 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                             </div>
 
                             <div className="bg-white/5 p-4 rounded-xl border border-white/5">
-                                <h4 className="text-sm font-bold text-primary mb-2">Box de Destaque (Opcional)</h4>
-                                <div className="grid grid-cols-1 gap-3">
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Título do Prêmio (ex: 3 Vagas)</label>
+                                <h4 className="text-sm font-bold text-yellow-500 mb-2 flex items-center gap-2">
+                                    <span className="material-icons-outlined">military_tech</span>
+                                    Insígnia de Recompensa (Opcional)
+                                </h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div className="md:col-span-2">
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Título da Insígnia</label>
                                         <input
                                             type="text"
-                                            value={editingRanking.prizeInfoTitle || ''}
-                                            onChange={e => setEditingRanking({ ...editingRanking, prizeInfoTitle: e.target.value })}
+                                            value={editingRanking.rewardBadgeTitle || ''}
+                                            onChange={e => setEditingRanking({ ...editingRanking, rewardBadgeTitle: e.target.value })}
+                                            placeholder="Ex: Campeão Anual 2025"
+                                            className="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm"
+                                        />
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Descrição</label>
+                                        <input
+                                            type="text"
+                                            value={editingRanking.rewardBadgeDesc || ''}
+                                            onChange={e => setEditingRanking({ ...editingRanking, rewardBadgeDesc: e.target.value })}
+                                            placeholder="Ex: Conquistou o ranking geral anual"
                                             className="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Detalhes do Prêmio</label>
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Ícone</label>
+                                        <select
+                                            value={editingRanking.rewardBadgeIcon || 'stars'}
+                                            onChange={e => setEditingRanking({ ...editingRanking, rewardBadgeIcon: e.target.value })}
+                                            className="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm"
+                                        >
+                                            <option value="stars">⭐ Estrela</option>
+                                            <option value="emoji_events">🏆 Troféu</option>
+                                            <option value="military_tech">🎖️ Medalha</option>
+                                            <option value="workspace_premium">📜 Premium</option>
+                                            <option value="diamond">💎 Diamante</option>
+                                            <option value="auto_awesome">✨ Brilho</option>
+                                            <option value="rocket_launch">🚀 Foguete</option>
+                                            <option value="crown">👑 Coroa</option>
+                                        </select>
+                                    </div>
+                                    <div className="md:col-span-2 mt-4 pt-4 border-t border-white/10">
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Ou escolha de um template:</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {badgeTemplates?.map(template => (
+                                                <button
+                                                    key={template.id}
+                                                    type="button"
+                                                    onClick={() => setEditingRanking({
+                                                        ...editingRanking,
+                                                        rewardBadgeTitle: template.title,
+                                                        rewardBadgeDesc: template.description,
+                                                        rewardBadgeIcon: template.icon
+                                                    })}
+                                                    className="px-3 py-1 bg-white/5 hover:bg-yellow-500/20 border border-white/10 rounded-full text-[10px] text-gray-300 transition-colors flex items-center gap-1"
+                                                >
+                                                    <span className="material-icons-outlined text-sm">{template.icon}</span>
+                                                    {template.title}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-white/5 p-4 rounded-xl border border-white/5">
+                                <h4 className="text-sm font-bold text-cyan-400 mb-2 flex items-center gap-2">
+                                    <span className="material-icons-outlined">payments</span>
+                                    Prêmios de Finalização (Top 1)
+                                </h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Créditos R$ (Carteira)</label>
                                         <input
-                                            type="text"
-                                            value={editingRanking.prizeInfoDetail || ''}
-                                            onChange={e => setEditingRanking({ ...editingRanking, prizeInfoDetail: e.target.value })}
+                                            type="number"
+                                            value={editingRanking.rewardBrl || 0}
+                                            onChange={e => setEditingRanking({ ...editingRanking, rewardBrl: Number(e.target.value) })}
+                                            className="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Fichas Chipz</label>
+                                        <input
+                                            type="number"
+                                            value={editingRanking.rewardChipz || 0}
+                                            onChange={e => setEditingRanking({ ...editingRanking, rewardChipz: Number(e.target.value) })}
                                             className="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm"
                                         />
                                     </div>
@@ -817,9 +935,9 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                             </div>
                         </form>
                     </div>
-                </div>
+                </div >
             )}
 
-        </div>
+        </div >
     );
 };
