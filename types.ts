@@ -4,7 +4,7 @@ export interface TournamentCategory {
   title: string;
   description: string;
   icon: string;
-  color: 'primary' | 'secondary' | 'purple' | 'pink';
+  color: 'primary' | 'secondary' | 'cyan' | 'pink';
   slots: number; // Número de vagas fixas/editáveis
 }
 
@@ -29,6 +29,8 @@ export interface PlayerResult {
   isVip: boolean;
   calculatedPoints: number;
   pointsPerRanking?: Record<string, number>; // Points specific to each ranking
+  rake?: number; // For Cash Games
+  profitLoss?: number; // For Cash Games
 }
 
 export interface Event {
@@ -104,7 +106,9 @@ export interface RankingPlayer {
   currentExp?: number;
   nextLevelExp?: number;
   lastDailyClaim?: string; // ISO Date String
-  isVip?: boolean;
+  isVip?: boolean; // Legacy
+  vipStatus?: 'nao_vip' | 'trimestral' | 'anual' | 'master';
+  vipExpiresAt?: string;
   balanceBrl?: number;
   balanceChipz?: number;
 }
@@ -119,7 +123,7 @@ export interface ChipzPackage {
 }
 
 // NOVA INTERFACE PARA RANKINGS DINÂMICOS
-export type CriterionType = 'participants' | 'buyin' | 'itm' | 'winnings' | 'rake' | 'spent' | 'isFt' | 'isVip';
+export type CriterionType = 'participants' | 'buyin' | 'itm' | 'winnings' | 'rake' | 'spent' | 'isFt' | 'isVip' | 'profit_loss';
 
 export interface ScoringCriterion {
   id: string;
@@ -184,7 +188,9 @@ export interface PlayerStats {
   nextLevelExp: number;
   lastDailyClaim: string | null; // ISO timestamp do último resgate
   dailyStreak: number;
-  isVip: boolean;
+  isVip: boolean; // Legacy
+  vipStatus: 'nao_vip' | 'trimestral' | 'anual' | 'master';
+  vipExpiresAt: string | null;
   balanceBrl: number;
   balanceChipz: number;
 }
@@ -236,8 +242,17 @@ export interface DailyReward {
   reward_label: string | null;
 }
 
+export interface ChipzPackage {
+  id: string;
+  name: string;
+  amount: number;
+  bonus: number;
+  price_brl: number;
+  active: boolean;
+  image_url: string | null;
+}
 
-export type RankingFormula = 'weekly' | 'monthly' | 'special' | 'cash_online' | 'mtt_online' | 'sit_n_go' | 'satellite';
+export type RankingFormula = 'weekly' | 'monthly' | 'special' | 'cash_online' | 'mtt_online' | 'sit_n_go' | 'satellite' | 'legacy_weekly' | 'legacy_monthly' | 'legacy_special';
 
 export type QualificationMode = 'rankings' | 'jackpot' | 'last_longer' | 'bet' | 'bet_up' | 'sng_sat' | 'quests' | 'vip';
 
@@ -269,4 +284,6 @@ export interface ContentDB {
   };
   // Adicione mais seções conforme necessário
   categories: TournamentCategory[]; // Categories são dinâmicas agora
+  faq?: { question: string; answer: string }[];
+  timeline?: { year: string; title: string; description: string; imageUrl?: string }[];
 }

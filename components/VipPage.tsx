@@ -1,61 +1,188 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { supabase } from '../src/lib/supabase';
+import { PlayerStats, MessageCategory } from '../types';
 
 interface VipPageProps {
   onNavigate: (view: string) => void;
+  currentUser?: Partial<PlayerStats>;
+  onUpdateProfile?: (originalName: string, updatedData: PlayerStats) => void;
+  onSendAdminMessage?: (subject: string, content: string, category: MessageCategory, pollId?: string, targetUserId?: string) => void;
 }
 
-export const VipPage: React.FC<VipPageProps> = ({ onNavigate }) => {
-  
+export const VipPage: React.FC<VipPageProps> = ({ onNavigate, currentUser, onUpdateProfile, onSendAdminMessage }) => {
+
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handlePurchase = async (plan: any) => {
+    if (!currentUser || !currentUser.id) {
+      alert('Você precisa estar logado para comprar um plano VIP.');
+      onNavigate('login');
+      return;
+    }
+
+    const cost = parseFloat(plan.price.replace(',', '.'));
+    const currentBalance = currentUser.balanceBrl || 0;
+
+    if (currentBalance < cost) {
+      alert(`Saldo insuficiente! Seu saldo atual é R$ ${currentBalance.toFixed(2).replace('.', ',')}. Você precisa de R$ ${plan.price} para adquirir o plano ${plan.title}.`);
+      onNavigate('profile');
+      return;
+    }
+
+    if (!window.confirm(`Confirma a compra do plano ${plan.title} por R$ ${plan.price}? Isso será descontado do seu saldo BRL.`)) return;
+
+    setIsProcessing(true);
+    let newExpiresAt = new Date();
+    // Definir expiração
+    if (plan.id === 'quarterly') {
+      newExpiresAt.setMonth(newExpiresAt.getMonth() + 3);
+    } else if (plan.id === 'annual') {
+      newExpiresAt.setFullYear(newExpiresAt.getFullYear() + 1);
+    } else if (plan.id === 'master') {
+      newExpiresAt.setFullYear(newExpiresAt.getFullYear() + 1);
+    }
+
+    const vipStatusMap: Record<string, 'trimestral' | 'anual' | 'master'> = {
+      'quarterly': 'trimestral',
+      'annual': 'anual',
+      'master': 'master'
+    };
+
+    try {
+      const { error } = await supabase.rpc('secure_balance_transaction', {
+        user_id: currentUser.id,
+        brl_amount: -cost,
+        chipz_amount: 0,
+        description: `Compra: Plano VIP ${plan.title}`
+      });
+
+      if (error) {
+        console.error(error);
+        alert('Falha na transação. Verifique seu saldo ou tente novamente em instantes.');
+        setIsProcessing(false);
+        return;
+      }
+
+      // Atualiza status vip na tabela profiles
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          vip_status: vipStatusMap[plan.id],
+          vip_expires_at: newExpiresAt.toISOString(),
+          is_vip: true
+        })
+        .eq('id', currentUser.id);
+
+      if (profileError) {
+        console.error(profileError);
+        alert('Plano comprado, mas falha ao atualizar status. Contate o suporte.');
+        // Não retornamos porque a cobrança já foi feita, tentaremos continuar
+      }
+
+      // Emita uma mensagem automática do sistema
+      if (onSendAdminMessage) {
+        const dateStr = newExpiresAt.toLocaleDateString('pt-BR');
+        onSendAdminMessage(
+          `Bem-vindo ao VIP ${plan.title}! 💎`,
+          `Parabéns, ${currentUser.name}! Você acabou de adquirir o plano VIP ${plan.title}. Seus benefícios exclusivos já estão ativos e válidos até ${dateStr}. Aproveite ao máximo as vantagens dentro e fora das mesas do Chip Race!`,
+          'system',
+          undefined,
+          currentUser.id
+        );
+      }
+
+      alert(`Você adquiriu o plano ${plan.title} com sucesso!`);
+
+      if (onUpdateProfile && currentUser) {
+        // Força um refresh lendo do db, mas passamos a mutation local antes pro update instantâneo
+        const updated = {
+          ...currentUser,
+          balanceBrl: currentBalance - cost,
+          vipStatus: vipStatusMap[plan.id],
+          vipExpiresAt: newExpiresAt.toISOString(),
+          isVip: true
+        } as PlayerStats;
+        onUpdateProfile(currentUser.name || '', updated);
+      }
+
+      onNavigate('profile');
+
+    } catch (e) {
+      console.error(e);
+      alert('Erro inesperado durante a compra.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const plans = [
     {
       id: 'quarterly',
       title: 'Trimestral',
-      price: '149,90',
-      period: 'por trimestre',
+      price: '189,90',
+      period: 'trimestre (Mar-Mai 2026)',
       color: 'border-secondary',
       btnColor: 'bg-transparent border border-secondary text-secondary hover:bg-secondary hover:text-black',
       features: [
-        'Acesso antecipado a inscrições',
-        'Bônus de 2.000 fichas em torneios regulares',
-        'Prioridade na fila de espera',
-        'Badge "VIP Bronze" no perfil',
-        'Participação no torneio exclusivo Trimestral'
+        'R$ 10 de desconto na janta',
+        'R$ 10 de desconto na taxa adm/ staff',
+        '5k fichas adicionais no addon',
+        'Bet free R$ 5 por evento',
+        'Sorteio de 1 add on por evento',
+        '5 pontos adicionais no ranking por evento',
+        'Participar Get Up',
+        'Prioridade em assento em caso de lotação máxima',
+        'R$ 10 em créditos mensais no app Chip Race',
+        '*Valor total dos bônus no trimestre: R$ 280 + benefícios diversos'
       ]
     },
     {
       id: 'annual',
       title: 'Anual',
-      price: '389,90',
-      period: 'por ano',
+      price: '499,90',
+      period: 'por ano (Mar-Nov 2026)',
       tag: 'MELHOR CUSTO-BENEFÍCIO',
       color: 'border-primary',
       btnColor: 'bg-primary text-white hover:bg-primary/90 shadow-neon-pink',
       features: [
-        'Todas as vantagens do Trimestral',
-        'Bônus de 5.000 fichas em torneios regulares',
-        'Isenção de taxa de staff em 1 torneio/mês',
-        'Badge "VIP Gold" no perfil',
-        'Kit de Boas-vindas Chip Race (Boné + Camiseta)',
-        'Convite para o Jantar de Gala Anual'
+        'R$ 10 de desconto na janta',
+        'R$ 10 de desconto na taxa adm/ staff',
+        '5k fichas adicionais no addon',
+        'Bet free R$ 5 por evento',
+        'Sorteio de 1 add on por evento',
+        '5 pontos adicionais no ranking por evento',
+        'Participar Get Up',
+        'Prioridade em assento em caso de lotação máxima',
+        '20% desconto bar e cozinha',
+        'R$ 30 em créditos mensais no app Chip Race',
+        '*Valor total dos bônus no ano: R$ 1.200 + benefícios diversos'
       ]
     },
     {
       id: 'master',
       title: 'Master',
-      price: '1.490,00',
-      period: 'pagamento único',
-      limit: 'APENAS 3 COTAS DISPONÍVEIS',
+      price: '1.990,90',
+      period: 'ano (Mar-Nov 2026)',
+      limit: 'APENAS 3 COTAS POR CLUBE',
       color: 'border-yellow-400',
       btnColor: 'bg-gradient-to-r from-yellow-600 to-yellow-400 text-black font-black hover:scale-105 shadow-[0_0_30px_rgba(250,204,21,0.4)]',
       isMaster: true,
       features: [
-        'Status de Sócio Honorário',
-        'Buy-in Grátis para todos os torneios Regulares',
-        'Vaga Direta Garantida no The Chosen (Sem jogar ranking)',
-        'Badge "VIP Master" animada e exclusiva',
-        'Lugar reservado em qualquer mesa televisionada',
-        'Concierge pessoal para agendamentos',
-        'Acesso ao grupo de WhatsApp da Diretoria'
+        'Vaga The Chosen 30k+ (Destaque)',
+        '5k fichas adicionais no addon',
+        'Bet free R$ 5 por evento',
+        'Sorteio de 1 add on por evento',
+        '5 pontos adicionais no ranking por evento',
+        'Participar Get Up',
+        'Prioridade em assento em caso de lotação máxima',
+        'R$ 100 em créditos mensais no app Chip Race',
+        '50% desconto bar/ cozinha',
+        'Staff free em todos eventos',
+        'Janta cortesia em todos eventos',
+        'Boné e camiseta Chip Race oficial',
+        'Grupo direto com diretoria e direito a voto',
+        'Nome destacado VIP Master no app',
+        '*Valor total dos bônus no ano: R$ 4.550 + benefícios'
       ]
     }
   ];
@@ -67,7 +194,7 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate }) => {
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-secondary/10 rounded-full blur-[120px] pointer-events-none"></div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        
+
         <div className="text-center mb-16">
           <h1 className="text-5xl md:text-6xl font-display font-black text-white mb-6">
             ELEVE SEU <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">NÍVEL</span>
@@ -79,7 +206,7 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate }) => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
           {plans.map((plan) => (
-            <div 
+            <div
               key={plan.id}
               className={`relative bg-surface-dark border-2 rounded-3xl p-8 flex flex-col h-full transition-all duration-300 group ${plan.color} ${plan.isMaster ? 'transform md:-translate-y-4 shadow-2xl bg-gradient-to-b from-surface-dark to-black' : 'hover:-translate-y-2'}`}
             >
@@ -88,7 +215,7 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate }) => {
                   {plan.tag}
                 </div>
               )}
-              
+
               {plan.limit && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white text-xs font-black uppercase py-1 px-4 rounded-full shadow-lg animate-pulse whitespace-nowrap">
                   {plan.limit}
@@ -113,21 +240,22 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate }) => {
                 ))}
               </ul>
 
-              <button 
-                className={`w-full py-4 rounded-xl font-bold uppercase tracking-wider transition-all duration-300 ${plan.btnColor}`}
-                onClick={() => alert(`Você selecionou o plano ${plan.title}. Redirecionando para checkout...`)}
+              <button
+                className={`w-full py-4 rounded-xl font-bold uppercase tracking-wider transition-all duration-300 ${plan.btnColor} ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                onClick={() => handlePurchase(plan)}
+                disabled={isProcessing}
               >
-                Quero ser {plan.title}
+                {isProcessing ? 'Processando...' : `Quero ser ${plan.title}`}
               </button>
             </div>
           ))}
         </div>
 
         <div className="mt-20 text-center">
-            <p className="text-gray-500 text-sm mb-4">Dúvidas sobre os planos?</p>
-            <button className="flex items-center gap-2 mx-auto text-white hover:text-green-400 transition-colors font-bold">
-                <span className="material-icons-outlined">whatsapp</span> Fale com nosso consultor
-            </button>
+          <p className="text-gray-500 text-sm mb-4">Dúvidas sobre os planos?</p>
+          <button className="flex items-center gap-2 mx-auto text-white hover:text-green-400 transition-colors font-bold">
+            <span className="material-icons-outlined">whatsapp</span> Fale com nosso consultor
+          </button>
         </div>
 
       </div>

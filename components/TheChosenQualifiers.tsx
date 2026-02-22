@@ -12,10 +12,10 @@ const MODES: { id: QualificationMode; label: string; icon: string; color: string
     { id: 'rankings', label: 'Rankings', icon: 'leaderboard', color: 'text-pink-500' },
     { id: 'jackpot', label: 'Jackpot', icon: 'attach_money', color: 'text-blue-400' },
     { id: 'last_longer', label: 'Last Longer', icon: 'schedule', color: 'text-green-400' },
-    { id: 'bet', label: 'Bet', icon: 'casino', color: 'text-purple-400' },
+    { id: 'bet', label: 'Bet', icon: 'casino', color: 'text-cyan-400' },
     { id: 'bet_up', label: 'Bet Up', icon: 'psychology', color: 'text-cyan-400' },
     { id: 'sng_sat', label: 'SnG / Sat', icon: 'layers', color: 'text-fuchsia-500' },
-    { id: 'quests', label: 'Quests', icon: 'explore', color: 'text-purple-500' },
+    { id: 'quests', label: 'Quests', icon: 'explore', color: 'text-cyan-500' },
     { id: 'vip', label: 'VIP', icon: 'diamond', color: 'text-pink-400' },
 ];
 

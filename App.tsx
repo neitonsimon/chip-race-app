@@ -12,8 +12,9 @@ import { TheChosenRegulations } from './components/TheChosenRegulations';
 import { VipPage } from './components/VipPage';
 import { Newsletter } from './components/Newsletter';
 import { Auth } from './components/Auth';
-// Force Vite HMR
 import { RechargePage } from './components/RechargePage';
+import { CompanyHistory } from './components/CompanyHistory';
+import { FAQSection } from './components/FAQSection';
 import { supabase } from './src/lib/supabase';
 import { RankingPlayer, MonthData, Message, ContentDB, TournamentCategory, Event, PlayerResult, PlayerStats, RankingInstance, ScoringSchema, RankingFormula, ExperienceLevel, DailyReward, Poll, PollVote, MessageCategory } from './types';
 import { calculatePoints } from './utils/scoring';
@@ -107,14 +108,20 @@ const INITIAL_DB: ContentDB = {
     },
     categories: [
         { id: 'rankings', title: 'Rankings 2026', description: 'A principal porta de entrada. Pontue no Live e Online para garantir sua vaga.', icon: 'leaderboard', color: 'primary', slots: 18 },
-        { id: 'jackpot', title: 'Jackpot', description: 'Classifique-se jogando de casa através dos nossos satélites semanais.', icon: 'attach_money', color: 'purple', slots: 9 },
+        { id: 'jackpot', title: 'Jackpot', description: 'Classifique-se jogando de casa através dos nossos satélites semanais.', icon: 'attach_money', color: 'cyan', slots: 9 },
         { id: 'get-up', title: 'Get Up', description: 'Vença torneios presenciais selecionados na sede e ganhe o Golden Ticket.', icon: 'psychology', color: 'secondary', slots: 9 },
         { id: 'sit-n-go', title: 'Sit & Go Satélite', description: 'Para quem joga caro. Os campeões dos HRs mensais garantem vaga direta.', icon: 'satellite_alt', color: 'pink', slots: 9 },
         { id: 'red-omaha', title: 'Last Longer', description: 'Aposte em quem vai mais longe. Uma disputa de resistência paralela ao torneio.', icon: 'timer', color: 'secondary', slots: 9 },
         { id: 'ladies-league', title: "Vip's", description: 'Torneio especial e exclusivo focado em promover a experiência VIP.', icon: 'diamond', color: 'primary', slots: 9 },
-        { id: 'bet', title: 'Bet', description: 'Desafios de apostas e repescagem. A última chance de entrar no 30K+.', icon: 'casino', color: 'purple', slots: 9 },
-        { id: 'quests', title: 'Quests', description: 'Missões diárias e desafios secretos que desbloqueiam vagas para o The Chosen.', icon: 'explore', color: 'pink', slots: 9 }
-    ]
+        { id: 'bet', title: 'Bet', description: 'Desafios de apostas e repescagem. A última chance de entrar no 30K+.', icon: 'casino', color: 'cyan', slots: 9 },
+        { id: 'quests', title: 'Quests', description: 'Missões diárias e desafios secretos que desbloqueiam vagas para o The Chosen.', icon: 'explore', color: 'pink', slots: 9 },
+        { id: 'qg', title: 'QG Chip Race', description: 'Nossa sede oficial de torneios e cash games.', icon: 'home', color: 'primary', slots: 0 },
+        { id: 'poker-online', title: 'Poker Online', description: 'Jogue confortavelmente através de nossa plataforma online parceira.', icon: 'computer', color: 'secondary', slots: 0 },
+        { id: 'chipz', title: 'Chipz', description: 'Nossa moeda virtual oficial para transações no ecossistema.', icon: 'toll', color: 'cyan', slots: 0 },
+        { id: 'mega-nutz', title: 'Mega Nutz', description: 'Em breve - Grande novidade', icon: 'stars', color: 'pink', slots: 0 }
+    ],
+    faq: [],
+    timeline: []
 };
 
 export default function App() {
@@ -282,7 +289,21 @@ export default function App() {
                     } else if (item.key === 'details') {
                         setContentDB(prev => ({ ...prev, details: item.value }));
                     } else if (item.key === 'categories') {
-                        setContentDB(prev => ({ ...prev, categories: item.value }));
+                        // Merge initial categories with fetched ones so we don't lose the new items if the DB is old.
+                        setContentDB(prev => {
+                            const dbCats = item.value || [];
+                            const combined = [...dbCats];
+                            INITIAL_DB.categories.forEach(initialCat => {
+                                if (!combined.some((c: any) => c.id === initialCat.id)) {
+                                    combined.push(initialCat);
+                                }
+                            });
+                            return { ...prev, categories: combined };
+                        });
+                    } else if (item.key === 'faq') {
+                        setContentDB(prev => ({ ...prev, faq: item.value }));
+                    } else if (item.key === 'timeline') {
+                        setContentDB(prev => ({ ...prev, timeline: item.value }));
                     } else if (item.key === 'months') {
                         setMonths(item.value);
                     } else if (item.key === 'total_qualifiers') {
@@ -294,7 +315,7 @@ export default function App() {
             // 5. Fetch All Profiles for Autocomplete
             const { data: profilesData, error: profilesError } = await supabase
                 .from('profiles')
-                .select('name, avatar_url, city, is_vip');
+                .select('name, avatar_url, city, is_vip, vip_status, vip_expires_at');
 
             if (profilesError) throw profilesError;
             if (profilesData) {
@@ -305,7 +326,9 @@ export default function App() {
                     city: p.city || '',
                     points: 0,
                     change: 'same',
-                    isVip: p.is_vip || false
+                    isVip: p.is_vip || false,
+                    vipStatus: p.vip_status || 'nao_vip',
+                    vipExpiresAt: p.vip_expires_at || null
                 }));
                 setAllProfiles(formattedProfiles);
             }
@@ -397,6 +420,8 @@ export default function App() {
                     lastDailyClaim: data.last_daily_claim || null,
                     dailyStreak: data.daily_streak || 0,
                     isVip: data.is_vip || false,
+                    vipStatus: data.vip_status || 'nao_vip',
+                    vipExpiresAt: data.vip_expires_at || null,
                     balanceBrl: data.balance_brl ? Number(data.balance_brl) : 0,
                     balanceChipz: data.balance_chipz || 0
                 });
@@ -495,10 +520,16 @@ export default function App() {
 
     // Generic Update Function
     const updateContent = async (section: keyof ContentDB, field: string, value: any) => {
-        const newSection = {
-            ...contentDB[section],
-            [field]: value
-        };
+        let newSection;
+        if (field === '') {
+            newSection = value;
+        } else {
+            newSection = {
+                ...contentDB[section],
+                [field]: value
+            };
+        }
+
         setContentDB(prev => ({
             ...prev,
             [section]: newSection
@@ -778,6 +809,25 @@ export default function App() {
         // 3. Persist to Supabase (if user is logged in)
         if (currentUserId) {
             try {
+                let targetDbId = currentUserId;
+
+                if (originalName !== currentUser.name) {
+                    if (!isAdmin) {
+                        alert("Você não tem permissão para editar outros perfis.");
+                        return;
+                    }
+                    const { data: targetProfile, error: targetError } = await supabase
+                        .from('profiles')
+                        .select('id')
+                        .eq('name', originalName)
+                        .single();
+
+                    if (targetError || !targetProfile) {
+                        throw new Error("Usuário não encontrado no banco de dados.");
+                    }
+                    targetDbId = targetProfile.id;
+                }
+
                 const { error } = await supabase
                     .from('profiles')
                     .update({
@@ -794,10 +844,12 @@ export default function App() {
                         last_daily_claim: updatedData.lastDailyClaim || null,
                         daily_streak: updatedData.dailyStreak || 0,
                         is_vip: updatedData.isVip || false,
+                        vip_status: updatedData.vipStatus || 'nao_vip',
+                        vip_expires_at: updatedData.vipExpiresAt || null,
                         balance_brl: updatedData.balanceBrl || 0,
                         balance_chipz: updatedData.balanceChipz || 0
                     })
-                    .eq('id', currentUserId);
+                    .eq('id', targetDbId);
 
                 if (error) throw error;
             } catch (e: any) {
@@ -985,7 +1037,9 @@ export default function App() {
                             r.prize,
                             r.isVip,
                             mappedSchemaId,
-                            globalScoringSchemas
+                            globalScoringSchemas,
+                            r.rake || 0,
+                            r.profitLoss || 0
                         );
 
                         p.points += calculatedPoints;
@@ -1263,9 +1317,9 @@ export default function App() {
     };
 
     const [months, setMonths] = useState<MonthData[]>([
-        { name: 'MAR', qualifiers: 5, prize: '33K+', status: 'completed' },
-        { name: 'ABR', qualifiers: 15, prize: '35K+', status: 'active' },
-        { name: 'MAI', qualifiers: 10, prize: '40K+', status: 'locked' },
+        { name: 'MAR', qualifiers: 5, prize: '30K+', status: 'active' },
+        { name: 'ABR', qualifiers: 5, prize: '33K+', status: 'locked' },
+        { name: 'MAI', qualifiers: 5, prize: '35K+', status: 'locked' },
         { name: 'JUN', qualifiers: '?', prize: '???', status: 'locked' },
         { name: 'JUL', qualifiers: '?', prize: '???', status: 'locked' },
         { name: 'AGO', qualifiers: '?', prize: '???', status: 'locked' },
@@ -1486,11 +1540,25 @@ export default function App() {
                     onUpdateCategory={updateCategory}
                     onNavigatePlayer={handleNavigateToPlayerByName}
                     allPlayers={getAllUniquePlayers()}
+                    months={months}
+                    onUpdateMonth={handleUpdateMonth}
+                    onToggleMonthStatus={handleToggleMonthStatus}
+                    totalQualifiers={totalQualifiers}
+                    nextGoal={nextGoal}
+                    onUpdateTotal={handleUpdateTotalQualifiers}
+                    isManualTotal={customTotalQualifiers !== null}
+                    heroContent={contentDB.hero}
+                    onUpdateHeroContent={(field, val) => updateContent('hero', field, val)}
                 />;
             case 'the-chosen-regulations':
                 return <TheChosenRegulations prizeLabel={prizeLabel} onBack={() => handleNavigate('the-chosen-details')} />;
             case 'vip':
-                return <VipPage onNavigate={handleNavigate} />;
+                return <VipPage
+                    onNavigate={handleNavigate}
+                    currentUser={currentUser as any}
+                    onUpdateProfile={handleProfileUpdate}
+                    onSendAdminMessage={handleSendAdminMessage}
+                />;
             case 'recharge':
                 // TODO: Import and return RechargePage later when implemented. Falling back to a temp text if not ready
                 // but actually, we will create RechargePage now, so let's import and return it.
@@ -1509,20 +1577,25 @@ export default function App() {
                             onNavigate={handleNavigate}
                             content={contentDB.hero}
                             onUpdateContent={(field, val) => updateContent('hero', field, val)}
+                            showTimeline={false}
                         />
-                        <TheChosenStats
-                            isAdmin={isAdmin}
-                            prizeLabel={prizeLabel}
-                            totalQualifiers={totalQualifiers}
-                            nextGoal={nextGoal}
-                            onUpdateTotal={handleUpdateTotalQualifiers}
-                            isManualTotal={customTotalQualifiers !== null}
-                        />
+
+
                         <TournamentCategories
                             isAdmin={isAdmin}
                             categories={contentDB.categories}
                             onUpdateCategory={updateCategory}
                             prizeLabel={prizeLabel}
+                        />
+                        <CompanyHistory
+                            isAdmin={isAdmin}
+                            timeline={contentDB.timeline}
+                            onUpdateTimeline={(val) => updateContent('timeline', '', val)}
+                        />
+                        <FAQSection
+                            isAdmin={isAdmin}
+                            faqs={contentDB.faq}
+                            onUpdateFaqs={(val) => updateContent('faq', '', val)}
                         />
                         <Newsletter onNavigate={handleNavigate} />
                     </>

@@ -192,7 +192,9 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         nextLevelExp: 1000,
         lastDailyClaim: null,
         dailyStreak: 0,
-        isVip: false
+        isVip: false,
+        vipStatus: 'nao_vip',
+        vipExpiresAt: null
     };
 
     const [player, setPlayer] = useState<PlayerStats>(myProfileData);
@@ -227,7 +229,10 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                 },
                 level: initialData.level || Math.floor(Math.random() * 20) + 1,
                 currentExp: initialData.currentExp || 500,
-                nextLevelExp: initialData.nextLevelExp || 1000
+                nextLevelExp: initialData.nextLevelExp || 1000,
+                isVip: initialData.isVip || false,
+                vipStatus: initialData.vipStatus || 'nao_vip',
+                vipExpiresAt: initialData.vipExpiresAt || null
             };
             setActiveTab('overview');
         } else if (currentUser) {
@@ -245,6 +250,9 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             baseData.nextLevelExp = currentUser.nextLevelExp || 1000;
             baseData.lastDailyClaim = currentUser.lastDailyClaim || null;
             baseData.dailyStreak = currentUser.dailyStreak || 0;
+            baseData.isVip = currentUser.isVip || false;
+            baseData.vipStatus = currentUser.vipStatus || 'nao_vip';
+            baseData.vipExpiresAt = currentUser.vipExpiresAt || null;
 
             originalNameRef.current = baseData.name;
 
@@ -460,7 +468,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                 }}
                                 className={`p-6 rounded-3xl border transition-all cursor-pointer group flex gap-6 items-center ${msg.read ? 'bg-black/20 border-white/5 opacity-80' : 'bg-surface-dark border-primary/30 shadow-[0_0_30px_rgba(217,0,255,0.05)] hover:border-primary/60'}`}
                             >
-                                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${msg.category === 'poll' ? 'bg-purple-500/20 text-purple-400' :
+                                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${msg.category === 'poll' ? 'bg-cyan-500/20 text-cyan-400' :
                                     msg.category === 'private' ? 'bg-secondary/20 text-secondary' :
                                         msg.category === 'bonus' ? 'bg-green-500/20 text-green-400' :
                                             msg.category === 'admin' ? 'bg-red-500/20 text-red-400' :
@@ -922,16 +930,32 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                         alt={player.name}
                                         className="w-40 h-40 rounded-full border-4 border-gray-100 dark:border-white/10 p-1 mx-auto object-cover"
                                     />
-                                    {player.isVip && (
-                                        <div className="absolute bottom-2 right-2 bg-primary text-white text-[10px] md:text-xs font-black px-2 md:px-3 py-1 rounded-full border-2 border-surface-dark z-20 shadow-neon-pink flex items-center gap-1">
+                                    {(player.vipStatus === 'master') ? (
+                                        <div className="absolute bottom-2 right-[-10px] bg-gradient-to-r from-yellow-600 to-yellow-400 text-black text-[10px] md:text-xs font-black px-3 py-1 rounded-full border-2 border-surface-dark z-20 shadow-[0_0_15px_rgba(250,204,21,0.5)] flex items-center gap-1 animate-pulse">
+                                            <span className="material-icons-outlined text-[10px] md:text-xs">diamond</span>
+                                            VIP MASTER
+                                        </div>
+                                    ) : (player.vipStatus === 'anual') ? (
+                                        <div className="absolute bottom-2 right-2 bg-primary text-white text-[10px] md:text-xs font-black px-3 py-1 rounded-full border-2 border-surface-dark z-20 shadow-neon-blue flex items-center gap-1">
+                                            <span className="material-icons-outlined text-[10px] md:text-xs">diamond</span>
+                                            VIP GOLD
+                                        </div>
+                                    ) : (player.vipStatus === 'trimestral') ? (
+                                        <div className="absolute bottom-2 right-2 bg-secondary text-black text-[10px] md:text-xs font-black px-3 py-1 rounded-full border-2 border-surface-dark z-20 shadow-[0_0_15px_rgba(0,224,255,0.5)] flex items-center gap-1">
+                                            <span className="material-icons-outlined text-[10px] md:text-xs">diamond</span>
+                                            VIP BRONZE
+                                        </div>
+                                    ) : (player.isVip) ? (
+                                        <div className="absolute bottom-2 right-2 bg-primary text-white text-[10px] md:text-xs font-black px-2 md:px-3 py-1 rounded-full border-2 border-surface-dark z-20 shadow-neon-blue flex items-center gap-1">
                                             <span className="material-icons-outlined text-[10px] md:text-xs">diamond</span>
                                             VIP
                                         </div>
-                                    )}
+                                    ) : null}
                                 </div>
 
                                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{player.name}</h1>
                                 <p className="text-gray-500 dark:text-gray-400 text-base mb-6">{player.city}</p>
+
 
                                 {/* Social Media Section */}
                                 <div className="flex justify-center gap-4 mb-8">
@@ -1022,7 +1046,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                                     checkClaimAvailability(newLastClaim);
                                                     if (onUpdateProfile) onUpdateProfile(originalNameRef.current, newPlayerData);
                                                 }}
-                                                className="px-2 py-1 bg-purple-600/20 text-purple-400 text-[10px] font-bold rounded uppercase hover:bg-purple-600 hover:text-white transition-colors flex items-center gap-1"
+                                                className="px-2 py-1 bg-cyan-600/20 text-cyan-400 text-[10px] font-bold rounded uppercase hover:bg-cyan-600 hover:text-white transition-colors flex items-center gap-1"
                                                 title="DEV: Forçar reset de 24h"
                                             >
                                                 <span className="material-icons-outlined text-[12px]">fast_forward</span> DEV: +1 DIA
@@ -1094,11 +1118,11 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                     <div className="text-xl font-display font-black text-secondary">{player.winnings}</div>
                                     <div className="text-sm text-gray-500 uppercase tracking-wider">Ganhos Totais</div>
                                 </div>
-                                <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-purple-500/50 transition-colors">
+                                <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-cyan-500/50 transition-colors">
                                     <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
                                         <span className="material-icons-outlined text-4xl">emoji_events</span>
                                     </div>
-                                    <div className="text-3xl font-display font-black text-purple-500">{player.titles}</div>
+                                    <div className="text-3xl font-display font-black text-cyan-500">{player.titles}</div>
                                     <div className="text-sm text-gray-500 uppercase tracking-wider">Títulos</div>
                                 </div>
                                 <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-pink-500/50 transition-colors">
@@ -1170,7 +1194,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                             const colors = [
                                                 'text-red-500 border-red-500/20 bg-red-500/10',
                                                 'text-blue-500 border-blue-500/20 bg-blue-500/10',
-                                                'text-purple-500 border-purple-500/20 bg-purple-500/10',
+                                                'text-cyan-500 border-cyan-500/20 bg-cyan-500/10',
                                                 'text-green-500 border-green-500/20 bg-green-500/10',
                                                 'text-yellow-500 border-yellow-500/20 bg-yellow-500/10',
                                             ];
@@ -1515,7 +1539,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                 <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
                     <div className="bg-surface-dark border border-white/10 rounded-[2.5rem] w-full max-w-2xl overflow-hidden animate-in zoom-in duration-300 shadow-[0_0_100px_rgba(0,0,0,0.5)]">
                         {/* Header */}
-                        <div className={`p-8 flex justify-between items-center ${viewedMessage.category === 'poll' ? 'bg-purple-600/20' :
+                        <div className={`p-8 flex justify-between items-center ${viewedMessage.category === 'poll' ? 'bg-cyan-600/20' :
                             viewedMessage.category === 'private' ? 'bg-secondary/20' :
                                 viewedMessage.category === 'bonus' ? 'bg-green-600/20' :
                                     'bg-primary/20'
@@ -1547,8 +1571,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                             {viewedMessage.category === 'poll' && polls && (() => {
                                 const poll = polls.find(p => p.id === viewedMessage.pollId);
                                 if (!poll) return (
-                                    <div className="bg-black/20 border border-purple-500/20 rounded-3xl p-6 mb-8 text-center">
-                                        <span className="material-icons-outlined text-purple-400 text-3xl block mb-2">how_to_vote</span>
+                                    <div className="bg-black/20 border border-cyan-500/20 rounded-3xl p-6 mb-8 text-center">
+                                        <span className="material-icons-outlined text-cyan-400 text-3xl block mb-2">how_to_vote</span>
                                         <p className="text-gray-400 text-sm">Esta enquete não está mais disponível.</p>
                                     </div>
                                 );
@@ -1565,13 +1589,13 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                 const totalVotes = voteCounts.reduce((a, b) => a + b, 0);
 
                                 return (
-                                    <div className="bg-gradient-to-b from-purple-900/20 to-black/30 border border-purple-500/20 rounded-3xl p-6 mb-8">
+                                    <div className="bg-gradient-to-b from-cyan-900/20 to-black/30 border border-cyan-500/20 rounded-3xl p-6 mb-8">
                                         <div className="flex items-center gap-3 mb-6">
-                                            <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                                                <span className="material-icons-outlined text-purple-400">how_to_vote</span>
+                                            <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+                                                <span className="material-icons-outlined text-cyan-400">how_to_vote</span>
                                             </div>
                                             <div>
-                                                <div className="text-xs text-purple-400 font-black uppercase tracking-widest mb-0.5">Enquete Ativa</div>
+                                                <div className="text-xs text-cyan-400 font-black uppercase tracking-widest mb-0.5">Enquete Ativa</div>
                                                 <h4 className="text-white font-bold text-lg leading-tight">{poll.question}</h4>
                                             </div>
                                         </div>
@@ -1590,23 +1614,23 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                                             onClick={() => onVotePoll && onVotePoll(poll.id, idx)}
                                                             className={`w-full text-left p-4 rounded-2xl border transition-all relative overflow-hidden
                                                                 ${isSelected
-                                                                    ? 'border-purple-500 bg-purple-500/10 text-white'
+                                                                    ? 'border-cyan-500 bg-cyan-500/10 text-white'
                                                                     : hasVoted
                                                                         ? 'border-white/10 bg-black/20 text-gray-400 cursor-default'
-                                                                        : 'border-white/10 bg-black/20 hover:border-purple-400/50 hover:bg-purple-500/5 text-white cursor-pointer hover:scale-[1.01]'
+                                                                        : 'border-white/10 bg-black/20 hover:border-cyan-400/50 hover:bg-cyan-500/5 text-white cursor-pointer hover:scale-[1.01]'
                                                                 }`}
                                                         >
                                                             {/* Progress bar */}
                                                             {hasVoted && (
                                                                 <div
-                                                                    className={`absolute inset-0 transition-all duration-1000 rounded-2xl ${isSelected ? 'bg-purple-500/15' : 'bg-white/5'}`}
+                                                                    className={`absolute inset-0 transition-all duration-1000 rounded-2xl ${isSelected ? 'bg-cyan-500/15' : 'bg-white/5'}`}
                                                                     style={{ width: `${pct}%` }}
                                                                 />
                                                             )}
                                                             <div className="relative z-10 flex items-center justify-between">
                                                                 <div className="flex items-center gap-3">
                                                                     {isSelected && (
-                                                                        <span className="material-icons-outlined text-purple-400 text-sm">check_circle</span>
+                                                                        <span className="material-icons-outlined text-cyan-400 text-sm">check_circle</span>
                                                                     )}
                                                                     {!isSelected && !hasVoted && (
                                                                         <span className="w-5 h-5 rounded-full border-2 border-white/20 flex-shrink-0"></span>
@@ -1618,7 +1642,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                                                 </div>
                                                                 {hasVoted && (
                                                                     <div className="flex items-center gap-2">
-                                                                        <span className={`text-sm font-black ${isSelected ? 'text-purple-400' : 'text-gray-500'}`}>{pct}%</span>
+                                                                        <span className={`text-sm font-black ${isSelected ? 'text-cyan-400' : 'text-gray-500'}`}>{pct}%</span>
                                                                         <span className="text-[10px] text-gray-600">{count} votos</span>
                                                                     </div>
                                                                 )}
@@ -1642,7 +1666,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                         {/* ADMIN: Results table */}
                                         {isAdmin && (
                                             <div className="mt-6 pt-6 border-t border-white/10">
-                                                <div className="text-xs text-purple-400 font-black uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                <div className="text-xs text-cyan-400 font-black uppercase tracking-widest mb-4 flex items-center gap-2">
                                                     <span className="material-icons-outlined text-sm">bar_chart</span>
                                                     Resultados (Admin)
                                                 </div>
@@ -1655,7 +1679,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                                                 <span className="text-xs text-gray-400 w-32 truncate">{opt}</span>
                                                                 <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
                                                                     <div
-                                                                        className="h-full bg-gradient-to-r from-purple-500 to-purple-300 rounded-full transition-all duration-700"
+                                                                        className="h-full bg-gradient-to-r from-cyan-500 to-cyan-300 rounded-full transition-all duration-700"
                                                                         style={{ width: `${pct}%` }}
                                                                     />
                                                                 </div>

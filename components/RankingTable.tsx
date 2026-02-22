@@ -51,6 +51,8 @@ export const RankingTable: React.FC<RankingTableProps> = ({
     const [simPosition, setSimPosition] = useState<number>(1);
     const [simIsVip, setSimIsVip] = useState<boolean>(false);
     const [simPrize, setSimPrize] = useState<number>(0);
+    const [simRake, setSimRake] = useState<number>(0);
+    const [simProfitLoss, setSimProfitLoss] = useState<number>(0);
     const [simResult, setSimResult] = useState<number>(0);
 
     // Ensure activeRankingId is valid (fallback to first available if deleted)
@@ -62,6 +64,19 @@ export const RankingTable: React.FC<RankingTableProps> = ({
 
     const activeRanking = rankings.find(r => r.id === activeRankingId) || rankings[0];
 
+    // Reset simulator type based on ranking category
+    useEffect(() => {
+        if (!activeRanking) return;
+        const label = activeRanking.label.toLowerCase();
+        if (label.includes('legado')) {
+            setSimType('legacy_weekly');
+        } else if (label.includes('cash')) {
+            setSimType('cash_online');
+        } else {
+            setSimType('weekly');
+        }
+    }, [activeRankingId]);
+
     // --- SIMULATOR LOGIC ---
     useEffect(() => {
         let points = 0;
@@ -69,8 +84,8 @@ export const RankingTable: React.FC<RankingTableProps> = ({
         const b = simBuyin || 0;
         const pos = simPosition || 1;
         const z = simPrize || 0;
-        const spent = 0; // Simulator doesn't have input for spent yet
-        const rake = 0; // Simulator doesn't have input for rake yet
+        const r = simRake || 0;
+        const pl = simProfitLoss || 0;
 
         // Try to find a schema specific to this ranking and event type first
         const mappedSchemaId = activeRanking?.scoringSchemaMap?.[simType];
@@ -88,15 +103,17 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                 z,
                 simIsVip,
                 schema?.id || mappedSchemaId,
-                globalScoringSchemas || activeRanking?.scoringSchemas
+                globalScoringSchemas || activeRanking?.scoringSchemas,
+                r,
+                pl
             );
         } else {
             // Fallback to utility's legacy logic
-            points = calculatePoints(simType as RankingFormula, p, b, pos, z, simIsVip);
+            points = calculatePoints(simType as RankingFormula, p, b, pos, z, simIsVip, undefined, undefined, r, pl);
         }
 
         setSimResult(Math.round(points));
-    }, [simType, simPlayers, simBuyin, simPosition, simIsVip, simPrize, activeRanking]);
+    }, [simType, simPlayers, simBuyin, simPosition, simIsVip, simPrize, simRake, simProfitLoss, activeRanking, globalScoringSchemas]);
 
     // Filtragem e Dropdown
     const getSuggestions = () => {
@@ -268,6 +285,12 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                             activeRanking.scoringSchemas.map(s => (
                                                 <option key={s.id} value={s.id}>{s.name}</option>
                                             ))
+                                        ) : activeRanking?.label.toLowerCase().includes('legado') ? (
+                                            <>
+                                                <option value="legacy_weekly">Legacy: Semanal</option>
+                                                <option value="legacy_monthly">Legacy: Mensal</option>
+                                                <option value="legacy_special">Legacy: Especial</option>
+                                            </>
                                         ) : (
                                             <>
                                                 <option value="weekly">Semanal (Padrão)</option>
@@ -281,51 +304,88 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                         )}
                                     </select>
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Participantes</label>
-                                    <input
-                                        type="number"
-                                        value={simPlayers || ''}
-                                        onChange={(e) => setSimPlayers(parseInt(e.target.value) || 0)}
-                                        className="w-full bg-black/30 border border-white/10 rounded-lg p-2 text-white text-sm focus:border-secondary outline-none"
-                                        placeholder="0"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Buy-in (R$)</label>
-                                    <input
-                                        type="number"
-                                        value={simBuyin || ''}
-                                        onChange={(e) => setSimBuyin(parseInt(e.target.value) || 0)}
-                                        className="w-full bg-black/30 border border-white/10 rounded-lg p-2 text-white text-sm focus:border-secondary outline-none"
-                                        placeholder="0"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Premiação (ITM)</label>
-                                    <input
-                                        type="number"
-                                        value={simPrize || ''}
-                                        onChange={(e) => setSimPrize(parseInt(e.target.value) || 0)}
-                                        className="w-full bg-black/30 border border-white/10 rounded-lg p-2 text-white text-sm focus:border-secondary outline-none"
-                                        placeholder="0"
-                                    />
-                                </div>
+
+                                {simType === 'cash_online' ? (
+                                    <>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Rake Gerado (R$)</label>
+                                            <input
+                                                type="number"
+                                                value={simRake || ''}
+                                                onChange={(e) => setSimRake(parseInt(e.target.value) || 0)}
+                                                className="w-full bg-black/30 border border-white/10 rounded-lg p-2 text-white text-sm focus:border-secondary outline-none"
+                                                placeholder="0"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Lucro / Perda (R$)</label>
+                                            <input
+                                                type="number"
+                                                value={simProfitLoss || ''}
+                                                onChange={(e) => setSimProfitLoss(parseInt(e.target.value) || 0)}
+                                                className="w-full bg-black/30 border border-white/10 rounded-lg p-2 text-white text-sm focus:border-secondary outline-none"
+                                                placeholder="0"
+                                            />
+                                        </div>
+                                        <div className="hidden md:block"></div>
+                                    </>
+                                ) : activeRanking?.label.toLowerCase().includes('legado') ? (
+                                    <>
+                                        <div className="hidden md:block"></div>
+                                        <div className="hidden md:block"></div>
+                                        <div className="hidden md:block"></div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Participantes</label>
+                                            <input
+                                                type="number"
+                                                value={simPlayers || ''}
+                                                onChange={(e) => setSimPlayers(parseInt(e.target.value) || 0)}
+                                                className="w-full bg-black/30 border border-white/10 rounded-lg p-2 text-white text-sm focus:border-secondary outline-none"
+                                                placeholder="0"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Buy-in (R$)</label>
+                                            <input
+                                                type="number"
+                                                value={simBuyin || ''}
+                                                onChange={(e) => setSimBuyin(parseInt(e.target.value) || 0)}
+                                                className="w-full bg-black/30 border border-white/10 rounded-lg p-2 text-white text-sm focus:border-secondary outline-none"
+                                                placeholder="0"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Premiação (ITM)</label>
+                                            <input
+                                                type="number"
+                                                value={simPrize || ''}
+                                                onChange={(e) => setSimPrize(parseInt(e.target.value) || 0)}
+                                                className="w-full bg-black/30 border border-white/10 rounded-lg p-2 text-white text-sm focus:border-secondary outline-none"
+                                                placeholder="0"
+                                            />
+                                        </div>
+                                    </>
+                                )}
                             </div>
 
                             {/* Checkboxes & Result */}
                             <div className="lg:col-span-1 flex flex-col justify-between h-full gap-4">
                                 <div className="flex gap-4">
-                                    <div className="flex flex-col gap-1 w-24">
-                                        <label className="text-[10px] font-bold text-gray-400 uppercase">Posição Final</label>
-                                        <input
-                                            type="number"
-                                            value={simPosition || ''}
-                                            onChange={(e) => setSimPosition(parseInt(e.target.value) || 1)}
-                                            min="1"
-                                            className="w-full bg-black/40 border border-white/10 rounded px-2 py-1 text-white text-sm focus:border-secondary outline-none text-center"
-                                        />
-                                    </div>
+                                    {simType !== 'cash_online' && (
+                                        <div className="flex flex-col gap-1 w-24">
+                                            <label className="text-[10px] font-bold text-gray-400 uppercase">Posição Final</label>
+                                            <input
+                                                type="number"
+                                                value={simPosition || ''}
+                                                onChange={(e) => setSimPosition(parseInt(e.target.value) || 1)}
+                                                min="1"
+                                                className="w-full bg-black/40 border border-white/10 rounded px-2 py-1 text-white text-sm focus:border-secondary outline-none text-center"
+                                            />
+                                        </div>
+                                    )}
                                     <label className="flex items-center gap-2 cursor-pointer group">
                                         <input
                                             type="checkbox"
@@ -457,7 +517,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                     >
                                         <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-center md:text-left">
                                             <div className="flex items-center justify-center md:justify-start gap-2">
-                                                <div className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-lg font-display font-bold text-sm md:text-lg shadow-lg group-hover:scale-110 transition-transform ${player.rank === 1 ? 'bg-gradient-to-br from-primary to-purple-700 text-white border border-primary/50' :
+                                                <div className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-lg font-display font-bold text-sm md:text-lg shadow-lg group-hover:scale-110 transition-transform ${player.rank === 1 ? 'bg-gradient-to-br from-primary to-cyan-700 text-white border border-primary/50' :
                                                     player.rank === 2 ? 'bg-gradient-to-br from-secondary to-cyan-700 text-black border border-secondary/50' :
                                                         player.rank === 3 ? 'bg-gradient-to-br from-gray-600 to-gray-800 text-white border border-gray-500/50' :
                                                             'bg-gray-100 dark:bg-white/5 text-gray-500 border border-gray-200 dark:border-white/5'

@@ -330,7 +330,9 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                 p.prize,
                 p.isVip,
                 schemaId,
-                scoringSchemas
+                scoringSchemas,
+                p.rake || 0,
+                p.profitLoss || 0
             );
 
             // Calculate points for each specific ranking the event is part of
@@ -351,7 +353,9 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                             p.prize,
                             p.isVip,
                             mappedSchemaId,
-                            scoringSchemas
+                            scoringSchemas,
+                            p.rake || 0,
+                            p.profitLoss || 0
                         );
                     }
                 });
@@ -433,7 +437,10 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                     updatedP.position,
                     updatedP.prize,
                     updatedP.isVip,
-                    closingEvent?.scoringSchemaId
+                    closingEvent?.scoringSchemaId,
+                    scoringSchemas,
+                    updatedP.rake || 0,
+                    updatedP.profitLoss || 0
                 );
                 return updatedP;
             }
@@ -597,7 +604,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                             <span className={`text-xs px-2 py-0.5 rounded uppercase font-bold tracking-wide border ${event.status === 'closed' ? 'border-gray-500 text-gray-500 bg-gray-500/10' :
                                                 event.type === 'live'
                                                     ? 'border-secondary text-secondary bg-secondary/10'
-                                                    : 'border-purple-500 text-purple-500 bg-purple-500/10'
+                                                    : 'border-cyan-500 text-cyan-500 bg-cyan-500/10'
                                                 }`}>
                                                 {event.status === 'closed' ? 'ENCERRADO' : event.type === 'live' ? 'AO VIVO' : 'ONLINE'}
                                             </span>
@@ -1106,32 +1113,67 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                     </div>
 
                                     {/* HEADER DA TABELA DE JOGADORES NA MODAL */}
-                                    <div className="flex justify-between px-2 pb-2 text-[10px] font-bold text-gray-500 uppercase">
-                                        <span className="w-1/3">Nome</span>
-                                        <span className="w-12 text-center">Pos</span>
+                                    <div className="flex justify-between px-2 pb-2 text-[10px] font-bold text-gray-500 uppercase gap-2">
+                                        <span className="w-1/4">Nome</span>
+                                        {formulaType === 'cash_online' ? (
+                                            <>
+                                                <span className="w-20 text-center">Rake</span>
+                                                <span className="w-20 text-center">Lucro/Perda</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span className="w-12 text-center">Pos</span>
+                                                <span className="w-20 text-right">Prêmio (R$)</span>
+                                            </>
+                                        )}
                                         <span className="w-12 text-center">VIP</span>
-                                        <span className="w-24 text-center">Prêmio (R$)</span>
                                         <span className="w-12 text-center">Pts</span>
                                         <span className="w-6"></span>
                                     </div>
 
                                     <div className="flex-1 bg-black/20 rounded-xl border border-white/10 overflow-y-auto p-2">
                                         {playerResults.map(p => (
-                                            <div key={p.id} className="flex justify-between items-center p-2 border-b border-white/5 text-sm hover:bg-white/5">
-                                                <span className="text-white w-1/3 truncate font-bold">{p.name}</span>
-                                                <input type="number" value={p.position} onChange={(e) => updatePlayerResult(p.id, 'position', parseInt(e.target.value))} className="w-12 bg-black/50 text-center text-white rounded border border-white/10" />
-                                                <button onClick={() => updatePlayerResult(p.id, 'isVip', !p.isVip)} className={`px-2 rounded text-[10px] h-6 flex items-center justify-center ${p.isVip ? 'bg-primary text-white' : 'bg-gray-700 text-gray-400'}`}>VIP</button>
+                                            <div key={p.id} className="flex justify-between items-center p-2 border-b border-white/5 text-sm hover:bg-white/5 gap-2">
+                                                <span className="text-white w-1/4 truncate font-bold">{p.name}</span>
 
-                                                {/* NOVO CAMPO DE PREMIAÇÃO */}
-                                                <input
-                                                    type="number"
-                                                    placeholder="0"
-                                                    value={p.prize || ''}
-                                                    onChange={(e) => updatePlayerResult(p.id, 'prize', parseFloat(e.target.value) || 0)}
-                                                    className="w-24 bg-black/50 text-right text-green-400 font-bold rounded border border-white/10 px-2"
-                                                />
+                                                {formulaType === 'cash_online' ? (
+                                                    <>
+                                                        <input
+                                                            type="number"
+                                                            placeholder="Rake"
+                                                            value={p.rake || ''}
+                                                            onChange={(e) => updatePlayerResult(p.id, 'rake', parseFloat(e.target.value) || 0)}
+                                                            className="w-20 bg-black/50 text-center text-white rounded border border-white/10"
+                                                        />
+                                                        <input
+                                                            type="number"
+                                                            placeholder="+/-"
+                                                            value={p.profitLoss || ''}
+                                                            onChange={(e) => updatePlayerResult(p.id, 'profitLoss', parseFloat(e.target.value) || 0)}
+                                                            className="w-20 bg-black/50 text-center text-white rounded border border-white/10"
+                                                        />
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <input
+                                                            type="number"
+                                                            value={p.position}
+                                                            onChange={(e) => updatePlayerResult(p.id, 'position', parseInt(e.target.value))}
+                                                            className="w-12 bg-black/50 text-center text-white rounded border border-white/10"
+                                                        />
+                                                        <input
+                                                            type="number"
+                                                            placeholder="0"
+                                                            value={p.prize || ''}
+                                                            onChange={(e) => updatePlayerResult(p.id, 'prize', parseFloat(e.target.value) || 0)}
+                                                            className="w-20 bg-black/50 text-right text-green-400 font-bold rounded border border-white/10 px-2"
+                                                        />
+                                                    </>
+                                                )}
 
-                                                <div className="w-12 text-center flex flex-col items-center">
+                                                <button onClick={() => updatePlayerResult(p.id, 'isVip', !p.isVip)} className={`px-2 rounded text-[10px] h-6 flex items-center justify-center shrink-0 ${p.isVip ? 'bg-primary text-white' : 'bg-gray-700 text-gray-400'}`}>VIP</button>
+
+                                                <div className="w-12 text-center flex flex-col items-center shrink-0">
                                                     {(() => {
                                                         try {
                                                             const pointsEntries = Object.entries(p.pointsPerRanking || {});
@@ -1261,7 +1303,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
                                 {/* Nova Seção: Ranking Selection Box (DYNAMIC) */}
                                 <div className="bg-black/20 p-4 rounded-xl border border-white/5">
-                                    <h4 className="text-white font-bold mb-4 text-sm uppercase tracking-widest text-purple-400">Rankings Válidos</h4>
+                                    <h4 className="text-white font-bold mb-4 text-sm uppercase tracking-widest text-cyan-400">Rankings Válidos</h4>
                                     <div className="flex gap-6 flex-wrap">
                                         {rankings.map(rankOpt => (
                                             <label key={rankOpt.id} className="flex items-center gap-2 cursor-pointer group">
@@ -1269,7 +1311,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                     type="checkbox"
                                                     checked={editingEvent.includedRankings?.includes(rankOpt.id) ?? true} // Default true for legacy compatibility
                                                     onChange={() => toggleRanking(rankOpt.id)}
-                                                    className="w-4 h-4 accent-purple-500 bg-black border-white/20 rounded"
+                                                    className="w-4 h-4 accent-cyan-500 bg-black border-white/20 rounded"
                                                 />
                                                 <span className="text-sm text-gray-300 group-hover:text-white transition-colors">{rankOpt.label}</span>
                                             </label>
@@ -1329,7 +1371,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
                                         {/* Seção 3: Rebuys e Addons */}
                                         <div className="bg-black/20 p-4 rounded-xl border border-white/5">
-                                            <h4 className="text-white font-bold mb-4 text-sm uppercase tracking-widest text-purple-400">Rebuys & Add-ons</h4>
+                                            <h4 className="text-white font-bold mb-4 text-sm uppercase tracking-widest text-cyan-400">Rebuys & Add-ons</h4>
                                             <div className="grid grid-cols-2 gap-4">
                                                 {/* Rebuy Simples */}
                                                 <div className="p-2 border border-white/5 rounded">
@@ -1342,7 +1384,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
                                                 {/* Rebuy Duplo */}
                                                 <div className="p-2 border border-white/5 rounded">
-                                                    <div className="text-xs text-purple-400 mb-2 font-bold">REBUY DUPLO</div>
+                                                    <div className="text-xs text-cyan-400 mb-2 font-bold">REBUY DUPLO</div>
                                                     <div className="grid grid-cols-2 gap-2">
                                                         <input type="text" placeholder="Valor (R$)" value={editingEvent.doubleRebuyValue || ''} onChange={(e) => handleInputChange('doubleRebuyValue', e.target.value)} className="w-full bg-black/30 border border-white/10 rounded p-1 text-sm text-white" />
                                                         <input type="text" placeholder="Fichas" value={editingEvent.doubleRebuyChips || ''} onChange={(e) => handleInputChange('doubleRebuyChips', e.target.value)} className="w-full bg-black/30 border border-white/10 rounded p-1 text-sm text-white" />

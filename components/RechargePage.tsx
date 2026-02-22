@@ -43,39 +43,48 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
         try {
             if (type === 'chipz') {
                 const pack = chipzPackages.find(p => p.id === id);
-                if (pack && pack.stock === 0) {
-                    alert('Este pacote está esgotado no momento!');
+                if (!pack) return;
+
+                const cost = pack.price_brl;
+                const totalChipz = pack.amount + (pack.bonus || 0);
+                const currentBalance = currentUser.balanceBrl || 0;
+
+                if (currentBalance < cost) {
+                    alert(`Saldo insuficiente! Seu saldo atual é R$ ${currentBalance.toFixed(2).replace('.', ',')}. Você precisa de R$ ${cost.toFixed(2).replace('.', ',')} para este pacote.`);
+                    setIsProcessing(false);
                     return;
                 }
 
-                await new Promise(resolve => setTimeout(resolve, 1500));
-
-                if (pack) {
-                    // Update stock on DB
-                    if (pack.stock > 0) {
-                        const { error: stockError } = await supabase
-                            .from('chipz_packages')
-                            .update({ stock: pack.stock - 1 })
-                            .eq('id', pack.id);
-
-                        if (stockError) console.error('Error updating stock', stockError);
-                        else {
-                            setChipzPackages(prev => prev.map(p =>
-                                p.id === id ? { ...p, stock: p.stock - 1 } : p
-                            ));
-                        }
-                    }
-
-                    // UPDATE USER BALANCE
-                    const newBalanceChipz = (currentUser.balanceChipz || 0) + pack.amount;
-                    const newPlayerData = { ...currentUser, balanceChipz: newBalanceChipz };
-
-                    if (onUpdateProfile) {
-                        onUpdateProfile(currentUser.name, newPlayerData);
-                    }
-
-                    alert(`Sucesso! Você adquiriu ${pack.amount} Chipz.`);
+                if (!window.confirm(`Confirma a compra de ${totalChipz} Chipz por R$ ${cost.toFixed(2).replace('.', ',')}? Isso será descontado do seu saldo de reais.`)) {
+                    setIsProcessing(false);
+                    return;
                 }
+
+                // Chamar RPC para atualizar ambos os saldos de forma segura
+                const { error: txError } = await supabase.rpc('secure_balance_transaction', {
+                    user_id: currentUser.id,
+                    brl_amount: -cost,
+                    chipz_amount: totalChipz,
+                    description: `Compra: Pacote Chipz - ${pack.name}`
+                });
+
+                if (txError) {
+                    console.error('Erro na transação de compra:', txError);
+                    alert('Falha na transação. Tente novamente em alguns instantes.');
+                    setIsProcessing(false);
+                    return;
+                }
+
+                if (onUpdateProfile) {
+                    const newPlayerData = {
+                        ...currentUser,
+                        balanceBrl: (currentUser.balanceBrl || 0) - cost,
+                        balanceChipz: (currentUser.balanceChipz || 0) + totalChipz
+                    };
+                    onUpdateProfile(currentUser.name, newPlayerData);
+                }
+
+                alert(`Sucesso! Você adquiriu o pacote ${pack.name} e recebeu ${totalChipz} Chipz.`);
             } else {
                 // Type BRL (Recharge Wallet)
                 await new Promise(resolve => setTimeout(resolve, 1500));
@@ -245,14 +254,14 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                                         <div className="text-gray-400 text-sm">Moeda Virtual</div>
                                         {pkg.stock > 0 && (
                                             <div className="text-xs text-orange-400 font-bold mt-2 animate-pulse">
-                                                Restam: {pkg.stock}
+                                                Restam: ???
                                             </div>
                                         )}
                                     </div>
 
                                     <div className="mt-auto pt-6 border-t border-white/10">
                                         <button disabled={isSoldOut} className={`w-full ${pkg.popular && !isSoldOut ? 'bg-primary' : 'bg-white/5 group-hover:bg-primary/20'} text-white font-bold py-3 rounded-xl transition-colors uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed`}>
-                                            Por R$ {pkg.price}
+                                            Bloqueado
                                         </button>
                                     </div>
                                 </div>

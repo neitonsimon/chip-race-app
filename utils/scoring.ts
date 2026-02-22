@@ -8,9 +8,12 @@ export const calculatePoints = (
     prize: number,
     isVip: boolean,
     schemaId?: string,
-    globalSchemas?: ScoringSchema[]
+    globalSchemas?: ScoringSchema[],
+    rake: number = 0,
+    profitLoss: number = 0
 ): number => {
-    if (players <= 0 || schemaId === 'null') return 0;
+    if (schemaId === 'null') return 0;
+    if (players <= 0 && type !== 'cash_online' && !schemaId) return 0;
 
     const schemas = Array.isArray(globalSchemas) ? globalSchemas : [];
 
@@ -33,8 +36,9 @@ export const calculatePoints = (
                 else if (crit.type === 'itm' || crit.type === 'winnings') multiplier = prize;
                 else if (crit.type === 'isFt' && position <= 9 && position > 0) multiplier = 1;
                 else if (crit.type === 'isVip' && isVip) multiplier = 1;
-                else if (crit.type === 'spent') multiplier = 0; // Not used yet
-                else if (crit.type === 'rake') multiplier = 0; // Not used yet
+                else if (crit.type === 'spent') multiplier = buyin; // Defaulting spent to buyin
+                else if (crit.type === 'rake') multiplier = rake;
+                else if (crit.type === 'profit_loss') multiplier = Math.min(Math.abs(profitLoss), rake);
 
                 if (crit.operation === 'multiply') points += multiplier * crit.value;
                 else if (crit.operation === 'divide' && crit.value !== 0) points += multiplier / crit.value;
@@ -61,8 +65,14 @@ export const calculatePoints = (
         points = (players / 4) + (buyin / 6);
         if (isFT) points += 30;
         if (prize > 0) points += (prize / 25);
+    } else if (type === 'legacy_weekly' || type === 'legacy_monthly' || type === 'legacy_special') {
+        const table: Record<number, number> = { 1: 100, 2: 80, 3: 70, 4: 60, 5: 50, 6: 40, 7: 30, 8: 20, 9: 10 };
+        let basePoints = table[position] || (position <= 15 ? 5 : 0);
+        if (type === 'legacy_monthly') basePoints *= 1.5;
+        if (type === 'legacy_special') basePoints *= 3;
+        points = basePoints;
     } else if (type === 'cash_online') {
-        points = (buyin / 10);
+        points = rake + Math.min(Math.abs(profitLoss), rake);
     } else if (type === 'mtt_online') {
         points = (players / 5) + (buyin / 10);
     } else if (type === 'sit_n_go') {

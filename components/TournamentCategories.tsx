@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TournamentCategory } from '../types';
 import { EditableContent } from './EditableContent';
+import { supabase } from '../src/lib/supabase';
 
 interface TournamentCategoriesProps {
   isAdmin?: boolean;
@@ -89,7 +90,7 @@ Pontos = (Total Jogadores / 4) + (Buy-in Gasto / 6) + (30 se Mesa Final) + (Prem
   'bet': {
     title: 'Bet',
     icon: 'casino',
-    color: 'text-purple-500',
+    color: 'text-cyan-500',
     rules: `
 1. Campanhas promocionais de apostas esportivas parceiras da Chip Race.
 2. Desafios de repescagem através do "Bet": Sorteios de vagas entre os bolhas dos torneios Major.
@@ -115,6 +116,37 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
   prizeLabel = "30K+"
 }) => {
   const [activeRegulation, setActiveRegulation] = useState<string | null>(null);
+  const [productDetails, setProductDetails] = useState<any>(null);
+  const [isLoadingProduct, setIsLoadingProduct] = useState(false);
+
+  useEffect(() => {
+    if (activeRegulation) {
+      fetchProductInfo(activeRegulation);
+    } else {
+      setProductDetails(null);
+    }
+  }, [activeRegulation]);
+
+  const fetchProductInfo = async (categoryId: string) => {
+    setIsLoadingProduct(true);
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('category', categoryId)
+        .eq('active', true)
+        .limit(1)
+        .single();
+
+      if (data) {
+        setProductDetails(data);
+      }
+    } catch (e) {
+      console.error('Error fetching product:', e);
+    } finally {
+      setIsLoadingProduct(false);
+    }
+  };
 
   const getColors = (color: string) => {
     switch (color) {
@@ -136,14 +168,14 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
         btn: 'text-secondary',
         badge: 'bg-secondary/20 text-secondary border-secondary/40'
       };
-      case 'purple': return {
-        border: 'hover:border-purple-500/50',
-        icon: 'text-purple-500',
+      case 'cyan': return {
+        border: 'hover:border-cyan-500/50',
+        icon: 'text-cyan-500',
         shadow: 'group-hover:shadow-[0_0_20px_rgba(168,85,247,0.5)]',
-        glow: 'from-purple-500/10',
-        text: 'group-hover:text-purple-500',
-        btn: 'text-purple-500',
-        badge: 'bg-purple-500/20 text-purple-500 border-purple-500/40'
+        glow: 'from-cyan-500/10',
+        text: 'group-hover:text-cyan-500',
+        btn: 'text-cyan-500',
+        badge: 'bg-cyan-500/20 text-cyan-500 border-cyan-500/40'
       };
       case 'pink': return {
         border: 'hover:border-pink-500/50',
@@ -175,7 +207,7 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
   };
 
   return (
-    <div className="py-20 bg-background-light dark:bg-background-dark relative">
+    <div className="pt-10 pb-20 bg-background-light dark:bg-background-dark relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-display font-bold text-gray-900 dark:text-white mb-4">
@@ -198,15 +230,7 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${styles.glow} to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
 
-                {/* SLOT BADGE EDITABLE */}
-                <div className={`absolute top-4 right-4 text-xs font-black uppercase px-2 py-1 rounded-full border ${styles.badge} z-20 flex items-center gap-1`}>
-                  <EditableContent
-                    isAdmin={isAdmin}
-                    value={String(cat.slots)}
-                    onSave={(val) => onUpdateCategory(index, 'slots', parseInt(val) || 0)}
-                  />
-                  <span>Vagas</span>
-                </div>
+
 
                 <div className="relative z-10 flex flex-col items-center text-center mt-4">
                   <div className={`w-16 h-16 rounded-full bg-gradient-to-b from-gray-800 to-black flex items-center justify-center mb-4 shadow-lg ${styles.shadow} transition-shadow duration-300 border border-white/10`}>
@@ -233,9 +257,9 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
 
                   <button
                     onClick={(e) => handleOpenRegulation(e, cat.id)}
-                    className={`text-sm font-bold uppercase tracking-wider ${styles.btn} hover:text-white transition-colors flex items-center gap-1 cursor-pointer bg-transparent border-none`}
+                    className={`text-sm font-bold uppercase tracking-wider ${styles.btn} hover:scale-105 transition-all flex items-center gap-2 cursor-pointer bg-white/5 px-4 py-2 rounded-full border border-current shadow-sm group-hover:bg-white/10`}
                   >
-                    Ver Regulamento <span className="material-icons-outlined text-sm">arrow_forward</span>
+                    Ver Mais <span className="material-icons-outlined text-sm">add_circle</span>
                   </button>
                 </div>
               </div>
@@ -244,41 +268,77 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
         </div>
       </div>
 
-      {/* MODAL DE REGULAMENTO (POP-UP) */}
-      {activeRegulation && REGULATIONS_DATA[activeRegulation] && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-surface-dark border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl relative animate-float flex flex-col max-h-[90vh]">
+      {/* MODAL DE PRODUTO / DETALHES (POP-UP) */}
+      {activeRegulation && (REGULATIONS_DATA[activeRegulation] || productDetails) && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-[#0f0a28] border border-white/10 rounded-3xl w-full max-w-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] relative animate-float overflow-hidden flex flex-col max-h-[90vh]">
 
-            <div className="p-6 overflow-y-auto custom-scrollbar">
+            {/* Header Background Glow */}
+            <div className={`absolute -top-20 -right-20 w-64 h-64 rounded-full blur-[100px] opacity-20 bg-gradient-to-br ${getColors(categories.find(c => c.id === activeRegulation)?.color || '').glow}`}></div>
+
+            <div className="p-8 overflow-y-auto custom-scrollbar relative z-10">
               <button
                 onClick={() => setActiveRegulation(null)}
-                className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors z-10"
+                className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors p-2 bg-white/5 rounded-full"
               >
-                <span className="material-icons-outlined">close</span>
+                <span className="material-icons-outlined text-2xl">close</span>
               </button>
 
-              <div>
-                <div className="flex items-center gap-3 mb-4 border-b border-white/10 pb-4 pr-8">
-                  <span className={`material-icons-outlined text-3xl ${REGULATIONS_DATA[activeRegulation].color}`}>
-                    {REGULATIONS_DATA[activeRegulation].icon}
-                  </span>
-                  <h3 className="text-xl font-bold text-white leading-tight">
-                    {REGULATIONS_DATA[activeRegulation].title}
-                  </h3>
+              <div className="flex flex-col items-center text-center mb-8 pt-4">
+                <div className={`w-24 h-24 rounded-3xl bg-black border border-white/10 flex items-center justify-center mb-6 shadow-2xl relative overflow-hidden group`}>
+                  <div className={`absolute inset-0 opacity-20 bg-gradient-to-br ${getColors(categories.find(c => c.id === activeRegulation)?.color || '').glow}`}></div>
+                  {productDetails?.image_url ? (
+                    <img src={productDetails.image_url} alt={productDetails.name} className="w-full h-full object-cover relative z-10" />
+                  ) : (
+                    <span className={`material-icons-outlined text-5xl relative z-10 ${REGULATIONS_DATA[activeRegulation]?.color || 'text-primary'}`}>
+                      {REGULATIONS_DATA[activeRegulation]?.icon || 'star'}
+                    </span>
+                  )}
                 </div>
 
-                <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap break-words font-light">
-                  {REGULATIONS_DATA[activeRegulation].rules}
+                <h3 className="text-3xl font-display font-black text-white uppercase tracking-wider mb-2">
+                  {productDetails?.name || REGULATIONS_DATA[activeRegulation]?.title}
+                </h3>
+                <div className="h-1 w-16 bg-gradient-to-r from-primary to-secondary rounded-full"></div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+                  <h4 className="text-xs font-black text-primary uppercase tracking-[0.2em] mb-4">
+                    {productDetails ? 'DESCRIÇÃO DO PRODUTO' : 'INFORMAÇÕES GERAIS'}
+                  </h4>
+                  <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap font-light">
+                    {productDetails?.description || REGULATIONS_DATA[activeRegulation]?.rules}
+                  </div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-white/5">
-                  <button
-                    onClick={() => setActiveRegulation(null)}
-                    className="w-full py-3 bg-white/5 hover:bg-white/10 text-white rounded-lg font-bold transition-colors"
-                  >
-                    Entendido
-                  </button>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-white/5 border border-white/5 p-4 rounded-xl">
+                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">
+                      {productDetails ? 'Valor' : 'Status'}
+                    </p>
+                    <p className="text-white font-bold">
+                      {productDetails ? `R$ ${parseFloat(productDetails.price).toFixed(2).replace('.', ',')}` : 'Disponível'}
+                    </p>
+                  </div>
+                  <div className="bg-white/5 border border-white/5 p-4 rounded-xl">
+                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">
+                      {productDetails ? 'Disponível' : 'Categoria'}
+                    </p>
+                    <p className="text-white font-bold uppercase">
+                      {productDetails ? `${productDetails.stock} unidades` : activeRegulation}
+                    </p>
+                  </div>
                 </div>
+              </div>
+
+              <div className="mt-10">
+                <button
+                  onClick={() => setActiveRegulation(null)}
+                  className="w-full py-4 bg-gradient-to-r from-primary to-accent text-white rounded-xl font-black uppercase tracking-widest shadow-lg hover:shadow-primary/50 transition-all hover:scale-[1.02]"
+                >
+                  {productDetails ? 'Adquirir via App' : 'Entendido'}
+                </button>
               </div>
             </div>
           </div>

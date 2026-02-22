@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ContentDB, TournamentCategory } from '../types';
 import { EditableContent } from './EditableContent';
 import { TheChosenQualifiers } from './TheChosenQualifiers';
+import { supabase } from '../src/lib/supabase';
 
 interface TheChosenDetailsProps {
     isAdmin?: boolean;
@@ -13,6 +14,15 @@ interface TheChosenDetailsProps {
     onUpdateCategory?: (index: number, field: keyof TournamentCategory, value: any) => void;
     onNavigatePlayer?: (playerName: string) => void;
     allPlayers?: { name: string }[];
+    months?: any[];
+    onUpdateMonth?: (index: number, field: any, value: any) => void;
+    onToggleMonthStatus?: (index: number) => void;
+    totalQualifiers?: number;
+    nextGoal?: any;
+    onUpdateTotal?: (value: number | null) => void;
+    isManualTotal?: boolean;
+    heroContent?: any;
+    onUpdateHeroContent?: (field: string, value: string) => void;
 }
 
 // Fallback content if not provided (should be provided by App)
@@ -37,9 +47,128 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
     categories = [],
     onUpdateCategory = (_index: number, _field: keyof TournamentCategory, _value: any) => { },
     onNavigatePlayer,
-    allPlayers = []
+    allPlayers = [],
+    months = [],
+    onUpdateMonth = (_i: number, _f: any, _v: any) => { },
+    onToggleMonthStatus = (_i: number) => { },
+    totalQualifiers = 0,
+    nextGoal = { prize: 33000, qualifiers: 20 },
+    onUpdateTotal = (_v: any) => { },
+    isManualTotal,
+    heroContent,
+    onUpdateHeroContent = (_f: string, _v: string) => { }
 }) => {
     const [activeRegulation, setActiveRegulation] = useState<string | null>(null);
+    const [expandMobileTimeline, setExpandMobileTimeline] = useState(false);
+    const [productDetails, setProductDetails] = useState<any>(null);
+
+    useEffect(() => {
+        if (activeRegulation) {
+            fetchProductInfo(activeRegulation);
+        } else {
+            setProductDetails(null);
+        }
+    }, [activeRegulation]);
+
+    const fetchProductInfo = async (categoryId: string) => {
+        try {
+            const { data } = await supabase
+                .from('products')
+                .select('*')
+                .eq('category', categoryId)
+                .eq('active', true)
+                .limit(1)
+                .single();
+
+            if (data) {
+                setProductDetails(data);
+            }
+        } catch (e) {
+            console.error('Error fetching product:', e);
+        }
+    };
+
+    // Helpers para Timeline (reutilizado do Hero)
+    const renderMonthCard = (month: any, index: number) => {
+        const isActive = month.status === 'active';
+        const isCompleted = month.status === 'completed';
+        const isLocked = month.status === 'locked';
+
+        return (
+            <div key={index} className={`relative pt-6 pb-3 px-2 rounded-xl border flex flex-col items-center justify-center transition-all duration-300 min-h-[140px] ${isActive
+                ? 'bg-primary/20 border-primary shadow-neon-pink scale-105 z-10'
+                : isCompleted
+                    ? 'bg-secondary/10 border-secondary/50 opacity-100'
+                    : 'bg-white/5 border-white/5 opacity-60 grayscale'
+                }`}>
+                <div className={`absolute top-0 left-0 w-full text-[9px] uppercase font-black py-1 tracking-widest rounded-t-lg ${isActive ? 'bg-primary text-white' :
+                    isCompleted ? 'bg-secondary text-black' :
+                        'bg-gray-800 text-gray-500'
+                    }`}>
+                    {isActive ? 'EM ANDAMENTO' : isCompleted ? 'ATINGIDA' : 'BLOQUEADA'}
+                </div>
+                <div className="text-xs font-bold text-gray-400 mb-2 mt-2">{month.name}</div>
+                {isLocked && !isAdmin ? (
+                    <span className="material-icons-outlined text-2xl text-gray-600 my-2">lock</span>
+                ) : (
+                    <div className="flex flex-col items-center w-full">
+                        {isAdmin ? (
+                            <input
+                                type="text"
+                                value={month.prize}
+                                onChange={(e) => onUpdateMonth(index, 'prize', e.target.value)}
+                                className="w-16 text-center bg-black/50 border border-white/20 rounded text-sm text-white font-bold mb-1"
+                            />
+                        ) : (
+                            <div className={`text-lg font-display font-black ${isActive ? 'text-white' : isCompleted ? 'text-secondary' : 'text-gray-500'}`}>
+                                {month.prize}
+                            </div>
+                        )}
+                        <div className="text-[10px] uppercase text-gray-400">GTD</div>
+                    </div>
+                )}
+                <div className="mt-3 w-full flex justify-center">
+                    {isAdmin ? (
+                        <div className="flex items-center gap-1 justify-center">
+                            <input
+                                type="text"
+                                value={month.qualifiers}
+                                onChange={(e) => onUpdateMonth(index, 'qualifiers', e.target.value)}
+                                className="w-10 text-center bg-black/50 border border-white/20 rounded text-xs text-white"
+                            />
+                            <span className="text-[10px] text-gray-400">Vagas</span>
+                        </div>
+                    ) : (
+                        <div className={`text-[10px] py-1 px-2 rounded-full font-bold ${isActive ? 'bg-primary text-white' :
+                            isCompleted ? 'bg-secondary/20 text-secondary' :
+                                'bg-black/30 text-gray-500'
+                            }`}>
+                            {month.qualifiers} {typeof month.qualifiers === 'number' || !isNaN(Number(month.qualifiers)) ? 'Vagas' : ''}
+                        </div>
+                    )}
+                </div>
+                {isAdmin && (
+                    <button
+                        onClick={() => onToggleMonthStatus(index)}
+                        className={`absolute bottom-1 right-1 w-6 h-6 rounded-full flex items-center justify-center border z-20 ${isActive ? 'bg-green-500 border-green-300' :
+                            isCompleted ? 'bg-blue-500 border-blue-300' : 'bg-red-500 border-red-300'
+                            }`}
+                    >
+                        <span className="material-icons-outlined text-[10px] text-white">change_circle</span>
+                    </button>
+                )}
+            </div>
+        );
+    };
+
+    const currentMonthIndex = months.findIndex(m => m.status === 'active') === -1
+        ? months.findIndex(m => m.status === 'locked')
+        : months.findIndex(m => m.status === 'active');
+
+    // Stats calculations
+    const currentGtdNum = parseInt(prizeLabel.replace(/\D/g, '')) * 1000 || 30000;
+    const remainingQualifiers = nextGoal.qualifiers > totalQualifiers ? nextGoal.qualifiers - totalQualifiers : 0;
+    const progressPercentage = Math.min(100, (totalQualifiers / nextGoal.qualifiers) * 100);
 
     const qualifyingMethods = [
         {
@@ -104,8 +233,8 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
             title: 'Bet',
             desc: 'Desafios de apostas e repescagem. A última chance de entrar no 30K+.',
             icon: 'casino',
-            color: 'text-purple-500',
-            badge: 'bg-purple-500/20 text-purple-500 border-purple-500/40',
+            color: 'text-cyan-500',
+            badge: 'bg-cyan-500/20 text-cyan-500 border-cyan-500/40',
             glow: 'shadow-[0_0_20px_rgba(168,85,247,0.5)]',
             rules: `
               1. Campanhas promocionais de apostas esportivas parceiras da Chip Race.
@@ -247,6 +376,49 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                     </div>
                 </div>
 
+                {/* CRONOGRAMA DE EVOLUÇÃO (MOVIDO DA HOME) */}
+                <div className="mb-20">
+                    <div className="text-center mb-10">
+                        <h2 className="text-3xl font-display font-bold text-white mb-2 uppercase tracking-wide">
+                            <EditableContent
+                                isAdmin={isAdmin}
+                                value={heroContent?.timeline_title || "Cronograma de Evolução"}
+                                onSave={(val) => onUpdateHeroContent('timeline_title', val)}
+                            />
+                        </h2>
+                        <div className="h-1 w-20 bg-primary/30 mx-auto rounded-full"></div>
+                    </div>
+
+                    {/* Desktop View: Full Grid */}
+                    <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-9 gap-3">
+                        {months.map((month: any, index: number) => renderMonthCard(month, index))}
+                    </div>
+
+                    {/* Mobile View: Toggle logic */}
+                    <div className="md:hidden">
+                        {!expandMobileTimeline ? (
+                            <div className="flex flex-col items-center">
+                                <div className="w-full max-w-[240px]">
+                                    {renderMonthCard(months[currentMonthIndex], currentMonthIndex)}
+                                </div>
+                                <button onClick={() => setExpandMobileTimeline(true)} className="mt-6 text-xs text-gray-400 font-bold tracking-widest bg-white/5 px-6 py-3 rounded-full border border-white/10">VER CRONOGRAMA COMPLETO</button>
+                            </div>
+                        ) : (
+                            <div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {months.map((month: any, index: number) => renderMonthCard(month, index))}
+                                </div>
+                                <button onClick={() => setExpandMobileTimeline(false)} className="mt-6 w-full py-3 text-xs text-gray-500 font-bold uppercase tracking-widest bg-black/20 rounded-lg">RECOLHER</button>
+                            </div>
+                        )}
+                    </div>
+
+                    <p className="mt-6 text-center text-xs text-gray-500 italic">
+                        * Nos meses bloqueados, a premiação e o número de classificados são suspensos e revelados posteriormente pela Chip Race.
+                    </p>
+                </div>
+
+
                 {/* 8 Ways to Qualify */}
                 <div className="mb-20">
                     <div className="text-center mb-12">
@@ -291,9 +463,9 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                                     </div>
                                     <button
                                         onClick={() => setActiveRegulation(item.id)}
-                                        className={`mt-auto text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 hover:text-white transition-colors ${item.color}`}
+                                        className={`mt-auto text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-current hover:bg-white/10 transition-all ${item.color}`}
                                     >
-                                        VER REGULAMENTO <span className="material-icons-outlined text-xs">arrow_forward</span>
+                                        VER MAIS <span className="material-icons-outlined text-xs">add_circle</span>
                                     </button>
                                 </div>
                             );
@@ -376,46 +548,86 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
 
             </div>
 
-            {/* MODAL REGULAMENTO ESPECÍFICO */}
-            {activeRegulation && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-surface-dark border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl relative animate-float flex flex-col max-h-[90vh]">
+            {/* MODAL PRODUTO / DETALHES ESPECÍFICOS */}
+            {activeRegulation && (qualifyingMethods.some(m => m.id === activeRegulation) || productDetails) && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-[#0f0a28] border border-white/10 rounded-3xl w-full max-w-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] relative animate-float overflow-hidden flex flex-col max-h-[90vh]">
 
-                        {/* Modal Header & Content Scrollable */}
-                        <div className="p-6 overflow-y-auto custom-scrollbar">
+                        {/* Header Background Glow */}
+                        <div className={`absolute -top-20 -right-20 w-64 h-64 rounded-full blur-[100px] opacity-20 bg-gradient-to-br from-primary/20 to-secondary/20`}></div>
+
+                        <div className="p-8 overflow-y-auto custom-scrollbar relative z-10">
                             <button
                                 onClick={() => setActiveRegulation(null)}
-                                className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors z-10"
+                                className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors p-2 bg-white/5 rounded-full"
                             >
-                                <span className="material-icons-outlined">close</span>
+                                <span className="material-icons-outlined text-2xl">close</span>
                             </button>
 
-                            {qualifyingMethods.filter(m => m.id === activeRegulation).map(method => (
-                                <div key={method.id}>
-                                    <div className="flex items-center gap-3 mb-4 border-b border-white/10 pb-4 pr-8">
-                                        <span className={`material-icons-outlined text-3xl ${method.color}`}>{method.icon}</span>
-                                        <h3 className="text-xl font-bold text-white leading-tight">{method.title}</h3>
-                                    </div>
+                            {(() => {
+                                const method = qualifyingMethods.find(m => m.id === activeRegulation);
+                                return (
+                                    <div key={method?.id || 'product'}>
+                                        <div className="flex flex-col items-center text-center mb-8 pt-4">
+                                            <div className={`w-24 h-24 rounded-3xl bg-black border border-white/10 flex items-center justify-center mb-6 shadow-2xl relative overflow-hidden group`}>
+                                                <div className={`absolute inset-0 opacity-20 bg-gradient-to-br from-primary/20 to-secondary/20`}></div>
+                                                {productDetails?.image_url ? (
+                                                    <img src={productDetails.image_url} alt={productDetails.name} className="w-full h-full object-cover relative z-10" />
+                                                ) : (
+                                                    <span className={`material-icons-outlined text-5xl relative z-10 ${method?.color || 'text-primary'}`}>{method?.icon || 'star'}</span>
+                                                )}
+                                            </div>
 
-                                    <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap break-words">
-                                        {method.rules}
-                                    </div>
+                                            <h3 className="text-3xl font-display font-black text-white uppercase tracking-wider mb-2">
+                                                {productDetails?.name || method?.title}
+                                            </h3>
+                                            <div className="h-1 w-16 bg-gradient-to-r from-primary to-secondary rounded-full"></div>
+                                        </div>
 
-                                    <div className="mt-6 pt-4 border-t border-white/5">
-                                        <button
-                                            onClick={() => setActiveRegulation(null)}
-                                            className="w-full py-3 bg-white/5 hover:bg-white/10 text-white rounded-lg font-bold transition-colors"
-                                        >
-                                            Entendido
-                                        </button>
+                                        <div className="space-y-6">
+                                            <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+                                                <h4 className="text-xs font-black text-primary uppercase tracking-[0.2em] mb-4">
+                                                    {productDetails ? 'DESCRIÇÃO DO PRODUTO' : 'INFORMAÇÕES GERAIS'}
+                                                </h4>
+                                                <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap font-light">
+                                                    {productDetails?.description || method?.rules}
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="bg-white/5 border border-white/5 p-4 rounded-xl">
+                                                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">
+                                                        {productDetails ? 'Valor' : 'Status'}
+                                                    </p>
+                                                    <p className="text-white font-bold">
+                                                        {productDetails ? `R$ ${parseFloat(productDetails.price).toFixed(2).replace('.', ',')}` : 'Disponível'}
+                                                    </p>
+                                                </div>
+                                                <div className="bg-white/5 border border-white/5 p-4 rounded-xl">
+                                                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">
+                                                        {productDetails ? 'Disponível' : 'Método'}
+                                                    </p>
+                                                    <p className="text-white font-bold uppercase">
+                                                        {productDetails ? `${productDetails.stock} unidades` : activeRegulation}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-10">
+                                            <button
+                                                onClick={() => setActiveRegulation(null)}
+                                                className="w-full py-4 bg-gradient-to-r from-primary to-accent text-white rounded-xl font-black uppercase tracking-widest shadow-lg hover:shadow-primary/50 transition-all hover:scale-[1.02]"
+                                            >
+                                                {productDetails ? 'Adquirir via App' : 'Entendido'}
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })()}
                         </div>
                     </div>
                 </div>
             )}
-
         </div>
     );
 };
