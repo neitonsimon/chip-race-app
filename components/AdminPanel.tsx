@@ -67,6 +67,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const [topUpAmount, setTopUpAmount] = useState('');
     const [commandsTab, setCommandsTab] = useState<'ativas' | 'historico'>('ativas');
     const [reportData, setReportData] = useState<any[]>([]);
+    const [reportFilter, setReportFilter] = useState<'event' | 'date'>('event');
+    const [startDate, setStartDate] = useState(() => { const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0] });
+    const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
     const [editingClosedCommand, setEditingClosedCommand] = useState<any | null>(null);
     const [viewingClosedCommand, setViewingClosedCommand] = useState<any | null>(null);
     const [viewingItems, setViewingItems] = useState<any[]>([]);
@@ -98,11 +101,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         if (data) setProducts(data);
     };
     const fetchOpenCommands = async (eventId: string) => {
-        const { data } = await supabase.from('commands').select('*, profiles!user_id(name, numeric_id, avatar_url, vip_status, role)').eq('event_id', eventId).eq('status', 'open').order('created_at', { ascending: false });
+        const { data } = await supabase.from('commands').select('*, profiles!user_id(name, numeric_id, avatar_url, vip_status, role, balance_brl)').eq('event_id', eventId).eq('status', 'open').order('created_at', { ascending: false });
         if (data) setOpenCommands(data);
     };
     const fetchClosedCommands = async (eventId: string) => {
-        const { data } = await supabase.from('commands').select('*, profiles!user_id(name, numeric_id, avatar_url, vip_status)').eq('event_id', eventId).eq('status', 'closed').order('closed_at', { ascending: false });
+        const { data } = await supabase.from('commands').select('*, profiles!user_id(name, numeric_id, avatar_url, vip_status, balance_brl)').eq('event_id', eventId).eq('status', 'closed').order('closed_at', { ascending: false });
         if (data) setClosedCommands(data);
     };
     const fetchCommandItems = async (commandId: string) => {
@@ -111,6 +114,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     };
     const fetchReport = async (eventId: string) => {
         const { data } = await supabase.from('command_items').select('*, products(name, category), commands!inner(event_id, profiles!user_id(name, numeric_id))').eq('commands.event_id', eventId);
+        if (data) setReportData(data);
+    };
+    const fetchMonthlyReport = async (start: string, end: string) => {
+        if (!start || !end) return;
+        const { data } = await supabase.from('command_items')
+            .select('*, products(name, category), commands!inner(event_id, status, closed_at, profiles!user_id(name, numeric_id))')
+            .gte('commands.closed_at', start + 'T00:00:00.000Z')
+            .lte('commands.closed_at', end + 'T23:59:59.999Z')
+            .eq('commands.status', 'closed');
         if (data) setReportData(data);
     };
 
@@ -157,7 +169,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         setSearchQuery(query);
         if (query.length < 2) { setSearchResults([]); return; }
         const isNumeric = /^\d+$/.test(query);
-        let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, vip_status');
+        let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, vip_status, balance_brl');
         q = isNumeric ? q.eq('numeric_id', parseInt(query)) : q.ilike('name', `%${query}%`);
         const { data } = await q.limit(5);
         setSearchResults(data || []);
@@ -166,7 +178,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const handleOpenCommand = async (player: any) => {
         if (!selectedEvent) { alert('Selecione um evento primeiro.'); return; }
         if (openCommands.find(c => c.user_id === player.id)) { alert('Jogador já tem comanda aberta.'); return; }
-        const { data, error } = await supabase.from('commands').insert({ event_id: selectedEvent.id, user_id: player.id, status: 'open', opened_by: currentUser.id }).select('*, profiles!user_id(name, numeric_id, avatar_url, vip_status, role)').single();
+        const { data, error } = await supabase.from('commands').insert({ event_id: selectedEvent.id, user_id: player.id, status: 'open', opened_by: currentUser.id }).select('*, profiles!user_id(name, numeric_id, avatar_url, vip_status, role, balance_brl)').single();
         if (error) { alert('Erro: ' + error.message); return; }
         setOpenCommands([data, ...openCommands]);
         setSearchQuery(''); setSearchResults([]);
@@ -386,7 +398,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                                     <img src={cmd.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${cmd.profiles?.name}&background=random`} className="w-9 h-9 rounded-full border border-white/10 flex-shrink-0" alt="" />
                                                     <div>
                                                         <PlayerName p={cmd.profiles} />
-                                                        <span className="text-[10px] text-gray-500 font-black">CR#{String(cmd.profiles?.numeric_id).padStart(3, '0')}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[10px] text-gray-500 font-black">CR#{String(cmd.profiles?.numeric_id).padStart(3, '0')}</span>
+                                                            <span className="text-[10px] text-green-400 font-black">💵 R$ {Number(cmd.profiles?.balance_brl || 0).toFixed(2)}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                                 <div className="text-right flex flex-col items-end gap-1">
@@ -480,11 +495,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
 
                                 {selectedCommand ? (
                                     <div className="flex-1 flex flex-col overflow-hidden">
-                                        <div className="px-4 py-2 bg-primary/10 border-b border-primary/20 flex-shrink-0 flex items-center gap-2">
-                                            {selectedCommand.profiles?.vip_status && <span className="text-sm">{VIP_ICONS[selectedCommand.profiles.vip_status]}</span>}
-                                            <p className="text-[10px] text-primary font-black uppercase truncate flex-1">
-                                                ▶ {selectedCommand.profiles?.name} — R$ {Number(selectedCommand.total_brl).toFixed(2)}
-                                            </p>
+                                        <div className="px-4 py-2 bg-primary/10 border-b border-primary/20 flex-shrink-0 flex items-center justify-between">
+                                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                {selectedCommand.profiles?.vip_status && <span className="text-sm">{VIP_ICONS[selectedCommand.profiles.vip_status]}</span>}
+                                                <p className="text-[10px] text-primary font-black uppercase truncate">
+                                                    ▶ {selectedCommand.profiles?.name} — R$ {Number(selectedCommand.total_brl).toFixed(2)}
+                                                </p>
+                                            </div>
+                                            <div className="text-[10px] text-green-400 font-black whitespace-nowrap">
+                                                💵 R$ {Number(selectedCommand.profiles?.balance_brl || 0).toFixed(2)}
+                                            </div>
                                         </div>
 
                                         <div className="flex border-b border-white/10 flex-shrink-0">
@@ -577,22 +597,36 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             <div className="flex items-center justify-between mb-6">
                                 <div>
                                     <h3 className="text-xl font-display font-black text-white uppercase">Relatório Financeiro</h3>
-                                    <p className="text-gray-400 text-sm">Movimentação por sessão.</p>
+                                    <div className="flex gap-2 mt-2">
+                                        <button onClick={() => { setReportFilter('event'); setReportData([]); }} className={`text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-xl transition-all ${reportFilter === 'event' ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}>Por Evento</button>
+                                        <button onClick={() => { setReportFilter('date'); setReportData([]); }} className={`text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-xl transition-all ${reportFilter === 'date' ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}>Por Período</button>
+                                    </div>
                                 </div>
                                 <div className="flex gap-2">
-                                    <select value={selectedEvent?.id || ''} onChange={e => { const ev = events.find(x => x.id === e.target.value) || null; setSelectedEvent(ev); if (ev) fetchReport(ev.id); }}
-                                        className="bg-[#0a0720] border border-white/10 rounded-xl px-3 py-2 text-white outline-none text-sm font-bold min-w-[200px]"
-                                        style={{ backgroundColor: '#0a0720' }}>
-                                        <option value="" style={{ backgroundColor: '#0a0720' }}>Selecionar Evento</option>
-                                        {events.map(ev => <option key={ev.id} value={ev.id} style={{ backgroundColor: '#0a0720' }}>{ev.title}</option>)}
-                                    </select>
-                                    {selectedEvent && <button onClick={() => fetchReport(selectedEvent.id)} className="p-2 bg-white/5 border border-white/10 rounded-xl hover:bg-primary/20 hover:border-primary/50 transition-all"><span className="material-icons-outlined text-sm text-gray-400">refresh</span></button>}
+                                    {reportFilter === 'event' ? (
+                                        <>
+                                            <select value={selectedEvent?.id || ''} onChange={e => { const ev = events.find(x => x.id === e.target.value) || null; setSelectedEvent(ev); if (ev) fetchReport(ev.id); }}
+                                                className="bg-[#0a0720] border border-white/10 rounded-xl px-3 py-2 text-white outline-none text-sm font-bold min-w-[200px]"
+                                                style={{ backgroundColor: '#0a0720' }}>
+                                                <option value="" style={{ backgroundColor: '#0a0720' }}>Selecionar Evento</option>
+                                                {events.map(ev => <option key={ev.id} value={ev.id} style={{ backgroundColor: '#0a0720' }}>{ev.title} ({new Date(ev.date).toLocaleDateString('pt-BR')})</option>)}
+                                            </select>
+                                            {selectedEvent && <button onClick={() => fetchReport(selectedEvent.id)} className="p-2 bg-white/5 border border-white/10 rounded-xl hover:bg-primary/20 hover:border-primary/50 transition-all"><span className="material-icons-outlined text-sm text-gray-400">refresh</span></button>}
+                                        </>
+                                    ) : (
+                                        <div className="flex items-center gap-2 bg-[#0a0720] border border-white/10 rounded-xl px-3 py-1">
+                                            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-transparent text-gray-400 font-bold text-sm outline-none w-32 custom-date-input" />
+                                            <span className="text-gray-500 font-black">até</span>
+                                            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-transparent text-gray-400 font-bold text-sm outline-none w-32 custom-date-input" />
+                                            <button onClick={() => fetchMonthlyReport(startDate, endDate)} className="p-2 bg-primary hover:bg-primary/80 text-white rounded-lg transition-all shadow-neon-pink ml-2"><span className="material-icons-outlined text-sm">search</span></button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             {reportData.length === 0 ? (
                                 <div className="text-center py-20 text-gray-600 border-2 border-dashed border-white/5 rounded-2xl">
                                     <span className="material-icons-outlined text-4xl opacity-20 block mb-2">analytics</span>
-                                    <p className="italic">Selecione um evento.</p>
+                                    <p className="italic">{reportFilter === 'event' ? 'Selecione um evento.' : 'Selecione as datas e clique em buscar.'}</p>
                                 </div>
                             ) : (
                                 <div className="space-y-6">
@@ -650,7 +684,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                 <img src={selectedCommand.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${selectedCommand.profiles?.name}&background=random`} className="w-8 h-8 rounded-full border border-primary/50" alt="" />
                                 <div>
                                     <PlayerName p={selectedCommand.profiles} />
-                                    <span className="text-[10px] text-primary font-black">CR#{String(selectedCommand.profiles?.numeric_id).padStart(3, '0')}</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] text-primary font-black">CR#{String(selectedCommand.profiles?.numeric_id).padStart(3, '0')}</span>
+                                        <span className="text-[10px] text-green-400 font-black">💵 R$ {Number(selectedCommand.profiles?.balance_brl || 0).toFixed(2)}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>

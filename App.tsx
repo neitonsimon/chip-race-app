@@ -16,6 +16,7 @@ import { RechargePage } from './components/RechargePage';
 import { CompanyHistory } from './components/CompanyHistory';
 import { FAQSection } from './components/FAQSection';
 import { AdminPanel } from './components/AdminPanel';
+import { SponsorsSection } from './components/SponsorsSection';
 import { supabase } from './src/lib/supabase';
 import { RankingPlayer, MonthData, Message, ContentDB, TournamentCategory, Event, PlayerResult, PlayerStats, RankingInstance, ScoringSchema, RankingFormula, ExperienceLevel, DailyReward, Poll, PollVote, MessageCategory } from './types';
 import { calculatePoints } from './utils/scoring';
@@ -1672,6 +1673,7 @@ export default function App() {
                             faqs={contentDB.faq}
                             onUpdateFaqs={(val) => updateContent('faq', '', val)}
                         />
+                        <SponsorsSection />
                         <Newsletter onNavigate={handleNavigate} />
                     </>
                 );

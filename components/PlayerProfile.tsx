@@ -150,12 +150,13 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     const [receiptItems, setReceiptItems] = useState<any[]>([]);
 
     useEffect(() => {
-        if (activeTab === 'comprovantes' && currentUser?.id === initialData.id) {
+        if (activeTab === 'comprovantes' && initialData?.id && currentUser?.id === initialData.id) {
             fetchPlayerCommands();
         }
-    }, [activeTab, initialData.id, currentUser?.id]);
+    }, [activeTab, initialData?.id, currentUser?.id]);
 
     const fetchPlayerCommands = async () => {
+        if (!initialData?.id) return;
         const { data } = await supabase.from('commands')
             .select('*, events(title, date)')
             .eq('user_id', initialData.id)
