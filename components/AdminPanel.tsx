@@ -216,11 +216,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         if (!selectedCommand) return;
         setIsLoading(true);
         try {
-            const { data: profile } = await supabase.from('profiles').select('balance_brl').eq('id', selectedCommand.user_id).single();
             const total = Number(selectedCommand.total_brl);
-            const balance = Number(profile?.balance_brl || 0);
-            if (balance < total) { alert(`Saldo insuficiente! Tem R$ ${balance.toFixed(2)}, comanda: R$ ${total.toFixed(2)}.`); return; }
-            await supabase.from('profiles').update({ balance_brl: balance - total }).eq('id', selectedCommand.user_id);
+            // Atomic deduct with balance check - fails safely if insufficient funds
+            const { error: deductErr } = await supabase.rpc('deduct_balance_brl', {
+                p_user_id: selectedCommand.user_id,
+                p_amount: total
+            });
+            if (deductErr) {
+                alert(deductErr.message || 'Erro ao descontar saldo.');
+                setIsLoading(false); return;
+            }
             await supabase.from('commands').update({ status: 'closed', closed_at: new Date().toISOString() }).eq('id', selectedCommand.id);
             await supabase.from('messages').insert({ user_id: selectedCommand.user_id, sender_id: currentUser.id, content: `Sua comanda foi encerrada. Total: R$ ${total.toFixed(2)} descontado do saldo.`, category: 'system', is_read: false });
             setOpenCommands(openCommands.filter(c => c.id !== selectedCommand.id));
@@ -236,10 +241,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         if (!amount || amount <= 0) return;
         setIsLoading(true);
         try {
-            const { data: profile } = await supabase.from('profiles').select('balance_brl').eq('id', selectedCommand.user_id).single();
-            await supabase.from('profiles').update({ balance_brl: Number(profile?.balance_brl || 0) + amount }).eq('id', selectedCommand.user_id);
-            await supabase.from('messages').insert({ user_id: selectedCommand.user_id, sender_id: currentUser.id, content: `Pagamento de R$ ${amount.toFixed(2)} registrado. Saldo atualizado.`, category: 'system', is_read: false });
-            alert(`R$ ${amount.toFixed(2)} creditado!`);
+            // Atomic increment — no race condition
+            const { error: incrErr } = await supabase.rpc('increment_balance_brl', {
+                p_user_id: selectedCommand.user_id,
+                p_amount: amount
+            });
+            if (incrErr) { alert('Erro ao creditar: ' + incrErr.message); return; }
+            await supabase.from('messages').insert({ user_id: selectedCommand.user_id, sender_id: currentUser.id, content: `Pagamento de R$ ${amount.toFixed(2)} registrado pelo admin. Saldo atualizado.`, category: 'system', is_read: false });
+            alert(`✅ R$ ${amount.toFixed(2)} creditado com sucesso!`);
             setShowTopUp(false); setTopUpAmount('');
         } catch (err: any) { alert('Erro: ' + err.message); }
         finally { setIsLoading(false); }
@@ -453,12 +462,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                         </div>
 
                                         <div className="flex-1 overflow-y-auto p-3 custom-scrollbar">
-                                            {pendingProduct && (
-                                                <div className="mb-3 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-[10px] text-yellow-300 font-bold text-center">
-                                                    Confirmar "{pendingProduct.name}" à comanda de @{selectedCommand.profiles?.name}?
-                                                </div>
-                                            )}
-
                                             <div className="grid grid-cols-2 gap-2">
                                                 {productSection !== 'torneio' ? filteredProducts.map(product => {
                                                     const finalPrice = getVipPrice(Number(product.price), product.category, product.name);
