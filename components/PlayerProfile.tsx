@@ -544,7 +544,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
     const activeDailyRewards = dailyRewards.length > 0 ? dailyRewards : FALLBACK_DAILY_REWARDS;
 
-    const handleClaimToday = () => {
+    const handleClaimToday = async () => {
         // 1. Calculate Rewards
         const streakIndex = Math.min(player.dailyStreak, activeDailyRewards.length - 1);
         const reward = activeDailyRewards[streakIndex];
@@ -595,11 +595,29 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             dailyStreak: 0
         };
 
+        // 3.1. Se for recompensa financeira, garantir persistência via RPC primeiro
+        if (reward.reward_type === 'chipz' || reward.reward_type === 'brl') {
+            try {
+                const { error: txError } = await supabase.rpc('secure_balance_transaction', {
+                    user_id: targetIdRef.current,
+                    brl_amount: reward.reward_type === 'brl' ? reward.reward_value : 0,
+                    chipz_amount: reward.reward_type === 'chipz' ? reward.reward_value : 0,
+                    description: `Recompensa Diária: ${reward.reward_name}`
+                });
+
+                if (txError) throw txError;
+            } catch (err) {
+                console.error('Erro ao processar recompensa financeira:', err);
+                alert('Erro ao processar recompensa. Tente novamente.');
+                return;
+            }
+        }
+
         setPlayer(newPlayerData);
         setCanClaimDaily(false);
         setClaimAnimation(true);
 
-        // Persist to "DB" (App State)
+        // Persist to "DB" (App State - para XP, Nível e Datas)
         if (onUpdateProfile) {
             onUpdateProfile(targetIdRef.current, newPlayerData);
         }
@@ -1056,7 +1074,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                                     const newPlayerData = { ...player, lastDailyClaim: newLastClaim };
                                                     setPlayer(newPlayerData);
                                                     checkClaimAvailability(newLastClaim);
-                                                    if (onUpdateProfile) onUpdateProfile(originalNameRef.current, newPlayerData);
+                                                    if (onUpdateProfile) onUpdateProfile(targetIdRef.current, newPlayerData);
                                                 }}
                                                 className="px-2 py-1 bg-cyan-600/20 text-cyan-400 text-[10px] font-bold rounded uppercase hover:bg-cyan-600 hover:text-white transition-colors flex items-center gap-1"
                                                 title="DEV: Forçar reset de 24h"

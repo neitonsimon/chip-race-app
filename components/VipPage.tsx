@@ -5,7 +5,7 @@ import { PlayerStats, MessageCategory } from '../types';
 interface VipPageProps {
   onNavigate: (view: string) => void;
   currentUser?: Partial<PlayerStats>;
-  onUpdateProfile?: (originalName: string, updatedData: PlayerStats) => void;
+  onUpdateProfile?: (targetId: string, updatedData: PlayerStats) => void;
   onSendAdminMessage?: (subject: string, content: string, category: MessageCategory, pollId?: string, targetUserId?: string) => void;
 }
 
@@ -102,7 +102,7 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate, currentUser, onUpd
           vipExpiresAt: newExpiresAt.toISOString(),
           isVip: true
         } as PlayerStats;
-        onUpdateProfile(currentUser.name || '', updated);
+        onUpdateProfile(currentUser.id || '', updated);
       }
 
       onNavigate('profile');

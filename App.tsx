@@ -847,7 +847,9 @@ export default function App() {
         }));
 
         // 3. Persist to Supabase (if user is logged in)
-        if (currentUserId && targetId) {
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetId);
+
+        if (currentUserId && targetId && isUUID) {
             try {
                 if (targetId !== currentUserId && !isAdmin) {
                     alert("Você não tem permissão para editar outros perfis.");
@@ -871,9 +873,7 @@ export default function App() {
                         daily_streak: updatedData.dailyStreak || 0,
                         is_vip: updatedData.isVip || false,
                         vip_status: updatedData.vipStatus || 'nao_vip',
-                        vip_expires_at: updatedData.vipExpiresAt || null,
-                        balance_brl: updatedData.balanceBrl || 0,
-                        balance_chipz: updatedData.balanceChipz || 0
+                        vip_expires_at: updatedData.vipExpiresAt || null
                     })
                     .eq('id', targetId);
 
@@ -1426,6 +1426,7 @@ export default function App() {
     const handlePlayerSelect = (player: RankingPlayer) => {
         setSelectedPlayer(player);
         setCurrentView('profile');
+        window.scrollTo(0, 0);
     };
 
     const handleNavigate = (view: string) => {
@@ -1502,7 +1503,8 @@ export default function App() {
         const player = players.find(p => p.name.toLowerCase() === name.toLowerCase());
         if (player) {
             setSelectedPlayer(player);
-            handleNavigate('profile');
+            setCurrentView('profile');
+            window.scrollTo(0, 0);
         } else {
             // Se não encontrou no ranking, tenta criar um objeto básico com o nome
             setSelectedPlayer({
@@ -1513,7 +1515,8 @@ export default function App() {
                 points: 0,
                 change: 'same'
             });
-            handleNavigate('profile');
+            setCurrentView('profile');
+            window.scrollTo(0, 0);
         }
     };
 

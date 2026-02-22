@@ -5,7 +5,7 @@ import { supabase } from '../src/lib/supabase';
 interface RechargePageProps {
     currentUser: PlayerStats;
     onNavigate: (view: string) => void;
-    onUpdateProfile?: (originalName: string, updatedData: PlayerStats) => void;
+    onUpdateProfile?: (targetId: string, updatedData: PlayerStats) => void;
 }
 
 export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavigate, onUpdateProfile }) => {
@@ -81,22 +81,38 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                         balanceBrl: (currentUser.balanceBrl || 0) - cost,
                         balanceChipz: (currentUser.balanceChipz || 0) + totalChipz
                     };
-                    onUpdateProfile(currentUser.name, newPlayerData);
+                    onUpdateProfile(currentUser.id, newPlayerData);
                 }
 
                 alert(`Sucesso! Você adquiriu o pacote ${pack.name} e recebeu ${totalChipz} Chipz.`);
             } else {
                 // Type BRL (Recharge Wallet)
-                await new Promise(resolve => setTimeout(resolve, 1500));
+                await new Promise(resolve => setTimeout(resolve, 1000));
 
                 const amountToAdd = parseFloat(id);
                 if (isNaN(amountToAdd) || amountToAdd <= 0) return;
 
-                const newBalanceBrl = (currentUser.balanceBrl || 0) + amountToAdd;
-                const newPlayerData = { ...currentUser, balanceBrl: newBalanceBrl };
+                // Usar RPC para adicionar saldo de forma segura
+                const { error: txError } = await supabase.rpc('secure_balance_transaction', {
+                    user_id: currentUser.id,
+                    brl_amount: amountToAdd,
+                    chipz_amount: 0,
+                    description: `Depósito: Adicionar Reais`
+                });
+
+                if (txError) {
+                    console.error('Erro no depósito:', txError);
+                    alert('Falha ao processar depósito. Tente novamente.');
+                    setIsProcessing(false);
+                    return;
+                }
 
                 if (onUpdateProfile) {
-                    onUpdateProfile(currentUser.name, newPlayerData);
+                    const newPlayerData = {
+                        ...currentUser,
+                        balanceBrl: (currentUser.balanceBrl || 0) + amountToAdd
+                    };
+                    onUpdateProfile(currentUser.id, newPlayerData);
                 }
 
                 setCustomBrlAmount('');
