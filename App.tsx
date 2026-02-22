@@ -1474,6 +1474,7 @@ export default function App() {
         if (isLoggedIn && currentUser.name) {
             combinedPlayers.push({
                 id: currentUserId || undefined,
+                numericId: currentUser.numericId,
                 rank: 0,
                 name: currentUser.name,
                 avatar: currentUser.avatar || '',

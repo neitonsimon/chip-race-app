@@ -80,27 +80,27 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
             const uniqueUserIds = [...new Set(rows.filter((q: any) => q.user_id).map((q: any) => q.user_id))];
             const uniqueNames = [...new Set(rows.filter((q: any) => !q.user_id).map((q: any) => q.player_name as string))];
 
-            const fullProfileMap: Record<string, { name: string, avatar?: string }> = {};
+            const fullProfileMap: Record<string, { name: string, avatar?: string, numericId?: number }> = {};
 
             if (uniqueUserIds.length > 0) {
                 const { data: profilesById } = await supabase
                     .from('profiles')
-                    .select('id, name, avatar_url')
+                    .select('id, name, avatar_url, numeric_id')
                     .in('id', uniqueUserIds);
 
                 profilesById?.forEach((p: any) => {
-                    fullProfileMap[p.id] = { name: p.name || 'Usuário', avatar: p.avatar_url };
+                    fullProfileMap[p.id] = { name: p.name || 'Usuário', avatar: p.avatar_url, numericId: p.numeric_id };
                 });
             }
 
             if (uniqueNames.length > 0) {
                 const { data: profilesByName } = await supabase
                     .from('profiles')
-                    .select('id, name, avatar_url')
+                    .select('id, name, avatar_url, numeric_id')
                     .in('name', uniqueNames);
 
                 profilesByName?.forEach((p: any) => {
-                    fullProfileMap[p.name.toLowerCase().trim()] = { name: p.name, avatar: p.avatar_url };
+                    fullProfileMap[p.name.toLowerCase().trim()] = { name: p.name, avatar: p.avatar_url, numericId: p.numeric_id };
                 });
             }
 
@@ -268,7 +268,15 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
                                                 {player.name.substring(0, 2).toUpperCase()}
                                             </div>
                                         )}
-                                        <span className="font-bold text-white">{player.name}</span>
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-white transition-colors">{player.name}</span>
+                                            <span className="text-[10px] uppercase font-black tracking-widest text-primary/70">
+                                                {(() => {
+                                                    const pInfo = player.userId ? profileMap[player.userId] : profileMap[player.name.toLowerCase().trim()];
+                                                    return pInfo?.numericId ? `CR#${String(pInfo.numericId).padStart(3, '0')}` : 'CR#INV';
+                                                })()}
+                                            </span>
+                                        </div>
                                     </button>
                                 </td>
 

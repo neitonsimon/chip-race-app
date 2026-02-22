@@ -92,7 +92,14 @@ export const RankingTable: React.FC<RankingTableProps> = ({
 
         // Use mapped ID, or search by name (simType might be a schema name in old data)
         const schema = globalScoringSchemas?.find(s => s.id === mappedSchemaId)
-            || activeRanking?.scoringSchemas?.find(s => s.id === simType || s.name === simType);
+            || activeRanking?.scoringSchemas?.find(s => s.id === simType || s.name === simType)
+            || globalScoringSchemas?.find(s => {
+                const sName = s.name.toLowerCase();
+                if (simType === 'legacy_weekly' && sName.includes('legado') && sName.includes('padrão')) return true;
+                if (simType === 'legacy_monthly' && sName.includes('legado') && sName.includes('mensal')) return true;
+                if (simType === 'legacy_special' && sName.includes('legado') && sName.includes('especial')) return true;
+                return false;
+            });
 
         if (schema || mappedSchemaId) {
             points = calculatePoints(
@@ -287,9 +294,9 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                             ))
                                         ) : activeRanking?.label.toLowerCase().includes('legado') ? (
                                             <>
-                                                <option value="legacy_weekly">Legacy: Semanal</option>
-                                                <option value="legacy_monthly">Legacy: Mensal</option>
-                                                <option value="legacy_special">Legacy: Especial</option>
+                                                <option value="legacy_weekly">Legado Padrão</option>
+                                                <option value="legacy_monthly">Legado Mensal</option>
+                                                <option value="legacy_special">Legado Especial</option>
                                             </>
                                         ) : (
                                             <>
@@ -375,15 +382,27 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                             <div className="lg:col-span-1 flex flex-col justify-between h-full gap-4">
                                 <div className="flex gap-4">
                                     {simType !== 'cash_online' && (
-                                        <div className="flex flex-col gap-1 w-24">
+                                        <div className="flex flex-col gap-1 w-24 md:w-32">
                                             <label className="text-[10px] font-bold text-gray-400 uppercase">Posição Final</label>
-                                            <input
-                                                type="number"
-                                                value={simPosition || ''}
-                                                onChange={(e) => setSimPosition(parseInt(e.target.value) || 1)}
-                                                min="1"
-                                                className="w-full bg-black/40 border border-white/10 rounded px-2 py-1 text-white text-sm focus:border-secondary outline-none text-center"
-                                            />
+                                            {simType.includes('legacy') || activeRanking?.label.toLowerCase().includes('legado') ? (
+                                                <select
+                                                    value={simPosition || 1}
+                                                    onChange={(e) => setSimPosition(parseInt(e.target.value) || 1)}
+                                                    className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-white text-sm focus:border-secondary outline-none text-center"
+                                                >
+                                                    <option value="1">Campeão</option>
+                                                    <option value="2">Vice</option>
+                                                    <option value="3">3º Lugar</option>
+                                                </select>
+                                            ) : (
+                                                <input
+                                                    type="number"
+                                                    value={simPosition || ''}
+                                                    onChange={(e) => setSimPosition(parseInt(e.target.value) || 1)}
+                                                    min="1"
+                                                    className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-white text-sm focus:border-secondary outline-none text-center"
+                                                />
+                                            )}
                                         </div>
                                     )}
                                     <label className="flex items-center gap-2 cursor-pointer group">
@@ -542,7 +561,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                                         {player.name}
                                                     </span>
                                                     <span className="text-[10px] md:text-xs uppercase tracking-wider text-gray-500 block truncate max-w-[120px]">
-                                                        {player.city}
+                                                        {player.numericId ? `CR#${String(player.numericId).padStart(3, '0')}` : 'CR#INV'} · {player.city}
                                                     </span>
                                                 </div>
                                             </div>

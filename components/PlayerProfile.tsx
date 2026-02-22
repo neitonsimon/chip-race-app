@@ -981,7 +981,10 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                     ) : null}
                                 </div>
 
-                                <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{player.name}</h1>
+                                <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-0.5">{player.name}</h1>
+                                <div className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-4 bg-primary/10 inline-block px-3 py-1 rounded-full border border-primary/20">
+                                    ID: {player.numericId ? `CR#${String(player.numericId).padStart(3, '0')}` : 'CR#GUEST'}
+                                </div>
                                 <p className="text-gray-500 dark:text-gray-400 text-base mb-6">{player.city}</p>
 
 
@@ -1025,7 +1028,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                         <div title={`UUID: ${player.id}`}>
                                             <div className="text-xs text-gray-500 uppercase tracking-wide">ID Chip Race</div>
                                             <div className="text-xl font-display font-black text-primary">
-                                                #{player.numericId || (player.id ? player.id.substring(0, 8).toUpperCase() : '---')}
+                                                {player.numericId ? `CR#${String(player.numericId).padStart(3, '0')}` : 'CR#GUEST'}
                                             </div>
                                         </div>
                                         {/* NEW XP & LEVEL UI */}
@@ -1338,13 +1341,13 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                             className="w-full bg-black/30 border border-white/10 rounded p-3 text-white focus:border-secondary outline-none"
                                         />
                                     </div>
-                                    <div className="opacity-50">
+                                    <div className="opacity-70">
                                         <label className="block text-sm font-bold text-gray-500 uppercase mb-1">ID Chip Race (Fixo)</label>
                                         <input
                                             type="text"
-                                            value={player.id}
+                                            value={player.numericId ? `CR#${String(player.numericId).padStart(3, '0')}` : (player.id?.length > 20 ? 'CR#GUEST (Pendente)' : `CR#INV (${player.id})`)}
                                             disabled
-                                            className="w-full bg-black/10 border border-white/5 rounded p-3 text-gray-400 cursor-not-allowed"
+                                            className="w-full bg-black/20 border border-white/5 rounded p-3 text-primary font-bold cursor-not-allowed"
                                         />
                                     </div>
                                 </div>

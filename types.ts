@@ -87,6 +87,7 @@ export interface Event {
 
 export interface RankingPlayer {
   id?: string;
+  numericId?: number;
   rank: number;
   name: string;
   avatar: string;
