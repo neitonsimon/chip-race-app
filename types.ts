@@ -260,6 +260,7 @@ export type QualificationMode = 'rankings' | 'jackpot' | 'last_longer' | 'bet' |
 
 export interface TheChosenQualifier {
   id: string;
+  user_id?: string;
   player_name: string;
   mode: QualificationMode;
   created_at: string;

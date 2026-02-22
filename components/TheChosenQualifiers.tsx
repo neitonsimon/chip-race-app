@@ -20,6 +20,7 @@ const MODES: { id: QualificationMode; label: string; icon: string; color: string
 ];
 
 interface PlayerSummary {
+    userId?: string;
     name: string;
     qualifications: Record<QualificationMode, number>;
     totalCount: number;
@@ -39,10 +40,12 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
 
     // Form state
     const [newPlayerName, setNewPlayerName] = useState('');
+    const [selectedUserId, setSelectedUserId] = useState<string | undefined>(undefined);
     const [selectedMode, setSelectedMode] = useState<QualificationMode>('rankings');
     const [isSaving, setIsSaving] = useState(false);
-    const [filteredSuggestions, setFilteredSuggestions] = useState<{ name: string }[]>([]);
+    const [filteredSuggestions, setFilteredSuggestions] = useState<{ id?: string, name: string }[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [profileMap, setProfileMap] = useState<Record<string, { name: string, avatar?: string }>>({});
 
     useEffect(() => {
         fetchQualifiers();
@@ -73,24 +76,42 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
             const rows = data || [];
             setQualifiers(rows);
 
-            // Fetch avatars for all unique player names
-            const uniqueNames = [...new Set(rows.map((q: any) => q.player_name as string))];
-            if (uniqueNames.length > 0) {
-                const { data: profiles } = await supabase
+            // Fetch profiles by ID and Name for accurate mapping
+            const uniqueUserIds = [...new Set(rows.filter((q: any) => q.user_id).map((q: any) => q.user_id))];
+            const uniqueNames = [...new Set(rows.filter((q: any) => !q.user_id).map((q: any) => q.player_name as string))];
+
+            const fullProfileMap: Record<string, { name: string, avatar?: string }> = {};
+
+            if (uniqueUserIds.length > 0) {
+                const { data: profilesById } = await supabase
                     .from('profiles')
-                    .select('name, avatar_url')
+                    .select('id, name, avatar_url')
+                    .in('id', uniqueUserIds);
+
+                profilesById?.forEach((p: any) => {
+                    fullProfileMap[p.id] = { name: p.name || 'Usuário', avatar: p.avatar_url };
+                });
+            }
+
+            if (uniqueNames.length > 0) {
+                const { data: profilesByName } = await supabase
+                    .from('profiles')
+                    .select('id, name, avatar_url')
                     .in('name', uniqueNames);
 
-                if (profiles) {
-                    const map: Record<string, string> = {};
-                    profiles.forEach((p: any) => {
-                        if (p.name && p.avatar_url) {
-                            map[p.name] = p.avatar_url;
-                        }
-                    });
-                    setAvatarMap(map);
-                }
+                profilesByName?.forEach((p: any) => {
+                    fullProfileMap[p.name.toLowerCase().trim()] = { name: p.name, avatar: p.avatar_url };
+                });
             }
+
+            setProfileMap(fullProfileMap);
+
+            // Legacy avatar map for backwards compatibility if needed elsewhere
+            const legacyMap: Record<string, string> = {};
+            Object.keys(fullProfileMap).forEach(key => {
+                if (fullProfileMap[key].avatar) legacyMap[key] = fullProfileMap[key].avatar!;
+            });
+            setAvatarMap(legacyMap);
         } catch (err) {
             console.error('Error fetching qualifiers:', err);
         } finally {
@@ -104,12 +125,13 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
         try {
             const { error } = await supabase
                 .from('the_chosen_qualifiers')
-                .insert([{ player_name: newPlayerName.trim(), mode: selectedMode }]);
+                .insert([{ player_name: newPlayerName.trim(), user_id: selectedUserId, mode: selectedMode }]);
 
             if (error) throw error;
 
             setShowAddModal(false);
             setNewPlayerName('');
+            setSelectedUserId(undefined);
             fetchQualifiers();
         } catch (err: any) {
             console.error('Error adding qualifier:', err);
@@ -138,9 +160,13 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
     const playerSummariesMap: Record<string, PlayerSummary> = {};
 
     qualifiers.forEach(q => {
-        if (!playerSummariesMap[q.player_name]) {
-            playerSummariesMap[q.player_name] = {
-                name: q.player_name,
+        const key = q.user_id || q.player_name.toLowerCase().trim();
+        const profile = q.user_id ? profileMap[q.user_id] : (profileMap[q.player_name.toLowerCase().trim()] || null);
+
+        if (!playerSummariesMap[key]) {
+            playerSummariesMap[key] = {
+                userId: q.user_id,
+                name: profile?.name || q.player_name,
                 qualifications: {
                     rankings: 0, jackpot: 0, last_longer: 0, bet: 0, bet_up: 0, sng_sat: 0, quests: 0, vip: 0
                 },
@@ -149,8 +175,8 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
                 bonusStack: 0
             };
         }
-        playerSummariesMap[q.player_name].qualifications[q.mode]++;
-        playerSummariesMap[q.player_name].totalCount++;
+        playerSummariesMap[key].qualifications[q.mode]++;
+        playerSummariesMap[key].totalCount++;
     });
 
     const summaries = Object.values(playerSummariesMap).map(player => {
@@ -231,20 +257,17 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
                                         onClick={() => onNavigatePlayer?.(player.name)}
                                         className="flex items-center gap-3 text-left hover:text-primary transition-colors"
                                     >
-                                        {avatarMap[player.name] ? (
+                                        {(player.userId ? profileMap[player.userId]?.avatar : profileMap[player.name.toLowerCase().trim()]?.avatar) ? (
                                             <img
-                                                src={avatarMap[player.name]}
+                                                src={player.userId ? profileMap[player.userId]?.avatar : profileMap[player.name.toLowerCase().trim()]?.avatar}
                                                 alt={player.name}
                                                 className="w-10 h-10 rounded-full object-cover border-2 border-primary/30 shadow-lg shadow-primary/20 flex-shrink-0"
-                                                onError={(e) => {
-                                                    (e.target as HTMLImageElement).style.display = 'none';
-                                                    (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-                                                }}
                                             />
-                                        ) : null}
-                                        <div className={`w-10 h-10 rounded-full bg-gradient-to-br from-primary/40 to-accent/40 flex items-center justify-center text-xs font-bold text-white shadow-lg border border-white/10 flex-shrink-0 ${avatarMap[player.name] ? 'hidden' : ''}`}>
-                                            {player.name.substring(0, 2).toUpperCase()}
-                                        </div>
+                                        ) : (
+                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/40 to-accent/40 flex items-center justify-center text-xs font-bold text-white shadow-lg border border-white/10 flex-shrink-0">
+                                                {player.name.substring(0, 2).toUpperCase()}
+                                            </div>
+                                        )}
                                         <span className="font-bold text-white">{player.name}</span>
                                     </button>
                                 </td>
@@ -347,6 +370,7 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
                                                 key={i}
                                                 onClick={() => {
                                                     setNewPlayerName(p.name);
+                                                    setSelectedUserId(p.id);
                                                     setShowSuggestions(false);
                                                 }}
                                                 className="w-full text-left px-4 py-3 hover:bg-primary/20 text-white text-sm transition-colors border-b border-white/5 last:border-0"

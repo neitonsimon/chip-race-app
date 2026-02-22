@@ -408,6 +408,7 @@ export default function App() {
                 console.log(`User profile loaded: ${data.email}, Role: ${data.role}, IsAdmin: ${userIsAdmin}`);
 
                 setCurrentUser({
+                    id: userId,
                     name: data.name || 'User',
                     avatar: data.avatar_url || `https://ui-avatars.com/api/?name=${data.name || 'U'}&background=random`,
                     city: data.city || '',

@@ -270,8 +270,11 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             realLogs = events
                 .filter(e => e.status === 'closed' && e.results)
                 .map(e => {
-                    // Find result for this player
-                    const res = e.results?.find(r => r.name.toLowerCase() === baseData.name.toLowerCase());
+                    // Find result for this player (Priority to ID, Fallback to Name)
+                    const res = e.results?.find(r =>
+                        (r.userId && r.userId === targetIdRef.current) ||
+                        (!r.userId && r.name.toLowerCase() === baseData.name.toLowerCase())
+                    );
                     if (res) {
                         return {
                             date: e.date.split('-').reverse().join('/'), // Convert YYYY-MM-DD to DD/MM/YYYY
