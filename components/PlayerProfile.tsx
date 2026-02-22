@@ -39,6 +39,7 @@ interface PlayerProfileProps {
     onMarkAsRead?: (id: string) => void;
     onReply?: (id: string, text: string) => void;
     rankings?: RankingInstance[];
+    rankingPlayers?: RankingPlayer[];
 }
 
 // Dicionário de Estilos de Jogo com Descrições
@@ -96,7 +97,7 @@ const FALLBACK_DAILY_REWARDS: DailyReward[] = [
 ];
 
 
-type TabView = 'overview' | 'edit' | 'inbox';
+type TabView = 'overview' | 'edit' | 'inbox' | 'notifications';
 
 export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     isAdmin,
@@ -105,7 +106,6 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     onSendMessage,
     onUpdateProfile,
     currentUser,
-    events,
     experienceLevels = [],
     setExperienceLevels,
     dailyRewards = [],
@@ -118,9 +118,12 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     onSendAdminMessage,
     onMarkAsRead,
     onReply,
-    rankings
+    rankings,
+    rankingPlayers = [],
+    events = []
 }) => {
     const [activeTab, setActiveTab] = useState<TabView>('overview');
+    const [viewClosedEvent, setViewClosedEvent] = useState<Event | null>(null);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [showMessageModal, setShowMessageModal] = useState(false);
     const [messageText, setMessageText] = useState('');
@@ -140,6 +143,40 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     // Admin Poll state
     const [pollQuestion, setPollQuestion] = useState('');
     const [pollOptions, setPollOptions] = useState(['', '']);
+
+    const handleOpenFlyer = (log: TournamentResult) => {
+        const eventMatch = events.find(e =>
+            e.title.toLowerCase() === log.eventName.toLowerCase() &&
+            (e.date.split('-').reverse().join('/') === log.date || e.date === log.date)
+        );
+
+        if (eventMatch) {
+            setViewClosedEvent(eventMatch);
+        }
+    };
+
+    useEffect(() => {
+        const handleOpenPolls = () => {
+            setActiveTab('notifications');
+            setInboxFilter('poll');
+        };
+        const handleOpenPrivate = () => {
+            setActiveTab('notifications');
+            setInboxFilter('private');
+        };
+        window.addEventListener('open-poll-messages', handleOpenPolls);
+        window.addEventListener('open-private-messages', handleOpenPrivate);
+        return () => {
+            window.removeEventListener('open-poll-messages', handleOpenPolls);
+            window.removeEventListener('open-private-messages', handleOpenPrivate);
+        };
+    }, []);
+
+    // Helper para buscar Avatar
+    const getPlayerAvatar = (name: string) => {
+        const p = rankingPlayers.find(ptr => ptr.name.toLowerCase() === name.toLowerCase());
+        return p?.avatar || `https://ui-avatars.com/api/?name=${name.replace(' ', '+')}&background=random`;
+    };
 
     // States para Upload de Imagem
     const [showUploadModal, setShowUploadModal] = useState(false);
@@ -214,6 +251,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             baseData = {
                 ...baseData,
                 id: initialData.id || `CR-${Math.floor(Math.random() * 9000) + 1000}`,
+                numericId: initialData.numericId,
                 name: initialData.name,
                 avatar: initialData.avatar,
                 city: initialData.city,
@@ -998,11 +1036,13 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="w-10 h-10 rounded-full bg-white/5 hover:bg-pink-600/20 hover:text-pink-500 flex items-center justify-center transition-colors"
+                                        >
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                 <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
                                                 <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
                                                 <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
                                             </svg>
+                                        </a>
                                     )}
                                     {player.social.twitter && (
                                         <a
@@ -1210,11 +1250,15 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                         <tbody className="divide-y divide-white/5">
                                             {player.tournamentLog && player.tournamentLog.length > 0 ? (
                                                 player.tournamentLog.map((log, index) => (
-                                                    <tr key={index} className="hover:bg-white/5 transition-colors">
+                                                    <tr
+                                                        key={index}
+                                                        className="hover:bg-white/5 transition-colors cursor-pointer group/row"
+                                                        onClick={() => handleOpenFlyer(log)}
+                                                    >
                                                         <td className="px-3 md:px-6 py-4 whitespace-nowrap hidden sm:table-cell">{log.date}</td>
                                                         <td className="px-3 md:px-6 py-4 font-bold text-white truncate max-w-[120px] md:max-w-none">
                                                             <div className="flex flex-col">
-                                                                <span>{log.eventName}</span>
+                                                                <span className="group-hover/row:text-primary transition-colors">{log.eventName}</span>
                                                                 <span className="text-[9px] text-gray-500 sm:hidden block mt-0.5">{log.date}</span>
                                                             </div>
                                                         </td>
@@ -2077,6 +2121,145 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                     </div>
                 )
             }
-        </div >
+            {/* EVENT FLYER MODAL (RESULTADOS) */}
+            {viewClosedEvent && (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
+                    <div
+                        className="relative h-full max-h-[calc(100vh-40px)] aspect-[3/4] bg-[#050214] border border-secondary/30 rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(0,224,255,0.15)] flex flex-col"
+                    >
+                        {/* Background Glows */}
+                        <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[70%] h-[40%] bg-secondary/10 rounded-full blur-[80px] pointer-events-none"></div>
+
+                        {/* Close Button */}
+                        <button
+                            onClick={() => setViewClosedEvent(null)}
+                            className="absolute top-4 right-4 z-[130] w-10 h-10 flex items-center justify-center bg-black/40 text-white hover:text-red-500 rounded-full hover:bg-white/10 transition-colors backdrop-blur-sm border border-white/5"
+                        >
+                            <span className="material-icons-outlined text-xl">close</span>
+                        </button>
+
+                        {/* --- RESULT FLYER CONTENT --- */}
+
+                        {/* 1. Header & Champion Section */}
+                        <div className="pt-8 pb-2 px-6 text-center shrink-0 flex flex-col items-center">
+                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
+                                {viewClosedEvent.date.split('-').reverse().join('/')}
+                            </div>
+                            <h3 className="text-xl md:text-2xl font-bold text-white mb-4 uppercase tracking-wider">{viewClosedEvent.title}</h3>
+
+                            {/* CHAMPION DISPLAY */}
+                            {(() => {
+                                const winner = viewClosedEvent.results?.find(r => r.position === 1);
+                                return winner ? (
+                                    <div className="flex flex-col items-center mb-4">
+                                        <div className="relative mb-6">
+                                            <div className="absolute -inset-6 bg-gradient-to-t from-secondary/20 to-transparent rounded-full blur-2xl"></div>
+                                            <img
+                                                src={getPlayerAvatar(winner.name)}
+                                                alt="Campeão"
+                                                className="w-28 h-28 md:w-32 md:h-32 rounded-full border-4 border-yellow-400 shadow-[0_0_40px_rgba(250,204,21,0.5)] object-cover relative z-10"
+                                            />
+                                            <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-yellow-400 text-black font-black text-xs px-4 py-1 rounded-full shadow-lg z-20 border-2 border-black">
+                                                CAMPEÃO
+                                            </div>
+                                        </div>
+
+                                        <div className="text-center">
+                                            <h2 className="text-3xl md:text-4xl font-display font-black text-white leading-tight uppercase">{winner.name}</h2>
+                                            {winner.prize > 0 && (
+                                                <div className="text-2xl font-bold text-green-400 mt-2">
+                                                    R$ {winner.prize.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                </div>
+                                            )}
+                                            <div className="text-xl font-display font-bold text-secondary mt-2 bg-secondary/10 px-4 py-1 rounded-full inline-block border border-secondary/30">
+                                                {winner.calculatedPoints} PTS
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="py-12 text-gray-500">Resultado não disponível.</div>
+                                );
+                            })()}
+                        </div>
+
+                        {/* 2. Stats Grid */}
+                        <div className="px-8 mb-6 shrink-0">
+                            <div className="grid grid-cols-4 bg-white/[0.03] rounded-2xl border border-white/5 divide-x divide-white/5 p-4">
+                                <div className="flex flex-col items-center justify-center">
+                                    <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Jogadores</span>
+                                    <span className="text-lg font-bold text-white">{viewClosedEvent.results?.length || 0}</span>
+                                </div>
+                                <div className="flex flex-col items-center justify-center">
+                                    <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Rebuys</span>
+                                    <span className="text-lg font-bold text-white">{viewClosedEvent.totalRebuys || 0}</span>
+                                </div>
+                                <div className="flex flex-col items-center justify-center">
+                                    <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Add-ons</span>
+                                    <span className="text-lg font-bold text-white">{viewClosedEvent.totalAddons || 0}</span>
+                                </div>
+                                <div className="flex flex-col items-center justify-center">
+                                    <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Premiação</span>
+                                    <span className="text-xs font-bold text-green-400 text-center leading-tight">
+                                        {viewClosedEvent.totalPrize ? `R$${viewClosedEvent.totalPrize.toLocaleString('pt-BR', { notation: 'compact' })}` : 'R$ 0'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 3. Results List (Scrollable) */}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar px-6 pb-6">
+                            <div className="bg-black/20 rounded-2xl border border-white/5 overflow-hidden">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-white/5 text-gray-400 font-bold uppercase text-[10px] tracking-wider sticky top-0 backdrop-blur-md z-10">
+                                        <tr>
+                                            <th className="px-4 py-4 text-center w-12">#</th>
+                                            <th className="px-4 py-4">Jogador</th>
+                                            <th className="px-4 py-4 text-right">Prêmio</th>
+                                            <th className="px-4 py-4 text-center">Pts</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-white/5">
+                                        {viewClosedEvent.results
+                                            ?.filter(r => r.position > 1)
+                                            .sort((a, b) => a.position - b.position)
+                                            .map((result) => (
+                                                <tr key={result.id} className="hover:bg-white/5 transition-colors">
+                                                    <td className="px-4 py-4 text-center">
+                                                        <span className={`inline-block w-8 h-8 leading-8 rounded-full font-bold text-xs ${result.position === 2 ? 'bg-gray-400 text-black' :
+                                                            result.position === 3 ? 'bg-orange-700 text-white' :
+                                                                'bg-white/5 text-gray-500'
+                                                            }`}>
+                                                            {result.position}º
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-4 font-bold text-gray-300">
+                                                        {result.name}
+                                                    </td>
+                                                    <td className="px-4 py-4 text-right text-green-500 font-bold">
+                                                        {result.prize > 0 ? `R$ ${result.prize.toLocaleString('pt-BR')}` : '-'}
+                                                    </td>
+                                                    <td className="px-4 py-4 text-center font-display font-black text-secondary">
+                                                        {result.calculatedPoints}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* 4. Footer */}
+                        <div className="bg-[#050821] px-8 py-4 border-t border-white/5 flex justify-between items-center shrink-0">
+                            <div className="flex items-center h-8">
+                                <img src="/cr-logo.png" alt="Chip Race" className="h-full w-auto drop-shadow-md" />
+                            </div>
+                            <div className="text-[10px] text-gray-600 uppercase tracking-[0.2em] font-bold">
+                                Resultados Oficiais
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 };

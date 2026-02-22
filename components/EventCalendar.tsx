@@ -66,6 +66,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
     const [playerResults, setPlayerResults] = useState<PlayerResult[]>([]);
 
+
     // Autocomplete States
     const [newPlayerName, setNewPlayerName] = useState('');
     const [selectedUserId, setSelectedUserId] = useState<string | undefined>(undefined);
@@ -494,14 +495,17 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
             eventDate.getUTCFullYear() === today.getFullYear();
     };
 
-    const renderStructureRow = (label: string, value?: string, chips?: string, colorClass: string = "text-white") => {
+    const renderStructureRow = (label: string, value?: string, chips?: string, colorClass: string = "text-white", icon?: string) => {
         if (!value && !chips) return null;
         return (
-            <div className="flex justify-between items-center bg-[#0A0616] p-3 rounded-lg border border-white/5 shrink-0">
-                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{label}</span>
+            <div className="flex justify-between items-center bg-white/[0.02] p-3 rounded-lg border border-white/5 shrink-0 backdrop-blur-sm group hover:bg-white/[0.05] transition-all">
+                <div className="flex items-center gap-2">
+                    {icon && <span className="material-icons-outlined text-sm text-primary/60 group-hover:text-primary transition-colors">{icon}</span>}
+                    <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">{label}</span>
+                </div>
                 <div className="text-right flex flex-col leading-none">
-                    <span className={`text-sm font-black ${colorClass}`}>{value}</span>
-                    {chips && <span className="text-[9px] text-gray-600 font-bold mt-0.5">{chips}</span>}
+                    <span className={`text-base font-black tracking-tight ${colorClass}`}>{value}</span>
+                    {chips && <span className="text-xs text-gray-600 font-bold mt-0.5">{chips}</span>}
                 </div>
             </div>
         );
@@ -767,127 +771,136 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                         </button>
 
                         {/* --- FLYER CONTENT --- */}
-
-                        {/* 1. Header Section */}
-                        <div className="pt-4 pb-2 px-6 text-center shrink-0 flex flex-col items-center">
-                            {/* Date Pill */}
-                            <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full border border-white/10 bg-white/5 backdrop-blur-md mb-2 shadow-lg">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-secondary">{viewEvent.type === 'live' ? 'AO VIVO' : 'ONLINE'}</span>
-                                <span className="text-gray-600 text-[10px]">|</span>
-                                <span className="text-[10px] font-bold text-gray-300 font-display tracking-wider">{viewEvent.date.split('-').reverse().join('/')}</span>
-                                <span className="text-gray-600 text-[10px]">•</span>
-                                <span className="text-[10px] font-bold text-gray-300 tracking-wider">{viewEvent.time}</span>
-                            </div>
-
-                            {/* Title */}
-                            <h2 className="text-2xl md:text-3xl font-display font-black text-white uppercase leading-[0.9] text-glow drop-shadow-xl mb-4 break-words w-full max-w-[90%]">
-                                {viewEvent.title}
-                            </h2>
-
-                            {/* Buyin & GTD */}
-                            {viewEvent.gameMode !== 'cash_game' && (
-                                <div className="flex justify-center items-center gap-8 w-full">
-                                    <div className="flex flex-col items-center">
-                                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-1">Buy-in</span>
-                                        <span className="text-3xl font-display font-black text-primary drop-shadow-[0_0_10px_rgba(217,0,255,0.5)]">{viewEvent.buyin}</span>
+                        <div className="flex-1 flex flex-col overflow-hidden relative">
+                            <div className="flex-1 flex flex-col overflow-hidden">
+                                {/* 1. Header Section */}
+                                <div className="pt-6 pb-2 px-6 text-center shrink-0 flex flex-col items-center">
+                                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-md mb-3 shadow-lg">
+                                        <span className="text-xs font-black uppercase tracking-widest text-secondary">{viewEvent.type === 'live' ? 'AO VIVO' : 'ONLINE'}</span>
+                                        <span className="text-gray-600 text-xs">|</span>
+                                        <span className="text-xs font-bold text-gray-300 tracking-wider">{(viewEvent.date || '').split('-').reverse().join('/')}</span>
+                                        <span className="text-gray-600 text-xs">•</span>
+                                        <span className="text-xs font-bold text-gray-300 tracking-wider">{viewEvent.time}</span>
                                     </div>
-                                    <div className="w-px h-8 bg-white/10"></div>
-                                    <div className="flex flex-col items-center">
-                                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-1">Garantido</span>
-                                        <span className="text-3xl font-display font-black text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]">{viewEvent.guaranteed}</span>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* 2. Body Section - Flex Grow to fill space */}
-                        <div className="flex-1 flex flex-col px-6 pb-4 overflow-hidden gap-4">
-
-                            {/* Technical Grid Box */}
-                            <div className="grid grid-cols-3 bg-white/[0.03] rounded-xl border border-white/5 divide-x divide-white/5 p-3 shrink-0">
-                                {viewEvent.gameMode === 'cash_game' ? (
-                                    <>
-                                        <div className="flex flex-col items-center justify-center p-1">
-                                            <span className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mb-1 text-center">Modalidade</span>
-                                            <span className="text-xs md:text-sm font-bold text-white text-center">{viewEvent.cashGameType === 'omaha4' ? 'Omaha 4' : viewEvent.cashGameType === 'omaha5' ? 'Omaha 5' : 'Texas'}</span>
-                                        </div>
-                                        <div className="flex flex-col items-center justify-center p-1">
-                                            <span className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mb-1 text-center">Blinds</span>
-                                            <span className="text-xs md:text-sm font-bold text-white text-center">{viewEvent.cashGameBlinds || '-'}</span>
-                                        </div>
-                                        <div className="flex flex-col items-center justify-center p-1">
-                                            <span className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mb-1 text-center">Lugares</span>
-                                            <span className="text-xs md:text-sm font-bold text-white text-center">{viewEvent.cashGameCapacity || '-'}</span>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <div className="flex flex-col items-center justify-center p-1">
-                                            <span className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mb-1">Stack</span>
-                                            <span className="text-xs md:text-sm font-bold text-white">{viewEvent.stack || '-'}</span>
-                                        </div>
-                                        <div className="flex flex-col items-center justify-center p-1">
-                                            <span className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mb-1">Blinds</span>
-                                            <span className="text-xs md:text-sm font-bold text-white">{viewEvent.blinds || '-'}</span>
-                                        </div>
-                                        <div className="flex flex-col items-center justify-center p-1">
-                                            <span className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mb-1">Late Reg</span>
-                                            <span className="text-xs md:text-sm font-bold text-white">{viewEvent.lateReg || '-'}</span>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-
-                            {/* Structure List - The main scrollable area if needed, but intended to fit */}
-                            <div className="flex flex-col gap-2 min-h-0">
-                                {viewEvent.gameMode === 'cash_game' ? (
-                                    <>
-                                        <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-1 shrink-0 mt-2">Detalhes da Mesa</h4>
-                                        <div className="flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-1">
-                                            {renderStructureRow("Mínimo / Máximo", viewEvent.cashGameMinMax, undefined, "text-yellow-400")}
-                                            {viewEvent.cashGameDinner && renderStructureRow("Jantar / Open Bar", "Incluso", "Cortesia da Casa", "text-green-400")}
-                                            {viewEvent.parallelProducts?.includes('jackpot') && renderStructureRow("Jackpot Dinâmico", "Ativo", "Participe", "text-secondary")}
-                                            {viewEvent.cashGameNotes && (
-                                                <div className="bg-white/5 p-3 rounded-lg border border-white/10 mt-2">
-                                                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1">Regras / Observações</span>
-                                                    <p className="text-sm text-gray-300 leading-relaxed">{viewEvent.cashGameNotes}</p>
+                                    <h2 className="text-3xl font-display font-black text-white uppercase leading-[0.9] text-glow mb-4 drop-shadow-2xl">
+                                        {viewEvent.title}
+                                    </h2>
+                                    {viewEvent.gameMode !== 'cash_game' && (
+                                        <div className="flex justify-center items-center gap-8 w-full">
+                                            <div className="flex flex-col items-center">
+                                                <span className="text-xs font-bold text-gray-500 uppercase tracking-[0.2em] mb-1">Buy-in</span>
+                                                <div className="flex items-baseline gap-1.5">
+                                                    <span className="text-4xl font-display font-black text-primary drop-shadow-[0_0_15px_rgba(217,0,255,0.4)]">{viewEvent.buyin}</span>
+                                                    {viewEvent.staffBonusValue && viewEvent.staffBonusValue !== '0' && (
+                                                        <span className="text-xl font-display font-bold text-yellow-500">
+                                                            + {viewEvent.staffBonusValue}
+                                                        </span>
+                                                    )}
                                                 </div>
+                                            </div>
+                                            <div className="w-px h-8 bg-white/10"></div>
+                                            <div className="flex flex-col items-center">
+                                                <span className="text-xs font-bold text-gray-500 uppercase tracking-[0.2em] mb-1">Garantido</span>
+                                                <span className="text-4xl font-display font-black text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.4)]">{viewEvent.guaranteed}</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* 2. Body Section */}
+                                <div className="flex-1 flex flex-col px-6 pb-4 overflow-hidden gap-4">
+                                    <div className="grid grid-cols-3 bg-white/[0.03] rounded-xl border border-white/5 divide-x divide-white/5 p-3 shrink-0">
+                                        {viewEvent.gameMode === 'cash_game' ? (
+                                            <>
+                                                <div className="flex flex-col items-center justify-center p-1">
+                                                    <span className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mb-1">Modalidade</span>
+                                                    <span className="text-xs font-bold text-white text-center">{viewEvent.cashGameType === 'omaha4' ? 'Omaha 4' : viewEvent.cashGameType === 'omaha5' ? 'Omaha 5' : 'Texas'}</span>
+                                                </div>
+                                                <div className="flex flex-col items-center justify-center p-1">
+                                                    <span className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mb-1 text-center">Blinds</span>
+                                                    <span className="text-xs font-bold text-white text-center">{viewEvent.cashGameBlinds || '-'}</span>
+                                                </div>
+                                                <div className="flex flex-col items-center justify-center p-1">
+                                                    <span className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mb-1 text-center">Lugares</span>
+                                                    <span className="text-xs font-bold text-white text-center">{viewEvent.cashGameCapacity || '-'}</span>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="flex flex-col items-center justify-center p-1">
+                                                    <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Stack</span>
+                                                    <span className="text-sm font-bold text-white">{viewEvent.stack || '-'}</span>
+                                                </div>
+                                                <div className="flex flex-col items-center justify-center p-1">
+                                                    <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Blinds</span>
+                                                    <span className="text-sm font-bold text-white">{viewEvent.blinds || '-'}</span>
+                                                </div>
+                                                <div className="flex flex-col items-center justify-center p-1">
+                                                    <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Late Reg</span>
+                                                    <span className="text-sm font-bold text-white">{viewEvent.lateReg || '-'}</span>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+
+                                    <div className="flex flex-col gap-2 min-h-0">
+                                        <div className="flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-1">
+                                            {viewEvent.gameMode === 'cash_game' ? (
+                                                <>
+                                                    {renderStructureRow("Mínimo / Máximo", viewEvent.cashGameMinMax, undefined, "text-yellow-400", "payments")}
+                                                    {viewEvent.cashGameDinner && renderStructureRow("Jantar / Open Bar", "Incluso", "Cortesia da Casa", "text-green-400", "restaurant")}
+                                                    {viewEvent.parallelProducts?.includes('jackpot') && renderStructureRow("Jackpot Dinâmico", "Ativo", "Participe", "text-secondary", "trending_up")}
+                                                    {viewEvent.cashGameNotes && (
+                                                        <div className="bg-white/5 p-3 rounded-lg border border-white/10 mt-2">
+                                                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1">Regras / Observações</span>
+                                                            <p className="text-xs text-gray-400 leading-relaxed italic">"{viewEvent.cashGameNotes}"</p>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <>
+                                                    {renderStructureRow("Rebuy", viewEvent.rebuyValue, viewEvent.rebuyChips, "text-primary", "add_circle_outline")}
+                                                    {renderStructureRow("Rebuy Duplo", viewEvent.doubleRebuyValue, viewEvent.doubleRebuyChips, "text-primary", "control_point_duplicate")}
+                                                    {renderStructureRow("Add-on", viewEvent.addonValue, viewEvent.addonChips, "text-secondary", "shopping_basket")}
+                                                    {renderStructureRow("Add-on Duplo", viewEvent.doubleAddonValue, viewEvent.doubleAddonChips, "text-secondary", "auto_awesome_motion")}
+                                                    {/* Staff Bonus moved to buy-in row */}
+                                                    {renderStructureRow("Time Chip", viewEvent.timeChipValue, viewEvent.timeChipChips, "text-green-500", "schedule")}
+                                                    {viewEvent.description && (
+                                                        <div className="bg-white/5 p-3 rounded-lg border border-white/10 mt-2">
+                                                            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block mb-1">Regras & Detalhes</span>
+                                                            <p className="text-[11px] text-gray-300 leading-relaxed italic">"{viewEvent.description}"</p>
+                                                        </div>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-1 shrink-0 mt-2">Estrutura de Fichas</h4>
-                                        <div className="flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-1">
-                                            {/* Helper to render row */}
-                                            {renderStructureRow("Rebuy", viewEvent.rebuyValue, viewEvent.rebuyChips, "text-primary")}
-                                            {renderStructureRow("Rebuy Duplo", viewEvent.doubleRebuyValue, viewEvent.doubleRebuyChips, "text-primary")}
-                                            {renderStructureRow("Add-on", viewEvent.addonValue, viewEvent.addonChips, "text-secondary")}
-                                            {renderStructureRow("Add-on Duplo", viewEvent.doubleAddonValue, viewEvent.doubleAddonChips, "text-secondary")}
-                                            {renderStructureRow("Staff Bonus", viewEvent.staffBonusValue, viewEvent.staffBonusChips, "text-yellow-500")}
-                                            {renderStructureRow("Time Chip", viewEvent.timeChipValue, viewEvent.timeChipChips, "text-green-500")}
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-
-                            {/* Badges/Rankings - Shrinkable */}
-                            {viewEvent.gameMode !== 'cash_game' && (
-                                <div className="flex flex-col items-center mt-auto shrink-0 pt-4">
-                                    <h4 className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mb-2">RANKINGS QUE VOCÊ PARTICIPA</h4>
-                                    <div className="flex flex-wrap gap-2 justify-center">
-                                        {viewEvent.includedRankings?.map(rankId => (
-                                            <span key={rankId} className="px-3 py-1 bg-white/5 border border-white/10 text-gray-400 text-[9px] font-bold uppercase rounded-full tracking-wider">
-                                                {rankings.find(r => r.id === rankId)?.label || rankId}
-                                            </span>
-                                        ))}
                                     </div>
                                 </div>
-                            )}
+                            </div>
                         </div>
 
+                        {/* Badges/Rankings - Shown for all layouts */}
+                        {viewEvent.gameMode !== 'cash_game' && (
+                            <div className="flex flex-col items-center shrink-0 pt-2 px-6 mb-3 relative z-10">
+                                <div className="flex flex-wrap gap-2 justify-center">
+                                    {viewEvent.includedRankings?.filter(id => ['annual', 'quarterly', 'legacy'].includes(id)).map(rankId => {
+                                        const rank = rankings.find(r => r.id === rankId);
+                                        // Se não encontrar label e for um ID longo (UUID), mostrar um nome genérico ou ignorar
+                                        const label = rank?.label || (rankId.length > 20 ? null : rankId);
+                                        if (!label) return null;
+                                        return (
+                                            <span key={rankId} className="px-3 py-1 bg-white/5 border border-white/10 text-gray-400 text-[10px] font-bold uppercase rounded-full tracking-wider backdrop-blur-sm">
+                                                {label}
+                                            </span>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+
                         {/* 3. Footer */}
-                        <div className="bg-[#050821] px-6 py-4 border-t border-white/5 flex justify-between items-center shrink-0">
+                        <div className="bg-[#050821] px-6 py-4 border-t border-white/5 flex justify-between items-center shrink-0 relative z-20">
                             <div className="flex items-center h-8">
                                 <img src="/cr-logo.png" alt="Chip Race" className="h-full w-auto" />
                             </div>
@@ -897,8 +910,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                         </div>
                     </div>
                 </div>
-            )
-            }
+            )}
 
             {/* CLOSED EVENT DETAILS MODAL (RESULTADOS) - REDESIGNED 3:4 FLYER STYLE */}
             {
@@ -1038,8 +1050,8 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                             </div>
                         </div>
                     </div>
-                )
-            }
+                )}
+
 
             {/* ADMIN CLOSING/MANAGING EVENT MODAL */}
             {
@@ -1225,8 +1237,8 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                             </div>
                         </div>
                     </div>
-                )
-            }
+                )}
+
 
             {/* ADMIN EVENT EDITOR MODAL */}
             {
@@ -1514,16 +1526,26 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                     </>
                                 )}
 
-                                <div className="pt-4 flex justify-end gap-2 border-t border-white/10">
-                                    <button type="button" onClick={() => setEditingEvent(null)} className="px-4 py-2 rounded-lg text-gray-400 hover:bg-white/5 transition-colors">Cancelar</button>
-                                    <button type="submit" className="px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-bold shadow-lg">Salvar Evento</button>
+                                <div className="pt-4 flex justify-between gap-2 border-t border-white/10">
+                                    <button
+                                        type="button"
+                                        onClick={() => setViewEvent(editingEvent)}
+                                        className="px-4 py-2 rounded-lg text-primary hover:bg-primary/10 transition-colors flex items-center gap-2 font-bold"
+                                    >
+                                        <span className="material-icons-outlined">visibility</span>
+                                        Visualizar Flyer
+                                    </button>
+                                    <div className="flex gap-2">
+                                        <button type="button" onClick={() => setEditingEvent(null)} className="px-4 py-2 rounded-lg text-gray-400 hover:bg-white/5 transition-colors">Cancelar</button>
+                                        <button type="submit" className="px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-bold shadow-lg">Salvar Evento</button>
+                                    </div>
                                 </div>
                             </form>
                         </div>
                     </div>
-                )
-            }
+                )}
 
-        </div >
+
+        </div>
     );
 };

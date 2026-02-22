@@ -118,14 +118,59 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
   const [activeRegulation, setActiveRegulation] = useState<string | null>(null);
   const [productDetails, setProductDetails] = useState<any>(null);
   const [isLoadingProduct, setIsLoadingProduct] = useState(false);
+  const [isEditingProduct, setIsEditingProduct] = useState(false);
+  const [editForm, setEditForm] = useState({ name: '', description: '', price: 0, stock: 0, image_url: '' });
 
   useEffect(() => {
     if (activeRegulation) {
+      setIsEditingProduct(false);
       fetchProductInfo(activeRegulation);
     } else {
       setProductDetails(null);
+      setIsEditingProduct(false);
     }
   }, [activeRegulation]);
+
+  const handleEditClick = () => {
+    setEditForm({
+      name: productDetails?.name || REGULATIONS_DATA[activeRegulation!]?.title || '',
+      description: productDetails?.description || REGULATIONS_DATA[activeRegulation!]?.rules || '',
+      price: productDetails?.price || 0,
+      stock: productDetails?.stock || 0,
+      image_url: productDetails?.image_url || ''
+    });
+    setIsEditingProduct(true);
+  };
+
+  const handleSaveProduct = async () => {
+    try {
+      if (!activeRegulation) return;
+
+      const upsertData: any = {
+        category: activeRegulation,
+        name: editForm.name,
+        description: editForm.description,
+        price: editForm.price,
+        stock: editForm.stock,
+        image_url: editForm.image_url,
+        active: true
+      };
+
+      if (productDetails?.id) {
+        upsertData.id = productDetails.id;
+      }
+
+      const { data, error } = await supabase.from('products').upsert(upsertData).select().single();
+      if (error) throw error;
+
+      setProductDetails(data);
+      setIsEditingProduct(false);
+      alert('Produto salvo com sucesso no banco de dados!');
+    } catch (e: any) {
+      console.error(e);
+      alert('Erro ao salvar produto: ' + e.message);
+    }
+  };
 
   const fetchProductInfo = async (categoryId: string) => {
     setIsLoadingProduct(true);
@@ -284,62 +329,111 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
                 <span className="material-icons-outlined text-2xl">close</span>
               </button>
 
-              <div className="flex flex-col items-center text-center mb-8 pt-4">
-                <div className={`w-24 h-24 rounded-3xl bg-black border border-white/10 flex items-center justify-center mb-6 shadow-2xl relative overflow-hidden group`}>
-                  <div className={`absolute inset-0 opacity-20 bg-gradient-to-br ${getColors(categories.find(c => c.id === activeRegulation)?.color || '').glow}`}></div>
-                  {productDetails?.image_url ? (
-                    <img src={productDetails.image_url} alt={productDetails.name} className="w-full h-full object-cover relative z-10" />
-                  ) : (
-                    <span className={`material-icons-outlined text-5xl relative z-10 ${REGULATIONS_DATA[activeRegulation]?.color || 'text-primary'}`}>
-                      {REGULATIONS_DATA[activeRegulation]?.icon || 'star'}
-                    </span>
-                  )}
-                </div>
-
-                <h3 className="text-3xl font-display font-black text-white uppercase tracking-wider mb-2">
-                  {productDetails?.name || REGULATIONS_DATA[activeRegulation]?.title}
-                </h3>
-                <div className="h-1 w-16 bg-gradient-to-r from-primary to-secondary rounded-full"></div>
-              </div>
-
-              <div className="space-y-6">
-                <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-                  <h4 className="text-xs font-black text-primary uppercase tracking-[0.2em] mb-4">
-                    {productDetails ? 'DESCRIÇÃO DO PRODUTO' : 'INFORMAÇÕES GERAIS'}
-                  </h4>
-                  <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap font-light">
-                    {productDetails?.description || REGULATIONS_DATA[activeRegulation]?.rules}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white/5 border border-white/5 p-4 rounded-xl">
-                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">
-                      {productDetails ? 'Valor' : 'Status'}
-                    </p>
-                    <p className="text-white font-bold">
-                      {productDetails ? `R$ ${parseFloat(productDetails.price).toFixed(2).replace('.', ',')}` : 'Disponível'}
-                    </p>
-                  </div>
-                  <div className="bg-white/5 border border-white/5 p-4 rounded-xl">
-                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">
-                      {productDetails ? 'Disponível' : 'Categoria'}
-                    </p>
-                    <p className="text-white font-bold uppercase">
-                      {productDetails ? `${productDetails.stock} unidades` : activeRegulation}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-10">
+              {isAdmin && !isEditingProduct && (
                 <button
-                  onClick={() => setActiveRegulation(null)}
-                  className="w-full py-4 bg-gradient-to-r from-primary to-accent text-white rounded-xl font-black uppercase tracking-widest shadow-lg hover:shadow-primary/50 transition-all hover:scale-[1.02]"
+                  onClick={handleEditClick}
+                  className="absolute top-6 right-20 text-secondary hover:text-white transition-colors p-2 bg-secondary/10 hover:bg-secondary/20 rounded-full shadow-lg"
+                  title="Editar Produto/Regulamento"
                 >
-                  {productDetails ? 'Adquirir via App' : 'Entendido'}
+                  <span className="material-icons-outlined text-2xl">edit</span>
                 </button>
-              </div>
+              )}
+
+              {isEditingProduct ? (
+                <div className="pt-8 flex flex-col gap-4">
+                  <h3 className="text-xl font-bold text-white mb-4">Editar Conteúdo do Box</h3>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nome do Produto/Regulamento</label>
+                    <input type="text" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} className="w-full bg-black/50 border border-white/10 rounded p-3 text-white focus:border-primary outline-none" />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Descrição / Regras</label>
+                    <textarea value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })} className="w-full bg-black/50 border border-white/10 rounded p-3 text-white focus:border-primary outline-none min-h-[150px]" />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Preço (R$)</label>
+                      <input type="number" step="0.01" value={editForm.price} onChange={e => setEditForm({ ...editForm, price: parseFloat(e.target.value) || 0 })} className="w-full bg-black/50 border border-white/10 rounded p-3 text-white focus:border-primary outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Estoque/Qtd. (Opcional)</label>
+                      <input type="number" value={editForm.stock} onChange={e => setEditForm({ ...editForm, stock: parseInt(e.target.value) || 0 })} className="w-full bg-black/50 border border-white/10 rounded p-3 text-white focus:border-primary outline-none" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">URL da Imagem (Opcional)</label>
+                    <input type="text" value={editForm.image_url} onChange={e => setEditForm({ ...editForm, image_url: e.target.value })} className="w-full bg-black/50 border border-white/10 rounded p-3 text-white focus:border-primary outline-none placeholder-gray-600" placeholder="https://..." />
+                  </div>
+
+                  <div className="flex gap-4 mt-6">
+                    <button onClick={() => setIsEditingProduct(false)} className="flex-1 py-3 bg-gray-800 text-white rounded-xl font-bold uppercase hover:bg-gray-700 transition-colors">Cancelar</button>
+                    <button onClick={handleSaveProduct} className="flex-1 py-3 bg-secondary text-black rounded-xl font-black uppercase hover:scale-105 transition-all shadow-[0_0_15px_rgba(45,212,191,0.4)]">Salvar no Banco</button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="flex flex-col items-center text-center mb-8 pt-4">
+                    <div className={`w-24 h-24 rounded-3xl bg-black border border-white/10 flex items-center justify-center mb-6 shadow-2xl relative overflow-hidden group`}>
+                      <div className={`absolute inset-0 opacity-20 bg-gradient-to-br ${getColors(categories.find(c => c.id === activeRegulation)?.color || '').glow}`}></div>
+                      {productDetails?.image_url ? (
+                        <img src={productDetails.image_url} alt={productDetails.name} className="w-full h-full object-cover relative z-10" />
+                      ) : (
+                        <span className={`material-icons-outlined text-5xl relative z-10 ${REGULATIONS_DATA[activeRegulation]?.color || 'text-primary'}`}>
+                          {REGULATIONS_DATA[activeRegulation]?.icon || 'star'}
+                        </span>
+                      )}
+                    </div>
+
+                    <h3 className="text-3xl font-display font-black text-white uppercase tracking-wider mb-2">
+                      {productDetails?.name || REGULATIONS_DATA[activeRegulation]?.title}
+                    </h3>
+                    <div className="h-1 w-16 bg-gradient-to-r from-primary to-secondary rounded-full"></div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+                      <h4 className="text-xs font-black text-primary uppercase tracking-[0.2em] mb-4">
+                        {productDetails ? 'DESCRIÇÃO DO PRODUTO' : 'INFORMAÇÕES GERAIS'}
+                      </h4>
+                      <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap font-light">
+                        {productDetails?.description || REGULATIONS_DATA[activeRegulation]?.rules}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-white/5 border border-white/5 p-4 rounded-xl">
+                        <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">
+                          {productDetails ? 'Valor' : 'Status'}
+                        </p>
+                        <p className="text-white font-bold">
+                          {productDetails ? `R$ ${parseFloat(productDetails.price).toFixed(2).replace('.', ',')}` : 'Disponível'}
+                        </p>
+                      </div>
+                      <div className="bg-white/5 border border-white/5 p-4 rounded-xl">
+                        <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">
+                          {productDetails ? 'Disponível' : 'Categoria'}
+                        </p>
+                        <p className="text-white font-bold uppercase">
+                          {productDetails ? `${productDetails.stock} unidades` : activeRegulation}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-10">
+                    <button
+                      onClick={() => setActiveRegulation(null)}
+                      className="w-full py-4 bg-gradient-to-r from-primary to-accent text-white rounded-xl font-black uppercase tracking-widest shadow-lg hover:shadow-primary/50 transition-all hover:scale-[1.02]"
+                    >
+                      {productDetails ? 'Adquirir via App' : 'Entendido'}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

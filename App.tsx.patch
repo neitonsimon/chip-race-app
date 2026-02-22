@@ -1,0 +1,35 @@
+    // Helper para obter lista completa e única de jogadores (Simulando DB completo)
+    const getAllUniquePlayers = () => {
+        // 1. Inicia com jogadores que já estão nos rankings
+        const playersFromRankings = rankings.flatMap(r => r.players);
+
+        // 2. Combina com todos os perfis do sistema (allProfiles)
+        const combinedPlayers = [...playersFromRankings, ...allProfiles];
+
+        // 3. Adiciona o usuário atual se estiver logado
+        if (isLoggedIn && currentUser.name) {
+            combinedPlayers.push({
+                id: currentUserId || undefined,
+                rank: 0,
+                name: currentUser.name,
+                avatar: currentUser.avatar || '',
+                city: currentUser.city || '',
+                points: 0,
+                change: 'same'
+            });
+        }
+
+        // 4. Remove duplicatas baseado no nome (Case Insensitive para segurança)
+        // Favoring entries with IDs if multiple exist for the same name
+        const uniqueMap = new Map<string, any>();
+        combinedPlayers.forEach(p => {
+            if (!p.name) return;
+            const key = p.name.toLowerCase().trim();
+            const existing = uniqueMap.get(key);
+            if (!existing || (p.id && !existing.id)) {
+                uniqueMap.set(key, (p as any));
+            }
+        });
+
+        return Array.from(uniqueMap.values());
+    };

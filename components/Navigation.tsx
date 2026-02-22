@@ -13,6 +13,7 @@ interface NavigationProps {
     onReply?: (id: string, text: string) => void;
     balanceBrl?: number;
     balanceChipz?: number;
+    isAdmin?: boolean;
 }
 
 export const Navigation: React.FC<NavigationProps> = ({
@@ -26,7 +27,8 @@ export const Navigation: React.FC<NavigationProps> = ({
     onMarkAsRead,
     onReply,
     balanceBrl = 0,
-    balanceChipz = 0
+    balanceChipz = 0,
+    isAdmin = false
 }) => {
     const [scrolled, setScrolled] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -35,6 +37,7 @@ export const Navigation: React.FC<NavigationProps> = ({
     // States for viewing/replying message
     const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
     const [replyText, setReplyText] = useState('');
+    const [quickReplies, setQuickReplies] = useState<Record<string, string>>({});
 
     const links: NavLink[] = [
         { label: 'Início', view: 'home' },
@@ -103,6 +106,17 @@ export const Navigation: React.FC<NavigationProps> = ({
                                 <span className="material-icons-outlined text-sm">diamond</span>
                                 <span className="text-sm font-bold uppercase tracking-wide">Seja VIP</span>
                             </button>
+
+                            {/* Admin Admin Panel Button */}
+                            {isAdmin && (
+                                <button
+                                    onClick={() => onNavigate('admin')}
+                                    className="flex items-center gap-2 text-primary border border-primary/50 px-4 py-1.5 rounded-full hover:bg-primary hover:text-white transition-all shadow-[0_0_10px_rgba(217,0,255,0.2)] hover:shadow-[0_0_20px_rgba(217,0,255,0.6)]"
+                                >
+                                    <span className="material-icons-outlined text-sm">admin_panel_settings</span>
+                                    <span className="text-sm font-bold uppercase tracking-wide">Painel Admin</span>
+                                </button>
+                            )}
                         </div>
 
                         <div className="hidden md:block ml-4">
@@ -170,24 +184,78 @@ export const Navigation: React.FC<NavigationProps> = ({
                                                         </div>
                                                     ) : (
                                                         messages.map(msg => (
-                                                            <button
+                                                            <div
                                                                 key={msg.id}
-                                                                onClick={() => handleOpenMessage(msg)}
-                                                                className={`w-full text-left px-4 py-3 border-b border-white/5 hover:bg-white/5 transition-colors flex gap-3 items-start ${!msg.read ? 'bg-primary/5' : ''
+                                                                className={`w-full text-left px-4 py-3 border-b border-white/5 hover:bg-white/5 transition-colors flex flex-col gap-2 relative ${!msg.read ? 'bg-primary/5' : ''
                                                                     }`}
                                                             >
-                                                                <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${!msg.read ? 'bg-primary shadow-neon-pink' : 'bg-white/20'
-                                                                    }`} />
-                                                                <div className="flex-1 min-w-0">
-                                                                    <p className={`text-sm font-semibold truncate ${!msg.read ? 'text-white' : 'text-gray-400'
-                                                                        }`}>{msg.subject}</p>
-                                                                    <p className="text-xs text-gray-500 truncate">{msg.from} · {msg.date}</p>
-                                                                    <p className="text-xs text-gray-600 truncate mt-0.5">{msg.content}</p>
+                                                                <div
+                                                                    className="flex gap-3 items-start cursor-pointer w-full"
+                                                                    onClick={() => {
+                                                                        if (msg.category === 'poll') {
+                                                                            onNavigate('profile');
+                                                                            setMessagesOpen(false);
+                                                                            setTimeout(() => {
+                                                                                window.dispatchEvent(new CustomEvent('open-poll-messages'));
+                                                                            }, 100);
+                                                                        } else if (msg.category === 'private') {
+                                                                            onNavigate('profile');
+                                                                            setMessagesOpen(false);
+                                                                            setTimeout(() => {
+                                                                                window.dispatchEvent(new CustomEvent('open-private-messages'));
+                                                                            }, 100);
+                                                                        } else {
+                                                                            handleOpenMessage(msg);
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${!msg.read ? 'bg-primary shadow-neon-pink' : 'bg-white/20'
+                                                                        }`} />
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <p className={`text-sm font-semibold truncate ${!msg.read ? 'text-white' : 'text-gray-400'
+                                                                            }`}>{msg.subject}</p>
+                                                                        <p className="text-xs text-gray-500 truncate">{msg.from} · {msg.date}</p>
+                                                                        <p className="text-xs text-gray-600 truncate mt-0.5">{msg.content}</p>
+                                                                    </div>
+                                                                    {msg.category === 'poll' && (
+                                                                        <span className="material-icons-outlined text-yellow-400 text-sm flex-shrink-0">how_to_vote</span>
+                                                                    )}
                                                                 </div>
-                                                                {msg.category === 'poll' && (
-                                                                    <span className="material-icons-outlined text-yellow-400 text-sm flex-shrink-0">how_to_vote</span>
+
+                                                                {/* Quick Reply for Private Messages */}
+                                                                {msg.category === 'private' && (
+                                                                    <div className="mt-2 pl-5 pr-1" onClick={(e) => e.stopPropagation()}>
+                                                                        <div className="flex bg-black/40 border border-white/10 rounded-lg overflow-hidden focus-within:border-primary/50 transition-colors">
+                                                                            <input
+                                                                                type="text"
+                                                                                placeholder={`Responder a ${msg.from}...`}
+                                                                                className="w-full bg-transparent text-xs text-white px-3 py-2 outline-none"
+                                                                                value={quickReplies[msg.id] || ''}
+                                                                                onChange={(e) => setQuickReplies(prev => ({ ...prev, [msg.id]: e.target.value }))}
+                                                                                onKeyDown={(e) => {
+                                                                                    if (e.key === 'Enter' && quickReplies[msg.id]?.trim() && onReply) {
+                                                                                        onReply(msg.id, quickReplies[msg.id]);
+                                                                                        if (onMarkAsRead) onMarkAsRead(msg.id);
+                                                                                        setQuickReplies(prev => ({ ...prev, [msg.id]: '' }));
+                                                                                    }
+                                                                                }}
+                                                                            />
+                                                                            <button
+                                                                                className="px-2 text-primary hover:text-white transition-colors"
+                                                                                onClick={() => {
+                                                                                    if (quickReplies[msg.id]?.trim() && onReply) {
+                                                                                        onReply(msg.id, quickReplies[msg.id]);
+                                                                                        if (onMarkAsRead) onMarkAsRead(msg.id);
+                                                                                        setQuickReplies(prev => ({ ...prev, [msg.id]: '' }));
+                                                                                    }
+                                                                                }}
+                                                                            >
+                                                                                <span className="material-icons-outlined text-sm">send</span>
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
                                                                 )}
-                                                            </button>
+                                                            </div>
                                                         ))
                                                     )}
                                                 </div>
@@ -264,6 +332,18 @@ export const Navigation: React.FC<NavigationProps> = ({
                             >
                                 <span className="material-icons-outlined">diamond</span> SEJA VIP
                             </button>
+
+                            {isAdmin && (
+                                <button
+                                    onClick={() => {
+                                        onNavigate('admin');
+                                        setMobileMenuOpen(false);
+                                    }}
+                                    className="block w-full text-left px-3 py-4 text-lg font-bold text-primary hover:bg-white/5 border-b border-white/5 flex items-center gap-2"
+                                >
+                                    <span className="material-icons-outlined">admin_panel_settings</span> PAINEL ADMIN
+                                </button>
+                            )}
 
                             {isLoggedIn ? (
                                 <>

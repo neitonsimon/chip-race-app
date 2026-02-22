@@ -94,8 +94,8 @@ export const RankingTable: React.FC<RankingTableProps> = ({
         const schema = globalScoringSchemas?.find(s => s.id === mappedSchemaId)
             || activeRanking?.scoringSchemas?.find(s => s.id === simType || s.name === simType)
             || globalScoringSchemas?.find(s => {
-                const sName = s.name.toLowerCase();
-                if (simType === 'legacy_weekly' && sName.includes('legado') && sName.includes('padrão')) return true;
+                const sName = s.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                if (simType === 'legacy_weekly' && sName.includes('legado') && (sName.includes('padrao') || sName.includes('semanal'))) return true;
                 if (simType === 'legacy_monthly' && sName.includes('legado') && sName.includes('mensal')) return true;
                 if (simType === 'legacy_special' && sName.includes('legado') && sName.includes('especial')) return true;
                 return false;

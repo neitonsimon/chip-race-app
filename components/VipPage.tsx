@@ -228,50 +228,82 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate, currentUser, onUpd
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-          {plans.map((plan) => (
-            <div
-              key={plan.id}
-              className={`relative bg-surface-dark border-2 rounded-3xl p-8 flex flex-col h-full transition-all duration-300 group ${plan.color} ${plan.isMaster ? 'transform md:-translate-y-4 shadow-2xl bg-gradient-to-b from-surface-dark to-black' : 'hover:-translate-y-2'}`}
-            >
-              {plan.tag && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-white text-xs font-bold uppercase py-1 px-4 rounded-full shadow-lg">
-                  {plan.tag}
-                </div>
-              )}
+          {plans.map((plan) => {
+            const basePrices: Record<string, number> = {
+              'quarterly': 189.90,
+              'annual': 499.90,
+              'master': 1990.90
+            };
+            const isCurrentlyVip = !!(currentUser?.isVip && currentUser?.vipExpiresAt && new Date(currentUser.vipExpiresAt) > new Date());
+            const userPlanCost = isCurrentlyVip && currentUser?.vipStatus ? basePrices[currentUser.vipStatus === 'master' ? 'master' : (currentUser.vipStatus === 'anual' ? 'annual' : 'quarterly')] || 0 : 0;
+            const targetPlanCost = basePrices[plan.id] || 0;
 
-              {plan.limit && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white text-xs font-black uppercase py-1 px-4 rounded-full shadow-lg animate-pulse whitespace-nowrap">
-                  {plan.limit}
-                </div>
-              )}
+            const isCurrentPlan = isCurrentlyVip && targetPlanCost === userPlanCost;
+            const isDowngrade = isCurrentlyVip && targetPlanCost < userPlanCost;
+            const isUpgrade = isCurrentlyVip && targetPlanCost > userPlanCost;
+            const isDisabled = isProcessing || isCurrentPlan || isDowngrade;
 
-              <div className="text-center mb-8 border-b border-white/5 pb-8">
-                <h3 className="text-2xl font-display font-bold text-white uppercase tracking-wider mb-2">{plan.title}</h3>
-                <div className="flex items-center justify-center gap-1">
-                  <span className="text-sm text-gray-400 font-bold mb-4">R$</span>
-                  <span className="text-5xl font-display font-black text-white">{plan.price}</span>
-                </div>
-                <div className="text-sm text-gray-500 uppercase tracking-widest font-bold">{plan.period}</div>
-              </div>
+            let btnText = `Quero ser ${plan.title}`;
+            if (isCurrentPlan) btnText = 'Seu Plano Atual';
+            else if (isDowngrade) btnText = 'Apenas Upgrade Permitido';
+            else if (isUpgrade) btnText = 'Fazer Upgrade';
+            if (isProcessing) btnText = 'Processando...';
 
-              <ul className="space-y-4 mb-8 flex-1">
-                {plan.features.map((feature, idx) => (
-                  <li key={idx} className="flex items-start gap-3 text-sm text-gray-300">
-                    <span className={`material-icons-outlined text-lg ${plan.isMaster ? 'text-yellow-400' : 'text-primary'}`}>check_circle</span>
-                    <span className="leading-tight">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <button
-                className={`w-full py-4 rounded-xl font-bold uppercase tracking-wider transition-all duration-300 ${plan.btnColor} ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                onClick={() => handlePurchase(plan)}
-                disabled={isProcessing}
+            return (
+              <div
+                key={plan.id}
+                className={`relative bg-surface-dark border-2 rounded-3xl p-8 flex flex-col h-full transition-all duration-300 group ${plan.color} ${plan.isMaster ? 'transform md:-translate-y-4 shadow-2xl bg-gradient-to-b from-surface-dark to-black' : 'hover:-translate-y-2'}`}
               >
-                {isProcessing ? 'Processando...' : `Quero ser ${plan.title}`}
-              </button>
-            </div>
-          ))}
+                {plan.tag && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-white text-xs font-bold uppercase py-1 px-4 rounded-full shadow-lg">
+                    {plan.tag}
+                  </div>
+                )}
+
+                {plan.limit && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white text-xs font-black uppercase py-1 px-4 rounded-full shadow-lg animate-pulse whitespace-nowrap">
+                    {plan.limit}
+                  </div>
+                )}
+
+                <div className="text-center mb-8 border-b border-white/5 pb-8">
+                  <h3 className="text-2xl font-display font-bold text-white uppercase tracking-wider mb-2">{plan.title}</h3>
+                  <div className="flex items-center justify-center gap-1">
+                    <span className="text-sm text-gray-400 font-bold mb-4">R$</span>
+                    {isUpgrade ? (
+                      <div className="flex flex-col items-center justify-center mt-2">
+                        <span className="text-2xl font-display text-gray-500 line-through mb-[-5px]">{plan.price}</span>
+                        <span className="text-5xl font-display font-black text-green-400">{(targetPlanCost - userPlanCost).toFixed(2).replace('.', ',')}</span>
+                      </div>
+                    ) : (
+                      <span className="text-5xl font-display font-black text-white">{plan.price}</span>
+                    )}
+                  </div>
+                  {isUpgrade && (
+                    <div className="text-xs text-green-400/80 uppercase font-black tracking-widest bg-green-900/40 rounded-full px-2 py-0.5 inline-block mb-3 mt-1">Desconto Upgrade</div>
+                  )}
+                  <div className="text-sm text-gray-500 uppercase tracking-widest font-bold mt-1">{plan.period}</div>
+                </div>
+
+                <ul className="space-y-4 mb-8 flex-1">
+                  {plan.features.map((feature, idx) => (
+                    <li key={idx} className="flex items-start gap-3 text-sm text-gray-300">
+                      <span className={`material-icons-outlined text-lg ${plan.isMaster ? 'text-yellow-400' : 'text-primary'}`}>check_circle</span>
+                      <span className="leading-tight">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  className={`w-full py-4 rounded-xl font-bold uppercase tracking-wider transition-all duration-300 ${isDisabled ? 'bg-white/5 border-white/10 text-gray-500 cursor-not-allowed' : plan.btnColor}`}
+                  onClick={() => handlePurchase(plan)}
+                  disabled={isDisabled}
+                >
+                  {btnText}
+                </button>
+              </div>
+            );
+          })}
         </div>
 
         <div className="mt-20 text-center">

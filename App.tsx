@@ -15,6 +15,7 @@ import { Auth } from './components/Auth';
 import { RechargePage } from './components/RechargePage';
 import { CompanyHistory } from './components/CompanyHistory';
 import { FAQSection } from './components/FAQSection';
+import { AdminPanel } from './components/AdminPanel';
 import { supabase } from './src/lib/supabase';
 import { RankingPlayer, MonthData, Message, ContentDB, TournamentCategory, Event, PlayerResult, PlayerStats, RankingInstance, ScoringSchema, RankingFormula, ExperienceLevel, DailyReward, Poll, PollVote, MessageCategory } from './types';
 import { calculatePoints } from './utils/scoring';
@@ -315,7 +316,7 @@ export default function App() {
             // 5. Fetch All Profiles for Autocomplete
             const { data: profilesData, error: profilesError } = await supabase
                 .from('profiles')
-                .select('id, numeric_id, name, avatar_url, city, is_vip, vip_status, vip_expires_at');
+                .select('id, numeric_id, name, avatar_url, city, is_vip, vip_status, vip_expires_at, social, bio, level, current_exp, next_level_exp, gallery, play_styles');
 
             if (profilesError) throw profilesError;
             if (profilesData) {
@@ -330,7 +331,14 @@ export default function App() {
                     change: 'same',
                     isVip: p.is_vip || false,
                     vipStatus: p.vip_status || 'nao_vip',
-                    vipExpiresAt: p.vip_expires_at || null
+                    vipExpiresAt: p.vip_expires_at || null,
+                    social: p.social || undefined,
+                    bio: p.bio || undefined,
+                    level: p.level || 1,
+                    currentExp: p.current_exp || 0,
+                    nextLevelExp: p.next_level_exp || 1000,
+                    gallery: p.gallery || undefined,
+                    playStyles: p.play_styles || undefined
                 }));
                 setAllProfiles(formattedProfiles);
             }
@@ -404,7 +412,7 @@ export default function App() {
 
             if (data) {
                 // Check if admin (role must be 'admin')
-                const userIsAdmin = data.role === 'admin';
+                const userIsAdmin = data.role === 'admin' || data.role === 'staff';
                 setIsAdmin(userIsAdmin);
                 console.log(`User profile loaded: ${data.email}, Role: ${data.role}, IsAdmin: ${userIsAdmin}`);
 
@@ -489,6 +497,7 @@ export default function App() {
                         if (!playerMap.has(playerKey)) {
                             playerMap.set(playerKey, {
                                 id: profile?.id || r.userId,
+                                numericId: profile?.numericId,
                                 rank: 0,
                                 name: profile?.name || r.name,
                                 avatar: profile?.avatar || `https://ui-avatars.com/api/?name=${r.name.replace(' ', '+')}&background=random`,
@@ -496,7 +505,14 @@ export default function App() {
                                 points: 0,
                                 change: 'same',
                                 isVip: profile?.isVip || r.isVip || false,
-                                vipStatus: profile?.vipStatus || 'nao_vip'
+                                vipStatus: profile?.vipStatus || 'nao_vip',
+                                social: profile?.social,
+                                bio: profile?.bio,
+                                level: profile?.level,
+                                currentExp: profile?.currentExp,
+                                nextLevelExp: profile?.nextLevelExp,
+                                gallery: profile?.gallery,
+                                playStyles: profile?.playStyles
                             });
                         }
 
@@ -1333,8 +1349,8 @@ export default function App() {
     const handleReplyMessage = (messageId: string, replyText: string) => {
         // Lógica de resposta: encontrar o remetente original
         const origMsg = messages.find(m => m.id === messageId);
-        if (origMsg && origMsg.senderId) {
-            handleSendMessage(origMsg.senderId, replyText);
+        if (origMsg && origMsg.from) {
+            handleSendMessage(origMsg.from, replyText);
             alert('Sua resposta foi enviada com sucesso!');
         }
     };
@@ -1480,7 +1496,14 @@ export default function App() {
                 avatar: currentUser.avatar || '',
                 city: currentUser.city || '',
                 points: 0,
-                change: 'same'
+                change: 'same',
+                social: currentUser.social,
+                bio: currentUser.bio,
+                level: currentUser.level,
+                currentExp: currentUser.currentExp,
+                nextLevelExp: currentUser.nextLevelExp,
+                gallery: currentUser.gallery,
+                playStyles: currentUser.playStyles
             });
         }
 
@@ -1573,6 +1596,7 @@ export default function App() {
                     onMarkAsRead={handleMarkAsRead}
                     onReply={handleReplyMessage}
                     rankings={rankings}
+                    rankingPlayers={getAllUniquePlayers()}
                 />;
             case 'register':
                 return isLoggedIn ? <EventRegistration isAdmin={isAdmin} /> : <Auth onLogin={handleLogin} onCancel={() => handleNavigate('home')} />;
@@ -1613,6 +1637,8 @@ export default function App() {
                 // but actually, we will create RechargePage now, so let's import and return it.
                 // We will add the import at the top of the file in another chunk.
                 return <RechargePage currentUser={currentUser as any} onNavigate={handleNavigate} onUpdateProfile={handleProfileUpdate} />;
+            case 'admin':
+                return <AdminPanel currentUser={currentUser as any} onClose={() => handleNavigate('home')} />;
             case 'home':
             default:
                 return (
@@ -1659,6 +1685,7 @@ export default function App() {
                 onNavigate={handleNavigate}
                 prizeLabel={prizeLabel}
                 isLoggedIn={isLoggedIn}
+                isAdmin={isAdmin}
                 onLogout={async () => {
                     await supabase.auth.signOut();
                     setIsLoggedIn(false);

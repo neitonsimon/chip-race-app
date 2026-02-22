@@ -13,7 +13,7 @@ export const calculatePoints = (
     profitLoss: number = 0
 ): number => {
     if (schemaId === 'null') return 0;
-    if (players <= 0 && type !== 'cash_online' && !schemaId) return 0;
+    if (players <= 0 && type !== 'cash_online' && !type.includes('legacy') && !schemaId) return 0;
 
     const schemas = Array.isArray(globalSchemas) ? globalSchemas : [];
 
