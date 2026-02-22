@@ -1572,6 +1572,7 @@ export default function App() {
                     onSendAdminMessage={handleSendAdminMessage}
                     onMarkAsRead={handleMarkAsRead}
                     onReply={handleReplyMessage}
+                    rankings={rankings}
                 />;
             case 'register':
                 return isLoggedIn ? <EventRegistration isAdmin={isAdmin} /> : <Auth onLogin={handleLogin} onCancel={() => handleNavigate('home')} />;

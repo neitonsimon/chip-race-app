@@ -20,26 +20,49 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate, currentUser, onUpd
       return;
     }
 
-    const cost = parseFloat(plan.price.replace(',', '.'));
+    const basePrices: Record<string, number> = {
+      'quarterly': 189.90,
+      'annual': 499.90,
+      'master': 1990.90
+    };
+
+    let discount = 0;
+    const isCurrentlyVip = currentUser.isVip && currentUser.vipExpiresAt && new Date(currentUser.vipExpiresAt) > new Date();
+
+    if (isCurrentlyVip && currentUser.vipStatus) {
+      const userPlanCost = basePrices[currentUser.vipStatus === 'master' ? 'master' : (currentUser.vipStatus === 'anual' ? 'annual' : 'quarterly')] || 0;
+      const targetPlanCost = basePrices[plan.id] || 0;
+
+      // Don't allow downgrade or buying same
+      if (targetPlanCost <= userPlanCost) {
+        alert('Você já possui este plano ou um plano com mais benefícios ativos.');
+        return;
+      }
+      discount = userPlanCost;
+    }
+
+    const costToCharge = (basePrices[plan.id] || parseFloat(plan.price.replace(/\./g, '').replace(',', '.'))) - discount;
     const currentBalance = currentUser.balanceBrl || 0;
 
-    if (currentBalance < cost) {
-      alert(`Saldo insuficiente! Seu saldo atual é R$ ${currentBalance.toFixed(2).replace('.', ',')}. Você precisa de R$ ${plan.price} para adquirir o plano ${plan.title}.`);
+    if (currentBalance < costToCharge) {
+      alert(`Saldo insuficiente! Seu saldo atual é R$ ${currentBalance.toFixed(2).replace('.', ',')}. Você precisa de R$ ${costToCharge.toFixed(2).replace('.', ',')} para adquirir/fazer upgrade para este plano.`);
       onNavigate('profile');
       return;
     }
 
-    if (!window.confirm(`Confirma a compra do plano ${plan.title} por R$ ${plan.price}? Isso será descontado do seu saldo BRL.`)) return;
+    const confirmMsg = discount > 0
+      ? `Você está fazendo um UPGRADE! O valor do seu plano atual (R$ ${discount.toFixed(2).replace('.', ',')}) será descontado. Confirma a compra por apenas R$ ${costToCharge.toFixed(2).replace('.', ',')}?`
+      : `Confirma a compra do plano ${plan.title} por R$ ${costToCharge.toFixed(2).replace('.', ',')}? Isso será descontado do seu saldo BRL.`;
+
+    if (!window.confirm(confirmMsg)) return;
 
     setIsProcessing(true);
     let newExpiresAt = new Date();
-    // Definir expiração
+    // Definir expiração com datas fixas (Temporadas)
     if (plan.id === 'quarterly') {
-      newExpiresAt.setMonth(newExpiresAt.getMonth() + 3);
-    } else if (plan.id === 'annual') {
-      newExpiresAt.setFullYear(newExpiresAt.getFullYear() + 1);
-    } else if (plan.id === 'master') {
-      newExpiresAt.setFullYear(newExpiresAt.getFullYear() + 1);
+      newExpiresAt = new Date('2026-05-25T23:59:59Z'); // Final 1º Trimestre
+    } else if (plan.id === 'annual' || plan.id === 'master') {
+      newExpiresAt = new Date('2026-11-20T23:59:59Z'); // Final Temporada Anual
     }
 
     const vipStatusMap: Record<string, 'trimestral' | 'anual' | 'master'> = {
@@ -51,9 +74,9 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate, currentUser, onUpd
     try {
       const { error } = await supabase.rpc('secure_balance_transaction', {
         user_id: currentUser.id,
-        brl_amount: -cost,
+        brl_amount: -costToCharge,
         chipz_amount: 0,
-        description: `Compra: Plano VIP ${plan.title}`
+        description: `Compra: Plano VIP ${plan.title} ${discount > 0 ? '(Upgrade)' : ''}`
       });
 
       if (error) {
@@ -97,7 +120,7 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate, currentUser, onUpd
         // Força um refresh lendo do db, mas passamos a mutation local antes pro update instantâneo
         const updated = {
           ...currentUser,
-          balanceBrl: currentBalance - cost,
+          balanceBrl: currentBalance - costToCharge,
           vipStatus: vipStatusMap[plan.id],
           vipExpiresAt: newExpiresAt.toISOString(),
           isVip: true
