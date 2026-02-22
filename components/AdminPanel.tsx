@@ -501,11 +501,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                                     const hasDisc = finalPrice < Number(product.price);
                                                     const isPend = pendingProduct?.id === product.id;
                                                     const disabled = isProductDisabled(product);
+                                                    const qty = commandItems.filter(ci => ci.product_id === product.id).reduce((sum, ci) => sum + ci.quantity, 0);
                                                     return (
                                                         <button key={product.id} onClick={() => handleProductClick(product)} disabled={disabled}
                                                             className={`p-2.5 rounded-xl flex flex-col items-center text-center active:scale-95 transition-all border relative
                                                                 ${disabled ? 'opacity-30 cursor-not-allowed border-white/5 bg-black/20' : isPend ? 'bg-yellow-500/20 border-yellow-400 shadow-[0_0_12px_rgba(234,179,8,0.4)]' : 'bg-black/40 border-white/10 hover:border-primary/50 group'}`}>
                                                             {disabled && <span className="absolute top-1 right-1 text-[8px] text-red-400 font-black">✓</span>}
+                                                            {!disabled && qty > 0 && <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-green-500 text-black text-[10px] font-black rounded-full flex items-center justify-center border border-[#050214]">{qty}x</span>}
                                                             <span className="material-icons-outlined text-gray-500 mb-1 group-hover:text-primary transition-colors text-base">
                                                                 {product.category === 'bar' ? 'local_bar' : product.category === 'jackpot' ? 'toll' : product.category === 'bet' ? 'casino' : 'confirmation_number'}
                                                             </span>
