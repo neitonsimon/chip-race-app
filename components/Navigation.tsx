@@ -194,21 +194,14 @@ export const Navigation: React.FC<NavigationProps> = ({
                                                                 <div
                                                                     className="flex gap-3 items-start cursor-pointer w-full"
                                                                     onClick={() => {
-                                                                        if (msg.category === 'poll') {
-                                                                            onNavigate('profile');
-                                                                            setMessagesOpen(false);
-                                                                            setTimeout(() => {
-                                                                                window.dispatchEvent(new CustomEvent('open-poll-messages'));
-                                                                            }, 100);
-                                                                        } else if (msg.category === 'private') {
-                                                                            onNavigate('profile');
-                                                                            setMessagesOpen(false);
-                                                                            setTimeout(() => {
-                                                                                window.dispatchEvent(new CustomEvent('open-private-messages'));
-                                                                            }, 100);
-                                                                        } else {
-                                                                            handleOpenMessage(msg);
-                                                                        }
+                                                                        // Todas as categorias agora linkam para o perfil
+                                                                        onNavigate('profile');
+                                                                        setMessagesOpen(false);
+
+                                                                        const category = msg.category || 'system';
+                                                                        setTimeout(() => {
+                                                                            window.dispatchEvent(new CustomEvent(`open-${category}-messages`));
+                                                                        }, 100);
                                                                     }}
                                                                 >
                                                                     <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${!msg.read ? 'bg-primary shadow-neon-pink' : 'bg-white/20'

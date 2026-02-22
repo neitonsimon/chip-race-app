@@ -1231,10 +1231,18 @@ export default function App() {
     const [customTotalQualifiers, setCustomTotalQualifiers] = useState<number | null>(null);
     const [nextGoal, setNextGoal] = useState({ prize: 35000, qualifiers: 25 });
 
+    const [newNotification, setNewNotification] = useState<Message | null>(null);
+    const notificationTimer = React.useRef<any>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [polls, setPolls] = useState<Poll[]>([]);
     const [pollVotesByCurrentUser, setPollVotesByCurrentUser] = useState<Record<string, number>>({});
+
+    const showNotification = (msg: Message) => {
+        if (notificationTimer.current) clearTimeout(notificationTimer.current);
+        setNewNotification(msg);
+        notificationTimer.current = setTimeout(() => setNewNotification(null), 8000);
+    };
 
     useEffect(() => {
         if (!isLoggedIn || !currentUserId) return;
@@ -1249,10 +1257,31 @@ export default function App() {
             .channel('realtime-messages')
             .on(
                 'postgres_changes',
-                { event: '*', schema: 'public', table: 'messages' },
-                (_payload) => {
-                    fetchMessages(currentUserId);
+                { event: 'INSERT', schema: 'public', table: 'messages' },
+                (payload) => {
+                    const m = payload.new as any;
+                    // Só notifica se for para esse usuário ou broadcast
+                    if (!m.user_id || m.user_id === currentUserId) {
+                        const newMsg: Message = {
+                            id: m.id,
+                            from: m.sender || 'Chip Race',
+                            senderId: m.sender_id,
+                            subject: m.subject || 'Notificação',
+                            content: m.content || '',
+                            date: new Date(m.created_at || Date.now()).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }),
+                            read: false,
+                            category: (m.category as MessageCategory) || 'system',
+                            pollId: m.poll_id
+                        };
+                        showNotification(newMsg);
+                        fetchMessages(currentUserId);
+                    }
                 }
+            )
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'messages' },
+                () => fetchMessages(currentUserId)
             )
             .subscribe();
 
@@ -1271,6 +1300,7 @@ export default function App() {
         return () => {
             supabase.removeChannel(msgChannel);
             supabase.removeChannel(pollChannel);
+            if (notificationTimer.current) clearTimeout(notificationTimer.current);
         };
     }, [isLoggedIn, currentUserId]);
 
@@ -1750,7 +1780,12 @@ export default function App() {
                 // We will add the import at the top of the file in another chunk.
                 return <RechargePage currentUser={currentUser as any} onNavigate={handleNavigate} onUpdateProfile={handleProfileUpdate} />;
             case 'admin':
-                return <AdminPanel currentUser={currentUser as any} onClose={() => handleNavigate('home')} isAdmin={isAdmin && currentUser?.role !== 'staff'} />;
+                return <AdminPanel
+                    currentUser={currentUser as any}
+                    onClose={() => handleNavigate('home')}
+                    isAdmin={isAdmin && currentUser?.role !== 'staff'}
+                    onUpdateProfile={handleProfileUpdate}
+                />;
             case 'home':
             default:
                 return (
@@ -1822,6 +1857,37 @@ export default function App() {
                 <div className="fixed bottom-4 right-4 z-50 bg-surface-dark/90 backdrop-blur border border-white/10 px-4 py-2 rounded-full shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4">
                     <div className={`w-2 h-2 rounded-full ${isAdmin ? 'bg-red-500' : 'bg-green-500'} animate-pulse`}></div>
                     <span className="text-sm text-gray-300">Olá, <span className="font-bold text-white">{currentUser.name}</span> {isAdmin && <span className="text-[10px] text-red-400 bg-red-900/30 px-1 rounded ml-1 border border-red-500/30">ADMIN</span>}</span>
+                </div>
+            )}
+
+            {/* UI: Notification Toast (Real-time) */}
+            {newNotification && (
+                <div
+                    onClick={() => {
+                        handleNavigate('profile');
+                        setNewNotification(null);
+                        setTimeout(() => {
+                            window.dispatchEvent(new CustomEvent(`open-${newNotification.category}-messages`));
+                        }, 100);
+                    }}
+                    className="fixed bottom-24 right-6 left-6 md:left-auto md:w-96 z-[300] bg-surface-dark border border-primary/30 rounded-2xl p-4 shadow-2xl cursor-pointer hover:border-primary transition-all animate-in slide-in-from-right-full"
+                >
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+                            <span className="material-icons-outlined text-primary text-2xl">notifications_active</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="text-[10px] text-primary font-black uppercase tracking-widest mb-0.5">Nova Mensagem</div>
+                            <h4 className="text-white font-bold truncate">{newNotification.subject}</h4>
+                            <p className="text-gray-400 text-xs truncate">{newNotification.from}: {newNotification.content}</p>
+                        </div>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setNewNotification(null); }}
+                            className="text-gray-500 hover:text-white"
+                        >
+                            <span className="material-icons-outlined text-sm">close</span>
+                        </button>
+                    </div>
                 </div>
             )}
         </div>

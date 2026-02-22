@@ -230,18 +230,44 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
     useEffect(() => {
         const handleOpenPolls = () => {
-            setActiveTab('notifications');
+            setActiveTab('inbox');
             setInboxFilter('poll');
         };
         const handleOpenPrivate = () => {
-            setActiveTab('notifications');
+            setActiveTab('inbox');
             setInboxFilter('private');
         };
+        const handleOpenSystem = () => {
+            setActiveTab('inbox');
+            setInboxFilter('system');
+        };
+        const handleOpenAdmin = () => {
+            setActiveTab('inbox');
+            setInboxFilter('admin');
+        };
+        const handleOpenBonus = () => {
+            setActiveTab('inbox');
+            setInboxFilter('bonus');
+        };
+        const handleOpenTournament = () => {
+            setActiveTab('inbox');
+            setInboxFilter('tournament');
+        };
+
         window.addEventListener('open-poll-messages', handleOpenPolls);
         window.addEventListener('open-private-messages', handleOpenPrivate);
+        window.addEventListener('open-system-messages', handleOpenSystem);
+        window.addEventListener('open-admin-messages', handleOpenAdmin);
+        window.addEventListener('open-bonus-messages', handleOpenBonus);
+        window.addEventListener('open-tournament-messages', handleOpenTournament);
+
         return () => {
             window.removeEventListener('open-poll-messages', handleOpenPolls);
             window.removeEventListener('open-private-messages', handleOpenPrivate);
+            window.removeEventListener('open-system-messages', handleOpenSystem);
+            window.removeEventListener('open-admin-messages', handleOpenAdmin);
+            window.removeEventListener('open-bonus-messages', handleOpenBonus);
+            window.removeEventListener('open-tournament-messages', handleOpenTournament);
         };
     }, []);
 

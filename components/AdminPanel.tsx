@@ -5,6 +5,7 @@ interface AdminPanelProps {
     onClose: () => void;
     currentUser: any;
     isAdmin?: boolean;
+    onUpdateProfile?: (id: string, stats: any) => void;
 }
 
 function applyVipDiscount(price: number, category: string, productName: string, vipStatus?: string | null): number {
@@ -48,7 +49,7 @@ function getOneTimeKeyFromNote(note: string): string | null {
     return null;
 }
 
-export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, isAdmin = false }) => {
+export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, isAdmin = false, onUpdateProfile }) => {
     const [activeTab, setActiveTab] = useState<'operational' | 'reports'>('operational');
     const [events, setEvents] = useState<any[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
@@ -61,7 +62,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const [commandItems, setCommandItems] = useState<any[]>([]);
     const [showCheckout, setShowCheckout] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [productSection, setProductSection] = useState<'bar' | 'torneio' | 'produtos'>('bar');
+    const [productSection, setProductSection] = useState<'bar' | 'torneio' | 'produtos' | 'cash'>('bar');
     const [pendingProduct, setPendingProduct] = useState<any | null>(null);
     const [showTopUp, setShowTopUp] = useState(false);
     const [topUpAmount, setTopUpAmount] = useState('');
@@ -75,6 +76,67 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const [viewingItems, setViewingItems] = useState<any[]>([]);
     const [toast, setToast] = useState<{ msg: string; price: number } | null>(null);
     const toastTimer = useRef<any>(null);
+
+    const updatePlayerBalanceLocally = (userId: string, amount: number) => {
+        // Update selectedCommand if matches
+        if (selectedCommand && selectedCommand.user_id === userId) {
+            setSelectedCommand((prev: any) => prev ? ({
+                ...prev,
+                profiles: {
+                    ...prev.profiles,
+                    balance_brl: (Number(prev.profiles?.balance_brl) || 0) + amount
+                }
+            }) : null);
+        }
+
+        // Update in openCommands
+        setOpenCommands(prev => prev.map(cmd => {
+            if (cmd.user_id === userId) {
+                return {
+                    ...cmd,
+                    profiles: {
+                        ...cmd.profiles,
+                        balance_brl: (Number(cmd.profiles?.balance_brl) || 0) + amount
+                    }
+                };
+            }
+            return cmd;
+        }));
+
+        // Update in closedCommands
+        setClosedCommands(prev => prev.map(cmd => {
+            if (cmd.user_id === userId) {
+                return {
+                    ...cmd,
+                    profiles: {
+                        ...cmd.profiles,
+                        balance_brl: (Number(cmd.profiles?.balance_brl) || 0) + amount
+                    }
+                };
+            }
+            return cmd;
+        }));
+
+        // Update in searchResults
+        setSearchResults(prev => prev.map(p => {
+            if (p.id === userId) {
+                return {
+                    ...p,
+                    balance_brl: (Number(p.balance_brl) || 0) + amount
+                };
+            }
+            return p;
+        }));
+
+        // Also update the global currentUser if it's the admin themselves
+        if (currentUser && currentUser.id === userId && onUpdateProfile) {
+            const updatedStats = {
+                ...currentUser,
+                balanceBrl: (Number(currentUser.balanceBrl) || 0) + amount
+            };
+            onUpdateProfile(userId, updatedStats);
+        }
+    };
 
     useEffect(() => { fetchEvents(); fetchProducts(); }, []);
     useEffect(() => {
@@ -137,6 +199,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         if (upErr) { alert('Erro ao reabrir: ' + upErr.message); return; }
         await supabase.from('messages').insert({ user_id: cmd.user_id, sender_id: currentUser.id, content: `Sua comanda foi reaberta pelo admin. R$ ${Number(cmd.total_brl).toFixed(2)} reembolsados ao saldo.`, category: 'system', is_read: false });
         if (selectedEvent) { fetchOpenCommands(selectedEvent.id); fetchClosedCommands(selectedEvent.id); }
+        updatePlayerBalanceLocally(cmd.user_id, Number(cmd.total_brl)); // Refund balance locally
         setSelectedCommand({ ...cmd, status: 'open', closed_at: null });
         setCommandsTab('ativas');
     };
@@ -199,13 +262,34 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         ].filter(Boolean) as any[];
     };
 
+    const getCashItems = () => [
+        { id: 'cash-20', name: '20 fichas', price: 20 },
+        { id: 'cash-30', name: '30 fichas', price: 30 },
+        { id: 'cash-50', name: '50 fichas', price: 50 },
+        { id: 'cash-100', name: '100 fichas', price: 100 },
+        { id: 'cash-200', name: '200 fichas', price: 200 },
+        { id: 'cash-500', name: '500 fichas', price: 500 },
+    ];
+
     const getVipPrice = (price: number, category: string, name: string) =>
         applyVipDiscount(price, category, name, selectedCommand?.profiles?.vip_status);
 
     const addProductToCommand = async (product: any) => {
         if (!selectedCommand) return;
         const finalPrice = getVipPrice(Number(product.price), product.category, product.name);
-        const { error } = await supabase.from('command_items').insert({ command_id: selectedCommand.id, product_id: product.id, quantity: 1, unit_price_brl: finalPrice, unit_price_chipz: 0, total_price_brl: finalPrice, total_price_chipz: 0, created_by: currentUser.id });
+        const now = new Date();
+        const saleTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const { error } = await supabase.from('command_items').insert({
+            command_id: selectedCommand.id,
+            product_id: product.id,
+            quantity: 1,
+            unit_price_brl: finalPrice,
+            unit_price_chipz: 0,
+            total_price_brl: finalPrice,
+            total_price_chipz: 0,
+            notes: `Lançado às ${saleTime}`,
+            created_by: currentUser.id
+        });
         if (error) { alert('Erro: ' + error.message); return; }
         const newTotal = Number(selectedCommand.total_brl) + finalPrice;
         await supabase.from('commands').update({ total_brl: newTotal }).eq('id', selectedCommand.id);
@@ -223,7 +307,45 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         if (item.name === 'Staff' && vipStatus === 'vip_master') finalPrice = Math.max(0, finalPrice - 10);
         const isAddon = item.name === 'Add On' || item.name === 'Add Duplo';
         const bonusNote = isAddon && vipStatus === 'vip_master' ? ' (+5K fichas VIP)' : '';
-        const { error } = await supabase.from('command_items').insert({ command_id: selectedCommand.id, product_id: null, quantity: 1, unit_price_brl: finalPrice, unit_price_chipz: 0, total_price_brl: finalPrice, total_price_chipz: 0, notes: `${item.name} — ${item.chips} fichas${bonusNote}`, created_by: currentUser.id });
+        const now = new Date();
+        const saleTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const { error } = await supabase.from('command_items').insert({
+            command_id: selectedCommand.id,
+            product_id: null,
+            quantity: 1,
+            unit_price_brl: finalPrice,
+            unit_price_chipz: 0,
+            total_price_brl: finalPrice,
+            total_price_chipz: 0,
+            notes: `${item.name} — ${item.chips} fichas${bonusNote} (Lançado às ${saleTime})`,
+            created_by: currentUser.id
+        });
+        if (error) { alert('Erro: ' + error.message); return; }
+        const newTotal = Number(selectedCommand.total_brl) + finalPrice;
+        await supabase.from('commands').update({ total_brl: newTotal }).eq('id', selectedCommand.id);
+        const upd = openCommands.map(c => c.id === selectedCommand.id ? { ...c, total_brl: newTotal } : c);
+        setOpenCommands(upd);
+        setSelectedCommand({ ...selectedCommand, total_brl: newTotal });
+        fetchCommandItems(selectedCommand.id);
+        showToast(item.name, finalPrice);
+    };
+
+    const addCashItemToCommand = async (item: any) => {
+        if (!selectedCommand) return;
+        const finalPrice = item.price;
+        const now = new Date();
+        const saleTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const { error } = await supabase.from('command_items').insert({
+            command_id: selectedCommand.id,
+            product_id: null,
+            quantity: 1,
+            unit_price_brl: finalPrice,
+            unit_price_chipz: 0,
+            total_price_brl: finalPrice,
+            total_price_chipz: 0,
+            notes: `Cash Game — ${item.name} (Lançado às ${saleTime})`,
+            created_by: currentUser.id
+        });
         if (error) { alert('Erro: ' + error.message); return; }
         const newTotal = Number(selectedCommand.total_brl) + finalPrice;
         await supabase.from('commands').update({ total_brl: newTotal }).eq('id', selectedCommand.id);
@@ -246,6 +368,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         if (pendingProduct?.id === item.id) { addTournamentItemToCommand(item); setPendingProduct(null); }
         else setPendingProduct(item);
     };
+    const handleCashItemClick = (item: any) => {
+        if (!selectedCommand) { alert('Selecione uma comanda primeiro.'); return; }
+        if (pendingProduct?.id === item.id) { addCashItemToCommand(item); setPendingProduct(null); }
+        else setPendingProduct(item);
+    };
 
     const handleCloseCommand = async () => {
         if (!selectedCommand) return;
@@ -263,6 +390,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             }
             await supabase.from('commands').update({ status: 'closed', closed_at: new Date().toISOString() }).eq('id', selectedCommand.id);
             await supabase.from('messages').insert({ user_id: selectedCommand.user_id, sender_id: currentUser.id, content: `Sua comanda foi encerrada. Total: R$ ${total.toFixed(2)} descontado do saldo.`, category: 'system', is_read: false });
+            updatePlayerBalanceLocally(selectedCommand.user_id, -total); // Deduct balance locally
             setOpenCommands(openCommands.filter(c => c.id !== selectedCommand.id));
             if (selectedEvent) fetchClosedCommands(selectedEvent.id);
             setSelectedCommand(null); setShowCheckout(false); setCommandItems([]);
@@ -283,10 +411,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             });
             if (incrErr) { alert('Erro ao creditar: ' + incrErr.message); return; }
             await supabase.from('messages').insert({ user_id: selectedCommand.user_id, sender_id: currentUser.id, content: `Pagamento de R$ ${amount.toFixed(2)} registrado pelo admin. Saldo atualizado.`, category: 'system', is_read: false });
+            updatePlayerBalanceLocally(selectedCommand.user_id, amount); // Update balance locally
             alert(`✅ R$ ${amount.toFixed(2)} creditado com sucesso!`);
             setShowTopUp(false); setTopUpAmount('');
-            // Reload page to refresh all user local states and balances
-            window.location.reload();
         } catch (err: any) { alert('Erro: ' + err.message); }
         finally { setIsLoading(false); }
     };
@@ -294,8 +421,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const reportBySection = () => {
         const sections: Record<string, { total: number; items: Record<string, { qty: number; total: number }> }> = {};
         reportData.forEach((item: any) => {
-            const cat = item.products?.category || 'torneio';
-            const sec = cat === 'bar' ? 'Bar' : ['bet', 'jackpot', 'lastlonger'].includes(cat) ? 'Produtos' : 'Torneio';
+            const cat = item.products?.category || (item.notes?.startsWith('Cash Game') ? 'cash' : 'torneio');
+            const sec = cat === 'bar' ? 'Bar' : cat === 'cash' ? 'Cash' : ['bet', 'jackpot', 'lastlonger'].includes(cat) ? 'Produtos' : 'Torneio';
             const name = item.products?.name || item.notes || 'Item';
             if (!sections[sec]) sections[sec] = { total: 0, items: {} };
             sections[sec].total += Number(item.total_price_brl);
@@ -315,7 +442,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     );
 
     const filteredProducts = productSection === 'bar' ? products.filter(p => p.category === 'bar')
-        : products.filter(p => ['bet', 'jackpot', 'lastlonger'].includes(p.category));
+        : productSection === 'produtos' ? products.filter(p => ['bet', 'jackpot', 'lastlonger'].includes(p.category))
+            : [];
 
     return (
         <div className="fixed inset-0 z-[100] bg-[#050214] flex flex-col">
@@ -371,7 +499,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                         className="flex-1 bg-transparent text-white text-sm font-bold outline-none"
                                         style={{ backgroundColor: 'transparent' }}>
                                         <option value="" style={{ backgroundColor: '#0a0720' }}>Selecionar Evento</option>
-                                        {events.map(ev => <option key={ev.id} value={ev.id} style={{ backgroundColor: '#0a0720' }}>{ev.title} ({new Date(ev.date).toLocaleDateString('pt-BR')})</option>)}
+                                        {events
+                                            .filter(ev => {
+                                                if (ev.status === 'closed') return false;
+                                                const today = new Date();
+                                                const tomorrow = new Date();
+                                                tomorrow.setDate(today.getDate() + 1);
+
+                                                const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+                                                const tomorrowStr = tomorrow.getFullYear() + '-' + String(tomorrow.getMonth() + 1).padStart(2, '0') + '-' + String(tomorrow.getDate()).padStart(2, '0');
+
+                                                return ev.date === todayStr || ev.date === tomorrowStr;
+                                            })
+                                            .map(ev => <option key={ev.id} value={ev.id} style={{ backgroundColor: '#0a0720' }}>{ev.title} ({new Date(ev.date).toLocaleDateString('pt-BR')})</option>)}
                                     </select>
                                 </div>
 
@@ -508,17 +648,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                         </div>
 
                                         <div className="flex border-b border-white/10 flex-shrink-0">
-                                            {(['bar', 'torneio', 'produtos'] as const).map(sec => (
+                                            {(['bar', 'torneio', 'cash', 'produtos'] as const).map(sec => (
                                                 <button key={sec} onClick={() => { setProductSection(sec); setPendingProduct(null); }}
                                                     className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest transition-all ${productSection === sec ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-300'}`}>
-                                                    {sec === 'bar' ? '🍺' : sec === 'torneio' ? '♠' : '🎯'} {sec}
+                                                    {sec === 'bar' ? '🍺' : sec === 'torneio' ? '♠' : sec === 'cash' ? '💵' : '🎯'} {sec}
                                                 </button>
                                             ))}
                                         </div>
 
                                         <div className="flex-1 overflow-y-auto p-3 custom-scrollbar">
                                             <div className="grid grid-cols-2 gap-2">
-                                                {productSection !== 'torneio' ? filteredProducts.map(product => {
+                                                {(productSection === 'bar' || productSection === 'produtos') ? filteredProducts.map(product => {
                                                     const finalPrice = getVipPrice(Number(product.price), product.category, product.name);
                                                     const hasDisc = finalPrice < Number(product.price);
                                                     const isPend = pendingProduct?.id === product.id;
@@ -544,7 +684,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                                             )}
                                                         </button>
                                                     );
-                                                }) : getTournamentItems().map(item => {
+                                                }) : productSection === 'torneio' ? getTournamentItems().map(item => {
                                                     const vipStatus = selectedCommand?.profiles?.vip_status;
                                                     let finalPrice = item.price;
                                                     if (item.name === 'Staff' && vipStatus === 'vip_master') finalPrice = Math.max(0, finalPrice - 10);
@@ -567,6 +707,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                                                     <span className="text-[10px] text-green-400 font-black block">R$ {finalPrice.toFixed(2)}</span>
                                                                 </div>
                                                             ) : <span className="text-[10px] text-primary font-black">R$ {item.price.toFixed(2)}</span>}
+                                                        </button>
+                                                    );
+                                                }) : getCashItems().map(item => {
+                                                    const isPend = pendingProduct?.id === item.id;
+                                                    return (
+                                                        <button key={item.id} onClick={() => handleCashItemClick(item)}
+                                                            className={`p-2.5 rounded-xl flex flex-col items-center text-center active:scale-95 transition-all border relative
+                                                                ${isPend ? 'bg-yellow-500/20 border-yellow-400 shadow-[0_0_12px_rgba(234,179,8,0.4)]' : 'bg-black/40 border-white/10 hover:border-primary/50 group'}`}>
+                                                            <span className="material-icons-outlined text-gray-500 mb-1 text-base">payments</span>
+                                                            <span className="text-[10px] text-white font-bold">{item.name}</span>
+                                                            <span className="text-[10px] text-primary font-black">R$ {item.price.toFixed(2)}</span>
                                                         </button>
                                                     );
                                                 })}
