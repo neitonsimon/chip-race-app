@@ -315,12 +315,13 @@ export default function App() {
             // 5. Fetch All Profiles for Autocomplete
             const { data: profilesData, error: profilesError } = await supabase
                 .from('profiles')
-                .select('id, name, avatar_url, city, is_vip, vip_status, vip_expires_at');
+                .select('id, numeric_id, name, avatar_url, city, is_vip, vip_status, vip_expires_at');
 
             if (profilesError) throw profilesError;
             if (profilesData) {
                 const formattedProfiles: RankingPlayer[] = profilesData.map(p => ({
                     id: p.id,
+                    numericId: p.numeric_id,
                     rank: 0,
                     name: p.name || 'Usuário',
                     avatar: p.avatar_url || `https://ui-avatars.com/api/?name=${p.name || 'U'}&background=random`,
@@ -409,6 +410,7 @@ export default function App() {
 
                 setCurrentUser({
                     id: userId,
+                    numericId: data.numeric_id,
                     name: data.name || 'User',
                     avatar: data.avatar_url || `https://ui-avatars.com/api/?name=${data.name || 'U'}&background=random`,
                     city: data.city || '',

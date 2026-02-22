@@ -167,6 +167,7 @@ export interface TournamentResult {
 
 export interface PlayerStats {
   id: string;
+  numericId?: number;
   name: string;
   avatar: string;
   city: string;

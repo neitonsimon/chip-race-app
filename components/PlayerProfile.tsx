@@ -240,7 +240,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         } else if (currentUser) {
             // Viewing Self
             targetIdRef.current = currentUser.id || '';
-            baseData.id = currentUser.id || baseData.id;
+            baseData.id = currentUser.id || '';
+            baseData.numericId = (currentUser as any).numericId;
             baseData.name = currentUser.name;
             baseData.avatar = currentUser.avatar;
             if (currentUser.city) baseData.city = currentUser.city;
@@ -1001,9 +1002,11 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
                                 <div className="border-t border-white/10 pt-6">
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div>
+                                        <div title={`UUID: ${player.id}`}>
                                             <div className="text-xs text-gray-500 uppercase tracking-wide">ID Chip Race</div>
-                                            <div className="text-lg font-display font-bold text-white">{player.id}</div>
+                                            <div className="text-xl font-display font-black text-primary">
+                                                #{player.numericId || (player.id ? player.id.substring(0, 8).toUpperCase() : '---')}
+                                            </div>
                                         </div>
                                         {/* NEW XP & LEVEL UI */}
                                         <div className="flex flex-col items-center">
