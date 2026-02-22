@@ -23,6 +23,7 @@ export interface CountdownTime {
 // Interface para resultados de fechamento de evento (Movida para cima para ser usada em Event)
 export interface PlayerResult {
   id: string;
+  userId?: string;
   name: string;
   position: number;
   prize: number;
@@ -85,6 +86,7 @@ export interface Event {
 }
 
 export interface RankingPlayer {
+  id?: string;
   rank: number;
   name: string;
   avatar: string;

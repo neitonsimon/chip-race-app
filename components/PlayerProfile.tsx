@@ -7,7 +7,7 @@ interface PlayerProfileProps {
     isLoggedIn?: boolean;
     initialData?: RankingPlayer;
     onSendMessage?: (to: string, content: string) => void;
-    onUpdateProfile?: (originalName: string, updatedData: PlayerStats) => void;
+    onUpdateProfile?: (targetId: string, updatedData: PlayerStats) => void;
     currentUser?: {
         id?: string;
         name: string;
@@ -161,7 +161,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
     const [isSavingExp, setIsSavingExp] = useState(false);
 
-    // Ref para guardar o nome original para fins de update no "banco"
+    // Ref para guardar o ID original para fins de update no "banco"
+    const targetIdRef = useRef<string>('');
     const originalNameRef = useRef<string>('');
 
     // Determina se é o perfil do próprio usuário logado ou de um terceiro
@@ -206,10 +207,11 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         // 1. Determine Identity (Name, Avatar, Bio...)
         if (initialData) {
             // Viewing someone else
+            targetIdRef.current = initialData.id || '';
             originalNameRef.current = initialData.name;
             baseData = {
                 ...baseData,
-                id: `CR-${Math.floor(Math.random() * 9000) + 1000}`,
+                id: initialData.id || `CR-${Math.floor(Math.random() * 9000) + 1000}`,
                 name: initialData.name,
                 avatar: initialData.avatar,
                 city: initialData.city,
@@ -237,6 +239,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             setActiveTab('overview');
         } else if (currentUser) {
             // Viewing Self
+            targetIdRef.current = currentUser.id || '';
+            baseData.id = currentUser.id || baseData.id;
             baseData.name = currentUser.name;
             baseData.avatar = currentUser.avatar;
             if (currentUser.city) baseData.city = currentUser.city;
@@ -591,7 +595,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
         // Persist to "DB" (App State)
         if (onUpdateProfile) {
-            onUpdateProfile(originalNameRef.current, newPlayerData);
+            onUpdateProfile(targetIdRef.current, newPlayerData);
         }
 
         // 4. Show animation then close modal automatically
@@ -617,7 +621,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         setShowClaimModal(false);
 
         if (onUpdateProfile) {
-            onUpdateProfile(originalNameRef.current, newPlayerData);
+            onUpdateProfile(targetIdRef.current, newPlayerData);
         }
     };
 
@@ -788,7 +792,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     const handleSaveProfile = () => {
         // Chama a função de update do pai para persistir no "banco"
         if (onUpdateProfile) {
-            onUpdateProfile(originalNameRef.current, player);
+            onUpdateProfile(targetIdRef.current, player);
             // Atualiza a ref para o novo nome caso tenha mudado
             originalNameRef.current = player.name;
         }
@@ -1429,81 +1433,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                         </div>
 
 
-                        {isAdmin && isOwnProfile && (
-                            <div className="mt-12 bg-black/40 border border-primary/30 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
-                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-accent"></div>
-                                <h3 className="text-xl font-bold text-primary mb-6 flex items-center gap-2">
-                                    <span className="material-icons-outlined">admin_panel_settings</span>
-                                    Administração: Recompensas Diárias
-                                </h3>
 
-                                <div className="overflow-x-auto custom-scrollbar pb-4">
-                                    <table className="w-full text-left text-sm text-gray-300 min-w-[600px]">
-                                        <thead className="bg-white/5 uppercase text-xs font-bold text-gray-500 rounded-lg">
-                                            <tr>
-                                                <th className="px-4 py-3 rounded-tl-lg">Dia</th>
-                                                <th className="px-4 py-3">Tipo de Recompensa</th>
-                                                <th className="px-4 py-3">Valor</th>
-                                                <th className="px-4 py-3 rounded-tr-lg">Rótulo Exibição</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-white/5">
-                                            {activeDailyRewards.map((reward, idx) => (
-                                                <tr key={reward.day} className="hover:bg-white/5 transition-colors">
-                                                    <td className="px-4 py-3 font-bold text-white">Dia {reward.day}</td>
-                                                    <td className="px-4 py-3">
-                                                        <select
-                                                            value={reward.reward_type}
-                                                            onChange={(e) => handleUpdateActiveReward(idx, 'reward_type', e.target.value)}
-                                                            className="bg-black/50 border border-white/10 rounded px-3 py-2 text-white outline-none focus:border-primary"
-                                                        >
-                                                            <option value="xp">Experiência (XP)</option>
-                                                            <option value="chipz">Moeda Chipz</option>
-                                                            <option value="brl">Real (BRL)</option>
-                                                        </select>
-                                                    </td>
-                                                    <td className="px-4 py-3">
-                                                        <input
-                                                            type="number"
-                                                            value={reward.reward_value}
-                                                            onChange={(e) => handleUpdateActiveReward(idx, 'reward_value', e.target.value)}
-                                                            className="w-24 bg-black/50 border border-white/10 rounded px-3 py-2 text-white outline-none focus:border-primary text-right"
-                                                        />
-                                                    </td>
-                                                    <td className="px-4 py-3">
-                                                        <input
-                                                            type="text"
-                                                            value={reward.reward_label || ''}
-                                                            onChange={(e) => handleUpdateActiveReward(idx, 'reward_label', e.target.value)}
-                                                            className="w-full bg-black/50 border border-white/10 rounded px-3 py-2 text-white outline-none focus:border-primary"
-                                                            placeholder="Ex: 50 Chipz"
-                                                        />
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                <div className="mt-6 flex justify-end">
-                                    <button
-                                        onClick={handleSaveDailyRewardsConfig}
-                                        disabled={isSavingRewards}
-                                        className="px-6 py-3 bg-primary hover:bg-primary/80 text-white font-bold rounded-xl transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        {isSavingRewards ? (
-                                            <>
-                                                <span className="material-icons-outlined animate-spin">refresh</span> Salvando...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <span className="material-icons-outlined">save</span> Salvar Recompensas no BD
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-                            </div>
-                        )}
 
                         <div className="border-t border-white/10 pt-8 mt-8 flex justify-end gap-4">
                             <button onClick={() => setActiveTab('overview')} className="px-6 py-3 rounded-lg text-gray-400 font-bold hover:bg-white/5 transition-colors">Cancelar</button>

@@ -315,11 +315,12 @@ export default function App() {
             // 5. Fetch All Profiles for Autocomplete
             const { data: profilesData, error: profilesError } = await supabase
                 .from('profiles')
-                .select('name, avatar_url, city, is_vip, vip_status, vip_expires_at');
+                .select('id, name, avatar_url, city, is_vip, vip_status, vip_expires_at');
 
             if (profilesError) throw profilesError;
             if (profilesData) {
                 const formattedProfiles: RankingPlayer[] = profilesData.map(p => ({
+                    id: p.id,
                     rank: 0,
                     name: p.name || 'Usuário',
                     avatar: p.avatar_url || `https://ui-avatars.com/api/?name=${p.name || 'U'}&background=random`,
@@ -453,8 +454,13 @@ export default function App() {
     useEffect(() => {
         if (!events || events.length === 0 || !allProfiles || allProfiles.length === 0 || !rankings || rankings.length === 0) return;
 
-        const metadataMap = new Map<string, Partial<RankingPlayer>>();
-        allProfiles.forEach(p => metadataMap.set(p.name, p));
+        const metadataMap = new Map<string, RankingPlayer>();
+        const metadataByIdMap = new Map<string, RankingPlayer>();
+
+        allProfiles.forEach(p => {
+            if (p.name) metadataMap.set(p.name.toLowerCase().trim(), p);
+            if (p.id) metadataByIdMap.set(p.id, p);
+        });
 
         let hasChanges = false;
 
@@ -469,19 +475,29 @@ export default function App() {
                         : ev.scoringSchemaId;
 
                     ev.results.forEach((r: any) => {
-                        if (!playerMap.has(r.name)) {
-                            const meta = metadataMap.get(r.name) || {};
-                            playerMap.set(r.name, {
+                        // 1. Identify Target Profile
+                        const profileById = r.userId ? metadataByIdMap.get(r.userId) : null;
+                        const profileByName = metadataMap.get(r.name.toLowerCase().trim());
+                        const profile = profileById || profileByName;
+
+                        // 2. Determine Key for playerMap (Priority to ID)
+                        const playerKey = r.userId || r.name;
+
+                        if (!playerMap.has(playerKey)) {
+                            playerMap.set(playerKey, {
+                                id: profile?.id || r.userId,
                                 rank: 0,
-                                name: r.name,
-                                avatar: meta.avatar || `https://ui-avatars.com/api/?name=${r.name.replace(' ', '+')}&background=random`,
-                                city: meta.city || 'Venâncio Aires - RS',
+                                name: profile?.name || r.name,
+                                avatar: profile?.avatar || `https://ui-avatars.com/api/?name=${r.name.replace(' ', '+')}&background=random`,
+                                city: profile?.city || 'Venâncio Aires - RS',
                                 points: 0,
                                 change: 'same',
-                                ...meta
+                                isVip: profile?.isVip || r.isVip || false,
+                                vipStatus: profile?.vipStatus || 'nao_vip'
                             });
                         }
-                        const p = playerMap.get(r.name)!;
+
+                        const p = playerMap.get(playerKey)!;
 
                         const pts = calculatePoints(
                             ev.rankingType || 'weekly',
@@ -742,9 +758,9 @@ export default function App() {
     };
 
     // --- PROFILE UPDATE HANDLER ---
-    const handleProfileUpdate = async (originalName: string, updatedData: PlayerStats) => {
+    const handleProfileUpdate = async (targetId: string, updatedData: PlayerStats) => {
         // 1. Update local current user if it's the logged-in user
-        if (originalName === currentUser.name) {
+        if (targetId === currentUserId) {
             setCurrentUser(prev => ({
                 ...prev,
                 name: updatedData.name,
@@ -769,7 +785,7 @@ export default function App() {
         setRankings(prev => prev.map(ranking => ({
             ...ranking,
             players: ranking.players.map(p => {
-                if (p.name === originalName) {
+                if (p.id === targetId) {
                     return {
                         ...p,
                         name: updatedData.name,
@@ -789,7 +805,7 @@ export default function App() {
             })
         })));
 
-        if (selectedPlayer && selectedPlayer.name === originalName) {
+        if (selectedPlayer && selectedPlayer.id === targetId) {
             setSelectedPlayer(prev => prev ? {
                 ...prev,
                 name: updatedData.name,
@@ -806,26 +822,33 @@ export default function App() {
             } : null);
         }
 
+        // 2.3. Update in allProfiles (used for metadata mapping)
+        setAllProfiles(prev => prev.map(p => {
+            if (p.id === targetId) {
+                return {
+                    ...p,
+                    name: updatedData.name,
+                    city: updatedData.city,
+                    avatar: updatedData.avatar,
+                    bio: updatedData.bio,
+                    social: updatedData.social,
+                    playStyles: updatedData.playStyles,
+                    gallery: updatedData.gallery,
+                    level: updatedData.level,
+                    currentExp: updatedData.currentExp,
+                    nextLevelExp: updatedData.nextLevelExp,
+                    lastDailyClaim: updatedData.lastDailyClaim
+                };
+            }
+            return p;
+        }));
+
         // 3. Persist to Supabase (if user is logged in)
-        if (currentUserId) {
+        if (currentUserId && targetId) {
             try {
-                let targetDbId = currentUserId;
-
-                if (originalName !== currentUser.name) {
-                    if (!isAdmin) {
-                        alert("Você não tem permissão para editar outros perfis.");
-                        return;
-                    }
-                    const { data: targetProfile, error: targetError } = await supabase
-                        .from('profiles')
-                        .select('id')
-                        .eq('name', originalName)
-                        .single();
-
-                    if (targetError || !targetProfile) {
-                        throw new Error("Usuário não encontrado no banco de dados.");
-                    }
-                    targetDbId = targetProfile.id;
+                if (targetId !== currentUserId && !isAdmin) {
+                    alert("Você não tem permissão para editar outros perfis.");
+                    return;
                 }
 
                 const { error } = await supabase
@@ -849,7 +872,7 @@ export default function App() {
                         balance_brl: updatedData.balanceBrl || 0,
                         balance_chipz: updatedData.balanceChipz || 0
                     })
-                    .eq('id', targetDbId);
+                    .eq('id', targetId);
 
                 if (error) throw error;
             } catch (e: any) {
@@ -993,11 +1016,20 @@ export default function App() {
             }
         }
 
-        // Extract all unique players across all rankings to preserve metadata
-        const allPlayers = rankings.flatMap(r => r.players);
-        const metadataMap = new Map<string, Partial<RankingPlayer>>();
-        allPlayers.forEach(p => {
-            metadataMap.set(p.name, { city: p.city, avatar: p.avatar, bio: p.bio, social: p.social, playStyles: p.playStyles, gallery: p.gallery, manualPrize: p.manualPrize, level: p.level, currentExp: p.currentExp });
+        const allPlayersMetadata = rankings.flatMap(r => r.players);
+        const metadataMap = new Map<string, RankingPlayer>();
+        const metadataByIdMap = new Map<string, RankingPlayer>();
+
+        allProfiles.forEach(p => {
+            if (p.name) metadataMap.set(p.name.toLowerCase().trim(), p);
+            if (p.id) metadataByIdMap.set(p.id, p);
+        });
+
+        // Fallback for players not in allProfiles but in rankings
+        allPlayersMetadata.forEach(p => {
+            const key = p.name.toLowerCase().trim();
+            if (!metadataMap.has(key)) metadataMap.set(key, p);
+            if (p.id && !metadataByIdMap.has(p.id)) metadataByIdMap.set(p.id, p);
         });
 
         // Recalculate each ranking based on events
@@ -1013,20 +1045,26 @@ export default function App() {
                         ? ranking.scoringSchemaMap[ev.rankingType]
                         : ev.scoringSchemaId;
 
-                    ev.results.forEach(r => {
-                        if (!playerMap.has(r.name)) {
-                            const meta = metadataMap.get(r.name) || {};
-                            playerMap.set(r.name, {
+                    ev.results.forEach((r: any) => {
+                        const profileById = r.userId ? metadataByIdMap.get(r.userId) : null;
+                        const profileByName = metadataMap.get(r.name.toLowerCase().trim());
+                        const profile = profileById || profileByName;
+                        const playerKey = r.userId || r.name;
+
+                        if (!playerMap.has(playerKey)) {
+                            playerMap.set(playerKey, {
+                                id: profile?.id || r.userId,
                                 rank: 0,
-                                name: r.name,
-                                avatar: meta.avatar || `https://ui-avatars.com/api/?name=${r.name.replace(' ', '+')}&background=random`,
-                                city: meta.city || 'Venâncio Aires - RS',
+                                name: profile?.name || r.name,
+                                avatar: profile?.avatar || `https://ui-avatars.com/api/?name=${r.name.replace(' ', '+')}&background=random`,
+                                city: profile?.city || 'Venâncio Aires - RS',
                                 points: 0,
                                 change: 'same',
-                                ...meta
+                                isVip: profile?.isVip || r.isVip || false,
+                                vipStatus: profile?.vipStatus || 'nao_vip'
                             });
                         }
-                        const p = playerMap.get(r.name)!;
+                        const p = playerMap.get(playerKey)!;
 
                         // Calculate points specifically for this ranking
                         const calculatedPoints = calculatePoints(
@@ -1431,6 +1469,7 @@ export default function App() {
         // 3. Adiciona o usuário atual se estiver logado
         if (isLoggedIn && currentUser.name) {
             combinedPlayers.push({
+                id: currentUserId || undefined,
                 rank: 0,
                 name: currentUser.name,
                 avatar: currentUser.avatar || '',
@@ -1441,11 +1480,13 @@ export default function App() {
         }
 
         // 4. Remove duplicatas baseado no nome (Case Insensitive para segurança)
-        const uniqueMap = new Map();
+        // Favoring entries with IDs if multiple exist for the same name
+        const uniqueMap = new Map<string, any>();
         combinedPlayers.forEach(p => {
             if (!p.name) return;
             const key = p.name.toLowerCase().trim();
-            if (!uniqueMap.has(key)) {
+            const existing = uniqueMap.get(key);
+            if (!existing || (p.id && !existing.id)) {
                 uniqueMap.set(key, p);
             }
         });

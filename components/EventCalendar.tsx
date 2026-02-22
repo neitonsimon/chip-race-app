@@ -68,7 +68,8 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
     // Autocomplete States
     const [newPlayerName, setNewPlayerName] = useState('');
-    const [suggestions, setSuggestions] = useState<string[]>([]);
+    const [selectedUserId, setSelectedUserId] = useState<string | undefined>(undefined);
+    const [suggestions, setSuggestions] = useState<RankingPlayer[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
 
     // Helpers for Sorting
@@ -372,12 +373,12 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
     const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
         setNewPlayerName(val);
+        setSelectedUserId(undefined); // Reset ID if typing manually
         if (val.length > 0) {
-            const allNames = rankingPlayers.map(p => p.name);
             const valLower = val.toLowerCase();
 
-            const filtered = allNames.filter(name => {
-                const nameLower = name.toLowerCase();
+            const filtered = rankingPlayers.filter(p => {
+                const nameLower = p.name.toLowerCase();
                 const matchesSearch = nameLower.includes(valLower);
                 const isAlreadyAdded = playerResults.some(pr => pr.name.toLowerCase() === nameLower);
                 return matchesSearch && !isAlreadyAdded;
@@ -390,8 +391,9 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
         }
     };
 
-    const selectSuggestion = (name: string) => {
-        setNewPlayerName(name);
+    const selectSuggestion = (player: RankingPlayer) => {
+        setNewPlayerName(player.name);
+        setSelectedUserId(player.id);
         setShowSuggestions(false);
     };
 
@@ -403,6 +405,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
         const newResult: PlayerResult = {
             id: Date.now().toString(),
+            userId: selectedUserId,
             name: newPlayerName,
             position: playerResults.length + 1,
             prize: 0,
@@ -415,6 +418,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
         setPlayerResults(refreshedList);
         setNewPlayerName('');
+        setSelectedUserId(undefined);
         setShowSuggestions(false);
     };
 
@@ -1106,7 +1110,19 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                         <input type="text" value={newPlayerName} onChange={handleNameChange} placeholder="Nome do Jogador..." className="flex-1 bg-black/30 border border-white/20 rounded-lg px-4 py-2 text-white outline-none" onKeyDown={(e) => e.key === 'Enter' && addPlayerResult()} />
                                         {showSuggestions && suggestions.length > 0 && (
                                             <ul className="absolute z-50 top-10 left-0 w-full bg-surface-dark border border-white/20 rounded-lg shadow-xl max-h-48 overflow-y-auto custom-scrollbar">
-                                                {suggestions.map((n, i) => <li key={i} onClick={() => selectSuggestion(n)} className="px-4 py-2 hover:bg-white/10 text-white cursor-pointer">{n}</li>)}
+                                                {suggestions.map((p, i) => (
+                                                    <li
+                                                        key={i}
+                                                        onClick={() => selectSuggestion(p)}
+                                                        className="px-4 py-2 hover:bg-white/10 text-white cursor-pointer flex items-center gap-2"
+                                                    >
+                                                        <img src={p.avatar} alt="" className="w-6 h-6 rounded-full border border-white/10" />
+                                                        <div className="flex flex-col">
+                                                            <span className="font-bold">{p.name}</span>
+                                                            <span className="text-[10px] text-gray-500">{p.city}</span>
+                                                        </div>
+                                                    </li>
+                                                ))}
                                             </ul>
                                         )}
                                         <button onClick={addPlayerResult} className="bg-secondary text-black px-6 rounded-lg font-bold hover:bg-secondary/80">ADD</button>
