@@ -68,6 +68,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const [commandsTab, setCommandsTab] = useState<'ativas' | 'historico'>('ativas');
     const [reportData, setReportData] = useState<any[]>([]);
     const [editingClosedCommand, setEditingClosedCommand] = useState<any | null>(null);
+    const [viewingClosedCommand, setViewingClosedCommand] = useState<any | null>(null);
+    const [viewingItems, setViewingItems] = useState<any[]>([]);
     const [toast, setToast] = useState<{ msg: string; price: number } | null>(null);
     const toastTimer = useRef<any>(null);
 
@@ -110,6 +112,27 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const fetchReport = async (eventId: string) => {
         const { data } = await supabase.from('command_items').select('*, products(name, category), commands!inner(event_id, profiles!user_id(name, numeric_id))').eq('commands.event_id', eventId);
         if (data) setReportData(data);
+    };
+
+    const reopenCommand = async (cmd: any) => {
+        if (!window.confirm(`Reabrir comanda de ${cmd.profiles?.name}? O total de R$ ${Number(cmd.total_brl).toFixed(2)} será reembolsado ao saldo.`)) return;
+        // Atomically refund the balance
+        if (Number(cmd.total_brl) > 0) {
+            const { error } = await supabase.rpc('increment_balance_brl', { p_user_id: cmd.user_id, p_amount: Number(cmd.total_brl) });
+            if (error) { alert('Erro ao reembolsar saldo: ' + error.message); return; }
+        }
+        const { error: upErr } = await supabase.from('commands').update({ status: 'open', closed_at: null }).eq('id', cmd.id);
+        if (upErr) { alert('Erro ao reabrir: ' + upErr.message); return; }
+        await supabase.from('messages').insert({ user_id: cmd.user_id, sender_id: currentUser.id, content: `Sua comanda foi reaberta pelo admin. R$ ${Number(cmd.total_brl).toFixed(2)} reembolsados ao saldo.`, category: 'system', is_read: false });
+        if (selectedEvent) { fetchOpenCommands(selectedEvent.id); fetchClosedCommands(selectedEvent.id); }
+        setSelectedCommand({ ...cmd, status: 'open', closed_at: null });
+        setCommandsTab('ativas');
+    };
+
+    const openClosedCommandView = async (cmd: any) => {
+        const { data } = await supabase.from('command_items').select('*, products(name, category)').eq('command_id', cmd.id).order('created_at', { ascending: true });
+        setViewingItems(data || []);
+        setViewingClosedCommand(cmd);
     };
 
     // Compute which one-time keys are already used in this command
@@ -401,10 +424,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                                 </div>
                                                 <div className="text-right flex flex-col items-end gap-1">
                                                     <p className="text-gray-400 font-black text-sm">R$ {Number(cmd.total_brl).toFixed(2)}</p>
-                                                    <button onClick={() => setEditingClosedCommand(cmd)}
-                                                        className="px-2 py-0.5 bg-white/10 border border-white/20 text-gray-400 text-[8px] font-black uppercase rounded hover:bg-primary/20 hover:border-primary/50 hover:text-primary transition-all">
-                                                        Editar
-                                                    </button>
+                                                    <div className="flex gap-1 flex-wrap justify-end">
+                                                        <button onClick={() => openClosedCommandView(cmd)}
+                                                            className="px-2 py-0.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-[8px] font-black uppercase rounded hover:bg-cyan-500/30 transition-all">
+                                                            Ver
+                                                        </button>
+                                                        <button onClick={() => setEditingClosedCommand(cmd)}
+                                                            className="px-2 py-0.5 bg-white/10 border border-white/20 text-gray-400 text-[8px] font-black uppercase rounded hover:bg-yellow-500/20 hover:border-yellow-500/50 hover:text-yellow-400 transition-all">
+                                                            Editar
+                                                        </button>
+                                                        <button onClick={() => reopenCommand(cmd)}
+                                                            className="px-2 py-0.5 bg-green-500/10 border border-green-500/30 text-green-400 text-[8px] font-black uppercase rounded hover:bg-green-500/30 transition-all">
+                                                            Reabrir
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}
@@ -700,6 +733,67 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                 <span className="material-icons-outlined text-sm">save</span>Salvar
                             </button>
                             <button onClick={() => setEditingClosedCommand(null)} className="w-full bg-white/5 hover:bg-white/10 text-gray-400 font-bold py-2.5 rounded-2xl uppercase text-xs tracking-widest">Cancelar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Full View Modal — closed command items */}
+            {viewingClosedCommand && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+                    <div className="bg-[#0f0a28] border border-white/10 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+                        <div className="p-5 flex-shrink-0 border-b border-white/10">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-2xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center">
+                                        <span className="material-icons-outlined text-cyan-400 text-xl">receipt_long</span>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-base font-display font-black text-white uppercase">Extrato da Comanda</h4>
+                                        <p className="text-gray-500 text-xs">{viewingClosedCommand.closed_at ? new Date(viewingClosedCommand.closed_at).toLocaleString('pt-BR') : '—'}</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setViewingClosedCommand(null)} className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-red-500/20 transition-all">
+                                    <span className="material-icons-outlined text-gray-400 text-sm">close</span>
+                                </button>
+                            </div>
+                            <div className="flex items-center gap-3 bg-white/5 rounded-xl p-3">
+                                <img src={viewingClosedCommand.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${viewingClosedCommand.profiles?.name}&background=random`} className="w-9 h-9 rounded-full border border-white/10" alt="" />
+                                <div>
+                                    <PlayerName p={viewingClosedCommand.profiles} />
+                                    <span className="text-[10px] text-primary font-black">CR#{String(viewingClosedCommand.profiles?.numeric_id).padStart(3, '0')}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto px-5 py-4 custom-scrollbar">
+                            {viewingItems.length === 0 ? (
+                                <p className="text-gray-600 text-sm italic text-center py-8">Nenhum item encontrado.</p>
+                            ) : (
+                                <div className="space-y-2">
+                                    {viewingItems.map((item, i) => {
+                                        const name = item.products?.name || item.notes?.split(' —')[0] || 'Item';
+                                        const detail = item.notes?.includes('—') ? item.notes.split('— ')[1] : null;
+                                        const price = Number(item.total_price_brl);
+                                        return (
+                                            <div key={item.id || i} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0 gap-3">
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm text-white font-bold truncate">{name}</p>
+                                                    {detail && <p className="text-[10px] text-gray-500 truncate">{detail}</p>}
+                                                </div>
+                                                <span className={`text-sm font-black whitespace-nowrap ${price === 0 ? 'text-green-400' : 'text-white'}`}>
+                                                    {price === 0 ? 'GRÁTIS' : `R$ ${price.toFixed(2)}`}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="px-5 py-4 border-t border-white/10 flex-shrink-0 flex items-center justify-between">
+                            <span className="text-sm font-black text-gray-500 uppercase">Total Pago</span>
+                            <span className="text-xl font-display font-black text-primary">R$ {Number(viewingClosedCommand.total_brl).toFixed(2)}</span>
                         </div>
                     </div>
                 </div>

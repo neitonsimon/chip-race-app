@@ -97,7 +97,7 @@ const FALLBACK_DAILY_REWARDS: DailyReward[] = [
 ];
 
 
-type TabView = 'overview' | 'edit' | 'inbox' | 'notifications';
+type TabView = 'overview' | 'edit' | 'inbox' | 'notifications' | 'comprovantes';
 
 export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     isAdmin,
@@ -143,6 +143,35 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     // Admin Poll state
     const [pollQuestion, setPollQuestion] = useState('');
     const [pollOptions, setPollOptions] = useState(['', '']);
+
+    // Comprovantes state
+    const [playerCommands, setPlayerCommands] = useState<any[]>([]);
+    const [viewingReceipt, setViewingReceipt] = useState<any | null>(null);
+    const [receiptItems, setReceiptItems] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (activeTab === 'comprovantes' && currentUser?.id === initialData.id) {
+            fetchPlayerCommands();
+        }
+    }, [activeTab, initialData.id, currentUser?.id]);
+
+    const fetchPlayerCommands = async () => {
+        const { data } = await supabase.from('commands')
+            .select('*, events(title, date)')
+            .eq('user_id', initialData.id)
+            .eq('status', 'closed')
+            .order('closed_at', { ascending: false });
+        if (data) setPlayerCommands(data);
+    };
+
+    const handleViewReceipt = async (cmd: any) => {
+        const { data } = await supabase.from('command_items')
+            .select('*, products(name, category)')
+            .eq('command_id', cmd.id)
+            .order('created_at', { ascending: true });
+        setReceiptItems(data || []);
+        setViewingReceipt(cmd);
+    };
 
     const handleOpenFlyer = (log: TournamentResult) => {
         const eventMatch = events.find(e =>
@@ -980,6 +1009,17 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                 )}
                             </button>
                         )}
+                        {isOwnProfile && (
+                            <button
+                                onClick={() => setActiveTab('comprovantes')}
+                                className={`pb-3 px-4 text-base font-bold uppercase tracking-wider transition-all border-b-2 flex items-center gap-2 ${activeTab === 'comprovantes'
+                                    ? 'border-green-400 text-green-400'
+                                    : 'border-transparent text-gray-500 hover:text-white'
+                                    }`}
+                            >
+                                <span className="material-icons-outlined text-base">receipt_long</span> Comprovantes
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -1356,6 +1396,60 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
                 {/* ... (EDIT TAB CONTENT - Remains unchanged) ... */}
                 {activeTab === 'inbox' && isOwnProfile && renderInbox()}
+
+                {/* ======================= COMPROVANTES TAB ======================= */}
+                {activeTab === 'comprovantes' && isOwnProfile && (
+                    <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="flex items-center gap-4 mb-8">
+                            <div className="w-12 h-12 rounded-2xl bg-green-500/20 border border-green-500/30 flex items-center justify-center">
+                                <span className="material-icons-outlined text-green-400 text-2xl">receipt_long</span>
+                            </div>
+                            <div>
+                                <h3 className="text-2xl font-display font-black text-white uppercase tracking-wider">Histórico de Consumo</h3>
+                                <p className="text-gray-400 text-sm">Registro de comandas encerradas e serviços consumidos em etapas.</p>
+                            </div>
+                        </div>
+
+                        {playerCommands.length === 0 ? (
+                            <div className="bg-white/5 border border-white/10 rounded-3xl p-12 text-center flex flex-col items-center justify-center mt-8">
+                                <div className="w-20 h-20 bg-gray-500/10 rounded-full flex items-center justify-center mb-4">
+                                    <span className="material-icons-outlined text-4xl text-gray-500 block">receipt_long</span>
+                                </div>
+                                <h4 className="text-xl font-bold text-white mb-2">Nenhum comprovante</h4>
+                                <p className="text-gray-400 max-w-sm">Você ainda não possui comandas encerradas em eventos do Chip Race.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {playerCommands.map(cmd => (
+                                    <div key={cmd.id} className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:border-green-400/50 hover:shadow-[0_4px_20px_rgba(74,222,128,0.1)] transition-all group cursor-pointer"
+                                        onClick={() => handleViewReceipt(cmd)}>
+                                        <div className="p-5">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="w-10 h-10 rounded-xl bg-black/40 border border-white/5 flex items-center justify-center shrink-0">
+                                                    <span className="material-icons-outlined text-green-400 text-xl">point_of_sale</span>
+                                                </div>
+                                                <span className="text-3xl font-display font-black text-white">R$ {Number(cmd.total_brl).toFixed(2)}</span>
+                                            </div>
+
+                                            <h4 className="text-base font-bold text-white leading-tight mb-1">{cmd.events?.title || 'Torneio'}</h4>
+                                            <div className="flex items-center gap-2 text-xs text-gray-400 mb-4">
+                                                <span className="material-icons-outlined text-xs">calendar_today</span>
+                                                {cmd.closed_at ? new Date(cmd.closed_at).toLocaleDateString('pt-BR') : (cmd.events?.date ? new Date(cmd.events.date).toLocaleDateString('pt-BR') : '')}
+                                                <span className="w-1 h-1 rounded-full bg-gray-600"></span>
+                                                {cmd.closed_at ? new Date(cmd.closed_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
+                                            </div>
+
+                                            <div className="pt-4 border-t border-white/10 flex items-center justify-between text-xs font-bold text-green-400 group-hover:text-green-300 transition-colors">
+                                                <span className="uppercase tracking-widest">Ver Detalhes</span>
+                                                <span className="material-icons-outlined text-sm transform group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* EDIT TAB CONTENT */}
                 {activeTab === 'edit' && canEdit && (
@@ -2256,6 +2350,60 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                             <div className="text-[10px] text-gray-600 uppercase tracking-[0.2em] font-bold">
                                 Resultados Oficiais
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Receipt Details Modal */}
+            {viewingReceipt && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+                    <div className="bg-[#0f0a28] border border-white/10 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200">
+                        <div className="p-5 flex-shrink-0 border-b border-white/10">
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-2xl bg-green-500/20 border border-green-500/40 flex items-center justify-center">
+                                        <span className="material-icons-outlined text-green-400 text-xl">receipt_long</span>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-base font-display font-black text-white uppercase">{viewingReceipt.events?.title || 'Torneio'}</h4>
+                                        <p className="text-gray-500 text-xs">{viewingReceipt.closed_at ? new Date(viewingReceipt.closed_at).toLocaleString('pt-BR') : 'Sem data'}</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setViewingReceipt(null)} className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-red-500/20 transition-all">
+                                    <span className="material-icons-outlined text-gray-400 text-sm">close</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto px-5 py-4 custom-scrollbar">
+                            {receiptItems.length === 0 ? (
+                                <p className="text-gray-600 text-sm italic text-center py-8">Nenhum item consumido.</p>
+                            ) : (
+                                <div className="space-y-2">
+                                    {receiptItems.map((item, i) => {
+                                        const name = item.products?.name || item.notes?.split(' —')[0] || 'Item';
+                                        const detail = item.notes?.includes('—') ? item.notes.split('— ')[1] : null;
+                                        const price = Number(item.total_price_brl);
+                                        return (
+                                            <div key={item.id || i} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0 gap-3">
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm text-gray-300 font-bold truncate">{name}</p>
+                                                    {detail && <p className="text-[10px] text-gray-500 truncate">{detail}</p>}
+                                                </div>
+                                                <span className={`text-sm font-black whitespace-nowrap ${price === 0 ? 'text-green-400' : 'text-white'}`}>
+                                                    {price === 0 ? 'GRÁTIS' : `R$ ${price.toFixed(2)}`}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="px-5 py-4 border-t border-white/10 flex-shrink-0 flex items-center justify-between bg-black/20">
+                            <span className="text-sm font-black text-gray-400 uppercase tracking-widest">Total Pago</span>
+                            <span className="text-xl font-display font-black text-green-400">R$ {Number(viewingReceipt.total_brl).toFixed(2)}</span>
                         </div>
                     </div>
                 </div>
