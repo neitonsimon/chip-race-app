@@ -273,6 +273,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             await supabase.from('messages').insert({ user_id: selectedCommand.user_id, sender_id: currentUser.id, content: `Pagamento de R$ ${amount.toFixed(2)} registrado pelo admin. Saldo atualizado.`, category: 'system', is_read: false });
             alert(`✅ R$ ${amount.toFixed(2)} creditado com sucesso!`);
             setShowTopUp(false); setTopUpAmount('');
+            // Reload page to refresh all user local states and balances
+            window.location.reload();
         } catch (err: any) { alert('Erro: ' + err.message); }
         finally { setIsLoading(false); }
     };
