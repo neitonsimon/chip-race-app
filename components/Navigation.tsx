@@ -81,13 +81,13 @@ export const Navigation: React.FC<NavigationProps> = ({
                         </div>
 
                         {/* Desktop Menu */}
-                        <div className="hidden md:flex items-center gap-8">
-                            <div className="flex items-baseline space-x-8">
+                        <div className="hidden md:flex items-center gap-2">
+                            <div className="flex items-baseline space-x-1">
                                 {links.map((link) => (
                                     <button
                                         key={link.label}
                                         onClick={() => onNavigate(link.view)}
-                                        className={`px-3 py-2 rounded-md text-lg font-medium transition-colors relative group ${currentView === link.view
+                                        className={`px-2 py-2 rounded-md text-sm font-medium transition-colors relative group whitespace-nowrap ${currentView === link.view
                                             ? 'text-primary'
                                             : 'text-gray-300 hover:text-white'
                                             }`}
@@ -101,48 +101,50 @@ export const Navigation: React.FC<NavigationProps> = ({
                             {/* VIP Button */}
                             <button
                                 onClick={() => onNavigate('vip')}
-                                className="flex items-center gap-2 text-yellow-400 border border-yellow-400/50 px-4 py-1.5 rounded-full hover:bg-yellow-400 hover:text-black transition-all shadow-[0_0_10px_rgba(250,204,21,0.2)] hover:shadow-[0_0_20px_rgba(250,204,21,0.6)]"
+                                title="Seja VIP"
+                                className="flex items-center gap-1.5 text-yellow-400 border border-yellow-400/50 px-3 py-1.5 rounded-full hover:bg-yellow-400 hover:text-black transition-all shadow-[0_0_10px_rgba(250,204,21,0.2)] hover:shadow-[0_0_20px_rgba(250,204,21,0.6)] whitespace-nowrap"
                             >
                                 <span className="material-icons-outlined text-sm">diamond</span>
-                                <span className="text-sm font-bold uppercase tracking-wide">Seja VIP</span>
+                                <span className="text-xs font-bold uppercase tracking-wide hidden lg:inline">Seja VIP</span>
                             </button>
 
-                            {/* Admin Admin Panel Button */}
+                            {/* Admin Panel Button */}
                             {isAdmin && (
                                 <button
                                     onClick={() => onNavigate('admin')}
-                                    className="flex items-center gap-2 text-primary border border-primary/50 px-4 py-1.5 rounded-full hover:bg-primary hover:text-white transition-all shadow-[0_0_10px_rgba(217,0,255,0.2)] hover:shadow-[0_0_20px_rgba(217,0,255,0.6)]"
+                                    title="Painel Admin"
+                                    className="flex items-center gap-1.5 text-primary border border-primary/50 px-3 py-1.5 rounded-full hover:bg-primary hover:text-white transition-all shadow-[0_0_10px_rgba(217,0,255,0.2)] hover:shadow-[0_0_20px_rgba(217,0,255,0.6)] whitespace-nowrap"
                                 >
                                     <span className="material-icons-outlined text-sm">admin_panel_settings</span>
-                                    <span className="text-sm font-bold uppercase tracking-wide">Painel Admin</span>
+                                    <span className="text-xs font-bold uppercase tracking-wide hidden lg:inline">Admin</span>
                                 </button>
                             )}
                         </div>
 
-                        <div className="hidden md:block ml-4">
+                        <div className="hidden md:block ml-2">
                             {isLoggedIn ? (
-                                <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
 
                                     {/* Wallet Balances */}
-                                    <div className="flex items-center gap-3 bg-black/40 border border-white/10 rounded-full px-4 py-1.5 shadow-inner">
+                                    <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-full px-3 py-1.5 shadow-inner whitespace-nowrap">
                                         <div
                                             onClick={() => onNavigate('recharge')}
-                                            className="flex items-center gap-1.5 cursor-pointer hover:text-green-400 text-gray-200 transition-colors group"
+                                            className="flex items-center gap-1 cursor-pointer hover:text-green-400 text-gray-200 transition-colors group"
                                         >
                                             <span className="material-icons-outlined text-green-500 text-sm">account_balance_wallet</span>
-                                            <span className="font-bold text-sm text-white group-hover:text-green-400 transition-colors">R$ {balanceBrl.toFixed(2)}</span>
-                                            <span className="material-icons-outlined text-[10px] bg-white/10 rounded-full p-0.5 ml-1 group-hover:bg-green-500/20 group-hover:text-green-400">add</span>
+                                            <span className="font-bold text-xs text-white group-hover:text-green-400 transition-colors">R$ {balanceBrl.toFixed(2)}</span>
+                                            <span className="material-icons-outlined text-[9px] bg-white/10 rounded-full p-0.5 ml-0.5 group-hover:bg-green-500/20 group-hover:text-green-400">add</span>
                                         </div>
                                         <div className="w-px h-4 bg-white/20"></div>
                                         <div
                                             onClick={() => onNavigate('recharge')}
-                                            className="flex items-center gap-1.5 cursor-pointer group"
+                                            className="flex items-center gap-1 cursor-pointer group"
                                         >
-                                            <div className="w-5 h-5 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center shadow-neon-pink group-hover:scale-110 transition-transform">
-                                                <span className="material-icons-outlined text-[10px] text-white">token</span>
+                                            <div className="w-4 h-4 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center shadow-neon-pink group-hover:scale-110 transition-transform">
+                                                <span className="material-icons-outlined text-[8px] text-white">token</span>
                                             </div>
-                                            <span className="font-bold text-sm text-primary group-hover:text-white transition-colors">{balanceChipz}</span>
-                                            <span className="material-icons-outlined text-[10px] text-white/50 bg-white/10 rounded-full p-0.5 ml-1 group-hover:bg-primary/20 group-hover:text-primary transition-colors">add</span>
+                                            <span className="font-bold text-xs text-primary group-hover:text-white transition-colors">{balanceChipz}</span>
+                                            <span className="material-icons-outlined text-[9px] text-white/50 bg-white/10 rounded-full p-0.5 ml-0.5 group-hover:bg-primary/20 group-hover:text-primary transition-colors">add</span>
                                         </div>
                                     </div>
 
@@ -265,19 +267,19 @@ export const Navigation: React.FC<NavigationProps> = ({
 
                                     <button
                                         onClick={() => onNavigate('profile')}
-                                        className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-accent p-[2px] hover:shadow-neon-pink transition-all duration-300"
+                                        className="w-8 h-8 rounded-full bg-gradient-to-r from-primary to-accent p-[2px] hover:shadow-neon-pink transition-all duration-300 flex-shrink-0"
                                         title="Meu Perfil"
                                     >
                                         <div className="w-full h-full rounded-full bg-background-dark flex items-center justify-center overflow-hidden">
-                                            <span className="material-icons-outlined text-white">person</span>
+                                            <span className="material-icons-outlined text-white text-sm">person</span>
                                         </div>
                                     </button>
                                     <button
                                         onClick={onLogout}
-                                        className="text-gray-400 hover:text-white transition-colors"
+                                        className="text-gray-400 hover:text-white transition-colors flex-shrink-0"
                                         title="Sair"
                                     >
-                                        <span className="material-icons-outlined">logout</span>
+                                        <span className="material-icons-outlined text-xl">logout</span>
                                     </button>
                                 </div>
                             ) : (

@@ -1638,7 +1638,7 @@ export default function App() {
                 // We will add the import at the top of the file in another chunk.
                 return <RechargePage currentUser={currentUser as any} onNavigate={handleNavigate} onUpdateProfile={handleProfileUpdate} />;
             case 'admin':
-                return <AdminPanel currentUser={currentUser as any} onClose={() => handleNavigate('home')} />;
+                return <AdminPanel currentUser={currentUser as any} onClose={() => handleNavigate('home')} isAdmin={currentUser?.role === 'admin'} />;
             case 'home':
             default:
                 return (
