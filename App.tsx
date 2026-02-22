@@ -805,7 +805,7 @@ export default function App() {
         }
     };
 
-    const handleFinalizeRanking = async (rankingId: string) => {
+    const handleFinalizeRanking = async (rankingId: string, targetUserId?: string) => {
         if (!isAdmin) return;
         const ranking = rankings.find(r => r.id === rankingId);
         if (!ranking || ranking.isActive === false) {
@@ -813,13 +813,16 @@ export default function App() {
             return;
         }
 
-        const winner = ranking.players.find(p => p.rank === 1);
+        const winner = targetUserId
+            ? getAllUniquePlayers().find(p => p.id === targetUserId)
+            : ranking.players.find(p => p.rank === 1);
+
         if (!winner || !winner.id) {
-            alert("Vencedor não identificado (ou sem ID vinculado) no Rank #1.");
+            alert("Destinatário da premiação não identificado.");
             return;
         }
 
-        if (!window.confirm(`Encerrar o ranking "${ranking.label}" e premiar ${winner.name}?\n\nIsso irá:\n- Conceder a insígnia: ${ranking.rewardBadgeTitle || 'Nenhuma'}\n- Adicionar R$ ${ranking.rewardBrl || 0}\n- Adicionar ${ranking.rewardChipz || 0} Chipz\n\nEsta ação é permanente.`)) return;
+        if (!window.confirm(`Encerrar o ranking "${ranking.label}" e premiar ${winner.name} como vencedor?\n\nEsta ação distribuirá os créditos, fichas e a insígnia configurados.`)) return;
 
         try {
             // 1. Award Badge
