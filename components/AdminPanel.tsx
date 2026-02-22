@@ -277,8 +277,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const addProductToCommand = async (product: any) => {
         if (!selectedCommand) return;
         const finalPrice = getVipPrice(Number(product.price), product.category, product.name);
-        const now = new Date();
-        const saleTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         const { error } = await supabase.from('command_items').insert({
             command_id: selectedCommand.id,
             product_id: product.id,
@@ -287,7 +285,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             unit_price_chipz: 0,
             total_price_brl: finalPrice,
             total_price_chipz: 0,
-            notes: `Lançado às ${saleTime}`,
+            notes: null,
             created_by: currentUser.id
         });
         if (error) { alert('Erro: ' + error.message); return; }
@@ -307,8 +305,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         if (item.name === 'Staff' && vipStatus === 'vip_master') finalPrice = Math.max(0, finalPrice - 10);
         const isAddon = item.name === 'Add On' || item.name === 'Add Duplo';
         const bonusNote = isAddon && vipStatus === 'vip_master' ? ' (+5K fichas VIP)' : '';
-        const now = new Date();
-        const saleTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         const { error } = await supabase.from('command_items').insert({
             command_id: selectedCommand.id,
             product_id: null,
@@ -317,7 +313,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             unit_price_chipz: 0,
             total_price_brl: finalPrice,
             total_price_chipz: 0,
-            notes: `${item.name} — ${item.chips} fichas${bonusNote} (Lançado às ${saleTime})`,
+            notes: `${item.name} — ${item.chips} fichas${bonusNote}`,
             created_by: currentUser.id
         });
         if (error) { alert('Erro: ' + error.message); return; }
@@ -333,8 +329,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const addCashItemToCommand = async (item: any) => {
         if (!selectedCommand) return;
         const finalPrice = item.price;
-        const now = new Date();
-        const saleTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         const { error } = await supabase.from('command_items').insert({
             command_id: selectedCommand.id,
             product_id: null,
@@ -343,7 +337,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             unit_price_chipz: 0,
             total_price_brl: finalPrice,
             total_price_chipz: 0,
-            notes: `Cash Game — ${item.name} (Lançado às ${saleTime})`,
+            notes: `Cash Game — ${item.name}`,
             created_by: currentUser.id
         });
         if (error) { alert('Erro: ' + error.message); return; }
@@ -850,11 +844,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                 {commandItems.length === 0 ? (
                                     <p className="text-gray-600 text-xs italic">Nenhum item lançado.</p>
                                 ) : commandItems.map((item, i) => {
-                                    const name = item.products?.name || item.notes || 'Item';
+                                    const time = item.created_at ? new Date(item.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+                                    const rawName = item.products?.name || item.notes || 'Item';
+                                    const cleanName = rawName.replace(/\(Lançado às \d{2}:\d{2}\)/, '').replace(/Lançado às \d{2}:\d{2}/, '').trim();
                                     return (
-                                        <div key={item.id || i} className="flex items-center justify-between py-1 border-b border-white/5 last:border-0">
-                                            <span className="text-xs text-gray-300">{name}</span>
-                                            <span className="text-xs text-white font-bold whitespace-nowrap ml-2">{Number(item.total_price_brl) === 0 ? 'GRÁTIS' : `R$ ${Number(item.total_price_brl).toFixed(2)}`}</span>
+                                        <div key={item.id || i} className="flex items-center justify-between py-1 border-b border-white/5 last:border-0 gap-2">
+                                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                <span className="text-[10px] text-gray-500 font-mono flex-shrink-0">{time}</span>
+                                                <span className="text-xs text-gray-300 truncate">{cleanName}</span>
+                                            </div>
+                                            <span className="text-xs text-white font-bold whitespace-nowrap">{Number(item.total_price_brl) === 0 ? 'GRÁTIS' : `R$ ${Number(item.total_price_brl).toFixed(2)}`}</span>
                                         </div>
                                     );
                                 })}
@@ -964,14 +963,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             ) : (
                                 <div className="space-y-2">
                                     {viewingItems.map((item, i) => {
-                                        const name = item.products?.name || item.notes?.split(' —')[0] || 'Item';
-                                        const detail = item.notes?.includes('—') ? item.notes.split('— ')[1] : null;
+                                        const time = item.created_at ? new Date(item.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+                                        const rawName = item.products?.name || item.notes?.split(' —')[0] || 'Item';
+                                        const cleanName = rawName.replace(/\(Lançado às \d{2}:\d{2}\)/, '').replace(/Lançado às \d{2}:\d{2}/, '').trim();
+                                        const detail = item.notes?.includes('—') ? item.notes.split('— ')[1].replace(/\(Lançado às \d{2}:\d{2}\)/, '').trim() : null;
                                         const price = Number(item.total_price_brl);
                                         return (
                                             <div key={item.id || i} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0 gap-3">
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-sm text-white font-bold truncate">{name}</p>
-                                                    {detail && <p className="text-[10px] text-gray-500 truncate">{detail}</p>}
+                                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                    <span className="text-xs text-gray-500 font-mono flex-shrink-0">{time}</span>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm text-white font-bold truncate">{cleanName}</p>
+                                                        {detail && <p className="text-[10px] text-gray-500 truncate">{detail}</p>}
+                                                    </div>
                                                 </div>
                                                 <span className={`text-sm font-black whitespace-nowrap ${price === 0 ? 'text-green-400' : 'text-white'}`}>
                                                     {price === 0 ? 'GRÁTIS' : `R$ ${price.toFixed(2)}`}
