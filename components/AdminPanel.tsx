@@ -50,7 +50,7 @@ function getOneTimeKeyFromNote(note: string): string | null {
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, isAdmin = false, onUpdateProfile }) => {
-    const [activeTab, setActiveTab] = useState<'operational' | 'reports'>('operational');
+    const [activeTab, setActiveTab] = useState<'operational' | 'reports' | 'launch' | 'send-gifts'>('operational');
     const [events, setEvents] = useState<any[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -69,6 +69,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const [commandsTab, setCommandsTab] = useState<'ativas' | 'historico'>('ativas');
     const [reportData, setReportData] = useState<any[]>([]);
     const [reportFilter, setReportFilter] = useState<'event' | 'date'>('event');
+    const [extraReportData, setExtraReportData] = useState<any[]>([]);
     const [startDate, setStartDate] = useState(() => { const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0] });
     const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
     const [editingClosedCommand, setEditingClosedCommand] = useState<any | null>(null);
@@ -77,14 +78,31 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const [toast, setToast] = useState<{ msg: string; price: number } | null>(null);
     const toastTimer = useRef<any>(null);
 
-    const updatePlayerBalanceLocally = (userId: string, amount: number) => {
+    // Launch Tab State
+    const [newProduct, setNewProduct] = useState({ name: '', category: 'bar', price: '', description: '' });
+    const [allProducts, setAllProducts] = useState<any[]>([]); // Includes inactive
+    const [selectedCategory, setSelectedCategory] = useState<string>('all');
+
+    // Gift Tab State
+    const [giftTarget, setGiftTarget] = useState<'single' | 'all'>('single');
+    const [selectedGiftUsers, setSelectedGiftUsers] = useState<any[]>([]);
+    const [giftType, setGiftType] = useState<'brl' | 'chipz'>('brl');
+    const [giftAmount, setGiftAmount] = useState('');
+    const [giftSearchQuery, setGiftSearchQuery] = useState('');
+    const [giftSearchResults, setGiftSearchResults] = useState<any[]>([]);
+
+
+    const updatePlayerBalanceLocally = (userId: string, amount: number, type: 'brl' | 'chipz' = 'brl') => {
+        const field = type === 'brl' ? 'balance_brl' : 'balance_chipz';
+        const propField = type === 'brl' ? 'balanceBrl' : 'balanceChipz';
+
         // Update selectedCommand if matches
         if (selectedCommand && selectedCommand.user_id === userId) {
             setSelectedCommand((prev: any) => prev ? ({
                 ...prev,
                 profiles: {
                     ...prev.profiles,
-                    balance_brl: (Number(prev.profiles?.balance_brl) || 0) + amount
+                    [field]: (Number(prev.profiles?.[field]) || 0) + amount
                 }
             }) : null);
         }
@@ -96,7 +114,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                     ...cmd,
                     profiles: {
                         ...cmd.profiles,
-                        balance_brl: (Number(cmd.profiles?.balance_brl) || 0) + amount
+                        [field]: (Number(cmd.profiles?.[field]) || 0) + amount
                     }
                 };
             }
@@ -110,7 +128,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                     ...cmd,
                     profiles: {
                         ...cmd.profiles,
-                        balance_brl: (Number(cmd.profiles?.balance_brl) || 0) + amount
+                        [field]: (Number(cmd.profiles?.[field]) || 0) + amount
                     }
                 };
             }
@@ -122,7 +140,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             if (p.id === userId) {
                 return {
                     ...p,
-                    balance_brl: (Number(p.balance_brl) || 0) + amount
+                    [field]: (Number(p[field]) || 0) + amount
                 };
             }
             return p;
@@ -132,13 +150,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         if (currentUser && currentUser.id === userId && onUpdateProfile) {
             const updatedStats = {
                 ...currentUser,
-                balanceBrl: (Number(currentUser.balanceBrl) || 0) + amount
+                [propField]: (Number(currentUser[propField]) || 0) + amount
             };
             onUpdateProfile(userId, updatedStats);
         }
     };
 
-    useEffect(() => { fetchEvents(); fetchProducts(); }, []);
+    useEffect(() => { fetchEvents(); fetchProducts(); fetchAllProducts(); }, []);
     useEffect(() => {
         if (selectedEvent) { fetchOpenCommands(selectedEvent.id); fetchClosedCommands(selectedEvent.id); }
         else { setOpenCommands([]); setClosedCommands([]); }
@@ -162,6 +180,42 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         const { data } = await supabase.from('products').select('*').eq('active', true).order('category');
         if (data) setProducts(data);
     };
+    const fetchAllProducts = async () => {
+        const { data } = await supabase.from('products').select('*').order('category');
+        if (data) setAllProducts(data);
+    };
+    const handleAddProduct = async () => {
+        if (!newProduct.name || !newProduct.price) { alert('Nome e preço são obrigatórios.'); return; }
+        setIsLoading(true);
+        try {
+            const { error } = await supabase.from('products').insert({
+                name: newProduct.name,
+                category: newProduct.category,
+                price_brl: parseFloat(newProduct.price),
+                description: newProduct.description,
+                active: true
+            });
+            if (error) throw error;
+            alert('✅ Produto lançado com sucesso!');
+            setNewProduct({ name: '', category: 'bar', price: '', description: '' });
+            fetchAllProducts();
+            fetchProducts();
+        } catch (err: any) { alert('Erro: ' + err.message); }
+        finally { setIsLoading(false); }
+    };
+    const toggleProductStatus = async (product: any) => {
+        const { error } = await supabase.from('products').update({ active: !product.active }).eq('id', product.id);
+        if (error) { alert('Erro: ' + error.message); return; }
+        fetchAllProducts();
+        fetchProducts();
+    };
+    const deleteProduct = async (productId: string) => {
+        if (!window.confirm('⚠️ Tem certeza que deseja EXCLUIR este produto permanentemente do banco de dados?')) return;
+        const { error } = await supabase.from('products').delete().eq('id', productId);
+        if (error) { alert('Erro ao excluir: ' + error.message); return; }
+        fetchAllProducts();
+        fetchProducts();
+    };
     const fetchOpenCommands = async (eventId: string) => {
         const { data } = await supabase.from('commands').select('*, profiles!user_id(name, numeric_id, avatar_url, vip_status, role, balance_brl)').eq('event_id', eventId).eq('status', 'open').order('created_at', { ascending: false });
         if (data) setOpenCommands(data);
@@ -180,12 +234,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     };
     const fetchMonthlyReport = async (start: string, end: string) => {
         if (!start || !end) return;
-        const { data } = await supabase.from('command_items')
+        setIsLoading(true);
+        // Fetch command items
+        const { data: cmdItems } = await supabase.from('command_items')
             .select('*, products(name, category), commands!inner(event_id, status, closed_at, profiles!user_id(name, numeric_id))')
             .gte('commands.closed_at', start + 'T00:00:00.000Z')
             .lte('commands.closed_at', end + 'T23:59:59.999Z')
             .eq('commands.status', 'closed');
-        if (data) setReportData(data);
+
+        // Fetch transactions (VIP, Chipz, etc.)
+        const { data: txs } = await supabase.from('transactions')
+            .select('*, profiles!user_id(name, numeric_id)')
+            .gte('created_at', start + 'T00:00:00.000Z')
+            .lte('created_at', end + 'T23:59:59.999Z')
+            .not('category', 'eq', 'wallet_deposit'); // Don't count deposits as revenue, only sales
+
+        if (cmdItems) setReportData(cmdItems);
+        if (txs) setExtraReportData(txs);
+        setIsLoading(false);
     };
 
     const reopenCommand = async (cmd: any) => {
@@ -246,6 +312,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         setOpenCommands([data, ...openCommands]);
         setSearchQuery(''); setSearchResults([]);
         setSelectedCommand(data);
+    };
+
+    const handleGiftSearch = async (query: string) => {
+        setGiftSearchQuery(query);
+        if (query.length < 2) { setGiftSearchResults([]); return; }
+        const isNumeric = /^\d+$/.test(query);
+        let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, vip_status, balance_brl, balance_chipz');
+        q = isNumeric ? q.eq('numeric_id', parseInt(query)) : q.ilike('name', `%${query}%`);
+        const { data } = await q.limit(10);
+        setGiftSearchResults(data || []);
     };
 
     const getTournamentItems = () => {
@@ -412,11 +488,76 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         finally { setIsLoading(false); }
     };
 
+    const handleSendGifts = async () => {
+        if (!isAdmin) return;
+        const amount = parseFloat(giftAmount);
+        if (!amount || amount <= 0) { alert('Valor inválido.'); return; }
+
+        let targetUserIds: string[] = [];
+
+        if (giftTarget === 'all') {
+            if (!window.confirm(`Tem certeza que deseja enviar ${giftType === 'brl' ? 'R$' : 'Chipz'} ${amount} para TODOS os jogadores?`)) return;
+            setIsLoading(true);
+            const { data } = await supabase.from('profiles').select('id');
+            if (data) targetUserIds = data.map(u => u.id);
+        } else {
+            if (selectedGiftUsers.length === 0) { alert('Selecione pelo menos um usuário.'); return; }
+            targetUserIds = selectedGiftUsers.map(u => u.id);
+        }
+
+        if (targetUserIds.length === 0) { alert('Nenhum usuário encontrado.'); setIsLoading(false); return; }
+
+        setIsLoading(true);
+        try {
+            const rpcName = giftType === 'brl' ? 'increment_balance_brl' : 'increment_balance_chipz';
+            const finalAmount = giftType === 'chipz' ? Math.floor(amount) : amount;
+            const logMsg = giftType === 'brl' ? `R$ ${finalAmount.toFixed(2)}` : `${finalAmount} Chipz`;
+
+            // For now we process in chunks to avoid timeout if "Select All" is massive
+            const chunks = [];
+            for (let i = 0; i < targetUserIds.length; i += 20) {
+                chunks.push(targetUserIds.slice(i, i + 20));
+            }
+
+            for (const chunk of chunks) {
+                await Promise.all(chunk.map(async (uid) => {
+                    await supabase.rpc(rpcName, { p_user_id: uid, p_amount: finalAmount });
+                    await supabase.from('messages').insert({
+                        user_id: uid,
+                        sender: 'Admin',
+                        sender_id: currentUser.id,
+                        subject: '🎁 Você recebeu um Presente!',
+                        content: `Parabéns! O administrador enviou um presente especial para sua conta: ${logMsg}. O saldo já foi atualizado e está disponível para uso.`,
+                        category: 'gift',
+                        is_read: false
+                    });
+                    updatePlayerBalanceLocally(uid, finalAmount, giftType);
+                }));
+            }
+
+            alert(`✅ Presentes enviados com sucesso para ${targetUserIds.length} usuários!`);
+            setGiftAmount('');
+            setSelectedGiftUsers([]);
+        } catch (err: any) {
+            alert('Erro ao enviar presentes: ' + err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const reportBySection = () => {
         const sections: Record<string, { total: number; items: Record<string, { qty: number; total: number }> }> = {};
+
+        // Process command items
         reportData.forEach((item: any) => {
             const cat = item.products?.category || (item.notes?.startsWith('Cash Game') ? 'cash' : 'torneio');
-            const sec = cat === 'bar' ? 'Bar' : cat === 'cash' ? 'Cash' : ['bet', 'jackpot', 'lastlonger'].includes(cat) ? 'Produtos' : 'Torneio';
+            let sec = 'Torneio';
+            if (cat === 'bar') sec = 'Bar';
+            else if (cat === 'cash') sec = 'Cash';
+            else if (['bet', 'jackpot', 'lastlonger'].includes(cat)) sec = 'Produtos';
+            else if (['produtos', 'vestuario', 'aluguel', 'curso'].includes(cat)) sec = 'Geral/Loja';
+            else if (cat === 'online') sec = 'Online';
+
             const name = item.products?.name || item.notes || 'Item';
             if (!sections[sec]) sections[sec] = { total: 0, items: {} };
             sections[sec].total += Number(item.total_price_brl);
@@ -424,6 +565,30 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             sections[sec].items[name].qty += item.quantity;
             sections[sec].items[name].total += Number(item.total_price_brl);
         });
+
+        // Process extra transactions (VIP, etc.)
+        if (reportFilter === 'date') {
+            extraReportData.forEach((tx: any) => {
+                let sec = 'Outros';
+                if (tx.category === 'vip') sec = 'VIP';
+                else if (tx.category === 'chipz') sec = 'Chipz Online';
+                else if (tx.category === 'online' || tx.category === 'online_credits') sec = 'Online';
+                else if (tx.category === 'aluguel') sec = 'Aluguéis';
+                else if (tx.category === 'curso') sec = 'Cursos';
+                else if (tx.category === 'produtos' || tx.category === 'vestuario') sec = 'Geral/Loja';
+
+                if (!sections[sec]) sections[sec] = { total: 0, items: {} };
+                // Reverse the amount if it's a purchase (purchases are logged as negative in rpc but positive for revenue)
+                const amt = Math.abs(Number(tx.amount_brl));
+                sections[sec].total += amt;
+
+                const name = tx.description || 'Transação';
+                if (!sections[sec].items[name]) sections[sec].items[name] = { qty: 0, total: 0 };
+                sections[sec].items[name].qty += 1;
+                sections[sec].items[name].total += amt;
+            });
+        }
+
         return sections;
     };
 
@@ -463,9 +628,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
 
             <div className="flex-1 flex overflow-hidden">
                 <aside className="w-52 border-r border-white/10 bg-black/20 p-4 flex flex-col gap-2 flex-shrink-0">
-                    {[{ id: 'operational', icon: 'point_of_sale', label: 'Operacional' }, { id: 'reports', icon: 'bar_chart', label: 'Relatório' }].map(t => (
+                    {[{ id: 'operational', icon: 'point_of_sale', label: 'Operaç.' }, { id: 'launch', icon: 'add_shopping_cart', label: 'Lançar' }, { id: 'reports', icon: 'bar_chart', label: 'Relat.' }, { id: 'send-gifts', icon: 'card_giftcard', label: 'Presentes' }].map(t => (
                         <button key={t.id} onClick={() => { setActiveTab(t.id as any); if (t.id === 'reports' && selectedEvent) fetchReport(selectedEvent.id); }}
-                            className={`flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all text-xs font-bold uppercase tracking-widest ${activeTab === t.id ? 'bg-primary text-white shadow-neon-pink' : 'text-gray-400 hover:bg-white/5'}`}>
+                            className={`flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all text-[10px] font-bold uppercase tracking-widest ${activeTab === t.id ? 'bg-primary text-white shadow-neon-pink' : 'text-gray-400 hover:bg-white/5'}`}>
                             <span className="material-icons-outlined text-sm">{t.icon}</span>{t.label}
                         </button>
                     ))}
@@ -776,9 +941,23 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             ) : (
                                 <div className="space-y-6">
                                     <div className="grid grid-cols-3 gap-4">
-                                        {[{ label: 'Total Geral', val: `R$ ${reportData.reduce((s, i) => s + Number(i.total_price_brl), 0).toFixed(2)}`, color: 'text-primary' },
-                                        { label: 'Total Itens', val: reportData.reduce((s, i) => s + i.quantity, 0), color: 'text-white' },
-                                        { label: 'Comandas', val: [...new Set(reportData.map(i => i.command_id))].length, color: 'text-white' }].map(c => (
+                                        {[
+                                            {
+                                                label: 'Total Geral',
+                                                val: `R$ ${(reportData.reduce((s, i) => s + Number(i.total_price_brl), 0) + (reportFilter === 'date' ? extraReportData.reduce((s, i) => s + Math.abs(Number(i.amount_brl)), 0) : 0)).toFixed(2)}`,
+                                                color: 'text-primary'
+                                            },
+                                            {
+                                                label: 'Total Itens',
+                                                val: reportData.reduce((s, i) => s + i.quantity, 0) + (reportFilter === 'date' ? extraReportData.length : 0),
+                                                color: 'text-white'
+                                            },
+                                            {
+                                                label: 'Comandas/Sessões',
+                                                val: [...new Set(reportData.map(i => i.command_id))].length + (reportFilter === 'date' ? extraReportData.length : 0),
+                                                color: 'text-white'
+                                            }
+                                        ].map(c => (
                                             <div key={c.label} className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
                                                 <p className="text-xs text-gray-500 uppercase font-black mb-1">{c.label}</p>
                                                 <p className={`text-2xl font-display font-black ${c.color}`}>{c.val}</p>
@@ -811,6 +990,266 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                     ))}
                                 </div>
                             )}
+                        </div>
+                    )}
+
+                    {activeTab === 'launch' && (
+                        <div className="p-8 max-w-5xl mx-auto">
+                            <div className="flex items-center gap-4 mb-8">
+                                <div className="w-14 h-14 rounded-2xl bg-primary/20 border border-primary/40 flex items-center justify-center shadow-neon-pink">
+                                    <span className="material-icons-outlined text-primary text-3xl">add_shopping_cart</span>
+                                </div>
+                                <div>
+                                    <h3 className="text-2xl font-display font-black text-white uppercase tracking-widest">Lançar Produtos</h3>
+                                    <p className="text-gray-400 text-sm">Gerencie o catálogo de produtos e serviços da Chip Race.</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                                {/* Form */}
+                                <div className="lg:col-span-5 bg-black/40 border border-white/10 rounded-3xl p-6 h-fit sticky top-0">
+                                    <h4 className="text-sm font-black text-white uppercase mb-6 flex items-center gap-2">
+                                        <span className="material-icons-outlined text-primary text-sm">plus_one</span>
+                                        Novo Produto
+                                    </h4>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Categoria</label>
+                                            <select
+                                                value={newProduct.category}
+                                                onChange={e => setNewProduct({ ...newProduct, category: e.target.value })}
+                                                className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none transition-all"
+                                            >
+                                                <option value="torneio">Torneio (Buy-in, Rebuy)</option>
+                                                <option value="cash">Cash Game (Buy-in, Time Chip)</option>
+                                                <option value="bar">Bar & Gastronomia</option>
+                                                <option value="produtos">Acessórios & Poker Gear</option>
+                                                <option value="vestuario">Vestuário (Bonés, Camisas)</option>
+                                                <option value="aluguel">Aluguel (Mesas, Equipamentos)</option>
+                                                <option value="curso">Curso / Coach</option>
+                                                <option value="online">Poker Online (Créditos)</option>
+                                                <option value="bet">Bet & Quests</option>
+                                                <option value="jackpot">Jackpot / Last Longer</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Nome do Produto</label>
+                                            <input
+                                                type="text"
+                                                value={newProduct.name}
+                                                onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
+                                                placeholder="Ex: Boné Chip Race Pro"
+                                                className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none transition-all"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Preço Sugerido (R$)</label>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                value={newProduct.price}
+                                                onChange={e => setNewProduct({ ...newProduct, price: e.target.value })}
+                                                placeholder="0.00"
+                                                className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none transition-all"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Descrição (Opcional)</label>
+                                            <textarea
+                                                value={newProduct.description}
+                                                onChange={e => setNewProduct({ ...newProduct, description: e.target.value })}
+                                                placeholder="Detalhes sobre o produto..."
+                                                className="w-full h-24 bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none transition-all resize-none"
+                                            ></textarea>
+                                        </div>
+                                        <button
+                                            onClick={handleAddProduct}
+                                            disabled={isLoading}
+                                            className="w-full bg-primary hover:bg-white hover:text-black text-white font-black py-4 rounded-2xl transition-all shadow-neon-pink uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-50 mt-4"
+                                        >
+                                            {isLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <><span className="material-icons-outlined text-sm">cloud_upload</span> Cadastrar no Banco</>}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* List */}
+                                <div className="lg:col-span-7">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <h4 className="text-sm font-black text-white uppercase flex items-center gap-2">
+                                            <span className="material-icons-outlined text-primary text-sm">inventory_2</span>
+                                            Catálogo Atual
+                                        </h4>
+                                        <select
+                                            value={selectedCategory}
+                                            onChange={e => setSelectedCategory(e.target.value)}
+                                            className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-[10px] text-gray-400 uppercase font-black outline-none focus:border-primary"
+                                        >
+                                            <option value="all">Todas Categorias</option>
+                                            <option value="torneio">Torneio</option>
+                                            <option value="cash">Cash Game</option>
+                                            <option value="bar">Bar</option>
+                                            <option value="produtos">Produtos</option>
+                                            <option value="vestuario">Vestuário</option>
+                                            <option value="aluguel">Aluguel</option>
+                                            <option value="curso">Curso</option>
+                                            <option value="online">Online</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        {allProducts
+                                            .filter(p => selectedCategory === 'all' || p.category === selectedCategory)
+                                            .map(p => (
+                                                <div key={p.id} className={`bg-black/20 border rounded-2xl p-4 flex items-center justify-between transition-all ${p.active ? 'border-white/5' : 'border-red-500/20 opacity-60 grayscale'}`}>
+                                                    <div className="flex items-center gap-4">
+                                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-[10px] uppercase ${p.category === 'torneio' ? 'bg-blue-500/20 text-blue-400' : p.category === 'cash' ? 'bg-green-500/20 text-green-400' : p.category === 'bar' ? 'bg-orange-500/20 text-orange-400' : 'bg-purple-500/20 text-purple-400'}`}>
+                                                            {p.category.substring(0, 3)}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-bold text-white">{p.name}</p>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-[10px] text-gray-500 uppercase font-black">{p.category}</span>
+                                                                <span className="w-1 h-1 rounded-full bg-gray-700"></span>
+                                                                <span className="text-[10px] text-primary font-black">R$ {Number(p.price_brl || 0).toFixed(2)}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => toggleProductStatus(p)}
+                                                            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${p.active ? 'bg-green-500/10 text-green-500 hover:bg-red-500/10 hover:text-red-500' : 'bg-red-500/10 text-red-500 hover:bg-green-500/10 hover:text-green-500'}`}
+                                                            title={p.active ? 'Desativar Produto' : 'Ativar Produto'}
+                                                        >
+                                                            <span className="material-icons-outlined text-base">{p.active ? 'visibility' : 'visibility_off'}</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => deleteProduct(p.id)}
+                                                            className="w-10 h-10 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all"
+                                                            title="Excluir Permanentemente"
+                                                        >
+                                                            <span className="material-icons-outlined text-base">delete_forever</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'send-gifts' && (
+                        <div className="p-8 max-w-4xl mx-auto">
+                            <div className="flex items-center gap-4 mb-8">
+                                <div className="w-14 h-14 rounded-2xl bg-primary/20 border border-primary/40 flex items-center justify-center shadow-neon-pink">
+                                    <span className="material-icons-outlined text-primary text-3xl">redeem</span>
+                                </div>
+                                <div>
+                                    <h3 className="text-2xl font-display font-black text-white uppercase tracking-widest">Enviar Presentes</h3>
+                                    <p className="text-gray-400 text-sm">Distribua saldo ou chipz para os jogadores da plataforma.</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                {/* Configuration */}
+                                <div className="space-y-6">
+                                    <div className="bg-black/40 border border-white/10 rounded-3xl p-6">
+                                        <h4 className="text-sm font-black text-white uppercase mb-6 flex items-center gap-2">
+                                            <span className="material-icons-outlined text-primary text-sm">settings</span>
+                                            Configuração do Prêmio
+                                        </h4>
+
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Para quem?</label>
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => setGiftTarget('single')} className={`flex-1 py-3 rounded-xl border text-[10px] font-black uppercase transition-all ${giftTarget === 'single' ? 'bg-primary border-primary text-white shadow-neon-pink' : 'bg-white/5 border-white/10 text-gray-500 hover:text-gray-300'}`}>
+                                                        Usuários Específicos
+                                                    </button>
+                                                    <button onClick={() => setGiftTarget('all')} className={`flex-1 py-3 rounded-xl border text-[10px] font-black uppercase transition-all ${giftTarget === 'all' ? 'bg-red-500/20 border-red-500/50 text-red-500' : 'bg-white/5 border-white/10 text-gray-500 hover:text-gray-300'}`}>
+                                                        TODOS os Usuários
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex gap-4">
+                                                <div className="flex-1">
+                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Tipo de Moeda</label>
+                                                    <div className="flex gap-2">
+                                                        <button onClick={() => setGiftType('brl')} className={`flex-1 py-3 rounded-xl border text-[10px] font-black uppercase transition-all ${giftType === 'brl' ? 'bg-green-500/20 border-green-500/50 text-green-400' : 'bg-white/5 border-white/10 text-gray-500 hover:text-gray-300'}`}>
+                                                            R$ Reais
+                                                        </button>
+                                                        <button onClick={() => setGiftType('chipz')} className={`flex-1 py-3 rounded-xl border text-[10px] font-black uppercase transition-all ${giftType === 'chipz' ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-400' : 'bg-white/5 border-white/10 text-gray-500 hover:text-gray-300'}`}>
+                                                            Chipz
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Quantidade</label>
+                                                    <input type="number" value={giftAmount} onChange={e => setGiftAmount(e.target.value)} placeholder="0.00"
+                                                        className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-black focus:border-primary outline-none" />
+                                                </div>
+                                            </div>
+
+                                            <button onClick={handleSendGifts} disabled={isLoading || !giftAmount} className="w-full bg-primary hover:bg-white hover:text-black text-white font-black py-4 rounded-2xl transition-all shadow-neon-pink uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-50 mt-4">
+                                                {isLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <><span className="material-icons-outlined text-sm">send</span> {giftTarget === 'all' ? 'Enviar para Todos' : 'Enviar Presente'}</>}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* User Selection */}
+                                <div className={`space-y-6 transition-all ${giftTarget === 'all' ? 'opacity-20 pointer-events-none' : 'opacity-100'}`}>
+                                    <div className="bg-black/40 border border-white/10 rounded-3xl p-6">
+                                        <h4 className="text-sm font-black text-white uppercase mb-6 flex items-center gap-2">
+                                            <span className="material-icons-outlined text-primary text-sm">person_search</span>
+                                            Selecionar Destinatários ({selectedGiftUsers.length})
+                                        </h4>
+
+                                        <div className="relative mb-6">
+                                            <input type="text" value={giftSearchQuery} onChange={e => handleGiftSearch(e.target.value)} placeholder="Buscar por Nome ou CR#"
+                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary transition-all" />
+                                            {giftSearchResults.length > 0 && (
+                                                <div className="absolute top-full left-0 right-0 mt-1 bg-[#0a0720] border border-white/10 rounded-xl overflow-hidden shadow-2xl z-20">
+                                                    {giftSearchResults.map(u => (
+                                                        <button key={u.id} onClick={() => {
+                                                            if (!selectedGiftUsers.find(x => x.id === u.id)) setSelectedGiftUsers([...selectedGiftUsers, u]);
+                                                            setGiftSearchQuery(''); setGiftSearchResults([]);
+                                                        }} className="w-full flex items-center gap-3 p-3 hover:bg-primary/20 text-left border-b border-white/5 last:border-0">
+                                                            <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${u.name}&background=random`} className="w-8 h-8 rounded-full" />
+                                                            <div>
+                                                                <p className="text-xs font-bold text-white">{u.name}</p>
+                                                                <p className="text-[10px] text-primary font-black uppercase">CR#{String(u.numeric_id).padStart(3, '0')}</p>
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                                            {selectedGiftUsers.length === 0 ? (
+                                                <div className="text-center py-8 text-gray-600 border border-dashed border-white/5 rounded-2xl">
+                                                    <p className="text-xs italic">Nenhum usuário selecionado.</p>
+                                                </div>
+                                            ) : selectedGiftUsers.map(u => (
+                                                <div key={u.id} className="bg-white/5 border border-white/10 rounded-xl p-3 flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${u.name}&background=random`} className="w-8 h-8 rounded-full" />
+                                                        <div>
+                                                            <p className="text-xs font-bold text-white">{u.name}</p>
+                                                            <p className="text-[10px] text-gray-500">Saldo: R$ {Number(u.balance_brl || 0).toFixed(2)} · {u.balance_chipz || 0} Chipz</p>
+                                                        </div>
+                                                    </div>
+                                                    <button onClick={() => setSelectedGiftUsers(selectedGiftUsers.filter(x => x.id !== u.id))} className="text-gray-500 hover:text-red-500 transition-colors">
+                                                        <span className="material-icons-outlined text-base">remove_circle_outline</span>
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </main>

@@ -65,7 +65,8 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                     user_id: currentUser.id,
                     brl_amount: -cost,
                     chipz_amount: totalChipz,
-                    description: `Compra: Pacote Chipz - ${pack.name}`
+                    description: `Compra: Pacote Chipz - ${pack.name}`,
+                    category: 'chipz'
                 });
 
                 if (txError) {
@@ -97,7 +98,8 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                     user_id: currentUser.id,
                     brl_amount: amountToAdd,
                     chipz_amount: 0,
-                    description: `Depósito: Adicionar Reais`
+                    description: `Depósito: Adicionar Reais`,
+                    category: 'wallet_deposit'
                 });
 
                 if (txError) {

@@ -180,6 +180,7 @@ export interface RankingInstance {
   rewardBrl?: number;
   rewardChipz?: number;
   isActive?: boolean;
+  badgeTemplateId?: string;
 }
 
 export interface TournamentResult {
@@ -231,7 +232,7 @@ export interface MonthData {
   status: 'active' | 'completed' | 'locked';
 }
 
-export type MessageCategory = 'system' | 'admin' | 'private' | 'bonus' | 'tournament' | 'poll';
+export type MessageCategory = 'system' | 'admin' | 'private' | 'bonus' | 'tournament' | 'poll' | 'gift';
 
 export interface Message {
   id: string;

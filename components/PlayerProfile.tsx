@@ -145,78 +145,6 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     const [pollQuestion, setPollQuestion] = useState('');
     const [pollOptions, setPollOptions] = useState(['', '']);
 
-    // Comprovantes state
-    const [playerCommands, setPlayerCommands] = useState<any[]>([]);
-    const [viewingReceipt, setViewingReceipt] = useState<any | null>(null);
-    const [receiptItems, setReceiptItems] = useState<any[]>([]);
-
-    // Auto-update viewing receipt
-    const viewingReceiptRef = useRef<any | null>(null);
-    useEffect(() => { viewingReceiptRef.current = viewingReceipt; }, [viewingReceipt]);
-
-    useEffect(() => {
-        let interval: NodeJS.Timeout;
-        let channel: any;
-
-        if (activeTab === 'comprovantes' && targetIdRef.current) {
-            fetchPlayerCommands();
-
-            // Polling para "tempo real" garantido
-            interval = setInterval(() => {
-                fetchPlayerCommands();
-                if (viewingReceiptRef.current) {
-                    handleViewReceipt(viewingReceiptRef.current, true);
-                }
-            }, 5000);
-
-            // Realtime listener
-            channel = supabase.channel('commands_realtime_profile_' + targetIdRef.current)
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'commands', filter: `user_id=eq.${targetIdRef.current}` }, () => {
-                    fetchPlayerCommands();
-                })
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'command_items' }, () => {
-                    fetchPlayerCommands();
-                    if (viewingReceiptRef.current) {
-                        handleViewReceipt(viewingReceiptRef.current, true);
-                    }
-                })
-                .subscribe();
-        }
-
-        return () => {
-            if (interval) clearInterval(interval);
-            if (channel) supabase.removeChannel(channel);
-        };
-    }, [activeTab]);
-
-    const fetchPlayerCommands = async () => {
-        if (!targetIdRef.current) return;
-        const { data } = await supabase.from('commands')
-            .select('*, events(title, date)')
-            .eq('user_id', targetIdRef.current)
-            .in('status', ['open', 'closed'])
-            .order('created_at', { ascending: false });
-        if (data) setPlayerCommands(data);
-    };
-
-    const handleViewReceipt = async (cmd: any, isSilentUpdate = false) => {
-        const { data } = await supabase.from('command_items')
-            .select('*, products(name, category)')
-            .eq('command_id', cmd.id)
-            .order('created_at', { ascending: true });
-        setReceiptItems(data || []);
-
-        // Atualiza os totais mais recentes
-        const { data: latestCmd } = await supabase.from('commands')
-            .select('*, events(title, date)')
-            .eq('id', cmd.id)
-            .single();
-
-        if (!isSilentUpdate || (viewingReceiptRef.current && viewingReceiptRef.current.id === cmd.id)) {
-            setViewingReceipt(latestCmd || cmd);
-        }
-    };
-
     const handleOpenFlyer = (log: TournamentResult) => {
         const eventMatch = events.find(e =>
             e.title.toLowerCase() === log.eventName.toLowerCase() &&
@@ -253,6 +181,10 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             setActiveTab('inbox');
             setInboxFilter('tournament');
         };
+        const handleOpenGift = () => {
+            setActiveTab('inbox');
+            setInboxFilter('gift');
+        };
 
         window.addEventListener('open-poll-messages', handleOpenPolls);
         window.addEventListener('open-private-messages', handleOpenPrivate);
@@ -260,6 +192,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         window.addEventListener('open-admin-messages', handleOpenAdmin);
         window.addEventListener('open-bonus-messages', handleOpenBonus);
         window.addEventListener('open-tournament-messages', handleOpenTournament);
+        window.addEventListener('open-gift-messages', handleOpenGift);
 
         return () => {
             window.removeEventListener('open-poll-messages', handleOpenPolls);
@@ -268,6 +201,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             window.removeEventListener('open-admin-messages', handleOpenAdmin);
             window.removeEventListener('open-bonus-messages', handleOpenBonus);
             window.removeEventListener('open-tournament-messages', handleOpenTournament);
+            window.removeEventListener('open-gift-messages', handleOpenGift);
         };
     }, []);
 
@@ -311,7 +245,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     const originalNameRef = useRef<string>('');
 
     // Determina se é o perfil do próprio usuário logado ou de um terceiro
-    const isOwnProfile = !initialData;
+    const isOwnProfile = !initialData || (currentUser?.id && initialData.id === currentUser.id);
     // Apenas Admin ou o Próprio Dono (se logado) podem editar
     const canEdit = isAdmin || (isLoggedIn && isOwnProfile);
 
@@ -480,6 +414,81 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
     }, [initialData, currentUser, events]);
 
+    // Comprovantes state
+    const [playerCommands, setPlayerCommands] = useState<any[]>([]);
+    const [viewingReceipt, setViewingReceipt] = useState<any | null>(null);
+    const [receiptItems, setReceiptItems] = useState<any[]>([]);
+
+    // Auto-update viewing receipt
+    const viewingReceiptRef = useRef<any | null>(null);
+    useEffect(() => { viewingReceiptRef.current = viewingReceipt; }, [viewingReceipt]);
+
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        let channel: any;
+
+        if (activeTab === 'comprovantes' && (targetIdRef.current || player.id)) {
+            // Ensure targetIdRef is synced with player.id if they differ
+            if (!targetIdRef.current && player.id) targetIdRef.current = player.id;
+
+            fetchPlayerCommands();
+
+            // Polling para "tempo real" garantido
+            interval = setInterval(() => {
+                fetchPlayerCommands();
+                if (viewingReceiptRef.current) {
+                    handleViewReceipt(viewingReceiptRef.current, true);
+                }
+            }, 5000);
+
+            // Realtime listener
+            channel = supabase.channel('commands_realtime_profile_' + targetIdRef.current)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'commands', filter: `user_id=eq.${targetIdRef.current}` }, () => {
+                    fetchPlayerCommands();
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'command_items' }, () => {
+                    fetchPlayerCommands();
+                    if (viewingReceiptRef.current) {
+                        handleViewReceipt(viewingReceiptRef.current, true);
+                    }
+                })
+                .subscribe();
+        }
+
+        return () => {
+            if (interval) clearInterval(interval);
+            if (channel) supabase.removeChannel(channel);
+        };
+    }, [activeTab, player.id]);
+
+    const fetchPlayerCommands = async () => {
+        if (!targetIdRef.current) return;
+        const { data } = await supabase.from('commands')
+            .select('*, events(title, date)')
+            .eq('user_id', targetIdRef.current)
+            .in('status', ['open', 'closed'])
+            .order('created_at', { ascending: false });
+        if (data) setPlayerCommands(data);
+    };
+
+    const handleViewReceipt = async (cmd: any, isSilentUpdate = false) => {
+        const { data } = await supabase.from('command_items')
+            .select('*, products(name, category)')
+            .eq('command_id', cmd.id)
+            .order('created_at', { ascending: true });
+        setReceiptItems(data || []);
+
+        // Atualiza os totais mais recentes
+        const { data: latestCmd } = await supabase.from('commands')
+            .select('*, events(title, date)')
+            .eq('id', cmd.id)
+            .single();
+
+        if (!isSilentUpdate || (viewingReceiptRef.current && viewingReceiptRef.current.id === cmd.id)) {
+            setViewingReceipt(latestCmd || cmd);
+        }
+    };
+
     const handleAddPollOption = () => setPollOptions([...pollOptions, '']);
     const handleUpdatePollOption = (index: number, val: string) => {
         const updated = [...pollOptions];
@@ -593,7 +602,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
                 {/* FILTROS */}
                 <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                    {['all', 'system', 'admin', 'private', 'bonus', 'tournament', 'poll'].map(cat => (
+                    {['all', 'system', 'gift', 'admin', 'private', 'bonus', 'tournament', 'poll'].map(cat => (
                         <button
                             key={cat}
                             onClick={() => setInboxFilter(cat as any)}
@@ -601,11 +610,12 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                         >
                             {cat === 'all' ? '📬 Todas' :
                                 cat === 'system' ? '⚙️ Sistema' :
-                                    cat === 'admin' ? '📣 Admin' :
-                                        cat === 'private' ? '💬 Privadas' :
-                                            cat === 'bonus' ? '🎁 Bônus' :
-                                                cat === 'tournament' ? '🏆 Torneio' :
-                                                    cat === 'poll' ? '📊 Enquetes' : cat}
+                                    cat === 'gift' ? '🎁 Presentes' :
+                                        cat === 'admin' ? '📣 Admin' :
+                                            cat === 'private' ? '💬 Privadas' :
+                                                cat === 'bonus' ? '🎀 Bônus' :
+                                                    cat === 'tournament' ? '🏆 Torneio' :
+                                                        cat === 'poll' ? '📊 Enquetes' : cat}
                         </button>
                     ))}
                 </div>
@@ -631,14 +641,16 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                     msg.category === 'private' ? 'bg-secondary/20 text-secondary' :
                                         msg.category === 'bonus' ? 'bg-green-500/20 text-green-400' :
                                             msg.category === 'admin' ? 'bg-red-500/20 text-red-400' :
-                                                'bg-primary/20 text-primary'
+                                                msg.category === 'gift' ? 'bg-yellow-500/20 text-yellow-400' :
+                                                    'bg-primary/20 text-primary'
                                     }`}>
                                     <span className="material-icons-outlined text-3xl">
                                         {msg.category === 'poll' ? 'poll' :
                                             msg.category === 'private' ? 'chat' :
-                                                msg.category === 'bonus' ? 'redeem' :
-                                                    msg.category === 'tournament' ? 'stars' :
-                                                        'notifications'}
+                                                msg.category === 'bonus' ? 'card_giftcard' :
+                                                    msg.category === 'gift' ? 'redeem' :
+                                                        msg.category === 'tournament' ? 'stars' :
+                                                            'notifications'}
                                     </span>
                                 </div>
                                 <div className="flex-grow min-w-0">
@@ -2679,14 +2691,19 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                             ) : (
                                 <div className="space-y-2">
                                     {receiptItems.map((item, i) => {
-                                        const name = item.products?.name || item.notes?.split(' —')[0] || 'Item';
-                                        const detail = item.notes?.includes('—') ? item.notes.split('— ')[1] : null;
+                                        const time = item.created_at ? new Date(item.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+                                        const rawName = item.products?.name || item.notes?.split(' —')[0] || 'Item';
+                                        const name = rawName.replace(/(Lançado às \d{2}:\d{2})/g, '').replace(/Lançado às \d{2}:\d{2}/, '').trim();
+                                        const detail = item.notes?.includes('—') ? item.notes.split('— ')[1].replace(/(Lançado às \d{2}:\d{2})/g, '').trim() : null;
                                         const price = Number(item.total_price_brl);
                                         return (
                                             <div key={item.id || i} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0 gap-3">
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-sm text-gray-300 font-bold truncate">{name}</p>
-                                                    {detail && <p className="text-[10px] text-gray-500 truncate">{detail}</p>}
+                                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                    <span className="text-[10px] text-gray-500 font-mono flex-shrink-0 w-8">{time}</span>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm text-gray-300 font-bold truncate">{name}</p>
+                                                        {detail && <p className="text-[10px] text-gray-500 truncate">{detail}</p>}
+                                                    </div>
                                                 </div>
                                                 <span className={`text-sm font-black whitespace-nowrap ${price === 0 ? 'text-green-400' : 'text-white'}`}>
                                                     {price === 0 ? 'GRÁTIS' : `R$ ${price.toFixed(2)}`}

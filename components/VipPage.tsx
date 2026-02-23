@@ -76,7 +76,8 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate, currentUser, onUpd
         user_id: currentUser.id,
         brl_amount: -costToCharge,
         chipz_amount: 0,
-        description: `Compra: Plano VIP ${plan.title} ${discount > 0 ? '(Upgrade)' : ''}`
+        description: `Compra: Plano VIP ${plan.title} ${discount > 0 ? '(Upgrade)' : ''}`,
+        category: 'vip'
       });
 
       if (error) {

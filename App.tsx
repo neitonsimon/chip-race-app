@@ -213,6 +213,7 @@ export default function App() {
                     rewardBrl: r.reward_brl || 0,
                     rewardChipz: r.reward_chipz || 0,
                     isActive: r.is_active !== false,
+                    badgeTemplateId: r.badge_template_id,
                     players: [] // Players will be loaded/calculated separately se needed, or kept in local for now
                 }));
                 // Substituir os rankings APENAS pelos salvos no Supabase.
@@ -725,7 +726,8 @@ export default function App() {
                 reward_badge_icon: ranking.rewardBadgeIcon || null,
                 reward_brl: ranking.rewardBrl || 0,
                 reward_chipz: ranking.rewardChipz || 0,
-                is_active: ranking.isActive !== false
+                is_active: ranking.isActive !== false,
+                badge_template_id: ranking.badgeTemplateId || null
             };
 
             let result;
@@ -805,7 +807,7 @@ export default function App() {
         }
     };
 
-    const handleFinalizeRanking = async (rankingId: string, targetUserId?: string) => {
+    const handleFinalizeRanking = async (rankingId: string, targetUserId?: string, customJustification?: string) => {
         if (!isAdmin) return;
         const ranking = rankings.find(r => r.id === rankingId);
         if (!ranking || ranking.isActive === false) {
@@ -858,11 +860,12 @@ export default function App() {
             setRankings(prev => prev.map(r => r.id === rankingId ? { ...r, isActive: false } : r));
 
             // 5. System Message
+            const justificationText = customJustification ? `\n\nMotivo da Honraria: "${customJustification}"` : '';
             await supabase.from('messages').insert({
                 user_id: winner.id,
                 from: 'Sistema Chip Race',
                 subject: '🏆 Premiação de Ranking!',
-                content: `Parabéns! Você foi o grande vencedor do ranking ${ranking.label}.\n\nRecompensas:\n${ranking.rewardBadgeTitle ? `- Insígnia: ${ranking.rewardBadgeTitle}\n` : ''}${ranking.rewardBrl && ranking.rewardBrl > 0 ? `- Créditos: R$ ${ranking.rewardBrl.toFixed(2)}\n` : ''}${ranking.rewardChipz && ranking.rewardChipz > 0 ? `- Fichas: ${ranking.rewardChipz} Chipz\n` : ''}`,
+                content: `Parabéns! Você foi o grande vencedor do ranking ${ranking.label}.\n\nRecompensas:\n${ranking.rewardBadgeTitle ? `- Insígnia: ${ranking.rewardBadgeTitle}\n` : ''}${ranking.rewardBrl && ranking.rewardBrl > 0 ? `- Créditos: R$ ${ranking.rewardBrl.toFixed(2)}\n` : ''}${ranking.rewardChipz && ranking.rewardChipz > 0 ? `- Fichas: ${ranking.rewardChipz} Chipz\n` : ''}${justificationText}`,
                 category: 'bonus'
             });
 
