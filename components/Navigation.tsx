@@ -28,6 +28,7 @@ export const Navigation: React.FC<NavigationProps> = ({
     onReply,
     balanceBrl = 0,
     balanceChipz = 0,
+    totalPendingDebt = 0,
     isAdmin = false
 }) => {
     const [scrolled, setScrolled] = useState(false);
@@ -147,6 +148,18 @@ export const Navigation: React.FC<NavigationProps> = ({
                                             <span className="material-icons-outlined text-[9px] text-white/50 bg-white/10 rounded-full p-0.5 ml-0.5 group-hover:bg-primary/20 group-hover:text-primary transition-colors">add</span>
                                         </div>
                                     </div>
+
+                                    {/* Debt Indicator */}
+                                    {totalPendingDebt > 0 && (
+                                        <div
+                                            onClick={() => onNavigate('profile')}
+                                            className="flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 rounded-full px-3 py-1.5 cursor-pointer hover:bg-red-500/20 transition-all group animate-pulse-slow"
+                                            title="Pendências Pendentes"
+                                        >
+                                            <span className="material-icons-outlined text-red-500 text-sm">error_outline</span>
+                                            <span className="font-black text-[10px] text-red-500 uppercase tracking-tighter">Pendura: R$ {totalPendingDebt.toFixed(2)}</span>
+                                        </div>
+                                    )}
 
                                     {/* Notification Bell */}
                                     <div className="relative">
@@ -357,6 +370,12 @@ export const Navigation: React.FC<NavigationProps> = ({
                                             <span className="font-bold text-white text-sm">R$ {balanceBrl.toFixed(2)}</span>
                                             <span className="font-bold text-primary text-sm flex items-center gap-1"><span className="material-icons-outlined text-[12px]">token</span> {balanceChipz}</span>
                                         </div>
+                                        {totalPendingDebt > 0 && (
+                                            <div className="mt-2 flex items-center gap-2 text-red-500">
+                                                <span className="material-icons-outlined text-sm">error_outline</span>
+                                                <span className="text-xs font-black uppercase">Pendura: R$ {totalPendingDebt.toFixed(2)}</span>
+                                            </div>
+                                        )}
                                     </button>
 
                                     <button

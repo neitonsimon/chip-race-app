@@ -259,8 +259,8 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
             ECOSSISTEMA <span className="text-primary">CHIP RACE</span>
           </h2>
           <div className="h-1 w-24 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>
-          <p className="mt-4 text-gray-500 max-w-2xl mx-auto">
-            Os 8 caminhos sagrados para conquistar seu lugar no Capítulo Final. Escolha sua estratégia.
+          <p className="mt-4 text-gray-500 max-w-2xl mx-auto text-lg">
+            Explore o universo Chip Race: uma curadoria completa de produtos e serviços desenvolvidos para elevar sua experiência no poker ao próximo nível.
           </p>
         </div>
 
@@ -353,21 +353,7 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
                     <textarea value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })} className="w-full bg-black/50 border border-white/10 rounded p-3 text-white focus:border-primary outline-none min-h-[150px]" />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Preço (R$)</label>
-                      <input type="number" step="0.01" value={editForm.price} onChange={e => setEditForm({ ...editForm, price: parseFloat(e.target.value) || 0 })} className="w-full bg-black/50 border border-white/10 rounded p-3 text-white focus:border-primary outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Estoque/Qtd. (Opcional)</label>
-                      <input type="number" value={editForm.stock} onChange={e => setEditForm({ ...editForm, stock: parseInt(e.target.value) || 0 })} className="w-full bg-black/50 border border-white/10 rounded p-3 text-white focus:border-primary outline-none" />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">URL da Imagem (Opcional)</label>
-                    <input type="text" value={editForm.image_url} onChange={e => setEditForm({ ...editForm, image_url: e.target.value })} className="w-full bg-black/50 border border-white/10 rounded p-3 text-white focus:border-primary outline-none placeholder-gray-600" placeholder="https://..." />
-                  </div>
+                  {/* Campos de valor, estoque e imagem removidos a pedido do usuário */}
 
                   <div className="flex gap-4 mt-6">
                     <button onClick={() => setIsEditingProduct(false)} className="flex-1 py-3 bg-gray-800 text-white rounded-xl font-bold uppercase hover:bg-gray-700 transition-colors">Cancelar</button>
@@ -404,24 +390,7 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-white/5 border border-white/5 p-4 rounded-xl">
-                        <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">
-                          {productDetails ? 'Valor' : 'Status'}
-                        </p>
-                        <p className="text-white font-bold">
-                          {productDetails ? `R$ ${parseFloat(productDetails.price).toFixed(2).replace('.', ',')}` : 'Disponível'}
-                        </p>
-                      </div>
-                      <div className="bg-white/5 border border-white/5 p-4 rounded-xl">
-                        <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">
-                          {productDetails ? 'Disponível' : 'Categoria'}
-                        </p>
-                        <p className="text-white font-bold uppercase">
-                          {productDetails ? `${productDetails.stock} unidades` : activeRegulation}
-                        </p>
-                      </div>
-                    </div>
+                    {/* Campos de valor e disponível removidos na visualização também */}
                   </div>
 
                   <div className="mt-10">

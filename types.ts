@@ -131,6 +131,9 @@ export interface RankingPlayer {
   vipExpiresAt?: string;
   balanceBrl?: number;
   balanceChipz?: number;
+  isVerified?: boolean;
+  debtLimitBrl?: number;
+  totalPendingDebt?: number;
   badges?: Badge[];
 }
 
@@ -233,6 +236,9 @@ export interface PlayerStats {
   vipExpiresAt: string | null;
   balanceBrl: number;
   balanceChipz: number;
+  isVerified: boolean;
+  debtLimitBrl?: number;
+  totalPendingDebt?: number;
   badges?: Badge[];
 }
 
@@ -303,6 +309,32 @@ export interface TheChosenQualifier {
   player_name: string;
   mode: QualificationMode;
   created_at: string;
+}
+
+export interface Command {
+  id: string;
+  event_id: string;
+  user_id: string;
+  status: 'open' | 'closed';
+  total_brl: number;
+  discount_brl?: number;
+  unpaid_amount_brl?: number;
+  opened_by?: string;
+  opened_at: string;
+  closed_at?: string;
+  profiles?: any;
+}
+
+export interface Debt {
+  id: string;
+  user_id: string;
+  command_id?: string;
+  event_id?: string;
+  amount_brl: number;
+  status: 'pending' | 'paid' | 'cancelled';
+  paid_at?: string;
+  created_at: string;
+  profiles?: any;
 }
 
 // SIMULAÇÃO DO BANCO DE DADOS DE CONTEÚDO

@@ -6,6 +6,9 @@ interface AdminPanelProps {
     currentUser: any;
     isAdmin?: boolean;
     onUpdateProfile?: (id: string, stats: any) => void;
+    badgeTemplates?: any[];
+    onSendAdminMessage?: (subject: string, content: string, category: 'admin' | 'system' | 'tournament') => void;
+    onCreatePoll?: (question: string, options: string[]) => void;
 }
 
 function applyVipDiscount(price: number, category: string, productName: string, vipStatus?: string | null): number {
@@ -49,8 +52,8 @@ function getOneTimeKeyFromNote(note: string): string | null {
     return null;
 }
 
-export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, isAdmin = false, onUpdateProfile }) => {
-    const [activeTab, setActiveTab] = useState<'operational' | 'reports' | 'launch' | 'send-gifts'>('operational');
+export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, isAdmin = false, onUpdateProfile, badgeTemplates = [], onSendAdminMessage, onCreatePoll }) => {
+    const [activeTab, setActiveTab] = useState<'operational' | 'reports' | 'launch' | 'send-gifts' | 'debts' | 'communications'>('operational');
     const [events, setEvents] = useState<any[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -69,6 +72,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const [commandsTab, setCommandsTab] = useState<'ativas' | 'historico'>('ativas');
     const [reportData, setReportData] = useState<any[]>([]);
     const [reportFilter, setReportFilter] = useState<'event' | 'date' | 'product'>('event');
+    const [reportCategoryFilter, setReportCategoryFilter] = useState('all');
+    const [reportProductFilter, setReportProductFilter] = useState('all');
     const [extraReportData, setExtraReportData] = useState<any[]>([]);
     const [reportCommandsData, setReportCommandsData] = useState<any[]>([]);
     const [startDate, setStartDate] = useState(() => { const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0] });
@@ -87,12 +92,56 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     // Gift Tab State
     const [giftTarget, setGiftTarget] = useState<'single' | 'all'>('single');
     const [selectedGiftUsers, setSelectedGiftUsers] = useState<any[]>([]);
-    const [giftType, setGiftType] = useState<'brl' | 'chipz'>('brl');
+    const [giftType, setGiftType] = useState<'brl' | 'chipz' | 'badge'>('brl');
     const [giftAmount, setGiftAmount] = useState('');
     const [giftSearchQuery, setGiftSearchQuery] = useState('');
     const [giftDescription, setGiftDescription] = useState('');
+    const [selectedBadgeId, setSelectedBadgeId] = useState('');
     const [giftSearchResults, setGiftSearchResults] = useState<any[]>([]);
     const [checkoutDiscount, setCheckoutDiscount] = useState('');
+    const [confirmingCheckout, setConfirmingCheckout] = useState(false);
+    const [confirmingTopUp, setConfirmingTopUp] = useState(false);
+    const [checkoutDebt, setCheckoutDebt] = useState('');
+    const [activeDebts, setActiveDebts] = useState<any[]>([]);
+    const [totalActiveDebt, setTotalActiveDebt] = useState(0);
+
+    // Communication Tab State
+    const [adminSubject, setAdminSubject] = useState('');
+    const [adminMsgContent, setAdminMsgContent] = useState('');
+    const [adminMsgCategory, setAdminMsgCategory] = useState<'admin' | 'system' | 'tournament'>('admin');
+    const [pollQuestion, setPollQuestion] = useState('');
+    const [pollOptions, setPollOptions] = useState(['', '']);
+    const [cashAmount, setCashAmount] = useState('');
+
+    const handleAddPollOption = () => setPollOptions([...pollOptions, '']);
+    const handleUpdatePollOption = (index: number, val: string) => {
+        const updated = [...pollOptions];
+        updated[index] = val;
+        setPollOptions(updated);
+    };
+
+    const handleSendBroadcast = () => {
+        if (onSendAdminMessage && adminSubject && adminMsgContent) {
+            onSendAdminMessage(adminSubject, adminMsgContent, adminMsgCategory);
+            setAdminSubject('');
+            setAdminMsgContent('');
+            alert('Comunicado Global enviado!');
+        }
+    };
+
+    const handleCreatePollSubmit = () => {
+        const validOptions = pollOptions.filter(o => o.trim());
+        if (onCreatePoll && pollQuestion && validOptions.length >= 2) {
+            onCreatePoll(pollQuestion, validOptions);
+            setPollQuestion('');
+            setPollOptions(['', '']);
+            alert('Enquete publicada!');
+        }
+    };
+
+    const todayStr = new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0') + '-' + String(new Date().getDate()).padStart(2, '0');
+    const upcomingEventsList = events.filter(ev => ev.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date));
+    const pastEventsList = events.filter(ev => ev.date < todayStr).sort((a, b) => b.date.localeCompare(a.date));
 
 
     const updatePlayerBalanceLocally = (userId: string, amount: number, type: 'brl' | 'chipz' = 'brl') => {
@@ -159,7 +208,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         }
     };
 
-    useEffect(() => { fetchEvents(); fetchProducts(); fetchAllProducts(); }, []);
+    useEffect(() => { fetchEvents(); fetchProducts(); fetchAllProducts(); fetchDebts(); }, []);
+    useEffect(() => {
+        if (activeTab === 'debts') fetchDebts();
+    }, [activeTab]);
     useEffect(() => {
         if (selectedEvent) { fetchOpenCommands(selectedEvent.id); fetchClosedCommands(selectedEvent.id); }
         else { setOpenCommands([]); setClosedCommands([]); }
@@ -231,6 +283,53 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         const { data } = await supabase.from('command_items').select('*, products(name, category)').eq('command_id', commandId).order('created_at', { ascending: true });
         if (data) setCommandItems(data);
     };
+
+    const handleDeleteCommandItem = async (item: any) => {
+        if (!selectedCommand && !viewingClosedCommand) return;
+        const currentCmd = selectedCommand || viewingClosedCommand;
+
+        if (currentCmd.status !== 'open') {
+            alert('Apenas itens de comandas abertas podem ser excluídos.');
+            return;
+        }
+
+        if (!window.confirm(`Excluir item "${item.products?.name || item.notes || 'Item'}" da comanda?`)) return;
+
+        setIsLoading(true);
+        try {
+            // 1. Deletar o item
+            const { error: delErr } = await supabase.from('command_items').delete().eq('id', item.id);
+            if (delErr) throw delErr;
+
+            // 2. Atualizar o total da comanda
+            const itemPrice = Number(item.total_price_brl) || 0;
+            const newTotal = Math.max(0, Number(currentCmd.total_brl) - itemPrice);
+
+            const { error: updErr } = await supabase.from('commands').update({ total_brl: newTotal }).eq('id', currentCmd.id);
+            if (updErr) throw updErr;
+
+            // 3. Atualizar estado local
+            if (selectedCommand?.id === currentCmd.id) {
+                const updItems = commandItems.filter(i => i.id !== item.id);
+                setCommandItems(updItems);
+                setSelectedCommand({ ...selectedCommand, total_brl: newTotal });
+            }
+
+            if (viewingClosedCommand?.id === currentCmd.id) {
+                const updItems = viewingItems.filter(i => i.id !== item.id);
+                setViewingItems(updItems);
+                setViewingClosedCommand({ ...viewingClosedCommand, total_brl: newTotal });
+            }
+
+            setOpenCommands(prev => prev.map(c => c.id === currentCmd.id ? { ...c, total_brl: newTotal } : c));
+
+            // alert('Item excluído com sucesso!');
+        } catch (err: any) {
+            alert('Erro ao excluir item: ' + err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
     const fetchReport = async (eventId: string) => {
         const { data } = await supabase.from('command_items').select('*, products(name, category), commands!inner(event_id, profiles!user_id(name, numeric_id))').eq('commands.event_id', eventId);
         if (data) setReportData(data);
@@ -263,6 +362,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             .eq('status', 'closed');
         if (cmds) setReportCommandsData(cmds);
         setIsLoading(false);
+    };
+
+    const fetchDebts = async () => {
+        const { data } = await supabase.from('debts')
+            .select('*, profiles!user_id(name, numeric_id, avatar_url, balance_brl, debt_limit_brl), events(title)')
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false });
+        if (data) {
+            setActiveDebts(data);
+            setTotalActiveDebt(data.reduce((sum, d) => sum + Number(d.amount_brl), 0));
+        }
     };
 
     const reopenCommand = async (cmd: any) => {
@@ -437,6 +547,44 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         showToast(item.name, finalPrice);
     };
 
+    const handleAddManualCash = async () => {
+        if (!selectedCommand) { alert('Selecione uma comanda primeiro.'); return; }
+        const amount = parseFloat(cashAmount);
+        if (isNaN(amount) || amount <= 0) { alert('Valor inválido.'); return; }
+
+        setIsLoading(true);
+        try {
+            const { error } = await supabase.from('command_items').insert({
+                command_id: selectedCommand.id,
+                product_id: null,
+                quantity: 1,
+                unit_price_brl: amount,
+                unit_price_chipz: 0,
+                total_price_brl: amount,
+                total_price_chipz: 0,
+                notes: `Cash Game — Compra Manual`,
+                created_by: currentUser.id
+            });
+            if (error) throw error;
+
+            const newTotal = Number(selectedCommand.total_brl) + amount;
+            await supabase.from('commands').update({ total_brl: newTotal }).eq('id', selectedCommand.id);
+
+            const upd = openCommands.map(c => c.id === selectedCommand.id ? { ...c, total_brl: newTotal } : c);
+            setOpenCommands(upd);
+            setSelectedCommand({ ...selectedCommand, total_brl: newTotal });
+            fetchCommandItems(selectedCommand.id);
+
+            showToast('Compra Cash', amount);
+            setCashAmount('');
+        } catch (err: any) {
+            alert('Erro ao lançar cash: ' + err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+
     const handleProductClick = (product: any) => {
         if (!selectedCommand) { alert('Selecione uma comanda primeiro.'); return; }
         if (isProductDisabled(product)) return;
@@ -457,46 +605,137 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
 
     const handleCloseCommand = async () => {
         if (!selectedCommand) return;
+        const total = Number(selectedCommand.total_brl);
+        const discount = parseFloat(checkoutDiscount) || 0;
+        const debt = parseFloat(checkoutDebt) || 0;
+        const finalToDeduct = Math.max(0, total - discount - debt);
+
+        if (!confirmingCheckout) {
+            // Validate debt limit before showing confirmation
+            const currentDebt = Number(selectedCommand.profiles?.total_pending_debt || 0);
+            const limit = Number(selectedCommand.profiles?.debt_limit_brl || 0);
+
+            if (debt > 0 && (currentDebt + debt) > limit) {
+                alert(`Limite de pendura excedido! \nLimite: R$ ${limit.toFixed(2)}\nPendência atual: R$ ${currentDebt.toFixed(2)}\nTentativa: R$ ${debt.toFixed(2)}`);
+                return;
+            }
+
+            // Check if player has enough balance for the remainder
+            if (Number(selectedCommand.profiles?.balance_brl || 0) < finalToDeduct) {
+                alert('Saldo insuficiente para cobrir o restante da comanda!');
+                return;
+            }
+
+            setConfirmingCheckout(true);
+            return;
+        }
+
         setIsLoading(true);
         try {
-            const total = Number(selectedCommand.total_brl);
-            const discount = parseFloat(checkoutDiscount) || 0;
-            const finalTotal = Math.max(0, total - discount);
-
-            // Atomic deduct with balance check - fails safely if insufficient funds
-            const { error: deductErr } = await supabase.rpc('deduct_balance_brl', {
-                p_user_id: selectedCommand.user_id,
-                p_amount: finalTotal
-            });
-            if (deductErr) {
-                alert(deductErr.message || 'Erro ao descontar saldo.');
-                setIsLoading(false); return;
+            // 1. If there's debt, record it
+            if (debt > 0) {
+                const { error: debtErr } = await supabase.from('debts').insert({
+                    user_id: selectedCommand.user_id,
+                    command_id: selectedCommand.id,
+                    event_id: selectedCommand.event_id,
+                    amount_brl: debt,
+                    status: 'pending'
+                });
+                if (debtErr) throw debtErr;
             }
+
+            // 2. Deduct the remainder from player balance
+            if (finalToDeduct > 0) {
+                const { error: deductErr } = await supabase.rpc('deduct_balance_brl', {
+                    p_user_id: selectedCommand.user_id,
+                    p_amount: finalToDeduct
+                });
+                if (deductErr) throw deductErr;
+            }
+
+            // 3. Close the command
             await supabase.from('commands').update({
                 status: 'closed',
                 closed_at: new Date().toISOString(),
-                discount_brl: discount
+                discount_brl: discount,
+                unpaid_amount_brl: debt
             }).eq('id', selectedCommand.id);
 
+            // 4. Notify user
             await supabase.from('messages').insert({
                 user_id: selectedCommand.user_id,
                 sender_id: currentUser.id,
-                content: `Sua comanda foi encerrada. Total: R$ ${total.toFixed(2)}${discount > 0 ? ` (Desconto de R$ ${discount.toFixed(2)})` : ''}. R$ ${finalTotal.toFixed(2)} descontado do saldo.`,
+                content: `Sua comanda foi encerrada. Total: R$ ${total.toFixed(2)}${discount > 0 ? ` (Desconto: R$ ${discount.toFixed(2)})` : ''}${debt > 0 ? ` (Pendura: R$ ${debt.toFixed(2)})` : ''}. R$ ${finalToDeduct.toFixed(2)} descontado do saldo.`,
                 category: 'system',
                 is_read: false
             });
-            updatePlayerBalanceLocally(selectedCommand.user_id, -finalTotal); // Deduct balance locally
+
+            // 5. Update UI
+            updatePlayerBalanceLocally(selectedCommand.user_id, -finalToDeduct);
             setOpenCommands(openCommands.filter(c => c.id !== selectedCommand.id));
             if (selectedEvent) fetchClosedCommands(selectedEvent.id);
-            setSelectedCommand(null); setShowCheckout(false); setCommandItems([]); setCheckoutDiscount('');
-        } catch (err: any) { alert('Erro: ' + err.message); }
-        finally { setIsLoading(false); }
+            fetchDebts(); // Refresh debt list
+
+            setSelectedCommand(null);
+            setShowCheckout(false);
+            setCommandItems([]);
+            setCheckoutDiscount('');
+            setCheckoutDebt('');
+            setConfirmingCheckout(false);
+        } catch (err: any) {
+            alert('Erro ao fechar comanda: ' + err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleSettleDebt = async (debt: any, type: 'balance' | 'manual') => {
+        if (!isAdmin) return;
+        const amount = Number(debt.amount_brl);
+        if (!window.confirm(`Confirmar baixa ${type === 'balance' ? 'via SALDO' : 'MANUAL'} de R$ ${amount.toFixed(2)} p/ ${debt.profiles?.name}?`)) return;
+
+        setIsLoading(true);
+        try {
+            if (type === 'balance') {
+                const { error: deductErr } = await supabase.rpc('deduct_balance_brl', {
+                    p_user_id: debt.user_id,
+                    p_amount: amount
+                });
+                if (deductErr) throw deductErr;
+                updatePlayerBalanceLocally(debt.user_id, -amount);
+            }
+
+            const { error: updateErr } = await supabase.from('debts').update({
+                status: 'paid',
+                paid_at: new Date().toISOString()
+            }).eq('id', debt.id);
+            if (updateErr) throw updateErr;
+
+            await supabase.from('messages').insert({
+                user_id: debt.user_id,
+                sender_id: currentUser.id,
+                content: `Sua pendência de R$ ${amount.toFixed(2)} foi baixada (${type === 'balance' ? 'Saldo R$' : 'Baixa Manual'}).`,
+                category: 'system',
+                is_read: false
+            });
+
+            fetchDebts();
+            alert('Baixa realizada com sucesso!');
+        } catch (err: any) {
+            alert('Erro ao dar baixa: ' + err.message);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleTopUp = async () => {
         if (!isAdmin || !selectedCommand) return;
         const amount = parseFloat(topUpAmount);
         if (!amount || amount <= 0) return;
+        if (!confirmingTopUp) {
+            setConfirmingTopUp(true);
+            return;
+        }
         setIsLoading(true);
         try {
             // Atomic increment — no race condition
@@ -508,20 +747,26 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             await supabase.from('messages').insert({ user_id: selectedCommand.user_id, sender_id: currentUser.id, content: `Pagamento de R$ ${amount.toFixed(2)} registrado pelo admin. Saldo atualizado.`, category: 'system', is_read: false });
             updatePlayerBalanceLocally(selectedCommand.user_id, amount); // Update balance locally
             alert(`✅ R$ ${amount.toFixed(2)} creditado com sucesso!`);
-            setShowTopUp(false); setTopUpAmount('');
+            setShowTopUp(false);
+            setTopUpAmount('');
+            setConfirmingTopUp(false);
         } catch (err: any) { alert('Erro: ' + err.message); }
         finally { setIsLoading(false); }
     };
 
     const handleSendGifts = async () => {
         if (!isAdmin) return;
-        const amount = parseFloat(giftAmount);
-        if (!amount || amount <= 0) { alert('Valor inválido.'); return; }
+        const amount = giftType === 'badge' ? 0 : parseFloat(giftAmount);
+
+        if (giftType !== 'badge' && (!amount || amount <= 0)) { alert('Valor inválido.'); return; }
+        if (giftType === 'badge' && !selectedBadgeId) { alert('Selecione uma insígnia.'); return; }
 
         let targetUserIds: string[] = [];
 
         if (giftTarget === 'all') {
-            if (!window.confirm(`Tem certeza que deseja enviar ${giftType === 'brl' ? 'R$' : 'Chipz'} ${amount} para TODOS os jogadores?`)) return;
+            const label = giftType === 'brl' ? 'R$' : giftType === 'chipz' ? 'Chipz' : 'a Insígnia';
+            const val = giftType === 'badge' ? badgeTemplates.find(b => b.id === selectedBadgeId)?.title : amount;
+            if (!window.confirm(`Tem certeza que deseja enviar ${label} ${val} para TODOS os jogadores?`)) return;
             setIsLoading(true);
             const { data } = await supabase.from('profiles').select('id');
             if (data) targetUserIds = data.map(u => u.id);
@@ -535,8 +780,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         setIsLoading(true);
         try {
             const finalAmount = giftType === 'chipz' ? Math.floor(amount) : amount;
-            const logMsg = giftType === 'brl' ? `R$ ${finalAmount.toFixed(2)}` : `${finalAmount} Chipz`;
-            const finalDescription = giftDescription.trim() || `Presente de Admin: ${logMsg}`;
+            const logMsg = giftType === 'brl' ? `R$ ${finalAmount.toFixed(2)}` : giftType === 'chipz' ? `${finalAmount} Chipz` : `Insígnia: ${badgeTemplates.find(b => b.id === selectedBadgeId)?.title}`;
+            const finalDescription = giftDescription.trim() || `Atribuição de Admin: ${logMsg}`;
 
             // Chunks for mass sending
             const chunks = [];
@@ -546,34 +791,48 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
 
             for (const chunk of chunks) {
                 await Promise.all(chunk.map(async (uid) => {
-                    // Use secure_balance_transaction for logging and safety
-                    await supabase.rpc('secure_balance_transaction', {
-                        user_id: uid,
-                        brl_amount: giftType === 'brl' ? finalAmount : 0,
-                        chipz_amount: giftType === 'chipz' ? finalAmount : 0,
-                        description: finalDescription,
-                        category: 'gift'
-                    });
+                    if (giftType === 'badge') {
+                        const template = badgeTemplates.find(b => b.id === selectedBadgeId);
+                        if (template) {
+                            await supabase.from('user_badges').insert({
+                                user_id: uid,
+                                title: template.title,
+                                description: finalDescription || template.description,
+                                icon: template.icon || 'stars',
+                                badge_template_id: template.id
+                            });
+                        }
+                    } else {
+                        // Use secure_balance_transaction for logging and safety
+                        await supabase.rpc('secure_balance_transaction', {
+                            user_id: uid,
+                            brl_amount: giftType === 'brl' ? finalAmount : 0,
+                            chipz_amount: giftType === 'chipz' ? finalAmount : 0,
+                            description: finalDescription,
+                            category: 'gift'
+                        });
+                        updatePlayerBalanceLocally(uid, finalAmount, giftType);
+                    }
 
                     await supabase.from('messages').insert({
                         user_id: uid,
                         sender: 'Admin',
                         sender_id: currentUser.id,
-                        subject: '🎁 Você recebeu um Presente!',
-                        content: `${finalDescription}. O saldo já foi atualizado e está disponível para uso.`,
-                        category: 'gift',
+                        subject: giftType === 'badge' ? '🎖️ Você recebeu uma Insígnia!' : '🎁 Você recebeu um Presente!',
+                        content: `${finalDescription}. ${giftType !== 'badge' ? 'O saldo já foi atualizado e está disponível para uso.' : ''}`,
+                        category: giftType === 'badge' ? 'system' : 'gift',
                         is_read: false
                     });
-                    updatePlayerBalanceLocally(uid, finalAmount, giftType);
                 }));
             }
 
-            alert(`✅ Presentes enviados com sucesso para ${targetUserIds.length} usuários!`);
+            alert(`✅ Prêmios enviados com sucesso para ${targetUserIds.length} usuários!`);
             setGiftAmount('');
             setGiftDescription('');
+            setSelectedBadgeId('');
             setSelectedGiftUsers([]);
         } catch (err: any) {
-            alert('Erro ao enviar presentes: ' + err.message);
+            alert('Erro ao enviar prêmios: ' + err.message);
         } finally {
             setIsLoading(false);
         }
@@ -633,6 +892,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         reportData.forEach((item: any) => {
             const name = item.products?.name || item.notes || 'Item';
             const cat = item.products?.category || (item.notes?.startsWith('Cash Game') ? 'cash' : 'torneio');
+
+            if (reportCategoryFilter !== 'all' && cat !== reportCategoryFilter) return;
+            if (reportProductFilter !== 'all' && name !== reportProductFilter) return;
+
             if (!prodMap[name]) prodMap[name] = { qty: 0, total: 0, category: cat };
             prodMap[name].qty += item.quantity;
             prodMap[name].total += Number(item.total_price_brl);
@@ -643,6 +906,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             extraReportData.forEach((tx: any) => {
                 const name = tx.description || 'Transação';
                 const cat = tx.category || 'outros';
+
+                if (reportCategoryFilter !== 'all' && cat !== reportCategoryFilter) return;
+                if (reportProductFilter !== 'all' && name !== reportProductFilter) return;
+
                 if (!prodMap[name]) prodMap[name] = { qty: 0, total: 0, category: cat };
                 const amt = Math.abs(Number(tx.amount_brl));
                 prodMap[name].qty += 1;
@@ -664,6 +931,37 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const filteredProducts = productSection === 'bar' ? products.filter(p => p.category === 'bar')
         : productSection === 'produtos' ? products.filter(p => ['bet', 'jackpot', 'lastlonger'].includes(p.category))
             : [];
+
+    // Helper lists for product/category filters in reporting
+    const availableCategories = Array.from(new Set([
+        ...reportData.map(i => i.products?.category || (i.notes?.startsWith('Cash Game') ? 'cash' : 'torneio')),
+        ...extraReportData.map(i => i.category || 'outros')
+    ])).filter(Boolean).sort();
+
+    const availableProducts = Array.from(new Set([
+        ...reportData.map(i => i.products?.name || i.notes || 'Item'),
+        ...extraReportData.map(i => i.description || 'Transação')
+    ])).filter(Boolean).sort();
+
+    const filteredReportItems = reportData.filter(item => {
+        const name = item.products?.name || item.notes || 'Item';
+        const cat = item.products?.category || (item.notes?.startsWith('Cash Game') ? 'cash' : 'torneio');
+        if (reportFilter === 'product') {
+            if (reportCategoryFilter !== 'all' && cat !== reportCategoryFilter) return false;
+            if (reportProductFilter !== 'all' && name !== reportProductFilter) return false;
+        }
+        return true;
+    });
+
+    const filteredExtraReportItems = extraReportData.filter(tx => {
+        const name = tx.description || 'Transação';
+        const cat = tx.category || 'outros';
+        if (reportFilter === 'product') {
+            if (reportCategoryFilter !== 'all' && cat !== reportCategoryFilter) return false;
+            if (reportProductFilter !== 'all' && name !== reportProductFilter) return false;
+        }
+        return true;
+    });
 
     return (
         <div className="fixed inset-0 z-[100] bg-[#050214] flex flex-col">
@@ -689,7 +987,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
 
             <div className="flex-1 flex overflow-hidden">
                 <aside className="w-52 border-r border-white/10 bg-black/20 p-4 flex flex-col gap-2 flex-shrink-0">
-                    {[{ id: 'operational', icon: 'point_of_sale', label: 'Operaç.' }, { id: 'launch', icon: 'add_shopping_cart', label: 'Lançar' }, { id: 'reports', icon: 'bar_chart', label: 'Relat.' }, { id: 'send-gifts', icon: 'card_giftcard', label: 'Presentes' }].map(t => (
+                    {[{ id: 'operational', icon: 'point_of_sale', label: 'Operaç.' }, { id: 'launch', icon: 'add_shopping_cart', label: 'Lançar' }, { id: 'reports', icon: 'bar_chart', label: 'Relat.' }, { id: 'send-gifts', icon: 'stars', label: 'Prêmios' }, { id: 'debts', icon: 'receipt_long', label: 'Pendura' }, { id: 'communications', icon: 'campaign', label: 'Comunic.' }].map(t => (
                         <button key={t.id} onClick={() => { setActiveTab(t.id as any); if (t.id === 'reports' && selectedEvent) fetchReport(selectedEvent.id); }}
                             className={`flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all text-[10px] font-bold uppercase tracking-widest ${activeTab === t.id ? 'bg-primary text-white shadow-neon-pink' : 'text-gray-400 hover:bg-white/5'}`}>
                             <span className="material-icons-outlined text-sm">{t.icon}</span>{t.label}
@@ -713,26 +1011,47 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             {/* Left: commands list */}
                             <div className="flex-1 overflow-y-auto p-5 space-y-4 custom-scrollbar">
                                 {/* Event selector */}
-                                <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl p-3">
-                                    <span className="material-icons-outlined text-primary text-sm flex-shrink-0">event</span>
-                                    <select value={selectedEvent?.id || ''} onChange={e => { const ev = events.find(x => x.id === e.target.value) || null; setSelectedEvent(ev); setSelectedCommand(null); setPendingProduct(null); }}
-                                        className="flex-1 bg-transparent text-white text-sm font-bold outline-none"
-                                        style={{ backgroundColor: 'transparent' }}>
-                                        <option value="" style={{ backgroundColor: '#0a0720' }}>Selecionar Evento</option>
-                                        {events
-                                            .filter(ev => {
-                                                if (ev.status === 'closed') return false;
-                                                const today = new Date();
-                                                const tomorrow = new Date();
-                                                tomorrow.setDate(today.getDate() + 1);
+                                <div className="space-y-2">
+                                    <div className={`flex items-center gap-3 bg-white/5 border rounded-2xl p-3 transition-all ${(!selectedEvent || upcomingEventsList.some(e => e.id === selectedEvent?.id)) ? 'border-primary/40 bg-primary/5' : 'border-white/10'}`}>
+                                        <span className={`material-icons-outlined text-sm flex-shrink-0 ${(!selectedEvent || upcomingEventsList.some(e => e.id === selectedEvent?.id)) ? 'text-primary' : 'text-gray-500'}`}>calendar_today</span>
+                                        <select
+                                            value={upcomingEventsList.some(e => e.id === selectedEvent?.id) ? selectedEvent?.id : ''}
+                                            onChange={e => {
+                                                const ev = events.find(x => x.id === e.target.value) || null;
+                                                setSelectedEvent(ev); setSelectedCommand(null); setPendingProduct(null);
+                                            }}
+                                            className="flex-1 bg-transparent text-white text-sm font-bold outline-none cursor-pointer"
+                                        >
+                                            <option value="" style={{ backgroundColor: '#0a0720' }}>Próximos Eventos / Hoje</option>
+                                            {upcomingEventsList.map(ev => {
+                                                const isEvToday = ev.date === todayStr;
+                                                return (
+                                                    <option key={ev.id} value={ev.id} style={{ backgroundColor: '#16103a', color: isEvToday ? '#ff007a' : 'white' }}>
+                                                        {isEvToday ? '🔴 ' : ''}{ev.title} ({new Date(ev.date + 'T12:00:00').toLocaleDateString('pt-BR')})
+                                                    </option>
+                                                );
+                                            })}
+                                        </select>
+                                    </div>
 
-                                                const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
-                                                const tomorrowStr = tomorrow.getFullYear() + '-' + String(tomorrow.getMonth() + 1).padStart(2, '0') + '-' + String(tomorrow.getDate()).padStart(2, '0');
-
-                                                return ev.date === todayStr || ev.date === tomorrowStr;
-                                            })
-                                            .map(ev => <option key={ev.id} value={ev.id} style={{ backgroundColor: '#0a0720' }}>{ev.title} ({new Date(ev.date).toLocaleDateString('pt-BR')})</option>)}
-                                    </select>
+                                    <div className={`flex items-center gap-3 bg-white/5 border rounded-2xl p-3 transition-all ${pastEventsList.some(e => e.id === selectedEvent?.id) ? 'border-gray-500 bg-white/5' : 'border-white/5 opacity-40 hover:opacity-100'}`}>
+                                        <span className="material-icons-outlined text-gray-500 text-sm flex-shrink-0">history_toggle_off</span>
+                                        <select
+                                            value={pastEventsList.some(e => e.id === selectedEvent?.id) ? selectedEvent?.id : ''}
+                                            onChange={e => {
+                                                const ev = events.find(x => x.id === e.target.value) || null;
+                                                setSelectedEvent(ev); setSelectedCommand(null); setPendingProduct(null);
+                                            }}
+                                            className="flex-1 bg-transparent text-white text-sm font-bold outline-none cursor-pointer"
+                                        >
+                                            <option value="" style={{ backgroundColor: '#0a0720' }}>Arquivo de Eventos (Passados)</option>
+                                            {pastEventsList.map(ev => (
+                                                <option key={ev.id} value={ev.id} style={{ backgroundColor: '#16103a' }}>
+                                                    {ev.title} ({new Date(ev.date + 'T12:00:00').toLocaleDateString('pt-BR')})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
 
                                 <div className="flex gap-2">
@@ -774,6 +1093,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                                                     + Saldo
                                                                 </button>
                                                             )}
+                                                            <button onClick={e => { e.stopPropagation(); openClosedCommandView(cmd); }}
+                                                                className="px-2 py-0.5 bg-cyan-500/20 border border-cyan-500/50 text-cyan-400 text-[8px] font-black uppercase rounded hover:bg-cyan-500 hover:text-white transition-all whitespace-nowrap">
+                                                                Ver
+                                                            </button>
                                                             <button onClick={e => { e.stopPropagation(); setShowCheckout(true); fetchCommandItems(cmd.id); }}
                                                                 className="px-2 py-0.5 bg-red-500/20 border border-red-500/50 text-red-400 text-[8px] font-black uppercase rounded hover:bg-red-500 hover:text-white transition-all whitespace-nowrap">
                                                                 Fechar
@@ -912,13 +1235,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                                     const isPend = pendingProduct?.id === item.id;
                                                     const disabled = isTourItemDisabled(item);
                                                     const isAddon = item.name === 'Add On' || item.name === 'Add Duplo';
+                                                    const qty = commandItems.filter(ci => ci.notes?.startsWith(item.name)).length;
+                                                    const getTourIcon = (name: string) => {
+                                                        if (name === 'Buy In') return 'login';
+                                                        if (name === 'Staff') return 'volunteer_activism';
+                                                        if (name.includes('Rebuy')) return 'refresh';
+                                                        if (name.includes('Add')) return 'add_circle';
+                                                        return 'poker_chip';
+                                                    };
                                                     return (
                                                         <button key={item.id} onClick={() => handleTourItemClick(item)} disabled={disabled}
                                                             className={`p-2.5 rounded-xl flex flex-col items-center text-center active:scale-95 transition-all border relative
                                                                 ${disabled ? 'opacity-30 cursor-not-allowed border-white/5 bg-black/20' : isPend ? 'bg-yellow-500/20 border-yellow-400 shadow-[0_0_12px_rgba(234,179,8,0.4)]' : 'bg-black/40 border-white/10 hover:border-primary/50 group'}`}>
                                                             {disabled && <span className="absolute top-1 right-1 text-[8px] text-red-400 font-black">✓</span>}
+                                                            {!disabled && qty > 0 && <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-green-500 text-black text-[10px] font-black rounded-full flex items-center justify-center border border-[#050214]">{qty}x</span>}
                                                             {isAddon && vipStatus === 'vip_master' && <span className="absolute -top-1 -right-1 text-[7px] bg-yellow-500 text-black font-black px-1 rounded">+5K VIP</span>}
-                                                            <span className="material-icons-outlined text-gray-500 mb-1 text-base">poker_chip</span>
+                                                            <span className="material-icons-outlined text-gray-500 mb-1 text-base group-hover:text-primary transition-colors">
+                                                                {getTourIcon(item.name)}
+                                                            </span>
                                                             <span className="text-[10px] text-white font-bold">{item.name}</span>
                                                             <span className="text-[9px] text-gray-500">{item.chips}</span>
                                                             {hasDisc ? (
@@ -929,18 +1263,47 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                                             ) : <span className="text-[10px] text-primary font-black">R$ {item.price.toFixed(2)}</span>}
                                                         </button>
                                                     );
-                                                }) : getCashItems().map(item => {
-                                                    const isPend = pendingProduct?.id === item.id;
-                                                    return (
-                                                        <button key={item.id} onClick={() => handleCashItemClick(item)}
-                                                            className={`p-2.5 rounded-xl flex flex-col items-center text-center active:scale-95 transition-all border relative
-                                                                ${isPend ? 'bg-yellow-500/20 border-yellow-400 shadow-[0_0_12px_rgba(234,179,8,0.4)]' : 'bg-black/40 border-white/10 hover:border-primary/50 group'}`}>
-                                                            <span className="material-icons-outlined text-gray-500 mb-1 text-base">payments</span>
-                                                            <span className="text-[10px] text-white font-bold">{item.name}</span>
-                                                            <span className="text-[10px] text-primary font-black">R$ {item.price.toFixed(2)}</span>
-                                                        </button>
-                                                    );
-                                                })}
+                                                }) : (
+                                                    <div className="col-span-2 space-y-4">
+                                                        <div className="bg-black/40 border border-white/10 rounded-2xl p-4">
+                                                            <div className="flex items-center gap-2 mb-4">
+                                                                <span className="material-icons-outlined text-primary">payments</span>
+                                                                <label className="text-[10px] font-black text-gray-300 uppercase block tracking-widest">Lançar Compra de Cash</label>
+                                                            </div>
+                                                            <div className="flex gap-2">
+                                                                <div className="relative flex-1">
+                                                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-black text-sm">R$</span>
+                                                                    <input
+                                                                        type="number"
+                                                                        value={cashAmount}
+                                                                        onChange={e => setCashAmount(e.target.value)}
+                                                                        placeholder="0,00"
+                                                                        className="w-full bg-black/60 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white font-black text-lg focus:border-primary outline-none transition-all"
+                                                                    />
+                                                                </div>
+                                                                <button
+                                                                    onClick={handleAddManualCash}
+                                                                    disabled={isLoading || !cashAmount}
+                                                                    className="bg-primary hover:bg-white hover:text-black text-white px-6 rounded-xl font-black uppercase text-xs transition-all shadow-neon-pink flex items-center gap-2 disabled:opacity-50"
+                                                                >
+                                                                    {isLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <><span className="material-icons-outlined text-sm">add_circle</span> Lançar</>}
+                                                                </button>
+                                                            </div>
+                                                            <p className="text-[9px] text-gray-600 italic mt-3">Insira o valor exato que o jogador está comprando em fichas.</p>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            {commandItems.filter(ci => ci.notes?.startsWith('Cash Game')).map((item, idx) => (
+                                                                <div key={idx} className="bg-green-500/5 border border-green-500/10 rounded-xl p-2.5 flex flex-col items-center text-center">
+                                                                    <span className="material-icons-outlined text-green-500/50 text-xs mb-1">check_circle</span>
+                                                                    <span className="text-[9px] text-gray-400 uppercase font-black">Lançado</span>
+                                                                    <span className="text-xs text-white font-black">R$ {Number(item.total_price_brl).toFixed(2)}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
                                             </div>
                                         </div>
                                     </div>
@@ -970,8 +1333,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                     <h3 className="text-xl font-display font-black text-white uppercase">Relatório Financeiro</h3>
                                     <div className="flex gap-2 mt-2">
                                         <button onClick={() => { setReportFilter('event'); setReportData([]); }} className={`text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-xl transition-all ${reportFilter === 'event' ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}>Por Evento</button>
-                                        <button onClick={() => { setReportFilter('date'); setReportData([]); }} className={`text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-xl transition-all ${reportFilter === 'date' ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}>Por Período</button>
-                                        <button onClick={() => { setReportFilter('product'); setReportData([]); setExtraReportData([]); fetchMonthlyReport(startDate, endDate); }} className={`text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-xl transition-all ${reportFilter === 'product' ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}>Por Produto</button>
+                                        <button onClick={() => { setReportFilter('date'); setReportData([]); setReportProductFilter('all'); setReportCategoryFilter('all'); }} className={`text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-xl transition-all ${reportFilter === 'date' ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}>Por Período</button>
+                                        <button onClick={() => { setReportFilter('product'); setReportData([]); setExtraReportData([]); setReportProductFilter('all'); setReportCategoryFilter('all'); fetchMonthlyReport(startDate, endDate); }} className={`text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-xl transition-all ${reportFilter === 'product' ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}>Por Produto</button>
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
@@ -986,11 +1349,42 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                             {selectedEvent && <button onClick={() => fetchReport(selectedEvent.id)} className="p-2 bg-white/5 border border-white/10 rounded-xl hover:bg-primary/20 hover:border-primary/50 transition-all"><span className="material-icons-outlined text-sm text-gray-400">refresh</span></button>}
                                         </>
                                     ) : (
-                                        <div className="flex items-center gap-2 bg-[#0a0720] border border-white/10 rounded-xl px-3 py-1">
-                                            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-transparent text-gray-400 font-bold text-sm outline-none w-32 custom-date-input" />
-                                            <span className="text-gray-500 font-black">até</span>
-                                            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-transparent text-gray-400 font-bold text-sm outline-none w-32 custom-date-input" />
-                                            <button onClick={() => fetchMonthlyReport(startDate, endDate)} className="p-2 bg-primary hover:bg-primary/80 text-white rounded-lg transition-all shadow-neon-pink ml-2"><span className="material-icons-outlined text-sm">search</span></button>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <div className="flex items-center gap-2 bg-[#0a0720] border border-white/10 rounded-xl px-3 py-1">
+                                                <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-transparent text-gray-400 font-bold text-sm outline-none w-32 custom-date-input" />
+                                                <span className="text-gray-500 font-black">até</span>
+                                                <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-transparent text-gray-400 font-bold text-sm outline-none w-32 custom-date-input" />
+                                                <button onClick={() => fetchMonthlyReport(startDate, endDate)} className="p-2 bg-primary hover:bg-primary/80 text-white rounded-lg transition-all shadow-neon-pink ml-2"><span className="material-icons-outlined text-sm">search</span></button>
+                                            </div>
+
+                                            {reportFilter === 'product' && reportData.length > 0 && (
+                                                <div className="flex items-center gap-2">
+                                                    <select
+                                                        value={reportCategoryFilter}
+                                                        onChange={e => { setReportCategoryFilter(e.target.value); setReportProductFilter('all'); }}
+                                                        className="bg-[#0a0720] border border-white/10 rounded-xl px-3 py-2 text-white outline-none text-[10px] font-black uppercase"
+                                                    >
+                                                        <option value="all">Todas Categorias</option>
+                                                        {availableCategories.map(c => <option key={c} value={c}>{c.toUpperCase()}</option>)}
+                                                    </select>
+
+                                                    <select
+                                                        value={reportProductFilter}
+                                                        onChange={e => setReportProductFilter(e.target.value)}
+                                                        className="bg-[#0a0720] border border-white/10 rounded-xl px-3 py-2 text-white outline-none text-[10px] font-black uppercase max-w-[200px]"
+                                                    >
+                                                        <option value="all">Todos Produtos</option>
+                                                        {availableProducts
+                                                            .filter(p => {
+                                                                if (reportCategoryFilter === 'all') return true;
+                                                                const isCmdProd = reportData.some(i => (i.products?.name || i.notes || 'Item') === p && (i.products?.category || (i.notes?.startsWith('Cash Game') ? 'cash' : 'torneio')) === reportCategoryFilter);
+                                                                const isExtraProd = extraReportData.some(i => (i.description || 'Transação') === p && (i.category || 'outros') === reportCategoryFilter);
+                                                                return isCmdProd || isExtraProd;
+                                                            })
+                                                            .map(p => <option key={p} value={p}>{p}</option>)}
+                                                    </select>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -1006,22 +1400,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                         {[
                                             {
                                                 label: 'Total Bruto',
-                                                val: `R$ ${(reportData.reduce((s, i) => s + Number(i.total_price_brl), 0) + (reportFilter !== 'event' ? extraReportData.reduce((s, i) => s + Math.abs(Number(i.amount_brl)), 0) : 0)).toFixed(2)}`,
+                                                val: `R$ ${(filteredReportItems.reduce((s, i) => s + Number(i.total_price_brl), 0) + (reportFilter !== 'event' ? filteredExtraReportItems.reduce((s, i) => s + Math.abs(Number(i.amount_brl)), 0) : 0)).toFixed(2)}`,
                                                 color: 'text-white'
                                             },
                                             {
                                                 label: 'Total Itens',
-                                                val: reportData.reduce((s, i) => s + i.quantity, 0) + (reportFilter !== 'event' ? extraReportData.length : 0),
+                                                val: filteredReportItems.reduce((s, i) => s + i.quantity, 0) + (reportFilter !== 'event' ? filteredExtraReportItems.length : 0),
                                                 color: 'text-white'
                                             },
                                             {
                                                 label: 'Quebra de Caixa',
-                                                val: `R$ ${reportCommandsData.reduce((s, c) => s + Number(c.discount_brl || 0), 0).toFixed(2)}`,
+                                                val: `R$ ${(reportProductFilter === 'all' && reportCategoryFilter === 'all' ? reportCommandsData.reduce((s, c) => s + Number(c.discount_brl || 0), 0) : 0).toFixed(2)}`,
                                                 color: 'text-red-400'
                                             },
                                             {
                                                 label: 'Comandas',
-                                                val: [...new Set(reportData.map(i => i.command_id))].length + (reportFilter !== 'event' ? extraReportData.length : 0),
+                                                val: [...new Set(filteredReportItems.map(i => i.command_id))].length + (reportFilter !== 'event' ? filteredExtraReportItems.length : 0),
                                                 color: 'text-white'
                                             }
                                         ].map(c => (
@@ -1044,9 +1438,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                         <div className="text-right">
                                             <p className="text-2xl font-display font-black text-green-400">
                                                 R$ {(
-                                                    reportData.reduce((s, i) => s + Number(i.total_price_brl), 0) +
-                                                    (reportFilter !== 'event' ? extraReportData.reduce((s, i) => s + Math.abs(Number(i.amount_brl)), 0) : 0) -
-                                                    reportCommandsData.reduce((s, c) => s + Number(c.discount_brl || 0), 0)
+                                                    filteredReportItems.reduce((s, i) => s + Number(i.total_price_brl), 0) +
+                                                    (reportFilter !== 'event' ? filteredExtraReportItems.reduce((s, i) => s + Math.abs(Number(i.amount_brl)), 0) : 0) -
+                                                    (reportProductFilter === 'all' && reportCategoryFilter === 'all' ? reportCommandsData.reduce((s, c) => s + Number(c.discount_brl || 0), 0) : 0)
                                                 ).toFixed(2)}
                                             </p>
                                         </div>
@@ -1269,11 +1663,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                         <div className="p-8 max-w-4xl mx-auto">
                             <div className="flex items-center gap-4 mb-8">
                                 <div className="w-14 h-14 rounded-2xl bg-primary/20 border border-primary/40 flex items-center justify-center shadow-neon-pink">
-                                    <span className="material-icons-outlined text-primary text-3xl">redeem</span>
+                                    <span className="material-icons-outlined text-primary text-3xl">stars</span>
                                 </div>
                                 <div>
-                                    <h3 className="text-2xl font-display font-black text-white uppercase tracking-widest">Enviar Presentes</h3>
-                                    <p className="text-gray-400 text-sm">Distribua saldo ou chipz para os jogadores da plataforma.</p>
+                                    <h3 className="text-2xl font-display font-black text-white uppercase tracking-widest">Prêmios & Honrarias</h3>
+                                    <p className="text-gray-400 text-sm">Distribua créditos, fichas ou insígnias por mérito ou glória.</p>
                                 </div>
                             </div>
 
@@ -1299,33 +1693,56 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                                 </div>
                                             </div>
 
-                                            <div className="flex gap-4">
-                                                <div className="flex-1">
-                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Tipo de Moeda</label>
-                                                    <div className="flex gap-2">
-                                                        <button onClick={() => setGiftType('brl')} className={`flex-1 py-3 rounded-xl border text-[10px] font-black uppercase transition-all ${giftType === 'brl' ? 'bg-green-500/20 border-green-500/50 text-green-400' : 'bg-white/5 border-white/10 text-gray-500 hover:text-gray-300'}`}>
-                                                            R$ Reais
-                                                        </button>
-                                                        <button onClick={() => setGiftType('chipz')} className={`flex-1 py-3 rounded-xl border text-[10px] font-black uppercase transition-all ${giftType === 'chipz' ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-400' : 'bg-white/5 border-white/10 text-gray-500 hover:text-gray-300'}`}>
-                                                            Chipz
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                <div className="flex-1">
-                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Quantidade</label>
-                                                    <input type="number" value={giftAmount} onChange={e => setGiftAmount(e.target.value)} placeholder="0.00"
-                                                        className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-black focus:border-primary outline-none" />
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Tipo de Recompensa</label>
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => setGiftType('brl')} className={`flex-1 py-3 rounded-xl border text-[10px] font-black uppercase transition-all ${giftType === 'brl' ? 'bg-primary border-primary text-white shadow-neon-pink' : 'bg-white/5 border-white/10 text-gray-400'}`}>
+                                                        Créditos (R$)
+                                                    </button>
+                                                    <button onClick={() => setGiftType('chipz')} className={`flex-1 py-3 rounded-xl border text-[10px] font-black uppercase transition-all ${giftType === 'chipz' ? 'bg-cyan-500 border-cyan-500 text-white shadow-neon-cyan' : 'bg-white/5 border-white/10 text-gray-400'}`}>
+                                                        Chipz
+                                                    </button>
+                                                    <button onClick={() => setGiftType('badge')} className={`flex-1 py-3 rounded-xl border text-[10px] font-black uppercase transition-all ${giftType === 'badge' ? 'bg-yellow-500 border-yellow-500 text-white shadow-neon-yellow' : 'bg-white/5 border-white/10 text-gray-400'}`}>
+                                                        Insígnia
+                                                    </button>
                                                 </div>
                                             </div>
 
+                                            {giftType === 'badge' ? (
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Selecionar Insígnia</label>
+                                                    <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                                                        {badgeTemplates.map(b => (
+                                                            <button
+                                                                key={b.id}
+                                                                onClick={() => setSelectedBadgeId(b.id)}
+                                                                className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${selectedBadgeId === b.id ? 'bg-white/10 border-yellow-500/50' : 'bg-black/20 border-white/5 hover:border-white/20'}`}
+                                                            >
+                                                                <span className="material-icons text-xl text-yellow-400">{b.icon || 'stars'}</span>
+                                                                <span className="text-[10px] font-black text-white uppercase truncate w-full text-center">{b.title}</span>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="flex-1">
+                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Quantidade</label>
+                                                    <div className="relative">
+                                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm">{giftType === 'brl' ? 'R$' : 'C'}</span>
+                                                        <input type="number" value={giftAmount} onChange={e => setGiftAmount(e.target.value)} placeholder="0.00"
+                                                            className="w-full bg-[#050214] border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white text-sm font-black focus:border-primary outline-none transition-all" />
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             <div>
-                                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Descrição / Motivo</label>
-                                                <input type="text" value={giftDescription} onChange={e => setGiftDescription(e.target.value)} placeholder="Ex: Presente de Natal, Reembolso, Bônus VIP..."
+                                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Justificativa / Motivo</label>
+                                                <input type="text" value={giftDescription} onChange={e => setGiftDescription(e.target.value)} placeholder={giftType === 'badge' ? 'Ex: Membro Honorário por serviços prestados...' : 'Ex: Presente de Natal, Bônus VIP...'}
                                                     className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none" />
                                             </div>
 
-                                            <button onClick={handleSendGifts} disabled={isLoading || !giftAmount} className="w-full bg-primary hover:bg-white hover:text-black text-white font-black py-4 rounded-2xl transition-all shadow-neon-pink uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-50 mt-4">
-                                                {isLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <><span className="material-icons-outlined text-sm">send</span> {giftTarget === 'all' ? 'Enviar para Todos' : 'Enviar Presente'}</>}
+                                            <button onClick={handleSendGifts} disabled={isLoading || (giftType !== 'badge' && !giftAmount) || (giftType === 'badge' && !selectedBadgeId)} className="w-full bg-primary hover:bg-white hover:text-black text-white font-black py-4 rounded-2xl transition-all shadow-neon-pink uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-50 mt-4">
+                                                {isLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <><span className="material-icons-outlined text-sm">verified</span> Confirmar Recompensas</>}
                                             </button>
                                         </div>
                                     </div>
@@ -1385,6 +1802,229 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             </div>
                         </div>
                     )}
+
+                    {activeTab === 'debts' && (
+                        <div className="p-8 max-w-5xl mx-auto">
+                            <div className="flex items-center justify-between mb-8">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-14 h-14 rounded-2xl bg-red-500/20 border border-red-500/40 flex items-center justify-center shadow-neon-red">
+                                        <span className="material-icons-outlined text-red-500 text-3xl">receipt_long</span>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-2xl font-display font-black text-white uppercase tracking-widest">Pendências (Pendura)</h3>
+                                        <p className="text-gray-400 text-sm">Gerenciamento de débitos pendentes dos jogadores.</p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[10px] text-gray-500 font-black uppercase mb-1">Total Pendurado (Agregado)</p>
+                                    <p className="text-3xl font-display font-black text-red-500">R$ {totalActiveDebt.toFixed(2)}</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-black/40 border border-white/10 rounded-3xl overflow-hidden">
+                                <div className="p-4 border-b border-white/10 bg-black/20 flex items-center justify-between gap-4">
+                                    <div className="relative flex-1 max-w-md">
+                                        <span className="material-icons-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">search</span>
+                                        <input
+                                            type="text"
+                                            placeholder="Filtrar por nome ou ID..."
+                                            onChange={(e) => {
+                                                const q = e.target.value.toLowerCase();
+                                                // Local filtering can be handled by a filteredDebts state if list grows large
+                                            }}
+                                            className="w-full bg-[#050214] border border-white/10 rounded-xl pl-10 pr-4 py-2 text-white text-xs focus:border-primary outline-none"
+                                        />
+                                    </div>
+                                    <button onClick={fetchDebts} className="p-2 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all">
+                                        <span className="material-icons-outlined text-sm text-gray-400">refresh</span>
+                                    </button>
+                                </div>
+
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-xs">
+                                        <thead>
+                                            <tr className="border-b border-white/5 bg-black/40 text-gray-500 uppercase font-bold">
+                                                <th className="text-left px-6 py-4">Jogador</th>
+                                                <th className="text-left px-6 py-4">Evento / Data</th>
+                                                <th className="text-center px-6 py-4">Valor</th>
+                                                <th className="text-right px-6 py-4">Ações</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-white/5">
+                                            {activeDebts.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={4} className="px-6 py-12 text-center text-gray-600 italic">
+                                                        Nenhuma pendência encontrada.
+                                                    </td>
+                                                </tr>
+                                            ) : activeDebts.map(debt => (
+                                                <tr key={debt.id} className="hover:bg-white/5 transition-colors">
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <img src={debt.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${debt.profiles?.name}&background=random`} className="w-9 h-9 rounded-full border border-white/10" alt="" />
+                                                            <div>
+                                                                <p className="text-white font-bold">{debt.profiles?.name}</p>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-[10px] text-primary font-black">CR#{String(debt.profiles?.numeric_id).padStart(3, '0')}</span>
+                                                                    <span className="text-[10px] text-green-400 font-black">💵 R$ {Number(debt.profiles?.balance_brl || 0).toFixed(2)}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <p className="text-gray-300 font-bold">{debt.events?.title || 'Evento'}</p>
+                                                        <p className="text-[10px] text-gray-500">{new Date(debt.created_at).toLocaleString('pt-BR')}</p>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className="text-red-500 font-display font-black text-base">R$ {Number(debt.amount_brl).toFixed(2)}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <div className="flex justify-end gap-2">
+                                                            <button
+                                                                onClick={() => handleSettleDebt(debt, 'balance')}
+                                                                disabled={isLoading || Number(debt.profiles?.balance_brl || 0) < Number(debt.amount_brl)}
+                                                                className="px-3 py-1.5 bg-green-500/10 border border-green-500/30 text-green-400 text-[10px] font-black uppercase rounded-lg hover:bg-green-500 hover:text-white transition-all disabled:opacity-30 disabled:grayscale"
+                                                            >
+                                                                Quitar c/ Saldo
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleSettleDebt(debt, 'manual')}
+                                                                disabled={isLoading}
+                                                                className="px-3 py-1.5 bg-white/5 border border-white/10 text-gray-400 text-[10px] font-black uppercase rounded-lg hover:bg-white/20 hover:text-white transition-all"
+                                                            >
+                                                                Baixa Manual
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'communications' && (
+                        <div className="p-8 max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
+                            <div className="flex items-center gap-4 mb-2">
+                                <div className="w-14 h-14 rounded-2xl bg-primary/20 border border-primary/40 flex items-center justify-center shadow-neon-pink">
+                                    <span className="material-icons-outlined text-primary text-3xl">campaign</span>
+                                </div>
+                                <div>
+                                    <h3 className="text-2xl font-display font-black text-white uppercase tracking-widest">Comunicação Admin</h3>
+                                    <p className="text-gray-400 text-sm">Envie comunicados globais ou crie enquetes para toda a comunidade.</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                                <div className="bg-black/40 p-8 rounded-[2.5rem] border border-white/10 shadow-2xl relative overflow-hidden group">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-primary/10 transition-colors"></div>
+                                    <h3 className="text-xl font-display font-black text-white mb-6 flex items-center gap-3">
+                                        <span className="material-icons-outlined text-primary">send</span>
+                                        Comunicado Global
+                                    </h3>
+                                    <div className="space-y-5">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-gray-500 uppercase ml-1">Assunto</label>
+                                            <input
+                                                className="w-full bg-[#050214] border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-primary transition-all text-sm font-bold"
+                                                placeholder="Ex: Novo Torneio High Roller Adicionado!"
+                                                value={adminSubject}
+                                                onChange={e => setAdminSubject(e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-gray-500 uppercase ml-1">Mensagem</label>
+                                            <textarea
+                                                className="w-full bg-[#050214] border border-white/10 rounded-2xl p-4 text-white h-40 outline-none focus:border-primary transition-all resize-none text-sm leading-relaxed"
+                                                placeholder="Escreva aqui o conteúdo que todos os jogadores irão receber..."
+                                                value={adminMsgContent}
+                                                onChange={e => setAdminMsgContent(e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="flex gap-4">
+                                            <div className="flex-1">
+                                                <label className="text-[10px] font-black text-gray-500 uppercase ml-1 mb-1.5 block">Categoria</label>
+                                                <select
+                                                    className="w-full bg-[#050214] border border-white/10 rounded-2xl px-4 py-3 text-white outline-none focus:border-primary text-sm font-bold"
+                                                    value={adminMsgCategory}
+                                                    onChange={e => setAdminMsgCategory(e.target.value as any)}
+                                                >
+                                                    <option value="admin">📣 Admin (Geral)</option>
+                                                    <option value="system">⚙️ Sistema (Importante)</option>
+                                                    <option value="tournament">🏆 Torneio (Eventos)</option>
+                                                </select>
+                                            </div>
+                                            <div className="flex items-end flex-1">
+                                                <button
+                                                    onClick={handleSendBroadcast}
+                                                    disabled={!adminSubject || !adminMsgContent}
+                                                    className="w-full bg-primary hover:bg-white hover:text-black text-white font-black py-3.5 rounded-2xl transition-all shadow-neon-pink uppercase tracking-widest text-[10px] disabled:opacity-30 flex items-center justify-center gap-2"
+                                                >
+                                                    <span className="material-icons-outlined text-sm">rocket_launch</span>
+                                                    Disparar Agora
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-black/40 p-8 rounded-[2.5rem] border border-white/10 shadow-2xl relative overflow-hidden group">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-secondary/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-secondary/10 transition-colors"></div>
+                                    <h3 className="text-xl font-display font-black text-white mb-6 flex items-center gap-3">
+                                        <span className="material-icons-outlined text-secondary">poll</span>
+                                        Nova Enquete
+                                    </h3>
+                                    <div className="space-y-5">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-gray-500 uppercase ml-1">Pergunta</label>
+                                            <input
+                                                className="w-full bg-[#050214] border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-secondary transition-all text-sm font-bold"
+                                                placeholder="Qual a pergunta?"
+                                                value={pollQuestion}
+                                                onChange={e => setPollQuestion(e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-gray-500 uppercase ml-1 block mb-1.5">Opções de Resposta</label>
+                                            <div className="space-y-3 max-h-56 overflow-y-auto pr-2 custom-scrollbar">
+                                                {pollOptions.map((opt, i) => (
+                                                    <div key={i} className="relative group/opt">
+                                                        <input
+                                                            className="w-full bg-[#050214] border border-white/10 rounded-2xl p-4 pr-10 text-xs text-white outline-none focus:border-secondary transition-all font-bold placeholder:font-normal placeholder:opacity-30"
+                                                            placeholder={`Opção ${i + 1}`}
+                                                            value={opt}
+                                                            onChange={e => handleUpdatePollOption(i, e.target.value)}
+                                                        />
+                                                        {pollOptions.length > 2 && (
+                                                            <button
+                                                                onClick={() => setPollOptions(pollOptions.filter((_, idx) => idx !== i))}
+                                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-red-500 opacity-0 group-hover/opt:opacity-100 transition-opacity"
+                                                            >
+                                                                <span className="material-icons-outlined text-sm">remove_circle_outline</span>
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                                <button onClick={handleAddPollOption} className="w-full bg-white/5 border border-white/5 hover:border-secondary/30 rounded-2xl py-3 text-secondary text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all">
+                                                    <span className="material-icons-outlined text-sm">add</span> Adicionar Opção
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={handleCreatePollSubmit}
+                                            disabled={!pollQuestion || pollOptions.filter(o => o.trim()).length < 2}
+                                            className="w-full bg-secondary hover:bg-white hover:text-black text-white font-black py-4 rounded-2xl transition-all shadow-neon-blue-light uppercase tracking-widest text-[10px] disabled:opacity-30 flex items-center justify-center gap-2"
+                                        >
+                                            <span className="material-icons-outlined text-sm">public</span>
+                                            Publicar Enquete
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </main>
             </div>
 
@@ -1425,7 +2065,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                                 <span className="text-[10px] text-gray-500 font-mono flex-shrink-0">{time}</span>
                                                 <span className="text-xs text-gray-300 truncate">{cleanName}</span>
                                             </div>
-                                            <span className="text-xs text-white font-bold whitespace-nowrap">{Number(item.total_price_brl) === 0 ? 'GRÁTIS' : `R$ ${Number(item.total_price_brl).toFixed(2)}`}</span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs text-white font-bold whitespace-nowrap">{Number(item.total_price_brl) === 0 ? 'GRÁTIS' : `R$ ${Number(item.total_price_brl).toFixed(2)}`}</span>
+                                                <button
+                                                    onClick={() => handleDeleteCommandItem(item)}
+                                                    className="text-gray-600 hover:text-red-500 transition-colors p-1"
+                                                    title="Remover Item"
+                                                >
+                                                    <span className="material-icons-outlined text-sm">close</span>
+                                                </button>
+                                            </div>
                                         </div>
                                     );
                                 })}
@@ -1433,27 +2082,42 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                         </div>
 
                         <div className="p-5 flex-shrink-0 border-t border-white/10">
-                            <div className="flex justify-between items-center mb-2">
-                                <span className="text-xs text-gray-500 uppercase font-black">Subtotal</span>
-                                <span className="text-sm font-bold text-white">R$ {Number(selectedCommand.total_brl).toFixed(2)}</span>
+                            <div className="flex items-center justify-between mb-2 pt-2 border-t border-white/5">
+                                <span className="text-sm text-white font-black uppercase">Faturamento Líquido</span>
+                                <span className="text-lg font-display font-black text-green-400">R$ {Math.max(0, Number(selectedCommand.total_brl) - (parseFloat(checkoutDiscount) || 0) - (parseFloat(checkoutDebt) || 0)).toFixed(2)}</span>
                             </div>
-                            <div className="flex items-center justify-between mb-4 gap-4">
-                                <span className="text-xs text-green-400 uppercase font-black">Desconto (R$)</span>
-                                <input
-                                    type="number"
-                                    value={checkoutDiscount}
-                                    onChange={e => setCheckoutDiscount(e.target.value)}
-                                    placeholder="0.00"
-                                    className="w-24 bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-right text-white text-sm font-bold outline-none focus:border-green-400"
-                                />
+                            <div className="space-y-4 mb-4">
+                                <div className="flex items-center justify-between gap-4">
+                                    <span className="text-[10px] text-green-400 uppercase font-black">Adicionar Desconto (R$)</span>
+                                    <input
+                                        type="number"
+                                        value={checkoutDiscount}
+                                        onChange={e => setCheckoutDiscount(e.target.value)}
+                                        placeholder="0.00"
+                                        className="w-24 bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-right text-white text-sm font-bold outline-none focus:border-green-400"
+                                    />
+                                </div>
+                                <div className="flex items-center justify-between gap-4">
+                                    <span className="text-[10px] text-red-500 uppercase font-black">Colocar na Pendura (R$)</span>
+                                    <input
+                                        type="number"
+                                        value={checkoutDebt}
+                                        onChange={e => setCheckoutDebt(e.target.value)}
+                                        placeholder="0.00"
+                                        className="w-24 bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-right text-white text-sm font-bold outline-none focus:border-red-500"
+                                    />
+                                </div>
                             </div>
-                            <div className="flex justify-between items-center mb-4 pt-2 border-t border-white/5">
-                                <span className="text-sm text-white font-black uppercase">Total Final</span>
-                                <span className="text-xl font-display font-black text-primary">R$ {Math.max(0, Number(selectedCommand.total_brl) - (parseFloat(checkoutDiscount) || 0)).toFixed(2)}</span>
+                            <div className="flex justify-between items-center mb-4 pt-2 border-t border-white/5 bg-primary/5 -mx-5 px-5 py-2">
+                                <div>
+                                    <p className="text-[10px] text-white font-black uppercase">Saldo a cobrar</p>
+                                    <p className="text-[8px] text-gray-400 uppercase">Limite: R$ {Number(selectedCommand.profiles?.debt_limit_brl || 0).toFixed(2)}</p>
+                                </div>
+                                <span className="text-xl font-display font-black text-primary">R$ {Math.max(0, Number(selectedCommand.total_brl) - (parseFloat(checkoutDiscount) || 0) - (parseFloat(checkoutDebt) || 0)).toFixed(2)}</span>
                             </div>
                             <div className="space-y-2">
                                 <button onClick={handleCloseCommand} disabled={isLoading} className="w-full bg-primary hover:bg-primary/80 disabled:opacity-50 text-white font-black py-3 rounded-2xl transition-all shadow-neon-pink uppercase tracking-widest flex items-center justify-center gap-2 text-sm">
-                                    {isLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <><span className="material-icons-outlined text-sm">payments</span>Confirmar (BRL)</>}
+                                    {isLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <><span className="material-icons-outlined text-sm">payments</span>Confirmar e Cobrar</>}
                                 </button>
                                 <button onClick={() => setShowCheckout(false)} className="w-full bg-white/5 hover:bg-white/10 text-gray-400 font-bold py-2.5 rounded-2xl uppercase text-xs tracking-widest">Voltar</button>
                             </div>
@@ -1461,6 +2125,33 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                     </div>
                 </div>
             )}
+
+            {/* Confirmation Checkout Modal */}
+            {confirmingCheckout && selectedCommand && (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl">
+                    <div className="bg-[#0f0a28] border border-white/10 rounded-3xl w-full max-w-sm shadow-2xl p-8 text-center animate-in zoom-in duration-200">
+                        <div className="w-20 h-20 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center mx-auto mb-6">
+                            <span className="material-icons-outlined text-primary text-4xl">help_outline</span>
+                        </div>
+                        <h3 className="text-xl font-display font-black text-white uppercase mb-2">Confirmar Encerramento?</h3>
+                        <div className="text-gray-400 text-sm mb-6 leading-relaxed space-y-2">
+                            <p>Total Final: <span className="text-white font-bold">R$ {(Number(selectedCommand.total_brl) - (parseFloat(checkoutDiscount) || 0)).toFixed(2)}</span></p>
+                            {parseFloat(checkoutDebt) > 0 && <p className="text-red-400 font-bold">Pendura: R$ {parseFloat(checkoutDebt).toFixed(2)}</p>}
+                            <p className="bg-white/5 p-2 rounded-lg">
+                                Valor a ser debitado do saldo: <br />
+                                <span className="text-primary font-black text-lg">R$ {Math.max(0, Number(selectedCommand.total_brl) - (parseFloat(checkoutDiscount) || 0) - (parseFloat(checkoutDebt) || 0)).toFixed(2)}</span>
+                            </p>
+                        </div>
+                        <div className="space-y-3">
+                            <button onClick={handleCloseCommand} disabled={isLoading} className="w-full bg-primary hover:bg-primary/80 disabled:opacity-50 text-white font-black py-4 rounded-2xl transition-all shadow-neon-pink uppercase tracking-widest flex items-center justify-center gap-2">
+                                {isLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <>SIM, DEBITAR E FECHAR</>}
+                            </button>
+                            <button onClick={() => setConfirmingCheckout(false)} className="w-full py-3 text-gray-500 font-bold uppercase text-xs tracking-widest hover:text-white transition-colors">Cancelar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
 
             {/* Top-Up Modal */}
             {showTopUp && selectedCommand && isAdmin && (
@@ -1482,6 +2173,27 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                 {isLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <><span className="material-icons-outlined text-sm">add_card</span>Confirmar Crédito</>}
                             </button>
                             <button onClick={() => { setShowTopUp(false); setTopUpAmount(''); }} className="w-full bg-white/5 hover:bg-white/10 text-gray-400 font-bold py-2.5 rounded-2xl uppercase text-xs tracking-widest">Cancelar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Confirmation Top-Up Modal */}
+            {confirmingTopUp && selectedCommand && (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl">
+                    <div className="bg-[#0f0a28] border border-white/10 rounded-3xl w-full max-w-sm shadow-2xl p-8 text-center animate-in zoom-in duration-200">
+                        <div className="w-20 h-20 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center mx-auto mb-6">
+                            <span className="material-icons-outlined text-green-400 text-4xl">account_balance_wallet</span>
+                        </div>
+                        <h3 className="text-xl font-display font-black text-white uppercase mb-2">Confirmar Pagamento?</h3>
+                        <p className="text-gray-400 text-sm mb-6 leading-relaxed">
+                            Você confirma que recebeu <span className="text-green-400 font-bold">R$ {Number(topUpAmount).toFixed(2)}</span> em espécie do usuário <span className="text-white font-bold">{selectedCommand.profiles?.name}</span>?
+                        </p>
+                        <div className="space-y-3">
+                            <button onClick={handleTopUp} disabled={isLoading} className="w-full bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-black py-4 rounded-2xl transition-all uppercase tracking-widest flex items-center justify-center gap-2">
+                                {isLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <>DAR BAIXA E ADD SALDO</>}
+                            </button>
+                            <button onClick={() => { setConfirmingTopUp(false); setIsLoading(false); }} className="w-full py-3 text-gray-500 font-bold uppercase text-xs tracking-widest hover:text-white transition-colors">Cancelar</button>
                         </div>
                     </div>
                 </div>
@@ -1563,9 +2275,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                                         {detail && <p className="text-[10px] text-gray-500 truncate">{detail}</p>}
                                                     </div>
                                                 </div>
-                                                <span className={`text-sm font-black whitespace-nowrap ${price === 0 ? 'text-green-400' : 'text-white'}`}>
-                                                    {price === 0 ? 'GRÁTIS' : `R$ ${price.toFixed(2)}`}
-                                                </span>
+                                                <div className="flex items-center gap-3">
+                                                    <span className={`text-sm font-black whitespace-nowrap ${price === 0 ? 'text-green-400' : 'text-white'}`}>
+                                                        {price === 0 ? 'GRÁTIS' : `R$ ${price.toFixed(2)}`}
+                                                    </span>
+                                                    {viewingClosedCommand.status === 'open' && (
+                                                        <button
+                                                            onClick={() => handleDeleteCommandItem(item)}
+                                                            className="w-7 h-7 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-lg active:scale-90"
+                                                            title="Excluir Lançamento Errado"
+                                                        >
+                                                            <span className="material-icons-outlined text-sm">delete</span>
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                         );
                                     })}

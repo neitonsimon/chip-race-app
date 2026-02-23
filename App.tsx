@@ -17,6 +17,7 @@ import { CompanyHistory } from './components/CompanyHistory';
 import { FAQSection } from './components/FAQSection';
 import { AdminPanel } from './components/AdminPanel';
 import { SponsorsSection } from './components/SponsorsSection';
+import { Footer } from './components/Footer';
 import { supabase } from './src/lib/supabase';
 import { RankingPlayer, MonthData, Message, ContentDB, TournamentCategory, Event, PlayerResult, PlayerStats, RankingInstance, ScoringSchema, RankingFormula, ExperienceLevel, DailyReward, Poll, PollVote, MessageCategory, BadgeTemplate } from './types';
 import { calculatePoints } from './utils/scoring';
@@ -327,10 +328,20 @@ export default function App() {
                 });
             }
 
+            // 4b. Fetch Ecosystem Categories from dedicated table
+            const { data: ecoCategoriesData } = await supabase
+                .from('ecosystem_categories')
+                .select('*')
+                .order('order', { ascending: true });
+
+            if (ecoCategoriesData && ecoCategoriesData.length > 0) {
+                setContentDB(prev => ({ ...prev, categories: ecoCategoriesData }));
+            }
+
             // 5. Fetch All Profiles for Autocomplete
             const { data: profilesData, error: profilesError } = await supabase
                 .from('profiles')
-                .select('id, numeric_id, name, avatar_url, city, is_vip, vip_status, vip_expires_at, social, bio, level, current_exp, next_level_exp, gallery, play_styles');
+                .select('id, numeric_id, name, avatar_url, city, is_vip, vip_status, vip_expires_at, social, bio, level, current_exp, next_level_exp, gallery, play_styles, total_pending_debt, is_verified');
 
             if (profilesError) throw profilesError;
             if (profilesData) {
@@ -352,7 +363,8 @@ export default function App() {
                     currentExp: p.current_exp || 0,
                     nextLevelExp: p.next_level_exp || 1000,
                     gallery: p.gallery || undefined,
-                    playStyles: p.play_styles || undefined
+                    playStyles: p.play_styles || undefined,
+                    isVerified: p.is_verified || false
                 }));
                 setAllProfiles(formattedProfiles);
             }
@@ -411,14 +423,47 @@ export default function App() {
             }
         });
 
-        return () => subscription.unsubscribe();
+        // Add real-time listener for profile changes (balance, debt, etc.)
+        let profileChannel: any;
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session) {
+                profileChannel = supabase.channel(`profile_realtime_${session.user.id}`)
+                    .on('postgres_changes', {
+                        event: 'UPDATE',
+                        schema: 'public',
+                        table: 'profiles',
+                        filter: `id=eq.${session.user.id}`
+                    }, (payload) => {
+                        console.log('Profile updated in real-time:', payload.new);
+                        const data = payload.new;
+                        setCurrentUser(prev => ({
+                            ...prev,
+                            balanceBrl: Number(data.balance_brl) || 0,
+                            balanceChipz: data.balance_chipz || 0,
+                            totalPendingDebt: data.total_pending_debt || 0,
+                            level: data.level,
+                            currentExp: data.current_exp,
+                            nextLevelExp: data.next_level_exp,
+                            isVip: data.is_vip,
+                            vipStatus: data.vip_status,
+                            isVerified: data.is_verified
+                        }));
+                    })
+                    .subscribe();
+            }
+        });
+
+        return () => {
+            subscription.unsubscribe();
+            if (profileChannel) supabase.removeChannel(profileChannel);
+        };
     }, []);
 
     const fetchProfile = async (userId: string) => {
         try {
             const { data, error } = await supabase
                 .from('profiles')
-                .select('*')
+                .select('*, total_pending_debt')
                 .eq('id', userId)
                 .single();
 
@@ -450,6 +495,8 @@ export default function App() {
                     vipExpiresAt: data.vip_expires_at || null,
                     balanceBrl: data.balance_brl ? Number(data.balance_brl) : 0,
                     balanceChipz: data.balance_chipz || 0,
+                    totalPendingDebt: data.total_pending_debt || 0,
+                    isVerified: data.is_verified || false,
                     badges: []
                 };
 
@@ -603,11 +650,28 @@ export default function App() {
 
     const updateCategory = async (index: number, field: keyof TournamentCategory, value: any) => {
         const newCats = [...contentDB.categories];
+        const categoryId = newCats[index].id;
         newCats[index] = { ...newCats[index], [field]: value };
         setContentDB(prev => ({ ...prev, categories: newCats }));
 
         if (isAdmin) {
-            await saveToContentDB('categories', newCats);
+            try {
+                // Save to new dedicated table
+                const { error } = await supabase
+                    .from('ecosystem_categories')
+                    .update({ [field]: value })
+                    .eq('id', categoryId);
+
+                if (error) {
+                    console.error('Error updating ecosystem_category:', error);
+                    // Fallback to content_db if needed or just alert
+                }
+
+                // Keep content_db in sync for now as safe fallback
+                await saveToContentDB('categories', newCats);
+            } catch (e) {
+                console.error('Error updating category:', e);
+            }
         }
     };
 
@@ -1801,8 +1865,6 @@ export default function App() {
                     polls={polls}
                     userVotes={pollVotesByCurrentUser}
                     onVotePoll={handleVoteOnPoll}
-                    onCreatePoll={handleCreatePoll}
-                    onSendAdminMessage={handleSendAdminMessage}
                     onMarkAsRead={handleMarkAsRead}
                     onReply={handleReplyMessage}
                     rankings={rankings}
@@ -1853,6 +1915,9 @@ export default function App() {
                     onClose={() => handleNavigate('home')}
                     isAdmin={isAdmin && currentUser?.role !== 'staff'}
                     onUpdateProfile={handleProfileUpdate}
+                    badgeTemplates={badgeTemplates}
+                    onSendAdminMessage={handleSendAdminMessage}
+                    onCreatePoll={handleCreatePoll}
                 />;
             case 'home':
             default:
@@ -1882,17 +1947,19 @@ export default function App() {
                             timeline={contentDB.timeline}
                             onUpdateTimeline={(val) => updateContent('timeline', '', val)}
                         />
+                        <SponsorsSection />
+                        <Newsletter onNavigate={handleNavigate} />
                         <FAQSection
                             isAdmin={isAdmin}
                             faqs={contentDB.faq}
                             onUpdateFaqs={(val) => updateContent('faq', '', val)}
                         />
-                        <SponsorsSection />
-                        <Newsletter onNavigate={handleNavigate} />
                     </>
                 );
         }
     };
+
+    const showFooter = ['home', 'the-chosen-details', 'calendar', 'ranking', 'vip', 'recharge', 'the-chosen-regulations'].includes(currentView);
 
     return (
         <div className="min-h-screen flex flex-col bg-background-light dark:bg-background-dark relative">
@@ -1914,11 +1981,19 @@ export default function App() {
                 onReply={handleReplyMessage}
                 balanceBrl={currentUser.balanceBrl}
                 balanceChipz={currentUser.balanceChipz}
+                totalPendingDebt={currentUser.totalPendingDebt}
             />
 
             <main className="flex-grow pt-20 pb-20">
                 {renderContent()}
             </main>
+
+            {showFooter && (
+                <Footer
+                    onNavigate={handleNavigate}
+                    isAdmin={isAdmin}
+                />
+            )}
 
             {/* Indicador de Usuário Logado - Fixo no canto inferior direito */}
             {isLoggedIn && currentUser.name && (

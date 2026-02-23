@@ -35,8 +35,6 @@ interface PlayerProfileProps {
     polls?: Poll[];
     userVotes?: Record<string, number>;
     onVotePoll?: (pollId: string, optionIndex: number) => void;
-    onCreatePoll?: (question: string, options: string[]) => void;
-    onSendAdminMessage?: (subject: string, content: string, category: MessageCategory, pollId?: string, targetUserId?: string) => void;
     onMarkAsRead?: (id: string) => void;
     onReply?: (id: string, text: string) => void;
     rankings?: RankingInstance[];
@@ -98,7 +96,7 @@ const FALLBACK_DAILY_REWARDS: DailyReward[] = [
 ];
 
 
-type TabView = 'overview' | 'edit' | 'inbox' | 'notifications' | 'comprovantes';
+type TabView = 'overview' | 'edit' | 'inbox' | 'notifications' | 'comprovantes' | 'pendencias';
 
 export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     isAdmin,
@@ -115,8 +113,6 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     polls,
     userVotes,
     onVotePoll,
-    onCreatePoll,
-    onSendAdminMessage,
     onMarkAsRead,
     onReply,
     rankings,
@@ -136,14 +132,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     const [replyMode, setReplyMode] = useState(false);
     const [replyContent, setReplyContent] = useState('');
 
-    // Admin Message Box state
-    const [adminSubject, setAdminSubject] = useState('');
-    const [adminMsgContent, setAdminMsgContent] = useState('');
-    const [adminMsgCategory, setAdminMsgCategory] = useState<MessageCategory>('admin');
 
-    // Admin Poll state
-    const [pollQuestion, setPollQuestion] = useState('');
-    const [pollOptions, setPollOptions] = useState(['', '']);
 
     const handleOpenFlyer = (log: TournamentResult) => {
         const eventMatch = events.find(e =>
@@ -269,7 +258,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         isVip: false,
         vipStatus: 'nao_vip',
         vipExpiresAt: null,
-        badges: []
+        badges: [],
+        isVerified: false
     };
 
     const [player, setPlayer] = useState<PlayerStats>(myProfileData);
@@ -310,6 +300,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                 isVip: initialData.isVip || false,
                 vipStatus: initialData.vipStatus || 'nao_vip',
                 vipExpiresAt: initialData.vipExpiresAt || null,
+                isVerified: initialData.isVerified || false,
                 badges: (initialData as any).badges || []
             };
             setActiveTab('overview');
@@ -336,6 +327,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             baseData.isVip = currentUser.isVip || false;
             baseData.vipStatus = currentUser.vipStatus || 'nao_vip';
             baseData.vipExpiresAt = currentUser.vipExpiresAt || null;
+            baseData.isVerified = (currentUser as any).isVerified || false;
             baseData.badges = currentUser.badges || [];
 
             originalNameRef.current = baseData.name;
@@ -413,6 +405,10 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     const [viewingReceipt, setViewingReceipt] = useState<any | null>(null);
     const [receiptItems, setReceiptItems] = useState<any[]>([]);
 
+    // Debt State
+    const [userDebts, setUserDebts] = useState<any[]>([]);
+    const [totalUserDebt, setTotalUserDebt] = useState(0);
+
     // Auto-update viewing receipt
     const viewingReceiptRef = useRef<any | null>(null);
     useEffect(() => { viewingReceiptRef.current = viewingReceipt; }, [viewingReceipt]);
@@ -455,6 +451,12 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         };
     }, [activeTab, player.id]);
 
+    useEffect(() => {
+        if (activeTab === 'pendencias' && targetIdRef.current) {
+            fetchUserDebts();
+        }
+    }, [activeTab, player.id]);
+
     const fetchPlayerCommands = async () => {
         if (!targetIdRef.current) return;
         const { data } = await supabase.from('commands')
@@ -463,6 +465,59 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             .in('status', ['open', 'closed'])
             .order('created_at', { ascending: false });
         if (data) setPlayerCommands(data);
+    };
+
+    const fetchUserDebts = async () => {
+        if (!targetIdRef.current) return;
+        const { data } = await supabase.from('debts')
+            .select('*, events(title, date)')
+            .eq('user_id', targetIdRef.current)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false });
+
+        if (data) {
+            setUserDebts(data);
+            const total = data.reduce((acc, d) => acc + Number(d.amount_brl), 0);
+            setTotalUserDebt(total);
+        }
+    };
+
+    const handlePayDebt = async (debt: any) => {
+        if (!isLoggedIn || !isOwnProfile) return;
+        const amount = Number(debt.amount_brl);
+        if (player.balanceBrl < amount) {
+            alert('Saldo insuficiente para quitar esta pendência!');
+            return;
+        }
+
+        if (!window.confirm(`Deseja quitar a pendência de R$ ${amount.toFixed(2)} usando seu saldo?`)) return;
+
+        setIsSavingExp(true);
+        try {
+            const { error: deductErr } = await supabase.rpc('deduct_balance_brl', {
+                p_user_id: player.id,
+                p_amount: amount
+            });
+            if (deductErr) throw deductErr;
+
+            const { error: updateErr } = await supabase.from('debts').update({
+                status: 'paid',
+                paid_at: new Date().toISOString()
+            }).eq('id', debt.id);
+            if (updateErr) throw updateErr;
+
+            const newBalance = player.balanceBrl - amount;
+            const updatedPlayer = { ...player, balanceBrl: newBalance };
+            setPlayer(updatedPlayer);
+            if (onUpdateProfile) onUpdateProfile(player.id, updatedPlayer);
+
+            fetchUserDebts();
+            alert('Pendência quitada com sucesso!');
+        } catch (err: any) {
+            alert('Erro ao pagar: ' + err.message);
+        } finally {
+            setIsSavingExp(false);
+        }
     };
 
     const handleViewReceipt = async (cmd: any, isSilentUpdate = false) => {
@@ -483,29 +538,16 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         }
     };
 
-    const handleAddPollOption = () => setPollOptions([...pollOptions, '']);
-    const handleUpdatePollOption = (index: number, val: string) => {
-        const updated = [...pollOptions];
-        updated[index] = val;
-        setPollOptions(updated);
-    };
-
-    const handleSendBroadcast = () => {
-        if (onSendAdminMessage && adminSubject && adminMsgContent) {
-            onSendAdminMessage(adminSubject, adminMsgContent, adminMsgCategory);
-            setAdminSubject('');
-            setAdminMsgContent('');
-            alert('Comunicado Global enviado!');
-        }
-    };
-
-    const handleCreatePollSubmit = () => {
-        const validOptions = pollOptions.filter(o => o.trim());
-        if (onCreatePoll && pollQuestion && validOptions.length >= 2) {
-            onCreatePoll(pollQuestion, validOptions);
-            setPollQuestion('');
-            setPollOptions(['', '']);
-            alert('Enquete publicada!');
+    const toggleVerification = async () => {
+        if (!isAdmin) return;
+        const newStatus = !player.isVerified;
+        try {
+            const { error } = await supabase.from('profiles').update({ is_verified: newStatus }).eq('id', targetIdRef.current);
+            if (error) throw error;
+            setPlayer(prev => ({ ...prev, isVerified: newStatus }));
+            alert(`Jogador ${newStatus ? 'verificado' : 'desverificado'} com sucesso!`);
+        } catch (err: any) {
+            alert('Erro ao atualizar verificação: ' + err.message);
         }
     };
 
@@ -515,83 +557,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
         return (
             <div className="space-y-8 animate-in fade-in duration-500 p-8">
-                {/* ÁREA ADMIN */}
-                {isAdmin && isOwnProfile && (
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
-                        <div className="bg-surface-dark/50 p-6 rounded-3xl border border-white/10 shadow-2xl">
-                            <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                                <span className="material-icons-outlined text-primary">campaign</span>
-                                Comunicado Global
-                            </h3>
-                            <div className="space-y-4">
-                                <input
-                                    className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-white outline-none focus:border-primary transition-all"
-                                    placeholder="Assunto do Comunicado"
-                                    value={adminSubject}
-                                    onChange={e => setAdminSubject(e.target.value)}
-                                />
-                                <textarea
-                                    className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-white h-32 outline-none focus:border-primary transition-all resize-none"
-                                    placeholder="Conteúdo da mensagem..."
-                                    value={adminMsgContent}
-                                    onChange={e => setAdminMsgContent(e.target.value)}
-                                />
-                                <div className="flex gap-4">
-                                    <select
-                                        className="bg-black/40 border border-white/10 rounded-xl px-4 text-white outline-none focus:border-primary"
-                                        value={adminMsgCategory}
-                                        onChange={e => setAdminMsgCategory(e.target.value as any)}
-                                    >
-                                        <option value="admin">📣 Admin</option>
-                                        <option value="system">⚙️ Sistema</option>
-                                        <option value="tournament">🏆 Torneio</option>
-                                    </select>
-                                    <button
-                                        onClick={handleSendBroadcast}
-                                        className="flex-grow bg-primary hover:bg-white hover:text-black text-white font-bold py-3 rounded-xl transition-all shadow-neon-pink"
-                                    >
-                                        Enviar Msg
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
 
-                        <div className="bg-surface-dark/50 p-6 rounded-3xl border border-white/10 shadow-2xl">
-                            <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                                <span className="material-icons-outlined text-secondary">poll</span>
-                                Criar Nova Enquete
-                            </h3>
-                            <div className="space-y-4">
-                                <input
-                                    className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-white outline-none focus:border-secondary transition-all"
-                                    placeholder="Qual a pergunta?"
-                                    value={pollQuestion}
-                                    onChange={e => setPollQuestion(e.target.value)}
-                                />
-                                <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                                    {pollOptions.map((opt, i) => (
-                                        <input
-                                            key={i}
-                                            className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-secondary transition-all"
-                                            placeholder={`Opção ${i + 1}`}
-                                            value={opt}
-                                            onChange={e => handleUpdatePollOption(i, e.target.value)}
-                                        />
-                                    ))}
-                                    <button onClick={handleAddPollOption} className="text-secondary text-sm font-bold flex items-center gap-1 hover:underline p-1">
-                                        <span className="material-icons-outlined text-sm">add</span> Adicionar Opção
-                                    </button>
-                                </div>
-                                <button
-                                    onClick={handleCreatePollSubmit}
-                                    className="w-full bg-secondary hover:bg-white text-black font-bold py-3 rounded-xl transition-all shadow-neon-blue"
-                                >
-                                    Publicar
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
 
                 {/* FILTROS */}
                 <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
@@ -1152,6 +1118,22 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                 <span className="material-icons-outlined text-base">receipt_long</span> Comprovantes
                             </button>
                         )}
+                        {isOwnProfile && (
+                            <button
+                                onClick={() => setActiveTab('pendencias')}
+                                className={`pb-3 px-4 text-base font-bold uppercase tracking-wider transition-all border-b-2 flex items-center gap-2 ${activeTab === 'pendencias'
+                                    ? 'border-red-500 text-red-500'
+                                    : 'border-transparent text-gray-500 hover:text-white'
+                                    }`}
+                            >
+                                <span className="material-icons-outlined text-base">error_outline</span> Pendências
+                                {totalUserDebt > 0 && (
+                                    <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1 animate-pulse">
+                                        R$ {totalUserDebt.toFixed(0)}
+                                    </span>
+                                )}
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -1193,7 +1175,18 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                     ) : null}
                                 </div>
 
-                                <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-0.5">{player.name}</h1>
+                                <div className="flex items-center justify-center gap-2 mb-0.5">
+                                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white uppercase tracking-tight">{player.name}</h1>
+                                    {(player.isVerified || isAdmin) && (
+                                        <span
+                                            onClick={isAdmin ? toggleVerification : undefined}
+                                            className={`material-icons text-xl transition-all ${player.isVerified ? 'text-cyan-400' : 'text-white/10'} ${isAdmin ? 'cursor-pointer hover:scale-110 active:scale-95' : ''}`}
+                                            title={player.isVerified ? "Usuário Verificado" : isAdmin ? "Clique para verificar usuário" : ""}
+                                        >
+                                            verified
+                                        </span>
+                                    )}
+                                </div>
                                 <div className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-4 bg-primary/10 inline-block px-3 py-1 rounded-full border border-primary/20">
                                     ID: {player.numericId ? `CR#${String(player.numericId).padStart(3, '0')}` : 'CR#GUEST'}
                                 </div>
@@ -1544,6 +1537,73 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
                 {/* ... (EDIT TAB CONTENT - Remains unchanged) ... */}
                 {activeTab === 'inbox' && isOwnProfile && renderInbox()}
+
+                {/* ======================= PENDÊNCIAS TAB ======================= */}
+                {activeTab === 'pendencias' && isOwnProfile && (
+                    <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 p-8">
+                        <div className="flex items-center justify-between mb-8">
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 rounded-2xl bg-red-500/20 border border-red-500/30 flex items-center justify-center shadow-neon-red">
+                                    <span className="material-icons-outlined text-red-500 text-3xl">receipt_long</span>
+                                </div>
+                                <div>
+                                    <h3 className="text-2xl font-display font-black text-white uppercase tracking-wider">Suas Pendências</h3>
+                                    <p className="text-gray-400 text-sm">Controle de débitos pendentes com o clube.</p>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[10px] text-gray-500 font-black uppercase mb-1">Total a Pagar</p>
+                                <p className="text-3xl font-display font-black text-red-500">R$ {totalUserDebt.toFixed(2)}</p>
+                            </div>
+                        </div>
+
+                        {userDebts.length === 0 ? (
+                            <div className="py-24 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
+                                <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                                    <span className="material-icons-outlined text-5xl text-green-500">check_circle</span>
+                                </div>
+                                <h4 className="text-xl font-bold text-white mb-2">Tudo em dia!</h4>
+                                <p className="text-gray-500">Você não possui nenhuma pendência registrada.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 gap-4">
+                                {userDebts.map(debt => (
+                                    <div key={debt.id} className="bg-surface-dark border border-white/10 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6 hover:border-red-500/30 transition-all group">
+                                        <div className="flex items-center gap-4 flex-1">
+                                            <div className="w-12 h-12 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-center shrink-0">
+                                                <span className="material-icons-outlined text-red-500">pending_actions</span>
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-white text-lg">{debt.events?.title || 'Consumo no Clube'}</h4>
+                                                <p className="text-xs text-gray-500">{new Date(debt.created_at).toLocaleString('pt-BR')}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-col items-center sm:items-end gap-1 px-8">
+                                            <span className="text-[10px] text-gray-500 font-black uppercase">Valor</span>
+                                            <span className="text-2xl font-display font-black text-red-500">R$ {Number(debt.amount_brl).toFixed(2)}</span>
+                                        </div>
+
+                                        <div className="shrink-0 w-full sm:w-auto">
+                                            <button
+                                                onClick={() => handlePayDebt(debt)}
+                                                disabled={player.balanceBrl < Number(debt.amount_brl) || (setIsSavingExp as any) === true}
+                                                className="w-full sm:w-auto px-8 py-3 bg-red-500 text-white font-black uppercase text-xs rounded-xl shadow-neon-red hover:scale-105 transition-all disabled:opacity-30 disabled:grayscale disabled:scale-100"
+                                            >
+                                                {player.balanceBrl < Number(debt.amount_brl) ? 'Saldo Insuficiente' : 'Quitar agora'}
+                                            </button>
+                                            {player.balanceBrl < Number(debt.amount_brl) && (
+                                                <p className="text-[10px] text-red-400 mt-2 text-center sm:text-right font-bold uppercase animate-pulse">
+                                                    Recarregue para pagar
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* ======================= COMPROVANTES TAB ======================= */}
                 {activeTab === 'comprovantes' && isOwnProfile && (

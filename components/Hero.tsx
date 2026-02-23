@@ -143,6 +143,18 @@ export const Hero: React.FC<HeroProps> = ({
               type="textarea"
             />
           </p>
+
+          <div className="flex justify-center mt-12 mb-4">
+            <button
+              onClick={() => onNavigate('the-chosen-details')}
+              className="group relative bg-gradient-to-r from-primary via-accent to-secondary text-white font-black py-4 px-10 rounded-2xl shadow-[0_0_30px_rgba(var(--primary-rgb),0.3)] hover:shadow-[0_0_50px_rgba(var(--primary-rgb),0.6)] transition-all duration-500 transform hover:-translate-y-2 flex items-center gap-4 uppercase tracking-[0.2em] text-sm overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12"></div>
+              <span className="material-icons-outlined text-2xl animate-pulse">stars</span>
+              <span className="relative z-10">THE CHOSEN <span className="text-secondary-light">30K+</span></span>
+              <span className="material-icons group-hover:translate-x-2 transition-transform relative z-10">arrow_forward</span>
+            </button>
+          </div>
         </div>
 
         {/* Timeline Section */}

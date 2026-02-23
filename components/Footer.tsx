@@ -1,89 +1,180 @@
 import React from 'react';
 
-export const Footer: React.FC = () => {
+interface FooterProps {
+  onNavigate: (view: string) => void;
+  isAdmin: boolean;
+}
+
+export const Footer: React.FC<FooterProps> = ({ onNavigate, isAdmin }) => {
+  const currentYear = new Date().getFullYear();
+
+  const handleLinkClick = (e: React.MouseEvent, view: string) => {
+    e.preventDefault();
+    onNavigate(view);
+  };
+
   return (
-    <footer className="bg-white dark:bg-[#050821] border-t border-gray-200 dark:border-white/5 pt-16 pb-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <footer className="bg-[#050821] border-t border-white/5 pt-16 pb-8 relative overflow-hidden">
+      {/* Glow Effect */}
+      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
 
           {/* Brand Column */}
-          <div>
-            <a href="#" className="flex items-center mb-6 group">
+          <div className="space-y-6">
+            <a href="#" onClick={(e) => handleLinkClick(e, 'home')} className="flex items-center group">
               <img src="/cr-logo.png" alt="Chip Race" className="h-16 w-auto group-hover:scale-105 transition-transform duration-300" />
             </a>
-            <p className="text-gray-500 dark:text-gray-400 text-base leading-relaxed mb-6">
-              Organização, premiação real e diversão. O destino final para amantes do poker no sul do Brasil.
+            <p className="text-gray-400 text-sm leading-relaxed max-w-xs">
+              A maior comunidade de poker do Brasil. Tecnologia, transparência e paixão pelo esporte da mente unidos em um único ecossistema.
             </p>
             <div className="flex gap-4">
-              {['instagram', 'whatsapp', 'facebook'].map((social) => (
+              {[
+                { name: 'instagram', icon: 'camera_alt', url: 'https://instagram.com/chiprace' },
+                { name: 'whatsapp', icon: 'chat', url: '#' },
+                { name: 'youtube', icon: 'play_circle', url: '#' }
+              ].map((social) => (
                 <a
-                  key={social}
-                  href="#"
-                  className="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-primary hover:text-white transition-all duration-300"
+                  key={social.name}
+                  href={social.url}
+                  className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:bg-primary hover:text-white hover:border-primary transition-all duration-300 group"
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
-                  <span className="material-icons-outlined text-sm">{social === 'instagram' ? 'photo_camera' : social === 'whatsapp' ? 'chat' : 'facebook'}</span>
+                  <span className="material-icons text-xl group-hover:scale-110 transition-transform">{social.icon}</span>
                 </a>
               ))}
             </div>
           </div>
 
-          {/* Tournaments Column */}
-          <div>
-            <h4 className="font-display font-bold text-gray-900 dark:text-white mb-6 uppercase tracking-wider text-base">
-              Eventos
+          {/* Quick Links Column */}
+          <div className="hidden sm:block">
+            <h4 className="font-display font-bold text-white mb-6 uppercase tracking-[0.2em] text-xs">
+              Menu Principal
             </h4>
-            <ul className="space-y-4 text-base text-gray-500 dark:text-gray-400">
-              {['The Chosen 30K+', 'Agenda Semanal QG', 'Home Game ID', 'Rankings 2026'].map((item) => (
-                <li key={item}>
-                  <a href="#" className="hover:text-primary transition-colors">{item}</a>
+            <ul className="space-y-4 text-sm text-gray-400">
+              {[
+                { label: 'The Chosen 30K+', view: 'the-chosen-details' },
+                { label: 'Calendário de Eventos', view: 'calendar' },
+                { label: 'Rankings 2026', view: 'ranking' },
+                { label: 'Área VIP', view: 'vip' },
+                { label: 'Recargas & Chipz', view: 'recharge' },
+              ].map((item) => (
+                <li key={item.label}>
+                  <a
+                    href="#"
+                    onClick={(e) => handleLinkClick(e, item.view)}
+                    className="hover:text-primary transition-colors flex items-center gap-2 group"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary/20 group-hover:bg-primary transition-colors"></span>
+                    {item.label}
+                  </a>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Support Column */}
-          <div>
-            <h4 className="font-display font-bold text-gray-900 dark:text-white mb-6 uppercase tracking-wider text-base">
+          {/* Legal/Support Column */}
+          <div className="hidden lg:block">
+            <h4 className="font-display font-bold text-white mb-6 uppercase tracking-[0.2em] text-xs">
               Informações
             </h4>
-            <ul className="space-y-4 text-base text-gray-500 dark:text-gray-400">
-              {['Sobre a Chip Race', 'Regras do Clube', 'Política de Privacidade', 'Jogo Responsável'].map((item) => (
-                <li key={item}>
-                  <a href="#" className="hover:text-primary transition-colors">{item}</a>
+            <ul className="space-y-4 text-sm text-gray-400">
+              {[
+                { label: 'Termos de Uso', view: 'home' },
+                { label: 'Política de Privacidade', view: 'home' },
+                { label: 'Regras do Clube', view: 'home' },
+                { label: 'Jogo Responsável', view: 'home' },
+                { label: 'Suporte Online', view: 'home' },
+              ].map((item) => (
+                <li key={item.label}>
+                  <a
+                    href="#"
+                    onClick={(e) => handleLinkClick(e, item.view)}
+                    className="hover:text-white transition-colors"
+                  >
+                    {item.label}
+                  </a>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Contact Column */}
-          <div>
-            <h4 className="font-display font-bold text-gray-900 dark:text-white mb-6 uppercase tracking-wider text-base">
-              Contato
+          {/* Admin Area Column (Exclusive) */}
+          <div className={`p-6 rounded-2xl border transition-all duration-500 ${isAdmin
+            ? 'bg-red-500/5 border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.1)]'
+            : 'bg-white/5 border-white/5 opacity-40 hover:opacity-100'
+            }`}>
+            <h4 className={`font-display font-black mb-4 uppercase tracking-[0.2em] text-xs flex items-center gap-2 ${isAdmin ? 'text-red-400' : 'text-gray-500'}`}>
+              <span className="material-icons text-sm">{isAdmin ? 'admin_panel_settings' : 'lock'}</span>
+              Área Administrativa
             </h4>
-            <ul className="space-y-4 text-base text-gray-500 dark:text-gray-400">
-              <li className="flex items-center gap-3">
-                <span className="material-icons-outlined text-primary text-base">email</span>
-                <span>contato@chiprace.com.br</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <span className="material-icons-outlined text-primary text-base">phone</span>
-                <span>(51) 99999-9999</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <span className="material-icons-outlined text-primary text-base">location_on</span>
-                <span>Centro, Venâncio Aires - RS</span>
-              </li>
-            </ul>
+
+            {isAdmin ? (
+              <ul className="space-y-3 text-sm">
+                <li>
+                  <a
+                    href="#"
+                    onClick={(e) => handleLinkClick(e, 'admin')}
+                    className="text-white hover:text-red-400 font-bold flex items-center gap-2 transition-colors uppercase text-[10px] tracking-widest"
+                  >
+                    <span className="material-icons text-xs">dashboard</span>
+                    Painel Gestor
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#"
+                    onClick={(e) => handleLinkClick(e, 'calendar')}
+                    className="text-gray-400 hover:text-white flex items-center gap-2 transition-colors text-xs"
+                  >
+                    <span className="material-icons text-xs">event</span>
+                    Gerenciar Eventos
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#"
+                    onClick={(e) => handleLinkClick(e, 'ranking')}
+                    className="text-gray-400 hover:text-white flex items-center gap-2 transition-colors text-xs"
+                  >
+                    <span className="material-icons text-xs">emoji_events</span>
+                    Ajustar Rankings
+                  </a>
+                </li>
+                <li className="pt-2 border-t border-red-500/10">
+                  <span className="text-[9px] text-red-500/50 uppercase font-bold">Acesso Restrito</span>
+                </li>
+              </ul>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-[10px] text-gray-500 leading-relaxed italic">
+                  Acesso restrito para administradores e staff do Chip Race.
+                </p>
+                <button
+                  onClick={(e) => handleLinkClick(e, 'login')}
+                  className="w-full py-2 bg-white/5 border border-white/10 rounded-lg text-[10px] font-bold text-gray-400 hover:bg-white/10 hover:text-white transition-all uppercase tracking-widest"
+                >
+                  Fazer Login
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-gray-200 dark:border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-gray-400 dark:text-gray-600">
-          <p>© 2026 Chip Race. Todos os direitos reservados.</p>
-          <div className="flex gap-6 mt-4 md:mt-0">
-            {['Privacidade', 'Termos'].map((item) => (
-              <a key={item} href="#" className="hover:text-gray-500 transition-colors">{item}</a>
-            ))}
+        <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center text-[10px] sm:text-xs text-gray-500 uppercase tracking-[0.2em] font-bold">
+          <div className="flex flex-col md:flex-row items-center gap-2 md:gap-8 mb-4 md:mb-0 text-center md:text-left">
+            <p>© {currentYear} Chip Race Organization.</p>
+            <p className="hidden sm:block text-gray-700">|</p>
+            <p className="text-primary-light/50">Desenvolvido com Paixão pelo Poker</p>
+          </div>
+
+          <div className="flex gap-6">
+            <a href="#" className="hover:text-primary transition-colors">V.2.0.25</a>
+            <a href="#" className="hover:text-white transition-colors">Status</a>
+            <a href="#" className="hover:text-white transition-colors">Network</a>
           </div>
         </div>
       </div>
