@@ -173,10 +173,6 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             setActiveTab('inbox');
             setInboxFilter('admin');
         };
-        const handleOpenBonus = () => {
-            setActiveTab('inbox');
-            setInboxFilter('bonus');
-        };
         const handleOpenTournament = () => {
             setActiveTab('inbox');
             setInboxFilter('tournament');
@@ -190,7 +186,6 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         window.addEventListener('open-private-messages', handleOpenPrivate);
         window.addEventListener('open-system-messages', handleOpenSystem);
         window.addEventListener('open-admin-messages', handleOpenAdmin);
-        window.addEventListener('open-bonus-messages', handleOpenBonus);
         window.addEventListener('open-tournament-messages', handleOpenTournament);
         window.addEventListener('open-gift-messages', handleOpenGift);
 
@@ -199,7 +194,6 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             window.removeEventListener('open-private-messages', handleOpenPrivate);
             window.removeEventListener('open-system-messages', handleOpenSystem);
             window.removeEventListener('open-admin-messages', handleOpenAdmin);
-            window.removeEventListener('open-bonus-messages', handleOpenBonus);
             window.removeEventListener('open-tournament-messages', handleOpenTournament);
             window.removeEventListener('open-gift-messages', handleOpenGift);
         };
@@ -550,7 +544,6 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                     >
                                         <option value="admin">📣 Admin</option>
                                         <option value="system">⚙️ Sistema</option>
-                                        <option value="bonus">🎁 Bônus</option>
                                         <option value="tournament">🏆 Torneio</option>
                                     </select>
                                     <button
@@ -602,7 +595,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
                 {/* FILTROS */}
                 <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                    {['all', 'system', 'gift', 'admin', 'private', 'bonus', 'tournament', 'poll'].map(cat => (
+                    {['all', 'system', 'gift', 'admin', 'private', 'tournament', 'poll'].map(cat => (
                         <button
                             key={cat}
                             onClick={() => setInboxFilter(cat as any)}
@@ -613,9 +606,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                     cat === 'gift' ? '🎁 Presentes' :
                                         cat === 'admin' ? '📣 Admin' :
                                             cat === 'private' ? '💬 Privadas' :
-                                                cat === 'bonus' ? '🎀 Bônus' :
-                                                    cat === 'tournament' ? '🏆 Torneio' :
-                                                        cat === 'poll' ? '📊 Enquetes' : cat}
+                                                cat === 'tournament' ? '🏆 Torneio' :
+                                                    cat === 'poll' ? '📊 Enquetes' : cat}
                         </button>
                     ))}
                 </div>
@@ -639,18 +631,16 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                             >
                                 <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${msg.category === 'poll' ? 'bg-cyan-500/20 text-cyan-400' :
                                     msg.category === 'private' ? 'bg-secondary/20 text-secondary' :
-                                        msg.category === 'bonus' ? 'bg-green-500/20 text-green-400' :
-                                            msg.category === 'admin' ? 'bg-red-500/20 text-red-400' :
-                                                msg.category === 'gift' ? 'bg-yellow-500/20 text-yellow-400' :
-                                                    'bg-primary/20 text-primary'
+                                        msg.category === 'admin' ? 'bg-red-500/20 text-red-400' :
+                                            msg.category === 'gift' ? 'bg-yellow-500/20 text-yellow-400' :
+                                                'bg-primary/20 text-primary'
                                     }`}>
                                     <span className="material-icons-outlined text-3xl">
                                         {msg.category === 'poll' ? 'poll' :
                                             msg.category === 'private' ? 'chat' :
-                                                msg.category === 'bonus' ? 'card_giftcard' :
-                                                    msg.category === 'gift' ? 'redeem' :
-                                                        msg.category === 'tournament' ? 'stars' :
-                                                            'notifications'}
+                                                msg.category === 'gift' ? 'redeem' :
+                                                    msg.category === 'tournament' ? 'stars' :
+                                                        'notifications'}
                                     </span>
                                 </div>
                                 <div className="flex-grow min-w-0">

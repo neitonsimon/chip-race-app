@@ -228,29 +228,52 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                             >
                                 <span className="material-icons-outlined">functions</span>
                             </button>
-                            {activeRanking.rewardBadgeTitle && (
+                            {(activeRanking.rewardBadgeTitle || (activeRanking.tieredRewards && activeRanking.tieredRewards.length > 0)) && (
                                 <button
                                     onClick={async () => {
                                         const winner = activeRanking.players.find(p => p.rank === 1);
                                         if (!winner || !winner.id) {
-                                            alert("Vendedor (Rank 1) não identificado ou sem ID.");
+                                            alert("Vendedor (Rank 1) não identificado.");
                                             return;
                                         }
-                                        if (!window.confirm(`Deseja conceder a insígnia "${activeRanking.rewardBadgeTitle}" para o campeão ${winner.name}?`)) return;
 
-                                        if (onAwardBadge) {
-                                            await onAwardBadge({
-                                                user_id: winner.id,
-                                                title: activeRanking.rewardBadgeTitle,
-                                                description: activeRanking.rewardBadgeDesc || '',
-                                                icon: activeRanking.rewardBadgeIcon || 'stars',
-                                                ranking_id: activeRanking.id
-                                            });
-                                            alert("Insígnia concedida ao campeão!");
+                                        let count = 0;
+                                        if (window.confirm(`Deseja distribuir as insígnias de premiação para os qualificados deste ranking?`)) {
+                                            if (onAwardBadge) {
+                                                // Award Top 1
+                                                if (activeRanking.rewardBadgeTitle) {
+                                                    await onAwardBadge({
+                                                        user_id: winner.id,
+                                                        title: activeRanking.rewardBadgeTitle,
+                                                        description: activeRanking.rewardBadgeDesc || '',
+                                                        icon: activeRanking.rewardBadgeIcon || 'stars',
+                                                        ranking_id: activeRanking.id
+                                                    });
+                                                    count++;
+                                                }
+
+                                                // Award Others
+                                                if (activeRanking.tieredRewards) {
+                                                    for (const tr of activeRanking.tieredRewards) {
+                                                        const recipient = activeRanking.players.find(p => p.rank === tr.position);
+                                                        if (recipient && recipient.id && tr.badgeTitle) {
+                                                            await onAwardBadge({
+                                                                user_id: recipient.id,
+                                                                title: tr.badgeTitle,
+                                                                description: tr.badgeDesc || '',
+                                                                icon: tr.badgeIcon || 'stars',
+                                                                ranking_id: activeRanking.id
+                                                            });
+                                                            count++;
+                                                        }
+                                                    }
+                                                }
+                                                alert(`Sucesso! ${count} insígnias distribuídas.`);
+                                            }
                                         }
                                     }}
                                     className="bg-yellow-500/10 p-2 rounded-full hover:bg-yellow-500 hover:text-white text-yellow-500 transition-colors border border-yellow-500/20"
-                                    title={`Premiar Campeão (${activeRanking.rewardBadgeTitle})`}
+                                    title="Distribuir Insígnias de Premiação"
                                 >
                                     <span className="material-icons-outlined">military_tech</span>
                                 </button>
@@ -881,6 +904,121 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                             </div>
 
                             <div className="bg-white/5 p-4 rounded-xl border border-white/5">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h4 className="text-sm font-bold text-accent mb-0 flex items-center gap-2">
+                                        <span className="material-icons-outlined">workspace_premium</span>
+                                        Premiações Adicionais (Top 2+)
+                                    </h4>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const nextPos = (editingRanking.tieredRewards?.length || 0) + 2;
+                                            setEditingRanking({
+                                                ...editingRanking,
+                                                tieredRewards: [...(editingRanking.tieredRewards || []), { position: nextPos, brl: 0, chipz: 0 }]
+                                            });
+                                        }}
+                                        className="text-[10px] font-bold text-accent hover:underline uppercase"
+                                    >
+                                        + Adicionar Posição
+                                    </button>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {(!editingRanking.tieredRewards || editingRanking.tieredRewards.length === 0) && (
+                                        <p className="text-[10px] text-gray-500 italic text-center py-2">Nenhuma premiação extra configurada.</p>
+                                    )}
+                                    {editingRanking.tieredRewards?.map((tr, idx) => (
+                                        <div key={idx} className="bg-black/20 p-3 rounded-lg border border-white/5 relative group">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const newList = editingRanking.tieredRewards?.filter((_, i) => i !== idx);
+                                                    setEditingRanking({ ...editingRanking, tieredRewards: newList });
+                                                }}
+                                                className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <span className="material-icons-outlined text-[10px]">close</span>
+                                            </button>
+
+                                            <div className="grid grid-cols-6 gap-3">
+                                                <div className="col-span-1">
+                                                    <label className="block text-[8px] font-bold text-gray-500 uppercase mb-1">Pos.</label>
+                                                    <input
+                                                        type="number"
+                                                        value={tr.position}
+                                                        onChange={e => {
+                                                            const newList = [...(editingRanking.tieredRewards || [])];
+                                                            newList[idx] = { ...tr, position: Number(e.target.value) };
+                                                            setEditingRanking({ ...editingRanking, tieredRewards: newList });
+                                                        }}
+                                                        className="w-full bg-black/30 border border-white/10 rounded p-1.5 text-white text-xs text-center"
+                                                    />
+                                                </div>
+                                                <div className="col-span-1">
+                                                    <label className="block text-[8px] font-bold text-gray-500 uppercase mb-1">R$</label>
+                                                    <input
+                                                        type="number"
+                                                        value={tr.brl || 0}
+                                                        onChange={e => {
+                                                            const newList = [...(editingRanking.tieredRewards || [])];
+                                                            newList[idx] = { ...tr, brl: Number(e.target.value) };
+                                                            setEditingRanking({ ...editingRanking, tieredRewards: newList });
+                                                        }}
+                                                        className="w-full bg-black/30 border border-white/10 rounded p-1.5 text-white text-xs"
+                                                    />
+                                                </div>
+                                                <div className="col-span-1">
+                                                    <label className="block text-[8px] font-bold text-gray-500 uppercase mb-1">Chipz</label>
+                                                    <input
+                                                        type="number"
+                                                        value={tr.chipz || 0}
+                                                        onChange={e => {
+                                                            const newList = [...(editingRanking.tieredRewards || [])];
+                                                            newList[idx] = { ...tr, chipz: Number(e.target.value) };
+                                                            setEditingRanking({ ...editingRanking, tieredRewards: newList });
+                                                        }}
+                                                        className="w-full bg-black/30 border border-white/10 rounded p-1.5 text-white text-xs"
+                                                    />
+                                                </div>
+                                                <div className="col-span-3">
+                                                    <label className="block text-[8px] font-bold text-gray-500 uppercase mb-1">Insígnia (Título)</label>
+                                                    <div className="flex gap-2">
+                                                        <input
+                                                            type="text"
+                                                            value={tr.badgeTitle || ''}
+                                                            onChange={e => {
+                                                                const newList = [...(editingRanking.tieredRewards || [])];
+                                                                newList[idx] = { ...tr, badgeTitle: e.target.value };
+                                                                setEditingRanking({ ...editingRanking, tieredRewards: newList });
+                                                            }}
+                                                            placeholder="Ex: Vice Campeão"
+                                                            className="flex-grow bg-black/30 border border-white/10 rounded p-1.5 text-white text-xs"
+                                                        />
+                                                        <select
+                                                            value={tr.badgeIcon || 'stars'}
+                                                            onChange={e => {
+                                                                const newList = [...(editingRanking.tieredRewards || [])];
+                                                                newList[idx] = { ...tr, badgeIcon: e.target.value };
+                                                                setEditingRanking({ ...editingRanking, tieredRewards: newList });
+                                                            }}
+                                                            className="bg-black/40 border border-white/10 rounded p-1 text-white text-[10px]"
+                                                        >
+                                                            <option value="stars">⭐</option>
+                                                            <option value="emoji_events">🏆</option>
+                                                            <option value="military_tech">🎖️</option>
+                                                            <option value="workspace_premium">📜</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+
+                            <div className="bg-white/5 p-4 rounded-xl border border-white/5">
                                 <h4 className="text-sm font-bold text-primary mb-3 uppercase tracking-wider">Mapeamento de Fórmulas</h4>
                                 <div className="space-y-4">
                                     {(['weekly', 'monthly', 'special', 'cash_online', 'mtt_online', 'sit_n_go', 'satellite'] as const).map((type) => (
@@ -1014,15 +1152,30 @@ const FinisherModal: React.FC<{
                         ></textarea>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-black/20 p-3 rounded-xl border border-white/5">
-                            <span className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Total R$</span>
-                            <span className="text-lg font-display font-black text-green-400">R$ {Number(ranking.rewardBrl || 0).toFixed(2)}</span>
+                    <div className="space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-black/20 p-3 rounded-xl border border-white/5">
+                                <span className="text-[10px] text-gray-500 uppercase font-bold block mb-1">1º Lugar: R$</span>
+                                <span className="text-lg font-display font-black text-green-400">R$ {Number(ranking.rewardBrl || 0).toFixed(2)}</span>
+                            </div>
+                            <div className="bg-black/20 p-3 rounded-xl border border-white/5">
+                                <span className="text-[10px] text-gray-500 uppercase font-bold block mb-1">1º Lugar: Chipz</span>
+                                <span className="text-lg font-display font-black text-secondary">{ranking.rewardChipz || 0}</span>
+                            </div>
                         </div>
-                        <div className="bg-black/20 p-3 rounded-xl border border-white/5">
-                            <span className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Total Chipz</span>
-                            <span className="text-lg font-display font-black text-secondary">{ranking.rewardChipz || 0}</span>
-                        </div>
+
+                        {ranking.tieredRewards?.map((tr, i) => (
+                            <div key={i} className="grid grid-cols-2 gap-3">
+                                <div className="bg-black/10 p-3 rounded-xl border border-white/5 opacity-80">
+                                    <span className="text-[10px] text-gray-500 uppercase font-bold block mb-1">{tr.position}º Lugar: R$</span>
+                                    <span className="text-sm font-bold text-green-400">R$ {Number(tr.brl || 0).toFixed(2)}</span>
+                                </div>
+                                <div className="bg-black/10 p-3 rounded-xl border border-white/5 opacity-80">
+                                    <span className="text-[10px] text-gray-500 uppercase font-bold block mb-1">{tr.position}º Lugar: Chipz</span>
+                                    <span className="text-sm font-bold text-secondary">{tr.chipz || 0}</span>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
 

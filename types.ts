@@ -143,6 +143,16 @@ export interface ChipzPackage {
   active: boolean;
 }
 
+export interface TieredReward {
+  position: number;
+  brl?: number;
+  chipz?: number;
+  badgeTitle?: string;
+  badgeDesc?: string;
+  badgeIcon?: string;
+  badgeTemplateId?: string;
+}
+
 // NOVA INTERFACE PARA RANKINGS DINÂMICOS
 export type CriterionType = 'participants' | 'buyin' | 'itm' | 'winnings' | 'rake' | 'spent' | 'isFt' | 'isVip' | 'profit_loss';
 
@@ -181,6 +191,7 @@ export interface RankingInstance {
   rewardChipz?: number;
   isActive?: boolean;
   badgeTemplateId?: string;
+  tieredRewards?: TieredReward[];
 }
 
 export interface TournamentResult {
@@ -232,7 +243,7 @@ export interface MonthData {
   status: 'active' | 'completed' | 'locked';
 }
 
-export type MessageCategory = 'system' | 'admin' | 'private' | 'bonus' | 'tournament' | 'poll' | 'gift';
+export type MessageCategory = 'system' | 'admin' | 'private' | 'tournament' | 'poll' | 'gift';
 
 export interface Message {
   id: string;

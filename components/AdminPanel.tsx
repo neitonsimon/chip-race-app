@@ -68,8 +68,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const [topUpAmount, setTopUpAmount] = useState('');
     const [commandsTab, setCommandsTab] = useState<'ativas' | 'historico'>('ativas');
     const [reportData, setReportData] = useState<any[]>([]);
-    const [reportFilter, setReportFilter] = useState<'event' | 'date'>('event');
+    const [reportFilter, setReportFilter] = useState<'event' | 'date' | 'product'>('event');
     const [extraReportData, setExtraReportData] = useState<any[]>([]);
+    const [reportCommandsData, setReportCommandsData] = useState<any[]>([]);
     const [startDate, setStartDate] = useState(() => { const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0] });
     const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
     const [editingClosedCommand, setEditingClosedCommand] = useState<any | null>(null);
@@ -89,7 +90,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const [giftType, setGiftType] = useState<'brl' | 'chipz'>('brl');
     const [giftAmount, setGiftAmount] = useState('');
     const [giftSearchQuery, setGiftSearchQuery] = useState('');
+    const [giftDescription, setGiftDescription] = useState('');
     const [giftSearchResults, setGiftSearchResults] = useState<any[]>([]);
+    const [checkoutDiscount, setCheckoutDiscount] = useState('');
 
 
     const updatePlayerBalanceLocally = (userId: string, amount: number, type: 'brl' | 'chipz' = 'brl') => {
@@ -231,6 +234,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const fetchReport = async (eventId: string) => {
         const { data } = await supabase.from('command_items').select('*, products(name, category), commands!inner(event_id, profiles!user_id(name, numeric_id))').eq('commands.event_id', eventId);
         if (data) setReportData(data);
+        const { data: cmds } = await supabase.from('commands').select('*').eq('event_id', eventId).eq('status', 'closed');
+        if (cmds) setReportCommandsData(cmds);
     };
     const fetchMonthlyReport = async (start: string, end: string) => {
         if (!start || !end) return;
@@ -251,6 +256,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
 
         if (cmdItems) setReportData(cmdItems);
         if (txs) setExtraReportData(txs);
+        const { data: cmds } = await supabase.from('commands')
+            .select('*')
+            .gte('closed_at', start + 'T00:00:00.000Z')
+            .lte('closed_at', end + 'T23:59:59.999Z')
+            .eq('status', 'closed');
+        if (cmds) setReportCommandsData(cmds);
         setIsLoading(false);
     };
 
@@ -449,21 +460,35 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         setIsLoading(true);
         try {
             const total = Number(selectedCommand.total_brl);
+            const discount = parseFloat(checkoutDiscount) || 0;
+            const finalTotal = Math.max(0, total - discount);
+
             // Atomic deduct with balance check - fails safely if insufficient funds
             const { error: deductErr } = await supabase.rpc('deduct_balance_brl', {
                 p_user_id: selectedCommand.user_id,
-                p_amount: total
+                p_amount: finalTotal
             });
             if (deductErr) {
                 alert(deductErr.message || 'Erro ao descontar saldo.');
                 setIsLoading(false); return;
             }
-            await supabase.from('commands').update({ status: 'closed', closed_at: new Date().toISOString() }).eq('id', selectedCommand.id);
-            await supabase.from('messages').insert({ user_id: selectedCommand.user_id, sender_id: currentUser.id, content: `Sua comanda foi encerrada. Total: R$ ${total.toFixed(2)} descontado do saldo.`, category: 'system', is_read: false });
-            updatePlayerBalanceLocally(selectedCommand.user_id, -total); // Deduct balance locally
+            await supabase.from('commands').update({
+                status: 'closed',
+                closed_at: new Date().toISOString(),
+                discount_brl: discount
+            }).eq('id', selectedCommand.id);
+
+            await supabase.from('messages').insert({
+                user_id: selectedCommand.user_id,
+                sender_id: currentUser.id,
+                content: `Sua comanda foi encerrada. Total: R$ ${total.toFixed(2)}${discount > 0 ? ` (Desconto de R$ ${discount.toFixed(2)})` : ''}. R$ ${finalTotal.toFixed(2)} descontado do saldo.`,
+                category: 'system',
+                is_read: false
+            });
+            updatePlayerBalanceLocally(selectedCommand.user_id, -finalTotal); // Deduct balance locally
             setOpenCommands(openCommands.filter(c => c.id !== selectedCommand.id));
             if (selectedEvent) fetchClosedCommands(selectedEvent.id);
-            setSelectedCommand(null); setShowCheckout(false); setCommandItems([]);
+            setSelectedCommand(null); setShowCheckout(false); setCommandItems([]); setCheckoutDiscount('');
         } catch (err: any) { alert('Erro: ' + err.message); }
         finally { setIsLoading(false); }
     };
@@ -509,11 +534,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
 
         setIsLoading(true);
         try {
-            const rpcName = giftType === 'brl' ? 'increment_balance_brl' : 'increment_balance_chipz';
             const finalAmount = giftType === 'chipz' ? Math.floor(amount) : amount;
             const logMsg = giftType === 'brl' ? `R$ ${finalAmount.toFixed(2)}` : `${finalAmount} Chipz`;
+            const finalDescription = giftDescription.trim() || `Presente de Admin: ${logMsg}`;
 
-            // For now we process in chunks to avoid timeout if "Select All" is massive
+            // Chunks for mass sending
             const chunks = [];
             for (let i = 0; i < targetUserIds.length; i += 20) {
                 chunks.push(targetUserIds.slice(i, i + 20));
@@ -521,13 +546,21 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
 
             for (const chunk of chunks) {
                 await Promise.all(chunk.map(async (uid) => {
-                    await supabase.rpc(rpcName, { p_user_id: uid, p_amount: finalAmount });
+                    // Use secure_balance_transaction for logging and safety
+                    await supabase.rpc('secure_balance_transaction', {
+                        user_id: uid,
+                        brl_amount: giftType === 'brl' ? finalAmount : 0,
+                        chipz_amount: giftType === 'chipz' ? finalAmount : 0,
+                        description: finalDescription,
+                        category: 'gift'
+                    });
+
                     await supabase.from('messages').insert({
                         user_id: uid,
                         sender: 'Admin',
                         sender_id: currentUser.id,
                         subject: '🎁 Você recebeu um Presente!',
-                        content: `Parabéns! O administrador enviou um presente especial para sua conta: ${logMsg}. O saldo já foi atualizado e está disponível para uso.`,
+                        content: `${finalDescription}. O saldo já foi atualizado e está disponível para uso.`,
                         category: 'gift',
                         is_read: false
                     });
@@ -537,6 +570,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
 
             alert(`✅ Presentes enviados com sucesso para ${targetUserIds.length} usuários!`);
             setGiftAmount('');
+            setGiftDescription('');
             setSelectedGiftUsers([]);
         } catch (err: any) {
             alert('Erro ao enviar presentes: ' + err.message);
@@ -590,6 +624,33 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         }
 
         return sections;
+    };
+
+    const reportByProduct = () => {
+        const prodMap: Record<string, { qty: number; total: number; category: string }> = {};
+
+        // Process command items
+        reportData.forEach((item: any) => {
+            const name = item.products?.name || item.notes || 'Item';
+            const cat = item.products?.category || (item.notes?.startsWith('Cash Game') ? 'cash' : 'torneio');
+            if (!prodMap[name]) prodMap[name] = { qty: 0, total: 0, category: cat };
+            prodMap[name].qty += item.quantity;
+            prodMap[name].total += Number(item.total_price_brl);
+        });
+
+        // Process extra transactions (VIP, etc.) if in date mode or product mode
+        if (reportFilter !== 'event') {
+            extraReportData.forEach((tx: any) => {
+                const name = tx.description || 'Transação';
+                const cat = tx.category || 'outros';
+                if (!prodMap[name]) prodMap[name] = { qty: 0, total: 0, category: cat };
+                const amt = Math.abs(Number(tx.amount_brl));
+                prodMap[name].qty += 1;
+                prodMap[name].total += amt;
+            });
+        }
+
+        return Object.entries(prodMap).sort((a, b) => b[1].total - a[1].total);
     };
 
     const PlayerName = ({ p }: { p: any }) => (
@@ -910,6 +971,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                     <div className="flex gap-2 mt-2">
                                         <button onClick={() => { setReportFilter('event'); setReportData([]); }} className={`text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-xl transition-all ${reportFilter === 'event' ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}>Por Evento</button>
                                         <button onClick={() => { setReportFilter('date'); setReportData([]); }} className={`text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-xl transition-all ${reportFilter === 'date' ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}>Por Período</button>
+                                        <button onClick={() => { setReportFilter('product'); setReportData([]); setExtraReportData([]); fetchMonthlyReport(startDate, endDate); }} className={`text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-xl transition-all ${reportFilter === 'product' ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}>Por Produto</button>
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
@@ -940,31 +1002,96 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                 </div>
                             ) : (
                                 <div className="space-y-6">
-                                    <div className="grid grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                         {[
                                             {
-                                                label: 'Total Geral',
-                                                val: `R$ ${(reportData.reduce((s, i) => s + Number(i.total_price_brl), 0) + (reportFilter === 'date' ? extraReportData.reduce((s, i) => s + Math.abs(Number(i.amount_brl)), 0) : 0)).toFixed(2)}`,
-                                                color: 'text-primary'
-                                            },
-                                            {
-                                                label: 'Total Itens',
-                                                val: reportData.reduce((s, i) => s + i.quantity, 0) + (reportFilter === 'date' ? extraReportData.length : 0),
+                                                label: 'Total Bruto',
+                                                val: `R$ ${(reportData.reduce((s, i) => s + Number(i.total_price_brl), 0) + (reportFilter !== 'event' ? extraReportData.reduce((s, i) => s + Math.abs(Number(i.amount_brl)), 0) : 0)).toFixed(2)}`,
                                                 color: 'text-white'
                                             },
                                             {
-                                                label: 'Comandas/Sessões',
-                                                val: [...new Set(reportData.map(i => i.command_id))].length + (reportFilter === 'date' ? extraReportData.length : 0),
+                                                label: 'Total Itens',
+                                                val: reportData.reduce((s, i) => s + i.quantity, 0) + (reportFilter !== 'event' ? extraReportData.length : 0),
+                                                color: 'text-white'
+                                            },
+                                            {
+                                                label: 'Quebra de Caixa',
+                                                val: `R$ ${reportCommandsData.reduce((s, c) => s + Number(c.discount_brl || 0), 0).toFixed(2)}`,
+                                                color: 'text-red-400'
+                                            },
+                                            {
+                                                label: 'Comandas',
+                                                val: [...new Set(reportData.map(i => i.command_id))].length + (reportFilter !== 'event' ? extraReportData.length : 0),
                                                 color: 'text-white'
                                             }
                                         ].map(c => (
                                             <div key={c.label} className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
-                                                <p className="text-xs text-gray-500 uppercase font-black mb-1">{c.label}</p>
-                                                <p className={`text-2xl font-display font-black ${c.color}`}>{c.val}</p>
+                                                <p className="text-[10px] text-gray-500 uppercase font-black mb-1">{c.label}</p>
+                                                <p className={`text-xl font-display font-black ${c.color}`}>{c.val}</p>
                                             </div>
                                         ))}
                                     </div>
-                                    {Object.entries(reportBySection()).map(([section, data]) => (
+                                    <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-4 flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center">
+                                                <span className="material-icons-outlined text-red-500">trending_down</span>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-black text-white uppercase">Faturamento Líquido</p>
+                                                <p className="text-[10px] text-gray-500">Total Geral - Quebra de Caixa</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-2xl font-display font-black text-green-400">
+                                                R$ {(
+                                                    reportData.reduce((s, i) => s + Number(i.total_price_brl), 0) +
+                                                    (reportFilter !== 'event' ? extraReportData.reduce((s, i) => s + Math.abs(Number(i.amount_brl)), 0) : 0) -
+                                                    reportCommandsData.reduce((s, c) => s + Number(c.discount_brl || 0), 0)
+                                                ).toFixed(2)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {reportFilter === 'product' ? (
+                                        <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+                                            <div className="px-4 py-3 border-b border-white/10 bg-black/20 flex items-center justify-between">
+                                                <span className="text-sm font-black text-white uppercase tracking-widest">Ranking de Vendas por Produto</span>
+                                                <span className="text-[10px] text-gray-500 uppercase font-black">{startDate} a {endDate}</span>
+                                            </div>
+                                            <table className="w-full text-xs">
+                                                <thead>
+                                                    <tr className="border-b border-white/5 bg-black/40">
+                                                        <th className="text-left px-4 py-3 text-gray-500 font-bold uppercase">Produto</th>
+                                                        <th className="text-left px-4 py-3 text-gray-500 font-bold uppercase">Categoria</th>
+                                                        <th className="text-center px-4 py-3 text-gray-500 font-bold uppercase">Quantidade</th>
+                                                        <th className="text-right px-4 py-3 text-gray-500 font-bold uppercase">Total Arrecadado</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {reportByProduct().map(([name, data]) => (
+                                                        <tr key={name} className="border-b border-white/5 hover:bg-white/10 transition-colors">
+                                                            <td className="px-4 py-3">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="material-icons-outlined text-primary text-base">inventory_2</span>
+                                                                    <span className="text-white font-bold">{name}</span>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-4 py-3">
+                                                                <span className="px-2 py-0.5 rounded-full bg-white/5 text-[9px] font-black uppercase text-gray-400 border border-white/10">
+                                                                    {data.category}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-4 py-3 text-center">
+                                                                <span className="text-white font-display font-black">{data.qty}</span>
+                                                            </td>
+                                                            <td className="px-4 py-3 text-right">
+                                                                <span className="text-primary font-display font-black">R$ {data.total.toFixed(2)}</span>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ) : Object.entries(reportBySection()).map(([section, data]) => (
                                         <div key={section} className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
                                             <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-black/20">
                                                 <span className="text-sm font-black text-white uppercase tracking-widest">{section}</span>
@@ -1191,6 +1318,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                                 </div>
                                             </div>
 
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Descrição / Motivo</label>
+                                                <input type="text" value={giftDescription} onChange={e => setGiftDescription(e.target.value)} placeholder="Ex: Presente de Natal, Reembolso, Bônus VIP..."
+                                                    className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none" />
+                                            </div>
+
                                             <button onClick={handleSendGifts} disabled={isLoading || !giftAmount} className="w-full bg-primary hover:bg-white hover:text-black text-white font-black py-4 rounded-2xl transition-all shadow-neon-pink uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-50 mt-4">
                                                 {isLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <><span className="material-icons-outlined text-sm">send</span> {giftTarget === 'all' ? 'Enviar para Todos' : 'Enviar Presente'}</>}
                                             </button>
@@ -1300,9 +1433,23 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                         </div>
 
                         <div className="p-5 flex-shrink-0 border-t border-white/10">
-                            <div className="flex justify-between items-center mb-4">
-                                <span className="text-sm text-white font-black uppercase">Total</span>
-                                <span className="text-xl font-display font-black text-primary">R$ {Number(selectedCommand.total_brl).toFixed(2)}</span>
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-xs text-gray-500 uppercase font-black">Subtotal</span>
+                                <span className="text-sm font-bold text-white">R$ {Number(selectedCommand.total_brl).toFixed(2)}</span>
+                            </div>
+                            <div className="flex items-center justify-between mb-4 gap-4">
+                                <span className="text-xs text-green-400 uppercase font-black">Desconto (R$)</span>
+                                <input
+                                    type="number"
+                                    value={checkoutDiscount}
+                                    onChange={e => setCheckoutDiscount(e.target.value)}
+                                    placeholder="0.00"
+                                    className="w-24 bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-right text-white text-sm font-bold outline-none focus:border-green-400"
+                                />
+                            </div>
+                            <div className="flex justify-between items-center mb-4 pt-2 border-t border-white/5">
+                                <span className="text-sm text-white font-black uppercase">Total Final</span>
+                                <span className="text-xl font-display font-black text-primary">R$ {Math.max(0, Number(selectedCommand.total_brl) - (parseFloat(checkoutDiscount) || 0)).toFixed(2)}</span>
                             </div>
                             <div className="space-y-2">
                                 <button onClick={handleCloseCommand} disabled={isLoading} className="w-full bg-primary hover:bg-primary/80 disabled:opacity-50 text-white font-black py-3 rounded-2xl transition-all shadow-neon-pink uppercase tracking-widest flex items-center justify-center gap-2 text-sm">

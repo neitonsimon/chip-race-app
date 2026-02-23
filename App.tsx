@@ -214,6 +214,7 @@ export default function App() {
                     rewardChipz: r.reward_chipz || 0,
                     isActive: r.is_active !== false,
                     badgeTemplateId: r.badge_template_id,
+                    tieredRewards: r.tiered_rewards || [],
                     players: [] // Players will be loaded/calculated separately se needed, or kept in local for now
                 }));
                 // Substituir os rankings APENAS pelos salvos no Supabase.
@@ -727,7 +728,8 @@ export default function App() {
                 reward_brl: ranking.rewardBrl || 0,
                 reward_chipz: ranking.rewardChipz || 0,
                 is_active: ranking.isActive !== false,
-                badge_template_id: ranking.badgeTemplateId || null
+                badge_template_id: ranking.badgeTemplateId || null,
+                tiered_rewards: ranking.tieredRewards || []
             };
 
             let result;
@@ -859,15 +861,56 @@ export default function App() {
             // 4. Update Local State
             setRankings(prev => prev.map(r => r.id === rankingId ? { ...r, isActive: false } : r));
 
-            // 5. System Message
+            // 5. System Message & Additional Rewards (Tiered)
             const justificationText = customJustification ? `\n\nMotivo da Honraria: "${customJustification}"` : '';
+
+            // Prize Distribution for Winner (Top 1)
             await supabase.from('messages').insert({
                 user_id: winner.id,
                 from: 'Sistema Chip Race',
                 subject: '🏆 Premiação de Ranking!',
                 content: `Parabéns! Você foi o grande vencedor do ranking ${ranking.label}.\n\nRecompensas:\n${ranking.rewardBadgeTitle ? `- Insígnia: ${ranking.rewardBadgeTitle}\n` : ''}${ranking.rewardBrl && ranking.rewardBrl > 0 ? `- Créditos: R$ ${ranking.rewardBrl.toFixed(2)}\n` : ''}${ranking.rewardChipz && ranking.rewardChipz > 0 ? `- Fichas: ${ranking.rewardChipz} Chipz\n` : ''}${justificationText}`,
-                category: 'bonus'
+                category: 'system'
             });
+
+            // Additional Tiered Rewards (for 2nd, 3rd, etc.)
+            if (ranking.tieredRewards && ranking.tieredRewards.length > 0) {
+                for (const tr of ranking.tieredRewards) {
+                    const recipient = ranking.players.find(p => p.rank === tr.position);
+                    if (recipient && recipient.id) {
+                        // 1. Award Badge
+                        if (tr.badgeTitle) {
+                            await supabase.from('user_badges').insert({
+                                user_id: recipient.id,
+                                title: tr.badgeTitle,
+                                description: tr.badgeDesc || '',
+                                icon: tr.badgeIcon || 'stars',
+                                ranking_id: ranking.id
+                            });
+                        }
+
+                        // 2. Award BRL/Chipz
+                        if ((tr.brl && tr.brl > 0) || (tr.chipz && tr.chipz > 0)) {
+                            const { data: profile } = await supabase.from('profiles').select('balance_brl, balance_chipz').eq('id', recipient.id).single();
+                            if (profile) {
+                                await supabase.from('profiles').update({
+                                    balance_brl: (profile.balance_brl || 0) + (tr.brl || 0),
+                                    balance_chipz: (profile.balance_chipz || 0) + (tr.chipz || 0)
+                                }).eq('id', recipient.id);
+                            }
+                        }
+
+                        // 3. Message
+                        await supabase.from('messages').insert({
+                            user_id: recipient.id,
+                            from: 'Sistema Chip Race',
+                            subject: `🏆 Premiação de Ranking (${tr.position}º Lugar)!`,
+                            content: `Parabéns! Você conquistou o ${tr.position}º lugar no ranking ${ranking.label}.\n\nRecompensas:\n${tr.badgeTitle ? `- Insígnia: ${tr.badgeTitle}\n` : ''}${tr.brl && tr.brl > 0 ? `- Créditos: R$ ${tr.brl.toFixed(2)}\n` : ''}${tr.chipz && tr.chipz > 0 ? `- Fichas: ${tr.chipz} Chipz\n` : ''}${justificationText}`,
+                            category: 'system'
+                        });
+                    }
+                }
+            }
 
             alert("Sucesso! Ranking encerrado e prêmios distribuídos.");
         } catch (err: any) {
@@ -1144,6 +1187,28 @@ export default function App() {
             } catch (e: any) {
                 console.error('Error updating closed event in Supabase:', e);
                 alert('Falha ao encerrar evento no Supabase: ' + (e.message || 'Erro desconhecido.'));
+            }
+        }
+
+        // AUTO-SEND MESSAGES TO PARTICIPANTS
+        if (results && results.length > 0) {
+            try {
+                const messagePromises = results.map(r => {
+                    if (r.userId) {
+                        return supabase.from('messages').insert({
+                            user_id: r.userId,
+                            sender: 'Chip Race',
+                            subject: '🏆 Resultado de Torneio',
+                            content: `${eventToUpdate.title} encerrado, você terminou na posição ${r.position}, parabéns!`,
+                            category: 'tournament',
+                            is_read: false
+                        });
+                    }
+                    return Promise.resolve();
+                });
+                await Promise.all(messagePromises);
+            } catch (err) {
+                console.error('Error sending automatic tournament results:', err);
             }
         }
 

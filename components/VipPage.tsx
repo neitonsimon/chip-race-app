@@ -269,21 +269,33 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate, currentUser, onUpd
 
                 <div className="text-center mb-8 border-b border-white/5 pb-8">
                   <h3 className="text-2xl font-display font-bold text-white uppercase tracking-wider mb-2">{plan.title}</h3>
-                  <div className="flex items-center justify-center gap-1">
-                    <span className="text-sm text-gray-400 font-bold mb-4">R$</span>
+
+                  <div className="flex flex-col items-center justify-center min-h-[100px]">
+                    <div className="flex items-center justify-center gap-1">
+                      <span className={`text-sm font-bold ${isUpgrade ? 'text-gray-500' : 'text-gray-400'}`}>R$</span>
+                      <span className={`font-display font-black leading-none ${isUpgrade ? 'text-3xl text-gray-500 line-through' : 'text-6xl text-white'}`}>
+                        {plan.price}
+                      </span>
+                    </div>
+
                     {isUpgrade ? (
-                      <div className="flex flex-col items-center justify-center mt-2">
-                        <span className="text-2xl font-display text-gray-500 line-through mb-[-5px]">{plan.price}</span>
-                        <span className="text-5xl font-display font-black text-green-400">{(targetPlanCost - userPlanCost).toFixed(2).replace('.', ',')}</span>
+                      <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-500">
+                        <div className="flex items-center justify-center gap-2 text-green-400 font-bold">
+                          <span className="text-sm">- R$ {userPlanCost.toFixed(2).replace('.', ',')}</span>
+                          <span className="text-[10px] bg-green-500/10 border border-green-500/20 rounded-full px-2 py-0.5 uppercase tracking-tighter">Desconto Upgrade</span>
+                        </div>
+                        <div className="flex items-center justify-center gap-1 mt-2">
+                          <span className="text-xs text-white/50 uppercase font-black">Total:</span>
+                          <span className="text-sm text-white/50 font-bold">R$</span>
+                          <span className="text-5xl font-display font-black text-white shadow-neon-pink">
+                            {(targetPlanCost - userPlanCost).toFixed(2).replace('.', ',')}
+                          </span>
+                        </div>
                       </div>
                     ) : (
-                      <span className="text-5xl font-display font-black text-white">{plan.price}</span>
+                      <div className="text-sm text-gray-500 uppercase tracking-widest font-bold mt-2">{plan.period}</div>
                     )}
                   </div>
-                  {isUpgrade && (
-                    <div className="text-xs text-green-400/80 uppercase font-black tracking-widest bg-green-900/40 rounded-full px-2 py-0.5 inline-block mb-3 mt-1">Desconto Upgrade</div>
-                  )}
-                  <div className="text-sm text-gray-500 uppercase tracking-widest font-bold mt-1">{plan.period}</div>
                 </div>
 
                 <ul className="space-y-4 mb-8 flex-1">
