@@ -6,7 +6,7 @@ import { supabase } from '../src/lib/supabase';
 interface TournamentCategoriesProps {
   isAdmin?: boolean;
   categories: TournamentCategory[];
-  onUpdateCategory: (index: number, field: keyof TournamentCategory, value: any) => void;
+  onUpdateCategory: (index: number, updates: Partial<TournamentCategory>) => void;
   prizeLabel?: string;
 }
 
@@ -116,6 +116,7 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
   prizeLabel = "30K+"
 }) => {
   const [activeRegulation, setActiveRegulation] = useState<string | null>(null);
+  const [activeTemplateSelect, setActiveTemplateSelect] = useState<number | null>(null);
   const [productDetails, setProductDetails] = useState<any>(null);
   const [isLoadingProduct, setIsLoadingProduct] = useState(false);
   const [isEditingProduct, setIsEditingProduct] = useState(false);
@@ -282,19 +283,58 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
                     <span className={`material-icons-outlined text-3xl ${styles.icon}`}>{cat.icon}</span>
                   </div>
 
-                  <h3 className={`text-lg font-display font-bold text-gray-900 dark:text-white mb-2 ${styles.text} transition-colors w-full`}>
+                  <h3 className={`text-lg font-display font-bold text-gray-900 dark:text-white mb-2 ${styles.text} transition-colors w-full flex items-center justify-center gap-2`}>
                     <EditableContent
                       isAdmin={isAdmin}
                       value={cat.title}
-                      onSave={(val) => onUpdateCategory(index, 'title', val)}
+                      onSave={(val) => onUpdateCategory(index, { title: val })}
                     />
+
+                    {isAdmin && (
+                      <div className="relative">
+                        <button
+                          onClick={() => setActiveTemplateSelect(activeTemplateSelect === index ? null : index)}
+                          className="p-1 hover:bg-white/10 rounded transition-colors text-gray-500 hover:text-primary"
+                          title="Escolher Categoria do Sistema"
+                        >
+                          <span className="material-icons-outlined text-sm">settings</span>
+                        </button>
+
+                        {activeTemplateSelect === index && (
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 bg-surface-dark border border-white/10 rounded-xl shadow-2xl z-[100] p-2 animate-in fade-in zoom-in duration-200">
+                            <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest p-2 border-b border-white/5 mb-1">Categorias do Sistema</div>
+                            <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                              {Object.entries(REGULATIONS_DATA).map(([key, data]) => (
+                                <button
+                                  key={key}
+                                  onClick={() => {
+                                    const colorValue = (data.color.replace('text-', '').replace('-500', '') as any);
+                                    onUpdateCategory(index, {
+                                      id: key,
+                                      title: data.title,
+                                      icon: data.icon,
+                                      color: colorValue === 'primary' || colorValue === 'secondary' || colorValue === 'cyan' || colorValue === 'pink' ? colorValue : 'primary'
+                                    });
+                                    setActiveTemplateSelect(null);
+                                  }}
+                                  className="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-white/5 transition-colors flex items-center gap-2 group/item"
+                                >
+                                  <span className={`material-icons-outlined text-sm ${data.color}`}>{data.icon}</span>
+                                  <span className="text-gray-300 group-hover/item:text-white truncate">{data.title}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </h3>
 
                   <p className="text-base text-gray-500 dark:text-gray-400 mb-4 min-h-[60px] flex items-center justify-center w-full">
                     <EditableContent
                       isAdmin={isAdmin}
                       value={cat.description}
-                      onSave={(val) => onUpdateCategory(index, 'description', val)}
+                      onSave={(val) => onUpdateCategory(index, { description: val })}
                       type="textarea"
                       className="w-full"
                     />

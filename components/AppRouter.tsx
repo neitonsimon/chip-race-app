@@ -132,7 +132,7 @@ export const AppRouter: React.FC = () => {
                 return <AdminPanel
                     currentUser={currentUser as any}
                     onClose={() => handleNavigate('home')}
-                    isAdmin={isAdmin && currentUser?.role !== 'staff'}
+                    isAdmin={isAdmin}
                     onUpdateProfile={handleProfileUpdate}
                     badgeTemplates={badgeTemplates}
                     onSendAdminMessage={handleSendAdminMessage}

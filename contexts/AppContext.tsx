@@ -173,7 +173,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     addonValue: e.addon_value,
                     addonChips: e.addon_chips,
                     staffBonusValue: e.staff_bonus_value,
-                    staff_bonus_chips: e.staff_bonus_chips,
+                    staffBonusChips: e.staff_bonus_chips,
                     timeChipValue: e.time_chip_value,
                     timeChipChips: e.time_chip_chips,
                     flyerUrl: e.flyer_url,
@@ -186,7 +186,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     totalRebuys: e.total_rebuys,
                     totalAddons: e.total_addons,
                     totalPrize: e.total_prize,
-                    scoringSchemaId: e.scoring_schema_id
+                    scoringSchemaId: e.scoring_schema_id,
+                    gameMode: e.game_mode,
+                    cashGameType: e.cash_game_type,
+                    cashGameBlinds: e.cash_game_blinds,
+                    cashGameCapacity: e.cash_game_capacity,
+                    cashGameMinMax: e.cash_game_min_max,
+                    cashGameDinner: e.cash_game_dinner,
+                    cashGameNotes: e.cash_game_notes,
+                    staffExpensesBrl: e.staff_expenses_brl || 0,
+                    prizePayoutBrl: e.prize_payout_brl || 0
                 })));
             }
 
@@ -206,6 +215,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (ecoCategoriesData) setContentDB(prev => ({ ...prev, categories: ecoCategoriesData }));
 
             const { data: profilesData } = await supabase.from('profiles_public').select('*');
+            const { data: allUserBadges } = await supabase.from('user_badges').select('*');
+
             if (profilesData) {
                 setAllProfiles(profilesData.map(p => ({
                     id: p.id,
@@ -226,7 +237,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     nextLevelExp: p.next_level_exp || 1000,
                     gallery: p.gallery || undefined,
                     playStyles: p.play_styles || undefined,
-                    isVerified: p.is_verified || false
+                    isVerified: p.is_verified || false,
+                    badges: allUserBadges?.filter(ub => ub.user_id === p.id) || []
                 })));
             }
 
@@ -273,6 +285,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     totalPendingDebt: data.total_pending_debt || 0,
                     debtLimitBrl: data.debt_limit_brl || 0,
                     isVerified: data.is_verified || false,
+                    role: data.role,
                     badges: []
                 };
                 const { data: userBadges } = await supabase.from('user_badges').select('*').eq('user_id', userId).order('awarded_at', { ascending: false });
@@ -406,7 +419,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                                 city: profile?.city || 'Venâncio Aires - RS', points: 0, change: 'same',
                                 isVip: profile?.isVip || r.isVip || false, vipStatus: profile?.vipStatus || 'nao_vip',
                                 social: profile?.social, bio: profile?.bio, level: profile?.level, currentExp: profile?.currentExp,
-                                nextLevelExp: profile?.nextLevelExp, gallery: profile?.gallery, playStyles: profile?.playStyles
+                                nextLevelExp: profile?.nextLevelExp, gallery: profile?.gallery, playStyles: profile?.playStyles,
+                                isVerified: profile?.isVerified || false
                             });
                         }
                         const p = playerMap.get(playerKey)!;
@@ -508,7 +522,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             staff_bonus_chips: event.staffBonusChips, time_chip_value: event.timeChipValue, time_chip_chips: event.timeChipChips, flyer_url: event.flyerUrl,
             double_rebuy_value: event.doubleRebuyValue, double_rebuy_chips: event.doubleRebuyChips, double_addon_value: event.doubleAddonValue,
             double_addon_chips: event.doubleAddonChips, parallel_products: event.parallelProducts, results: event.results,
-            total_rebuys: event.totalRebuys, total_addons: event.totalAddons, total_prize: event.totalPrize, scoring_schema_id: event.scoringSchemaId
+            total_rebuys: event.totalRebuys, total_addons: event.totalAddons, total_prize: event.totalPrize, scoring_schema_id: event.scoringSchemaId,
+            game_mode: event.gameMode, cash_game_type: event.cashGameType, cash_game_blinds: event.cashGameBlinds,
+            cash_game_capacity: event.cashGameCapacity,
+            cash_game_min_max: event.cashGameMinMax,
+            cash_game_dinner: event.cashGameDinner || false,
+            cash_game_notes: event.cashGameNotes || '',
+            staff_expenses_brl: event.staffExpensesBrl || 0,
+            prize_payout_brl: event.prizePayoutBrl || 0
         };
         try {
             if (isNew) {
@@ -775,11 +796,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (isAdmin) await supabase.from('content_db').upsert({ key: section, value: newSec }, { onConflict: 'key' });
     };
 
-    const updateCategory = async (index: number, field: keyof TournamentCategory, value: any) => {
+    const updateCategory = async (index: number, updates: Partial<TournamentCategory>) => {
         const newCats = [...contentDB.categories];
-        newCats[index] = { ...newCats[index], [field]: value };
+        const oldId = newCats[index].id;
+        newCats[index] = { ...newCats[index], ...updates };
         setContentDB(prev => ({ ...prev, categories: newCats }));
-        if (isAdmin) await supabase.from('ecosystem_categories').update({ [field]: value }).eq('id', newCats[index].id);
+        if (isAdmin) {
+            const { error } = await supabase.from('ecosystem_categories').update(updates).eq('id', oldId);
+            if (error) console.error('Error updating category:', error);
+        }
     };
 
     return (

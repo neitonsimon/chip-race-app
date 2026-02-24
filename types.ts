@@ -100,6 +100,8 @@ export interface Event {
   totalAddons?: number;
   totalPrize?: number; // Alterado de totalStaff para totalPrize
   scoringSchemaId?: string; // ID of the scoring formula to use
+  staffExpensesBrl?: number;
+  prizePayoutBrl?: number;
 }
 
 export interface RankingPlayer {
@@ -303,10 +305,29 @@ export interface Command {
   total_brl: number;
   discount_brl?: number;
   unpaid_amount_brl?: number;
+  chips_payment_brl?: number;
   opened_by?: string;
   opened_at: string;
   closed_at?: string;
   profiles?: any;
+}
+
+export interface CommandItem {
+  id: string;
+  command_id: string;
+  product_id?: string | null;
+  quantity: number;
+  unit_price_brl: number;
+  unit_price_chipz: number;
+  total_price_brl: number;
+  total_price_chipz: number;
+  notes?: string | null;
+  created_at?: string;
+  created_by?: string;
+  products?: {
+    name: string;
+    category: string;
+  };
 }
 
 export interface Debt {

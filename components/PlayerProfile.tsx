@@ -412,6 +412,21 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         }
     }, [activeTab, player.id]);
 
+    useEffect(() => {
+        const fetchBadges = async () => {
+            if (!targetIdRef.current) return;
+            const { data: userBadges } = await supabase.from('user_badges').select('*').eq('user_id', targetIdRef.current).order('awarded_at', { ascending: false });
+            if (userBadges) {
+                setPlayer(prev => ({ ...prev, badges: userBadges }));
+            }
+        };
+
+        // Always refresh badges for the target profile to ensure alignment with DB
+        if (targetIdRef.current) {
+            fetchBadges();
+        }
+    }, [player.id]);
+
     const fetchPlayerCommands = async () => {
         if (!targetIdRef.current) return;
         const { data } = await supabase.from('commands')
@@ -547,11 +562,24 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     };
 
     const toggleVerification = async () => {
-        if (!isAdmin) return;
+        if (!isAdmin || !targetIdRef.current) return;
+
+        // Basic UUID check to avoid trying to update guest users
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetIdRef.current);
+        if (!isUUID) {
+            alert('Não é possível verificar este perfil (jogador convidado ou sem registro no banco).');
+            return;
+        }
+
         const newStatus = !player.isVerified;
         try {
-            const { error } = await supabase.from('profiles').update({ is_verified: newStatus }).eq('id', targetIdRef.current);
+            const { data, error } = await supabase.from('profiles').update({ is_verified: newStatus }).eq('id', targetIdRef.current).select();
             if (error) throw error;
+
+            if (!data || data.length === 0) {
+                alert('Erro: O perfil não foi encontrado no banco de dados para atualização.');
+                return;
+            }
 
             const updatedPlayer = { ...player, isVerified: newStatus };
             setPlayer(updatedPlayer);
