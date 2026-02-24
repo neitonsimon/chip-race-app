@@ -186,6 +186,7 @@ export interface RankingInstance {
   brlReward?: number;
   chipzReward?: number;
   badgeTemplateId?: string;
+  positionPrizes?: Record<number, string>; // Rank-based manual prizes
 }
 
 export interface TournamentResult {

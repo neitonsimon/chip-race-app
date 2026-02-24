@@ -52,7 +52,7 @@ interface AppContextType {
     handleDeleteRanking: (id: string) => Promise<void>;
     handleAwardBadge: (badge: { user_id: string; title: string; description: string; icon: string; ranking_id: string }) => Promise<void>;
     handleFinalizeRanking: (rankingId: string, targetUserId?: string, customJustification?: string) => Promise<void>;
-    handleUpdateRankingPrize: (rankingId: string, playerName: string, newPrize: string) => void;
+    handleUpdateRankingPrize: (rankingId: string, rank: number, newPrize: string) => void;
     handleUpdateTotalQualifiers: (value: number | null) => Promise<void>;
     handleUpdateMonth: (index: number, field: keyof MonthData, value: any) => Promise<void>;
     handleToggleMonthStatus: (index: number) => void;
@@ -132,6 +132,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     brlReward: r.brl_reward,
                     chipzReward: r.chipz_reward,
                     badgeTemplateId: r.badge_template_id,
+                    positionPrizes: r.position_prizes || {},
                     players: []
                 })));
             }
@@ -562,7 +563,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 is_active: fullRanking.isActive,
                 brl_reward: fullRanking.brlReward,
                 chipz_reward: fullRanking.chipzReward,
-                badge_template_id: fullRanking.badgeTemplateId
+                badge_template_id: fullRanking.badgeTemplateId,
+                position_prizes: fullRanking.positionPrizes
             };
             await supabase.from('rankings').upsert({ id: rankingId, ...dbData }, { onConflict: 'id' });
         }
@@ -672,8 +674,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         } catch (e) { console.error('Error finalizing ranking:', e); }
     };
 
-    const handleUpdateRankingPrize = (rankingId: string, playerName: string, newPrize: string) => {
-        setRankings(prev => prev.map(r => r.id === rankingId ? { ...r, players: r.players.map(p => p.name === playerName ? { ...p, manualPrize: newPrize } : p) } : r));
+    const handleUpdateRankingPrize = (rankingId: string, rank: number, newPrize: string) => {
+        setRankings(prev => {
+            const updated = prev.map(r => {
+                if (r.id === rankingId) {
+                    const updatedPrizes = { ...(r.positionPrizes || {}), [rank]: newPrize };
+
+                    // Persist to DB if admin
+                    if (isAdmin) {
+                        supabase.from('rankings').update({ position_prizes: updatedPrizes }).eq('id', rankingId).then(({ error }) => {
+                            if (error) console.error('Error updating position prizes:', error);
+                        });
+                    }
+
+                    return { ...r, positionPrizes: updatedPrizes };
+                }
+                return r;
+            });
+            return updated;
+        });
     };
 
     const handleUpdateTotalQualifiers = async (value: number | null) => {

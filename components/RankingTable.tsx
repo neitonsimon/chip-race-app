@@ -11,7 +11,7 @@ interface RankingTableProps {
     onUpdateRankingMeta?: (id: string, updates: Partial<RankingInstance>) => void; // Admin
     onAddRanking?: () => void; // Admin
     onDeleteRanking?: (id: string) => void; // Admin
-    onUpdatePrize?: (rankingId: string, playerName: string, newPrize: string) => void;
+    onUpdatePrize?: (rankingId: string, rank: number, newPrize: string) => void;
     onNavigate?: (view: string) => void;
     currentUser?: { name?: string };
     globalScoringSchemas?: ScoringSchema[];
@@ -49,9 +49,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
 
     // Admin Editing State
     const [editingRanking, setEditingRanking] = useState<RankingInstance | null>(null);
-    const [finishingRanking, setFinishingRanking] = useState<RankingInstance | null>(null);
     const [justification, setJustification] = useState('');
-    const [isSubmittingFinish, setIsSubmittingFinish] = useState(false);
 
     // --- SIMULATOR STATE ---
     const [simType, setSimType] = useState<string>('weekly');
@@ -230,21 +228,9 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                 <span className="material-icons-outlined">functions</span>
                             </button>
 
-                            {activeRanking.isActive !== false && (
-                                <button
-                                    onClick={() => setFinishingRanking(activeRanking)}
-                                    className="bg-red-500/10 p-2 rounded-full hover:bg-red-500 hover:text-white text-red-500 transition-colors border border-red-500/20"
-                                    title="Encerrar Ranking e Distribuir Prêmios"
-                                >
-                                    <span className="material-icons-outlined">lock</span>
-                                </button>
-                            )}
 
-                            {activeRanking.isActive === false && (
-                                <div className="bg-gray-500/10 p-2 rounded-full text-gray-500 border border-gray-500/20" title="Ranking Encerrado">
-                                    <span className="material-icons-outlined">lock_clock</span>
-                                </div>
-                            )}
+
+
                         </div>
                     )}
                 </div>
@@ -630,15 +616,15 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                                 {isAdmin ? (
                                                     <input
                                                         type="text"
-                                                        value={player.manualPrize || ''}
+                                                        value={activeRanking.positionPrizes?.[player.rank] || ''}
                                                         onClick={(e) => e.stopPropagation()}
-                                                        onChange={(e) => onUpdatePrize && onUpdatePrize(activeRankingId, player.name, e.target.value)}
+                                                        onChange={(e) => onUpdatePrize && onUpdatePrize(activeRankingId, player.rank, e.target.value)}
                                                         placeholder="-"
                                                         className="bg-black/30 border border-white/10 rounded px-2 py-1 text-center text-xs md:text-sm text-secondary font-bold w-16 md:w-24 focus:border-secondary outline-none"
                                                     />
                                                 ) : (
                                                     <span className="text-xs md:text-base font-bold text-gray-500 dark:text-gray-400">
-                                                        {player.manualPrize || '-'}
+                                                        {activeRanking.positionPrizes?.[player.rank] || '-'}
                                                     </span>
                                                 )}
                                             </td>
@@ -771,47 +757,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                 </div>
                             </div>
 
-                            <div className="bg-primary/10 p-4 rounded-xl border border-primary/20 space-y-4">
-                                <h4 className="text-sm font-bold text-primary uppercase tracking-wider flex items-center gap-2">
-                                    <span className="material-icons-outlined text-sm">emoji_events</span>
-                                    Premiação Automática (Campeão)
-                                </h4>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Prêmio em R$</label>
-                                        <input
-                                            type="number"
-                                            value={editingRanking.brlReward || ''}
-                                            onChange={e => setEditingRanking({ ...editingRanking, brlReward: Number(e.target.value) })}
-                                            className="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-xs outline-none focus:border-primary"
-                                            placeholder="Ex: 500"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Prêmio em Chipz</label>
-                                        <input
-                                            type="number"
-                                            value={editingRanking.chipzReward || ''}
-                                            onChange={e => setEditingRanking({ ...editingRanking, chipzReward: Number(e.target.value) })}
-                                            className="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-xs outline-none focus:border-primary"
-                                            placeholder="Ex: 1000"
-                                        />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Insígnia de Campeão</label>
-                                    <select
-                                        value={editingRanking.badgeTemplateId || ''}
-                                        onChange={e => setEditingRanking({ ...editingRanking, badgeTemplateId: e.target.value })}
-                                        className="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-xs outline-none focus:border-primary"
-                                    >
-                                        <option value="">Nenhuma</option>
-                                        {badgeTemplates.map(b => (
-                                            <option key={b.id} value={b.id}>{b.title}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
+
 
                             <div className="bg-white/5 p-4 rounded-xl border border-white/5">
                                 <h4 className="text-sm font-bold text-primary mb-3 uppercase tracking-wider">Mapeamento de Fórmulas</h4>
@@ -875,104 +821,8 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                 </div >
             )}
 
-            {finishingRanking && (
-                <FinisherModal
-                    ranking={finishingRanking}
-                    onClose={() => setFinishingRanking(null)}
-                    isSubmitting={isSubmittingFinish}
-                    onConfirm={async (justification) => {
-                        if (onFinalizeRanking) {
-                            setIsSubmittingFinish(true);
-                            try {
-                                await onFinalizeRanking(finishingRanking.id, undefined, justification);
-                                setFinishingRanking(null);
-                            } catch (e) {
-                                console.error(e);
-                            } finally {
-                                setIsSubmittingFinish(false);
-                            }
-                        }
-                    }}
-                />
-            )}
+
 
         </div >
-    );
-};
-
-// Modal de Justificativa para Encerramento
-const FinisherModal: React.FC<{
-    ranking: RankingInstance;
-    onClose: () => void;
-    onConfirm: (justification: string) => void;
-    isSubmitting: boolean;
-}> = ({ ranking, onClose, onConfirm, isSubmitting }) => {
-    const [text, setText] = useState('');
-    const winner = ranking.players.find(p => p.rank === 1);
-
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose}></div>
-            <div className="bg-surface-dark border border-white/10 rounded-3xl p-8 max-w-lg w-full relative z-10 shadow-2xl animate-in fade-in zoom-in duration-300">
-                <div className="flex items-center gap-4 mb-6">
-                    <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center shrink-0 border border-primary/30">
-                        <span className="material-icons-outlined text-primary text-4xl">emoji_events</span>
-                    </div>
-                    <div>
-                        <h3 className="text-2xl font-display font-black text-white uppercase tracking-wider">Finalizar Ranking</h3>
-                        <p className="text-gray-400 text-sm">{ranking.label}</p>
-                    </div>
-                </div>
-
-                <div className="bg-white/5 rounded-2xl p-4 mb-6 border border-white/5">
-                    <p className="text-xs font-bold text-gray-500 uppercase mb-3">Vencedor Detectado</p>
-                    <div className="flex items-center gap-3">
-                        <img src={winner?.avatar || `https://ui-avatars.com/api/?name=${winner?.name}&background=random`} className="w-10 h-10 rounded-full border border-primary/50" alt="" />
-                        <div>
-                            <p className="text-white font-bold">{winner?.name || 'Não identificado'}</p>
-                            <p className="text-[10px] text-primary font-black uppercase tracking-widest">{winner?.points.toLocaleString()} Pontos</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="space-y-4 mb-8">
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Justificativa da Honraria</label>
-                        <textarea
-                            value={text}
-                            onChange={e => setText(text === '' ? e.target.value : e.target.value)} // ensure reactivity
-                            onInput={(e: any) => setText(e.target.value)}
-                            placeholder="Ex: Pela incrível consistência e espírito esportivo demonstrados durante toda a temporada..."
-                            className="w-full h-32 bg-black/40 border border-white/10 rounded-xl p-4 text-white text-sm focus:border-primary outline-none resize-none transition-all"
-                        ></textarea>
-                    </div>
-
-                    {/* Prizes and Chips display removed as requested */}
-                </div>
-
-                <div className="flex gap-4">
-                    <button
-                        onClick={onClose}
-                        className="flex-1 px-6 py-4 rounded-xl text-gray-400 font-bold hover:text-white transition-colors"
-                    >
-                        Voltar
-                    </button>
-                    <button
-                        onClick={() => onConfirm(text)}
-                        disabled={isSubmitting || !winner}
-                        className="flex-[2] bg-primary hover:bg-white hover:text-black text-white font-bold py-4 rounded-xl transition-all shadow-neon-pink flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                        {isSubmitting ? (
-                            <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                        ) : (
-                            <>
-                                <span className="material-icons-outlined">check_circle</span>
-                                Confirmar e Premiar
-                            </>
-                        )}
-                    </button>
-                </div>
-            </div>
-        </div>
     );
 };
