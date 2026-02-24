@@ -481,11 +481,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         }
         setIsLoading(true);
         try {
+            const isOnline = newDebtData.eventId === 'online_credit';
             const { error } = await supabase.from('debts').insert({
                 user_id: newDebtData.userId,
-                event_id: newDebtData.eventId,
+                event_id: isOnline ? null : newDebtData.eventId,
                 amount_brl: parseFloat(newDebtData.amount),
-                description: newDebtData.description,
+                description: newDebtData.description || (isOnline ? 'Crédito Online' : ''),
                 status: 'pending'
             });
             if (error) throw error;
@@ -2010,6 +2011,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                                     className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-red-500 outline-none transition-all"
                                                 >
                                                     <option value="" style={{ backgroundColor: '#0a0720' }}>Selecionar Evento</option>
+                                                    <option value="online_credit" style={{ backgroundColor: '#0a0720' }}>Crédito Online</option>
                                                     {events.map(ev => <option key={ev.id} value={ev.id} style={{ backgroundColor: '#0a0720' }}>{ev.title} ({new Date(ev.date + 'T12:00:00').toLocaleDateString('pt-BR')})</option>)}
                                                 </select>
                                             </div>
@@ -2084,6 +2086,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                         <tbody className="divide-y divide-white/5">
                                             {activeDebts.filter(d =>
                                                 (d.profiles?.name || '').toLowerCase().includes(debtFilter.toLowerCase()) ||
+                                                (d.events?.title || '').toLowerCase().includes(debtFilter.toLowerCase()) ||
+                                                (d.description || '').toLowerCase().includes(debtFilter.toLowerCase()) ||
                                                 String(d.profiles?.numeric_id || '').includes(debtFilter)
                                             ).length === 0 ? (
                                                 <tr>
@@ -2093,6 +2097,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                                 </tr>
                                             ) : activeDebts.filter(d =>
                                                 (d.profiles?.name || '').toLowerCase().includes(debtFilter.toLowerCase()) ||
+                                                (d.events?.title || '').toLowerCase().includes(debtFilter.toLowerCase()) ||
+                                                (d.description || '').toLowerCase().includes(debtFilter.toLowerCase()) ||
                                                 String(d.profiles?.numeric_id || '').includes(debtFilter)
                                             ).map(debt => (
                                                 <tr key={debt.id} className="hover:bg-white/5 transition-colors group/row">
@@ -2113,7 +2119,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        <p className="text-gray-300 font-bold">{debt.events?.title || 'Lançamento Manual'}</p>
+                                                        <p className="text-gray-300 font-bold">{debt.events?.title || (debt.description === 'Crédito Online' ? 'Crédito Online' : 'Lançamento Manual')}</p>
                                                         <p className="text-[10px] text-gray-500 uppercase font-black">{new Date(debt.created_at).toLocaleString('pt-BR')}</p>
                                                     </td>
                                                     <td className="px-6 py-4 text-center">
