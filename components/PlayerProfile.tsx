@@ -437,6 +437,59 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         }
     };
 
+    const handlePayOpenCommand = async (cmd: any) => {
+        if (!isLoggedIn || !isOwnProfile) return;
+        const amount = Number(cmd.total_brl);
+        if (amount <= 0) return;
+
+        if (player.balanceBrl < amount) {
+            alert('Saldo insuficiente para pagar esta comanda!');
+            return;
+        }
+
+        if (!window.confirm(`Deseja encerrar e pagar esta comanda de R$ ${amount.toFixed(2)} usando seu saldo?`)) return;
+
+        setIsSavingExp(true);
+        try {
+            // 1. Deduct balance using backend RPC
+            const { error: deductErr } = await supabase.rpc('deduct_balance_brl', {
+                p_user_id: player.id,
+                p_amount: amount
+            });
+            if (deductErr) throw deductErr;
+
+            // 2. Close command
+            const { error: updateErr } = await supabase.from('commands').update({
+                status: 'closed',
+                closed_at: new Date().toISOString()
+            }).eq('id', cmd.id);
+            if (updateErr) throw updateErr;
+
+            // 3. Notify system
+            await supabase.from('messages').insert({
+                user_id: player.id,
+                sender: 'Sistema',
+                content: `Você encerrou sua comanda no evento ${cmd.events?.title || 'Torneio'} e pagou R$ ${amount.toFixed(2)} com seu saldo.`,
+                category: 'system',
+                is_read: false
+            });
+
+            // 4. Update local state
+            const newBalance = player.balanceBrl - amount;
+            const updatedPlayer = { ...player, balanceBrl: newBalance };
+            setPlayer(updatedPlayer);
+            if (onUpdateProfile) onUpdateProfile(player.id, updatedPlayer);
+
+            fetchPlayerCommands();
+            setViewingReceipt(null);
+            alert('Comanda paga e encerrada com sucesso!');
+        } catch (err: any) {
+            alert('Erro ao processar pagamento: ' + err.message);
+        } finally {
+            setIsSavingExp(false);
+        }
+    };
+
     const handlePayDebt = async (debt: any) => {
         if (!isLoggedIn || !isOwnProfile) return;
         const amount = Number(debt.amount_brl);
@@ -2589,13 +2642,26 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                             )}
                         </div>
 
-                        <div className="px-5 py-4 border-t border-white/10 flex-shrink-0 flex items-center justify-between bg-black/20">
-                            <span className="text-sm font-black text-gray-400 uppercase tracking-widest">
-                                {viewingReceipt.status === 'open' ? 'Total Parcial (Aberto)' : 'Total Pago'}
-                            </span>
-                            <span className={`text-xl font-display font-black ${viewingReceipt.status === 'open' ? 'text-red-400' : 'text-green-400'}`}>
-                                R$ {Number(viewingReceipt.total_brl).toFixed(2)}
-                            </span>
+                        <div className="px-5 py-4 border-t border-white/10 flex-shrink-0 bg-black/20 space-y-4">
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm font-black text-gray-400 uppercase tracking-widest">
+                                    {viewingReceipt.status === 'open' ? 'Total Parcial (Aberto)' : 'Total Pago'}
+                                </span>
+                                <span className={`text-xl font-display font-black ${viewingReceipt.status === 'open' ? 'text-red-400' : 'text-green-400'}`}>
+                                    R$ {Number(viewingReceipt.total_brl).toFixed(2)}
+                                </span>
+                            </div>
+
+                            {viewingReceipt.status === 'open' && Number(viewingReceipt.total_brl) > 0 && (
+                                <button
+                                    onClick={() => handlePayOpenCommand(viewingReceipt)}
+                                    disabled={setIsSavingExp as any === true}
+                                    className="w-full bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-black py-4 rounded-2xl transition-all shadow-neon-green uppercase tracking-widest flex items-center justify-center gap-2 group"
+                                >
+                                    <span className="material-icons-outlined text-xl group-hover:scale-110 transition-transform">payments</span>
+                                    {player.balanceBrl < Number(viewingReceipt.total_brl) ? 'Saldo Insuficiente' : 'Pagar com meu Saldo'}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
