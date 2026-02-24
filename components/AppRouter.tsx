@@ -16,6 +16,10 @@ import { CompanyHistory } from './CompanyHistory';
 import { FAQSection } from './FAQSection';
 import { AdminPanel } from './AdminPanel';
 import { SponsorsSection } from './SponsorsSection';
+import { TermsOfUse } from './TermsOfUse';
+import { PrivacyPolicy } from './PrivacyPolicy';
+import { ClubRules } from './ClubRules';
+import { ResponsibleGaming } from './ResponsibleGaming';
 
 export const AppRouter: React.FC = () => {
     const {
@@ -138,6 +142,14 @@ export const AppRouter: React.FC = () => {
                     onSendAdminMessage={handleSendAdminMessage}
                     onCreatePoll={handleCreatePoll}
                 />;
+            case 'terms':
+                return <TermsOfUse />;
+            case 'privacy':
+                return <PrivacyPolicy />;
+            case 'rules':
+                return <ClubRules />;
+            case 'responsible-gaming':
+                return <ResponsibleGaming />;
             case 'home':
             default:
                 return (

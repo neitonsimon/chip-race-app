@@ -70,7 +70,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const [commandItems, setCommandItems] = useState<any[]>([]);
     const [showCheckout, setShowCheckout] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [productSection, setProductSection] = useState<'bar' | 'torneio' | 'produtos' | 'cash'>('bar');
+    const [productSection, setProductSection] = useState<'bar' | 'torneio' | 'opcionais' | 'cash'>('bar');
     const [pendingProduct, setPendingProduct] = useState<any | null>(null);
     const [showTopUp, setShowTopUp] = useState(false);
     const [topUpAmount, setTopUpAmount] = useState('');
@@ -90,9 +90,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const toastTimer = useRef<any>(null);
 
     // Launch Tab State
-    const [newProduct, setNewProduct] = useState({ name: '', category: 'bar', price: '', description: '' });
+    const [newProduct, setNewProduct] = useState({ name: '', category: 'bar', price: '', description: '', price_unit: '' });
     const [allProducts, setAllProducts] = useState<any[]>([]); // Includes inactive
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
+    const [productCategories, setProductCategories] = useState<any[]>([]);
+    const [newCategory, setNewCategory] = useState({ name: '', label: '', icon: 'inventory_2' });
 
     // Gift Tab State
     const [giftTarget, setGiftTarget] = useState<'single' | 'all'>('single');
@@ -229,7 +231,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         }
     };
 
-    useEffect(() => { fetchEvents(); fetchProducts(); fetchAllProducts(); fetchDebts(); }, []);
+    useEffect(() => { fetchEvents(); fetchProducts(); fetchAllProducts(); fetchDebts(); fetchProductCategories(); }, []);
     useEffect(() => {
         if (activeTab === 'debts') fetchDebts();
     }, [activeTab]);
@@ -270,6 +272,27 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         const { data } = await supabase.from('products').select('*').order('category');
         if (data) setAllProducts(data);
     };
+    const fetchProductCategories = async () => {
+        const { data } = await supabase.from('product_categories').select('*').order('label');
+        if (data) setProductCategories(data);
+    };
+    const handleAddCategory = async () => {
+        if (!newCategory.name || !newCategory.label) { alert('Nome e Rótulo são obrigatórios.'); return; }
+        setIsLoading(true);
+        try {
+            const { error } = await supabase.from('product_categories').insert({
+                name: newCategory.name.toLowerCase().replace(/\s+/g, '_'),
+                label: newCategory.label,
+                icon: newCategory.icon,
+                active: true
+            });
+            if (error) throw error;
+            alert('✅ Categoria criada com sucesso!');
+            setNewCategory({ name: '', label: '', icon: 'inventory_2' });
+            fetchProductCategories();
+        } catch (err: any) { alert('Erro: ' + err.message); }
+        finally { setIsLoading(false); }
+    };
     const handleAddProduct = async () => {
         if (!newProduct.name || !newProduct.price) { alert('Nome e preço são obrigatórios.'); return; }
         setIsLoading(true);
@@ -279,11 +302,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                 category: newProduct.category,
                 price: parseFloat(newProduct.price),
                 description: newProduct.description,
+                price_unit: newProduct.price_unit,
                 active: true
             });
             if (error) throw error;
             alert('✅ Produto lançado com sucesso!');
-            setNewProduct({ name: '', category: 'bar', price: '', description: '' });
+            setNewProduct({ name: '', category: 'bar', price: '', description: '', price_unit: '' });
             fetchAllProducts();
             fetchProducts();
         } catch (err: any) { alert('Erro: ' + err.message); }
@@ -616,7 +640,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             unit_price_chipz: 0,
             total_price_brl: finalPrice,
             total_price_chipz: 0,
-            notes: null,
+            notes: product.price_unit ? `Cobrança: ${product.price_unit}` : null,
             created_by: currentUser.id
         });
         if (error) { alert('Erro: ' + error.message); return; }
@@ -1091,6 +1115,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             handleDownloadCommandReceipt={() => { }}
                             isLoading={isLoading}
                             allProducts={products}
+                            tournamentItems={getTournamentItems()}
+                            cashItems={getCashItems()}
+                            cashAmount={cashAmount}
+                            setCashAmount={setCashAmount}
+                            handleAddManualCash={handleAddManualCash}
                             commandsTab={commandsTab === 'ativas' ? 'ativas' : 'encerradas'}
                             setCommandsTab={(t) => setCommandsTab(t === 'ativas' ? 'ativas' : 'historico')}
                             staffExpenses={staffExpenses}
@@ -1102,6 +1131,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             isProductDisabled={isProductDisabled}
                             isTourItemDisabled={isTourItemDisabled}
                             isAdmin={isAdmin}
+                            productCategories={productCategories}
                         />
                     )}
 
@@ -1143,6 +1173,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             toggleProductStatus={toggleProductStatus}
                             deleteProduct={deleteProduct}
                             isLoading={isLoading}
+                            productCategories={productCategories}
+                            newCategory={newCategory}
+                            setNewCategory={setNewCategory}
+                            handleAddCategory={handleAddCategory}
                         />
                     )}
                     {activeTab === 'send-gifts' && (

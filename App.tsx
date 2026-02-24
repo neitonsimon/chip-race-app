@@ -12,7 +12,7 @@ export default function App() {
         currentUser, newNotification, setNewNotification
     } = useApp();
 
-    const showFooter = ['home', 'the-chosen-details', 'calendar', 'ranking', 'vip', 'recharge', 'the-chosen-regulations'].includes(currentView);
+    const showFooter = ['home', 'the-chosen-details', 'calendar', 'ranking', 'vip', 'recharge', 'the-chosen-regulations', 'terms', 'privacy', 'rules', 'responsible-gaming'].includes(currentView);
 
     return (
         <div className="min-h-screen flex flex-col bg-background-light dark:bg-background-dark relative">

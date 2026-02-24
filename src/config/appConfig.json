@@ -65,19 +65,19 @@
         "informacoes": [
             {
                 "label": "Termos de Uso",
-                "view": "home"
+                "view": "terms"
             },
             {
                 "label": "Política de Privacidade",
-                "view": "home"
+                "view": "privacy"
             },
             {
                 "label": "Regras do Clube",
-                "view": "home"
+                "view": "rules"
             },
             {
                 "label": "Jogo Responsável",
-                "view": "home"
+                "view": "responsible-gaming"
             },
             {
                 "label": "Suporte Online",

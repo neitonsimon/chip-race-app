@@ -10,14 +10,33 @@ interface InventoryTabProps {
     toggleProductStatus: (p: any) => Promise<void>;
     deleteProduct: (id: string) => Promise<void>;
     isLoading: boolean;
+    productCategories: any[];
+    newCategory: any;
+    setNewCategory: (c: any) => void;
+    handleAddCategory: () => Promise<void>;
 }
 
 export const InventoryTab: React.FC<InventoryTabProps> = ({
     newProduct, setNewProduct, allProducts, selectedCategory, setSelectedCategory,
-    handleCreateProduct, toggleProductStatus, deleteProduct, isLoading
+    handleCreateProduct, toggleProductStatus, deleteProduct, isLoading,
+    productCategories, newCategory, setNewCategory, handleAddCategory
 }) => {
+    // Default categories if none exist in DB
+    const displayCategories = productCategories.length > 0 ? productCategories : [
+        { name: 'torneio', label: 'Torneio' },
+        { name: 'cash', label: 'Cash Game' },
+        { name: 'bar', label: 'Bar & Gastronomia' },
+        { name: 'produtos', label: 'Acessórios & Poker Gear' },
+        { name: 'vestuario', label: 'Vestuário' },
+        { name: 'aluguel', label: 'Aluguel' },
+        { name: 'curso', label: 'Curso' },
+        { name: 'online', label: 'Online' },
+        { name: 'bet', label: 'Bet' },
+        { name: 'jackpot', label: 'Jackpot' }
+    ];
+
     return (
-        <div className="p-8 max-w-6xl mx-auto">
+        <div className="p-8 max-w-6xl mx-auto pb-32">
             <div className="flex items-center gap-4 mb-8">
                 <div className="w-14 h-14 rounded-2xl bg-orange-500/20 border border-orange-500/40 flex items-center justify-center shadow-2xl">
                     <span className="material-icons-outlined text-orange-500 text-3xl">inventory_2</span>
@@ -29,11 +48,12 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Create Product */}
+                {/* Forms Section */}
                 <div className="space-y-6">
+                    {/* Create Product */}
                     <div className="bg-black/40 border border-white/10 rounded-3xl p-6">
                         <h4 className="text-sm font-black text-white uppercase mb-6 flex items-center gap-2">
-                            <span className="material-icons text-primary text-sm">add_circle</span> Cadastrar Novo
+                            <span className="material-icons text-primary text-sm">add_circle</span> Cadastrar Produto
                         </h4>
                         <div className="space-y-4">
                             <div>
@@ -43,16 +63,9 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
                                     onChange={e => setNewProduct({ ...newProduct, category: e.target.value })}
                                     className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-bold focus:border-primary outline-none"
                                 >
-                                    <option value="torneio">Torneio (Buy-in, Rebuy, Add-on)</option>
-                                    <option value="cash">Cash Game (Buy-in, Time Chip)</option>
-                                    <option value="bar">Bar & Gastronomia</option>
-                                    <option value="produtos">Acessórios & Poker Gear</option>
-                                    <option value="vestuario">Vestuário (Bonés, Camisas)</option>
-                                    <option value="aluguel">Aluguel (Mesas, Equipamentos)</option>
-                                    <option value="curso">Curso / Coach</option>
-                                    <option value="online">Poker Online (Créditos)</option>
-                                    <option value="bet">Bet & Quests</option>
-                                    <option value="jackpot">Jackpot / Last Longer</option>
+                                    {displayCategories.map(cat => (
+                                        <option key={cat.name} value={cat.name}>{cat.label}</option>
+                                    ))}
                                 </select>
                             </div>
                             <div>
@@ -65,15 +78,27 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
                                     className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none"
                                 />
                             </div>
-                            <div>
-                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Preço Sugerido (R$)</label>
-                                <input
-                                    type="number"
-                                    value={newProduct.price}
-                                    onChange={e => setNewProduct({ ...newProduct, price: e.target.value })}
-                                    placeholder="0.00"
-                                    className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-black focus:border-primary outline-none"
-                                />
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Preço Sugerido (R$)</label>
+                                    <input
+                                        type="number"
+                                        value={newProduct.price}
+                                        onChange={e => setNewProduct({ ...newProduct, price: e.target.value })}
+                                        placeholder="0.00"
+                                        className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-black focus:border-primary outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Condicional / Unid.</label>
+                                    <input
+                                        type="text"
+                                        value={newProduct.price_unit}
+                                        onChange={e => setNewProduct({ ...newProduct, price_unit: e.target.value })}
+                                        placeholder="unid, dia, mes..."
+                                        className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-xs focus:border-primary outline-none"
+                                    />
+                                </div>
                             </div>
                             <button
                                 onClick={handleCreateProduct}
@@ -81,6 +106,52 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
                                 className="w-full bg-primary hover:bg-white hover:text-black text-white font-black py-4 rounded-2xl transition-all shadow-neon-pink uppercase tracking-widest text-xs mt-4 disabled:opacity-50"
                             >
                                 {isLoading ? 'SALVANDO...' : 'CADASTRAR PRODUTO'}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Create Category */}
+                    <div className="bg-black/40 border border-white/10 rounded-3xl p-6">
+                        <h4 className="text-sm font-black text-white uppercase mb-6 flex items-center gap-2">
+                            <span className="material-icons text-secondary text-sm">category</span> Nova Categoria
+                        </h4>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">ID / Slug (Sem espaços)</label>
+                                <input
+                                    type="text"
+                                    value={newCategory.name}
+                                    onChange={e => setNewCategory({ ...newCategory, name: e.target.value })}
+                                    placeholder="ex: vinhos_premium"
+                                    className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Nome de Exibição</label>
+                                <input
+                                    type="text"
+                                    value={newCategory.label}
+                                    onChange={e => setNewCategory({ ...newCategory, label: e.target.value })}
+                                    placeholder="Ex: Vinhos Premium"
+                                    className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Ícone (Material Icons)</label>
+                                <input
+                                    type="text"
+                                    value={newCategory.icon}
+                                    onChange={e => setNewCategory({ ...newCategory, icon: e.target.value })}
+                                    placeholder="ex: local_bar"
+                                    className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none"
+                                />
+                            </div>
+                            <button
+                                onClick={handleAddCategory}
+                                disabled={isLoading || !newCategory.name || !newCategory.label}
+                                className="w-full bg-secondary hover:bg-white hover:text-black text-black font-black py-4 rounded-2xl transition-all shadow-neon-blue uppercase tracking-widest text-xs mt-4 disabled:opacity-50"
+                            >
+                                {isLoading ? 'SALVANDO...' : 'CRIAR CATEGORIA'}
                             </button>
                         </div>
                     </div>
@@ -99,14 +170,9 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
                                 className="bg-[#050214] border border-white/10 rounded-xl px-4 py-2 text-xs text-gray-400 font-black uppercase outline-none focus:border-primary"
                             >
                                 <option value="all">Ver Tudo</option>
-                                <option value="torneio">Torneio</option>
-                                <option value="cash">Cash Game</option>
-                                <option value="bar">Bar</option>
-                                <option value="produtos">Produtos</option>
-                                <option value="vestuario">Vestuário</option>
-                                <option value="aluguel">Aluguel</option>
-                                <option value="curso">Curso</option>
-                                <option value="online">Online</option>
+                                {displayCategories.map(cat => (
+                                    <option key={cat.name} value={cat.name}>{cat.label}</option>
+                                ))}
                             </select>
                         </div>
 
@@ -124,7 +190,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-[10px] text-gray-500 uppercase font-black">{p.category}</span>
                                                     <span className="w-1 h-1 rounded-full bg-gray-700"></span>
-                                                    <span className="text-[10px] text-primary font-black">R$ {Number(p.price || 0).toFixed(2)}</span>
+                                                    <span className="text-[10px] text-primary font-black">R$ {Number(p.price || 0).toFixed(2)}{p.price_unit ? ` / ${p.price_unit}` : ''}</span>
                                                 </div>
                                             </div>
                                         </div>

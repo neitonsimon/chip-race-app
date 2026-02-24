@@ -24,12 +24,18 @@ interface OperationalTabProps {
     fetchClosedCommands: (id: string) => Promise<void>;
     setShowCheckout: (s: boolean) => void;
     setShowTopUp: (s: boolean) => void;
-    productSection: 'bar' | 'torneio' | 'produtos' | 'cash';
-    setProductSection: (s: 'bar' | 'torneio' | 'produtos' | 'cash') => void;
+    productSection: string;
+    setProductSection: (s: string) => void;
+    productCategories?: any[];
     reopenCommand: (cmd: any) => Promise<void>;
     handleDownloadCommandReceipt: (cmd: any, items: any[]) => void;
     isLoading: boolean;
     allProducts: any[];
+    tournamentItems: any[];
+    cashItems: any[];
+    cashAmount: string;
+    setCashAmount: (v: string) => void;
+    handleAddManualCash: () => void;
     commandsTab: 'ativas' | 'encerradas';
     setCommandsTab: (t: 'ativas' | 'encerradas') => void;
     staffExpenses: string;
@@ -50,10 +56,35 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
     handleTourItemClick, handleCashItemClick, handleProductClick, handleDeleteCommandItem,
     fetchOpenCommands, fetchClosedCommands, setShowCheckout, setShowTopUp,
     productSection, setProductSection, reopenCommand, handleDownloadCommandReceipt, isLoading,
-    allProducts, commandsTab, setCommandsTab, staffExpenses, setStaffExpenses,
+    allProducts, tournamentItems, cashItems, cashAmount, setCashAmount, handleAddManualCash,
+    commandsTab, setCommandsTab, staffExpenses, setStaffExpenses,
     prizePayout, setPrizePayout, updateStaffExpenses, updatePrizePayout, isAdmin,
-    isProductDisabled, isTourItemDisabled
+    isProductDisabled, isTourItemDisabled, productCategories = []
 }) => {
+    // Determine which items to show based on productSection
+    const getVisibleItems = () => {
+        if (productSection === 'torneio') return tournamentItems;
+        if (productSection === 'cash') return cashItems;
+        if (productSection === 'opcionais') {
+            return allProducts.filter(p =>
+                (p.category === 'bet' || p.category === 'lastlonger' || p.category === 'jackpot' || p.category === 'produtos') && p.active
+            );
+        }
+        return allProducts.filter(p => p.category === productSection && p.active);
+    };
+
+    const visibleItems = getVisibleItems();
+
+    const getItemCount = (p: any) => {
+        if (!commandItems) return 0;
+        if (productSection === 'torneio') {
+            return commandItems.filter(item => item.notes?.startsWith(p.name)).reduce((sum, item) => sum + (item.quantity || 1), 0);
+        }
+        if (productSection === 'cash') {
+            return commandItems.filter(item => item.notes?.includes(p.name)).reduce((sum, item) => sum + (item.quantity || 1), 0);
+        }
+        return commandItems.filter(item => item.product_id === p.id).reduce((sum, item) => sum + (item.quantity || 1), 0);
+    };
     return (
         <div className="flex h-[calc(100vh-140px)] overflow-hidden">
             {/* Sidebar: Event Selection & Player Search */}
@@ -223,24 +254,29 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                 <div
                                     key={cmd.id}
                                     onClick={() => setSelectedCommand(cmd)}
-                                    className={`bg-surface-dark border rounded-2xl p-4 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] ${selectedCommand?.id === cmd.id ? 'border-primary shadow-neon-pink ring-1 ring-primary' : 'border-white/5'}`}
+                                    className={`bg-surface-dark border rounded-2xl p-3 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden flex flex-col items-center text-center ${selectedCommand?.id === cmd.id ? 'border-primary shadow-neon-pink ring-1 ring-primary' : 'border-white/5'}`}
                                 >
-                                    <div className="flex items-center gap-3 mb-4">
-                                        <img src={cmd.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${cmd.profiles?.name}&background=random`} className="w-12 h-12 rounded-xl" />
-                                        <div className="min-w-0 flex-1">
-                                            <h5 className="text-white font-bold truncate">{cmd.profiles?.name}</h5>
-                                            <p className="text-[10px] text-gray-500 font-black">CR#{String(cmd.profiles?.numeric_id).padStart(3, '0')}</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-primary font-display font-black">R$ {Number(cmd.total_brl).toFixed(2)}</p>
-                                            <p className="text-[8px] text-gray-500 uppercase font-black">{new Date(cmd.opened_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
+                                    <div className="relative mb-2 shrink-0">
+                                        <img src={cmd.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${cmd.profiles?.name}&background=random`} className="w-10 h-10 rounded-xl border border-white/10" />
+                                        {selectedCommand?.id === cmd.id && (
+                                            <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border-2 border-[#050214] animate-pulse"></div>
+                                        )}
+                                    </div>
+                                    <div className="min-w-0 w-full mb-3">
+                                        <h5 className="text-white font-bold text-[10px] truncate leading-tight mb-1 uppercase tracking-wider">{cmd.profiles?.name}</h5>
+                                        <div className="flex items-center justify-center gap-1">
+                                            <span className="text-[8px] text-gray-500 font-black">R$</span>
+                                            <p className="text-primary font-display font-black text-sm shadow-neon-pink leading-none">
+                                                {Number(cmd.total_brl).toFixed(2)}
+                                            </p>
                                         </div>
                                     </div>
-                                    <div className="flex gap-2">
+
+                                    <div className="w-full mt-auto pt-2 border-t border-white/5 flex gap-1.5">
                                         {cmd.status === 'open' ? (
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); setSelectedCommand(cmd); setShowCheckout(true); }}
-                                                className="flex-1 bg-white hover:bg-primary hover:text-white text-black text-[10px] font-black uppercase py-2 rounded-lg transition-all"
+                                                className="w-full bg-white hover:bg-primary hover:text-white text-black text-[9px] font-black uppercase py-2 rounded-lg transition-all shadow-sm active:scale-95"
                                             >
                                                 Fechar
                                             </button>
@@ -248,17 +284,17 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                             <>
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleDownloadCommandReceipt(cmd, []); }}
-                                                    className="flex-1 bg-white/5 hover:bg-white/10 text-white text-[10px] font-black uppercase py-2 rounded-lg transition-all border border-white/10"
+                                                    className="flex-1 bg-white/5 hover:bg-white/10 text-white text-[9px] font-black uppercase py-2 rounded-lg transition-all border border-white/10 active:scale-95 whitespace-nowrap px-1"
                                                 >
                                                     Recibo
                                                 </button>
                                                 {isAdmin && (
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); reopenCommand(cmd); }}
-                                                        className="px-3 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white text-[10px] font-black uppercase py-2 rounded-lg transition-all border border-red-500/20"
+                                                        className="px-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white text-[9px] font-black uppercase py-2 rounded-lg transition-all border border-red-500/20 active:scale-95"
                                                         title="Reabrir Comanda"
                                                     >
-                                                        <span className="material-icons text-sm">settings_backup_restore</span>
+                                                        <span className="material-icons text-xs">settings_backup_restore</span>
                                                     </button>
                                                 )}
                                             </>
@@ -290,7 +326,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                         <span className="material-icons-outlined text-sm group-hover:scale-110 transition-transform">add_card</span>
                                         <span className="text-[10px] font-black uppercase">Recarga</span>
                                     </button>
-                                    <button onClick={() => setProductSection('cash')} className={`flex items-center justify-center gap-2 border py-3 rounded-xl transition-all group ${productSection !== 'bar' && productSection !== 'torneio' && productSection !== 'produtos' ? 'bg-white text-black border-white' : 'bg-white/5 hover:bg-white hover:text-black border-white/10'}`}>
+                                    <button onClick={() => setProductSection('cash')} className={`flex items-center justify-center gap-2 border py-3 rounded-xl transition-all group ${productSection !== 'bar' && productSection !== 'torneio' && productSection !== 'opcionais' ? 'bg-white text-black border-white' : 'bg-white/5 hover:bg-white hover:text-black border-white/10'}`}>
                                         <span className="material-icons-outlined text-sm group-hover:scale-110 transition-transform">shopping_bag</span>
                                         <span className="text-[10px] font-black uppercase">Venda</span>
                                     </button>
@@ -300,49 +336,81 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                             <div className="bg-black/40 border border-white/5 rounded-2xl p-4">
                                 <div className="flex items-center justify-between mb-3">
                                     <p className="text-[10px] font-black text-gray-500 uppercase">Categorias</p>
-                                    <div className="flex gap-1">
-                                        {(['torneio', 'cash', 'bar', 'produtos'] as const).map(cat => (
+                                    <div className="flex gap-1 overflow-x-auto pb-1 max-w-[250px] custom-scrollbar">
+                                        {(['torneio', 'cash', 'bar', 'opcionais'] as const).map(cat => (
                                             <button
                                                 key={cat}
                                                 onClick={() => setProductSection(cat)}
-                                                className={`px-2 py-1 rounded-md text-[8px] font-black uppercase transition-all ${productSection === cat ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}
+                                                className={`px-2 py-1 rounded-md text-[8px] font-black uppercase transition-all whitespace-nowrap ${productSection === cat ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}
                                             >
                                                 {cat}
                                             </button>
                                         ))}
+                                        {/* Dynamic categories that are not the defaults above */}
+                                        {productCategories
+                                            .filter(c => !['torneio', 'cash', 'bar', 'produtos', 'vestuario', 'aluguel', 'curso', 'online', 'bet', 'jackpot'].includes(c.name))
+                                            .map(cat => (
+                                                <button
+                                                    key={cat.name}
+                                                    onClick={() => setProductSection(cat.name)}
+                                                    className={`px-2 py-1 rounded-md text-[8px] font-black uppercase transition-all whitespace-nowrap ${productSection === cat.name ? 'bg-secondary text-white shadow-neon-blue' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}
+                                                >
+                                                    {cat.label}
+                                                </button>
+                                            ))}
                                     </div>
                                 </div>
+
+                                {productSection === 'cash' && (
+                                    <div className="mb-4 flex gap-2">
+                                        <input
+                                            type="number"
+                                            placeholder="Valor Cash R$"
+                                            value={cashAmount}
+                                            onChange={(e) => setCashAmount(e.target.value)}
+                                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-bold focus:border-primary outline-none transition-all"
+                                        />
+                                        <button
+                                            onClick={handleAddManualCash}
+                                            className="bg-primary hover:scale-105 active:scale-95 text-white p-2 rounded-xl transition-all shadow-neon-pink"
+                                        >
+                                            <span className="material-icons text-sm">add</span>
+                                        </button>
+                                    </div>
+                                )}
+
                                 <div className="grid grid-cols-2 gap-2 max-h-[200px] overflow-y-auto custom-scrollbar pr-1">
-                                    {allProducts
-                                        .filter(p => p.category === productSection && p.active)
-                                        .map(p => {
-                                            const disabled = productSection === 'torneio' ? isTourItemDisabled(p) : isProductDisabled(p);
-                                            return (
-                                                <button
-                                                    key={p.id}
-                                                    disabled={disabled}
-                                                    onClick={() => {
-                                                        if (productSection === 'torneio') handleTourItemClick(p);
-                                                        else if (productSection === 'cash') handleCashItemClick(p);
-                                                        else handleProductClick(p);
-                                                    }}
-                                                    className={`p-3 border rounded-xl text-left transition-all group relative ${pendingProduct?.id === p.id ? 'bg-primary border-primary shadow-neon-pink' : disabled ? 'bg-white/5 border-white/5 opacity-50 cursor-not-allowed' : 'bg-white/5 hover:bg-white/10 border-white/10'}`}
-                                                >
-                                                    <p className={`text-[9px] font-black uppercase truncate ${pendingProduct?.id === p.id ? 'text-white' : 'text-gray-400'}`}>{p.name}</p>
-                                                    <p className={`text-xs font-display font-black ${pendingProduct?.id === p.id ? 'text-white' : 'text-white'}`}>R$ {Number(p.price).toFixed(2)}</p>
-                                                    {pendingProduct?.id === p.id && (
-                                                        <div className="absolute top-1 right-1">
-                                                            <span className="material-icons text-[10px] text-white animate-pulse">check_circle</span>
-                                                        </div>
+                                    {visibleItems.map(p => {
+                                        const disabled = productSection === 'torneio' ? isTourItemDisabled(p) : isProductDisabled(p);
+                                        const count = getItemCount(p);
+                                        return (
+                                            <button
+                                                key={p.id}
+                                                disabled={disabled}
+                                                onClick={() => {
+                                                    if (productSection === 'torneio') handleTourItemClick(p);
+                                                    else if (productSection === 'cash') handleCashItemClick(p);
+                                                    else handleProductClick(p);
+                                                }}
+                                                className={`p-3 border rounded-xl text-left transition-all group relative ${pendingProduct?.id === p.id ? 'bg-primary border-primary shadow-neon-pink' : disabled ? 'bg-white/5 border-white/5 opacity-50 cursor-not-allowed' : 'bg-white/5 hover:bg-white/10 border-white/10'}`}
+                                            >
+                                                <div className="flex items-center justify-between gap-1 mb-0.5">
+                                                    <p className={`text-[9px] font-black uppercase truncate flex-1 ${pendingProduct?.id === p.id ? 'text-white' : 'text-gray-400'}`}>{p.name}</p>
+                                                    {count > 0 && (
+                                                        <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md ${pendingProduct?.id === p.id ? 'bg-white/20 text-white' : 'bg-primary/20 text-primary'}`}>
+                                                            {count}x
+                                                        </span>
                                                     )}
-                                                    {disabled && (
-                                                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-xl">
-                                                            <span className="text-[10px] font-black text-white/50 uppercase tracking-tighter">Já Lançado</span>
-                                                        </div>
-                                                    )}
-                                                </button>
-                                            );
-                                        })}
+                                                </div>
+                                                <p className={`text-xs font-display font-black ${pendingProduct?.id === p.id ? 'text-white' : 'text-white'}`}>R$ {Number(p.price).toFixed(2)}</p>
+                                                {pendingProduct?.id === p.id && (
+                                                    <div className="absolute top-1 right-1">
+                                                        <span className="material-icons text-[10px] text-white animate-pulse">check_circle</span>
+                                                    </div>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>
