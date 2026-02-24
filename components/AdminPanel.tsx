@@ -1085,7 +1085,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             fetchClosedCommands={fetchClosedCommands}
                             setShowCheckout={setShowCheckout}
                             setShowTopUp={setShowTopUp}
-                            setShowManualSales={() => setProductSection('cash')}
+                            productSection={productSection}
+                            setProductSection={setProductSection}
                             reopenCommand={reopenCommand}
                             handleDownloadCommandReceipt={() => { }}
                             isLoading={isLoading}
@@ -1098,6 +1099,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             setPrizePayout={setPrizePayout}
                             updateStaffExpenses={handleSaveExpenses}
                             updatePrizePayout={handleSaveExpenses}
+                            isProductDisabled={isProductDisabled}
+                            isTourItemDisabled={isTourItemDisabled}
                             isAdmin={isAdmin}
                         />
                     )}

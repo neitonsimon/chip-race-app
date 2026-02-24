@@ -24,7 +24,8 @@ interface OperationalTabProps {
     fetchClosedCommands: (id: string) => Promise<void>;
     setShowCheckout: (s: boolean) => void;
     setShowTopUp: (s: boolean) => void;
-    setShowManualSales: (s: boolean) => void;
+    productSection: 'bar' | 'torneio' | 'produtos' | 'cash';
+    setProductSection: (s: 'bar' | 'torneio' | 'produtos' | 'cash') => void;
     reopenCommand: (cmd: any) => Promise<void>;
     handleDownloadCommandReceipt: (cmd: any, items: any[]) => void;
     isLoading: boolean;
@@ -38,6 +39,8 @@ interface OperationalTabProps {
     updateStaffExpenses: () => Promise<void>;
     updatePrizePayout: () => Promise<void>;
     isAdmin: boolean;
+    isProductDisabled: (p: any) => boolean;
+    isTourItemDisabled: (i: any) => boolean;
 }
 
 export const OperationalTab: React.FC<OperationalTabProps> = ({
@@ -46,9 +49,10 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
     searchResults, upcomingEventsList, handleSearchPlayers, handleOpenCommand,
     handleTourItemClick, handleCashItemClick, handleProductClick, handleDeleteCommandItem,
     fetchOpenCommands, fetchClosedCommands, setShowCheckout, setShowTopUp,
-    setShowManualSales, reopenCommand, handleDownloadCommandReceipt, isLoading,
+    productSection, setProductSection, reopenCommand, handleDownloadCommandReceipt, isLoading,
     allProducts, commandsTab, setCommandsTab, staffExpenses, setStaffExpenses,
-    prizePayout, setPrizePayout, updateStaffExpenses, updatePrizePayout, isAdmin
+    prizePayout, setPrizePayout, updateStaffExpenses, updatePrizePayout, isAdmin,
+    isProductDisabled, isTourItemDisabled
 }) => {
     return (
         <div className="flex h-[calc(100vh-140px)] overflow-hidden">
@@ -286,7 +290,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                         <span className="material-icons-outlined text-sm group-hover:scale-110 transition-transform">add_card</span>
                                         <span className="text-[10px] font-black uppercase">Recarga</span>
                                     </button>
-                                    <button onClick={() => setShowManualSales(true)} className="flex items-center justify-center gap-2 bg-white/5 hover:bg-white hover:text-black border border-white/10 py-3 rounded-xl transition-all group">
+                                    <button onClick={() => setProductSection('cash')} className={`flex items-center justify-center gap-2 border py-3 rounded-xl transition-all group ${productSection !== 'bar' && productSection !== 'torneio' && productSection !== 'produtos' ? 'bg-white text-black border-white' : 'bg-white/5 hover:bg-white hover:text-black border-white/10'}`}>
                                         <span className="material-icons-outlined text-sm group-hover:scale-110 transition-transform">shopping_bag</span>
                                         <span className="text-[10px] font-black uppercase">Venda</span>
                                     </button>
@@ -294,26 +298,51 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                             )}
 
                             <div className="bg-black/40 border border-white/5 rounded-2xl p-4">
-                                <p className="text-[10px] font-black text-gray-500 uppercase mb-3">Inserção Rápida</p>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {allProducts
-                                        .filter(p => p.category === 'torneio' && p.active)
-                                        .slice(0, 2)
-                                        .map(p => (
-                                            <button key={p.id} onClick={() => handleTourItemClick(p)} className="p-3 bg-blue-500/10 hover:bg-blue-500 border border-blue-500/20 rounded-xl text-left transition-all group">
-                                                <p className="text-[9px] font-black text-blue-400 group-hover:text-white truncate uppercase">{p.name}</p>
-                                                <p className="text-xs font-display font-black text-white">R$ {Number(p.price).toFixed(2)}</p>
+                                <div className="flex items-center justify-between mb-3">
+                                    <p className="text-[10px] font-black text-gray-500 uppercase">Categorias</p>
+                                    <div className="flex gap-1">
+                                        {(['torneio', 'cash', 'bar', 'produtos'] as const).map(cat => (
+                                            <button
+                                                key={cat}
+                                                onClick={() => setProductSection(cat)}
+                                                className={`px-2 py-1 rounded-md text-[8px] font-black uppercase transition-all ${productSection === cat ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}
+                                            >
+                                                {cat}
                                             </button>
                                         ))}
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 max-h-[200px] overflow-y-auto custom-scrollbar pr-1">
                                     {allProducts
-                                        .filter(p => p.category === 'cash' && p.active)
-                                        .slice(0, 2)
-                                        .map(p => (
-                                            <button key={p.id} onClick={() => handleCashItemClick(p)} className="p-3 bg-green-500/10 hover:bg-green-500 border border-green-500/20 rounded-xl text-left transition-all group">
-                                                <p className="text-[9px] font-black text-green-400 group-hover:text-white truncate uppercase">{p.name}</p>
-                                                <p className="text-xs font-display font-black text-white">R$ {Number(p.price).toFixed(2)}</p>
-                                            </button>
-                                        ))}
+                                        .filter(p => p.category === productSection && p.active)
+                                        .map(p => {
+                                            const disabled = productSection === 'torneio' ? isTourItemDisabled(p) : isProductDisabled(p);
+                                            return (
+                                                <button
+                                                    key={p.id}
+                                                    disabled={disabled}
+                                                    onClick={() => {
+                                                        if (productSection === 'torneio') handleTourItemClick(p);
+                                                        else if (productSection === 'cash') handleCashItemClick(p);
+                                                        else handleProductClick(p);
+                                                    }}
+                                                    className={`p-3 border rounded-xl text-left transition-all group relative ${pendingProduct?.id === p.id ? 'bg-primary border-primary shadow-neon-pink' : disabled ? 'bg-white/5 border-white/5 opacity-50 cursor-not-allowed' : 'bg-white/5 hover:bg-white/10 border-white/10'}`}
+                                                >
+                                                    <p className={`text-[9px] font-black uppercase truncate ${pendingProduct?.id === p.id ? 'text-white' : 'text-gray-400'}`}>{p.name}</p>
+                                                    <p className={`text-xs font-display font-black ${pendingProduct?.id === p.id ? 'text-white' : 'text-white'}`}>R$ {Number(p.price).toFixed(2)}</p>
+                                                    {pendingProduct?.id === p.id && (
+                                                        <div className="absolute top-1 right-1">
+                                                            <span className="material-icons text-[10px] text-white animate-pulse">check_circle</span>
+                                                        </div>
+                                                    )}
+                                                    {disabled && (
+                                                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-xl">
+                                                            <span className="text-[10px] font-black text-white/50 uppercase tracking-tighter">Já Lançado</span>
+                                                        </div>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
                                 </div>
                             </div>
                         </div>
