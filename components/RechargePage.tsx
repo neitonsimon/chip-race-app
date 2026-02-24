@@ -45,8 +45,9 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                 const pack = chipzPackages.find(p => p.id === id);
                 if (!pack) return;
 
-                const cost = pack.price_brl;
-                const totalChipz = pack.amount + (pack.bonus || 0);
+                const cost = pack.price;
+                const totalChipz = pack.amount;
+                const packageName = `${pack.amount} Chipz`;
                 const currentBalance = currentUser.balanceBrl || 0;
 
                 if (currentBalance < cost) {
@@ -65,7 +66,7 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                     user_id: currentUser.id,
                     brl_amount: -cost,
                     chipz_amount: totalChipz,
-                    description: `Compra: Pacote Chipz - ${pack.name}`,
+                    description: `Compra: Pacote Chipz - ${packageName}`,
                     category: 'chipz'
                 });
 
@@ -85,7 +86,7 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                     onUpdateProfile(currentUser.id, newPlayerData);
                 }
 
-                alert(`Sucesso! Você adquiriu o pacote ${pack.name} e recebeu ${totalChipz} Chipz.`);
+                alert(`Sucesso! Você adquiriu o pacote ${packageName} e recebeu ${totalChipz} Chipz.`);
             } else {
                 // Type BRL (Recharge Wallet)
                 await new Promise(resolve => setTimeout(resolve, 1000));

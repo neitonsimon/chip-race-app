@@ -1,0 +1,467 @@
+{
+    "navigation": {
+        "links": [
+            {
+                "label": "Início",
+                "view": "home"
+            },
+            {
+                "label": "The Chosen ${prizeLabel}",
+                "view": "the-chosen-details"
+            },
+            {
+                "label": "Calendário",
+                "view": "calendar"
+            },
+            {
+                "label": "Rankings",
+                "view": "ranking"
+            }
+        ]
+    },
+    "footer": {
+        "brand": {
+            "description": "A maior comunidade de poker do Brasil. Tecnologia, transparência e paixão pelo esporte da mente unidos em um único ecossistema."
+        },
+        "social": [
+            {
+                "name": "instagram",
+                "icon": "camera_alt",
+                "url": "https://instagram.com/chiprace"
+            },
+            {
+                "name": "whatsapp",
+                "icon": "chat",
+                "url": "#"
+            },
+            {
+                "name": "youtube",
+                "icon": "play_circle",
+                "url": "#"
+            }
+        ],
+        "menuPrincipal": [
+            {
+                "label": "The Chosen 30K+",
+                "view": "the-chosen-details"
+            },
+            {
+                "label": "Calendário de Eventos",
+                "view": "calendar"
+            },
+            {
+                "label": "Rankings 2026",
+                "view": "ranking"
+            },
+            {
+                "label": "Área VIP",
+                "view": "vip"
+            },
+            {
+                "label": "Recargas & Chipz",
+                "view": "recharge"
+            }
+        ],
+        "informacoes": [
+            {
+                "label": "Termos de Uso",
+                "view": "home"
+            },
+            {
+                "label": "Política de Privacidade",
+                "view": "home"
+            },
+            {
+                "label": "Regras do Clube",
+                "view": "home"
+            },
+            {
+                "label": "Jogo Responsável",
+                "view": "home"
+            },
+            {
+                "label": "Suporte Online",
+                "view": "home"
+            }
+        ]
+    },
+    "initialDefaults": {
+        "contentDB": {
+            "hero": {
+                "title_line1": "THE CHOSEN",
+                "title_line2_prefix": "",
+                "subtitle": "O palco principal da Chip Race. Uma jornada de 9 meses onde a comunidade define o tamanho da glória.",
+                "timeline_title": "Cronograma de Evolução",
+                "btn_ranking": "RANKING ATUALIZADO",
+                "btn_details": "ENTENDA O"
+            },
+            "details": {
+                "header_title": "THE CHOSEN",
+                "header_subtitle": "O Capítulo Final da temporada 2026 da Chip Race.",
+                "concept_title": "CONCEITO",
+                "concept_desc": "Diferente de torneios abertos, o The Chosen é um evento exclusivo para quem provou seu valor durante o ano. Não é possível comprar o buy-in diretamente para o Capítulo Final. Você deve conquistar sua vaga. Isso garante um field de altíssimo nível e uma atmosfera de verdadeira final de campeonato.",
+                "plus_title": "DINÂMICA PLUS",
+                "plus_desc": "O garantido inicial é de R$ 30.000,00, mas a Chip Race desafia a comunidade. A cada mês, se atingirmos metas de classificados, a Chip Race injeta mais dinheiro no garantido. O pote cresce junto com o engajamento dos jogadores.",
+                "ways_title": "8 Caminhos para a Glória"
+            },
+            "categories": [],
+            "faq": [],
+            "timeline": []
+        },
+        "months": [
+            {
+                "name": "MAR",
+                "qualifiers": 5,
+                "prize": "30K+",
+                "status": "active"
+            },
+            {
+                "name": "ABR",
+                "qualifiers": 5,
+                "prize": "33K+",
+                "status": "locked"
+            },
+            {
+                "name": "MAI",
+                "qualifiers": 5,
+                "prize": "35K+",
+                "status": "locked"
+            },
+            {
+                "name": "JUN",
+                "qualifiers": "?",
+                "prize": "???",
+                "status": "locked"
+            },
+            {
+                "name": "JUL",
+                "qualifiers": "?",
+                "prize": "???",
+                "status": "locked"
+            },
+            {
+                "name": "AGO",
+                "qualifiers": "?",
+                "prize": "???",
+                "status": "locked"
+            },
+            {
+                "name": "SET",
+                "qualifiers": "?",
+                "prize": "???",
+                "status": "locked"
+            },
+            {
+                "name": "OUT",
+                "qualifiers": "?",
+                "prize": "???",
+                "status": "locked"
+            },
+            {
+                "name": "NOV",
+                "qualifiers": "FINAL",
+                "prize": "MAX",
+                "status": "locked"
+            }
+        ],
+        "applicationDefaults": {
+            "prizeLabel": "30K+",
+            "totalQualifiers": 0,
+            "nextGoal": {
+                "prize": 35000,
+                "qualifiers": 25
+            }
+        }
+    },
+    "theChosen": {
+        "qualifyingMethods": [
+            {
+                "id": "rankings",
+                "title": "Rankings",
+                "desc": "A principal porta de entrada. Pontue no Live e Online para garantir sua vaga.",
+                "icon": "leaderboard",
+                "color": "text-primary",
+                "badge": "bg-primary/20 text-primary border-primary/40",
+                "glow": "shadow-neon-pink",
+                "rules": "\n              1. O Ranking Geral Anual soma pontos de todos os torneios regulares presenciais e online da temporada 2026.\n              2. Os 10 jogadores com maior pontuação acumulada ao final do ciclo classificatório (Outubro/2026) garantem vaga direta (Direct Entry) no dia 1 do The Chosen.\n              3. Em caso de empate na 10ª colocação, o critério de desempate será o valor total de premiações (winnings) arrecadado no ano.\n              4. A vaga é intransferível e não pode ser trocada por dinheiro.\n\n              --------------------------------------------------\n              FÓRMULAS DE PONTUAÇÃO (2026)\n              --------------------------------------------------\n\n              ► TORNEIOS SEMANAIS (Regular):\n              Pontos = (Total Jogadores / 3) + (Buy-in Gasto / 3) + (10 se Mesa Final) + (Premiação ITM / 10) + (5 se VIP)\n\n              ► TORNEIOS MENSAIS (High Rollers/Deep):\n              Pontos = (Total Jogadores / 3) + (Buy-in Gasto / 4) + (15 se Mesa Final) + (Premiação ITM / 15) + (5 se VIP)\n\n              ► ESPECIAIS (Majors/Estaduais):\n              Pontos = (Total Jogadores / 4) + (Buy-in Gasto / 6) + (30 se Mesa Final) + (Premiação ITM / 25) + (5 se VIP)\n          "
+            },
+            {
+                "id": "jackpot",
+                "title": "Jackpot",
+                "desc": "Classifique-se jogando de casa através dos nossos satélites semanais.",
+                "icon": "attach_money",
+                "color": "text-secondary",
+                "badge": "bg-secondary/20 text-secondary border-secondary/40",
+                "glow": "shadow-neon-blue",
+                "rules": "\n              1. Satélites Jackpot ocorrem semanalmente no aplicativo online Chip Race.\n              2. O vencedor de cada satélite Jackpot recebe um Ticket The Chosen.\n              3. Jogadores também podem ganhar vagas através de mãos premiadas específicas em mesas de Cash Game (Jackpot Hands) definidas mensalmente.\n              4. Vagas ganhas via Jackpot são acumulativas para o sistema de Bônus de Stack.\n          "
+            },
+            {
+                "id": "red-omaha",
+                "title": "Last Longer",
+                "desc": "Aposte em quem vai mais longe. Uma disputa de resistência paralela ao torneio.",
+                "icon": "timer",
+                "color": "text-secondary",
+                "badge": "bg-secondary/20 text-secondary border-secondary/40",
+                "glow": "shadow-neon-blue",
+                "rules": "\n              1. Disputa de resistência paralela realizada em torneios selecionados.\n              2. Os jogadores pagam uma inscrição extra para o Last Longer. O último jogador restante deste grupo (o que cair por último no torneio) leva a vaga.\n              3. Válido apenas para quem se inscrever no Last Longer antes do início do torneio.\n          "
+            },
+            {
+                "id": "bet",
+                "title": "Bet",
+                "desc": "Desafios de apostas e repescagem. A última chance de entrar no 30K+.",
+                "icon": "casino",
+                "color": "text-cyan-500",
+                "badge": "bg-cyan-500/20 text-cyan-500 border-cyan-500/40",
+                "glow": "shadow-[0_0_20px_rgba(168,85,247,0.5)]",
+                "rules": "\n              1. Campanhas promocionais de apostas esportivas parceiras da Chip Race.\n              2. Desafios de repescagem através do \"Bet\": Sorteios de vagas entre os bolhas dos torneios Major.\n              3. Regras específicas são divulgadas a cada campanha \"Bet & Win\".\n          "
+            },
+            {
+                "id": "get-up",
+                "title": "Get Up",
+                "desc": "Vença torneios presenciais selecionados na sede e ganhe o Golden Ticket.",
+                "icon": "psychology",
+                "color": "text-secondary",
+                "badge": "bg-secondary/20 text-secondary border-secondary/40",
+                "glow": "shadow-neon-blue",
+                "rules": "\n              1. Eventos designados como \"Major\" no calendário presencial do QG Chip Race oferecem uma vaga extra ao campeão.\n              2. Esta vaga é adicionada ao prêmio regular do torneio, sem descontar do pote garantido.\n              3. A lista de torneios Major é divulgada no início de cada mês no calendário oficial.\n          "
+            },
+            {
+                "id": "sit-n-go",
+                "title": "SNG / Sat",
+                "desc": "Para quem joga caro. Os campeões dos HRs mensais garantem vaga direta.",
+                "icon": "satellite_alt",
+                "color": "text-primary",
+                "badge": "bg-primary/20 text-primary border-primary/40",
+                "glow": "shadow-neon-pink",
+                "rules": "\n              1. Sit & Gos qualificatórios podem ser abertos sob demanda com 6 a 10 jogadores.\n              2. Torneios High Roller mensais garantem vaga direta ao campeão (ou TOP 2 dependendo do field).\n              3. A estrutura destes satélites é Turbo ou Hyper-Turbo.\n          "
+            },
+            {
+                "id": "quests",
+                "title": "Quests",
+                "desc": "Missões diárias e desafios secretos que desbloqueiam vagas para o The Chosen.",
+                "icon": "explore",
+                "color": "text-primary",
+                "badge": "bg-primary/20 text-primary border-primary/40",
+                "glow": "shadow-neon-pink",
+                "rules": "\n              1. Complete missões diárias no App (ex: Jogue 50 mãos, Ganhe com AA, etc) para ganhar fragmentos.\n              2. Junte fragmentos suficientes para trocar por um Ticket The Chosen na loja do clube.\n              3. Existem \"Quests Secretas\" presenciais que são reveladas apenas durante os eventos ao vivo.\n          "
+            },
+            {
+                "id": "ladies-league",
+                "title": "VIP",
+                "desc": "Torneio especial e exclusivo focado em promover a experiência VIP.",
+                "icon": "diamond",
+                "color": "text-primary",
+                "badge": "bg-primary/20 text-primary border-primary/40",
+                "glow": "shadow-neon-pink",
+                "rules": "\n              1. Torneio restrito a jogadores que atingiram o status VIP na plataforma ou no clube.\n              2. O evento VIP ocorre trimestralmente e distribui múltiplas vagas para o The Chosen.\n              3. Jogadores VIPs têm buy-in descontado ou freebuy dependendo do nível de fidelidade.\n          "
+            }
+        ]
+    },
+    "playerProfile": {
+        "playStyleDefinitions": {
+            "Iniciante": "Está começando agora a jornada no poker, aprendendo as regras e dinâmicas básicas.",
+            "Experiente": "Jogador com boa bagagem, conhece bem as mecânicas, leitura de jogo e gestão de banca.",
+            "Agressivo": "Joga muitas mãos e pressiona os oponentes com apostas frequentes.",
+            "Passivo": "Joga poucas mãos, prefere dar check e call a apostar.",
+            "Tight": "Seletivo. Joga apenas com mãos iniciais fortes.",
+            "Loose": "Joga uma grande variedade de mãos iniciais.",
+            "Maniac": "Extremamente agressivo, aposta alto com quase qualquer mão.",
+            "Rock": "Extremamente sólido e previsível, só entra no pote com o topo do baralho.",
+            "Calling Station": "Paga muitas apostas para ver o flop/turn/river, dificilmente folda.",
+            "GTO Wizard": "Tenta jogar a estratégia matematicamente perfeita e inexplorável.",
+            "Exploitative": "Foca em encontrar e explorar os erros específicos dos oponentes.",
+            "Bluffer": "Gosta de contar histórias e tentar ganhar potes sem a melhor mão.",
+            "Trapper": "Gosta de fazer armadilhas (slow play) com mãos muito fortes.",
+            "Nit": "Super conservador, joga com medo de perder fichas.",
+            "TAG": "Tight-Aggressive: Seleciona bem as mãos, mas joga elas de forma agressiva.",
+            "LAG": "Loose-Aggressive: Joga muitas mãos e de forma agressiva.",
+            "Short Stack Ninja": "Especialista em jogar com poucas fichas (<20BB), sabe as tabelas de push/fold.",
+            "Deep Stack Pro": "Especialista em jogar com muitas fichas (>100BB) e pós-flop complexo.",
+            "ICM Suicide": "Ignora a pressão do dinheiro em reta final e joga pela vitória a qualquer custo.",
+            "Bubble Abuser": "Usa seu stack grande para pressionar os stacks médios na bolha da premiação.",
+            "Satellite King": "Especialista em sobrevive para pegar a vaga, evitando riscos desnecessários.",
+            "Cash Game Pro": "Jogador focado em mesas a dinheiro, especialista em jogar deep.",
+            "MTT Grinder": "Jogador de volume em torneios multimesas, focado em longo prazo.",
+            "Heads-Up Specialist": "Especialista em duelo 1x1, entende muito de ranges amplos.",
+            "Limper": "Gosta de entrar nas mãos apenas pagando o blind (estratégia passiva).",
+            "3-Bet Machine": "Reaumenta (re-raise) com muita frequência pré-flop.",
+            "Check-Raiser": "Adora dar check para aumentar a aposta do oponente em seguida.",
+            "River Rat": "Tem o hábito de acertar a carta milagrosa no final frequentemente.",
+            "Math Geek": "Toma decisões baseadas puramente em probabilidades e equidade.",
+            "Feel Player": "Joga baseado em intuição, instinto e leitura corporal.",
+            "Tiltless": "Controle emocional absoluto, não se abala com bad beats.",
+            "Table Captain": "Domina a mesa, impõe o ritmo do jogo e intimida adversários.",
+            "Soul Reader": "Lê a mão do adversário com precisão assustadora.",
+            "Variable": "Muda de estilo conforme a situação, imprevisível.",
+            "Mixed Games": "Joga outras modalidades (Omaha, Stud, etc) além de Texas Hold'em."
+        },
+        "fallbackDailyRewards": [
+            {
+                "day": 1,
+                "reward_type": "xp",
+                "reward_value": 100,
+                "reward_label": "100 XP"
+            },
+            {
+                "day": 2,
+                "reward_type": "xp",
+                "reward_value": 200,
+                "reward_label": "200 XP"
+            },
+            {
+                "day": 3,
+                "reward_type": "chipz",
+                "reward_value": 50,
+                "reward_label": "50 Chipz"
+            },
+            {
+                "day": 4,
+                "reward_type": "xp",
+                "reward_value": 400,
+                "reward_label": "400 XP"
+            },
+            {
+                "day": 5,
+                "reward_type": "chipz",
+                "reward_value": 100,
+                "reward_label": "100 Chipz"
+            },
+            {
+                "day": 6,
+                "reward_type": "xp",
+                "reward_value": 800,
+                "reward_label": "800 XP"
+            },
+            {
+                "day": 7,
+                "reward_type": "brl",
+                "reward_value": 10,
+                "reward_label": "R$ 10,00"
+            }
+        ],
+        "defaultAvatar": "https://ui-avatars.com/api/?name=User&background=333&color=fff",
+        "defaultMyProfile": {
+            "id": "CR-1029",
+            "name": "Neiton Simon",
+            "city": "Venâncio Aires - RS",
+            "bio": "Este é o seu perfil pessoal. Seus dados e estatísticas aparecerão aqui."
+        }
+    },
+    "vip": {
+        "basePrices": {
+            "quarterly": 189.90,
+            "annual": 499.90,
+            "master": 1990.90
+        },
+        "expirationDates": {
+            "quarterly": "2026-05-25T23:59:59Z",
+            "annual": "2026-11-20T23:59:59Z",
+            "master": "2026-11-20T23:59:59Z"
+        },
+        "plans": [
+            {
+                "id": "quarterly",
+                "title": "Trimestral",
+                "price": "189,90",
+                "period": "trimestre (Mar-Mai 2026)",
+                "color": "border-secondary",
+                "btnColor": "bg-transparent border border-secondary text-secondary hover:bg-secondary hover:text-black",
+                "features": [
+                    "R$ 10 de desconto na janta",
+                    "R$ 10 de desconto na taxa adm/ staff",
+                    "5k fichas adicionais no addon",
+                    "Bet free R$ 5 por evento",
+                    "Sorteio de 1 add on por evento",
+                    "5 pontos adicionais no ranking por evento",
+                    "Participar Get Up",
+                    "Prioridade em assento em caso de lotação máxima",
+                    "R$ 10 em créditos mensais no app Chip Race",
+                    "*Valor total dos bônus no trimestre: R$ 280 + benefícios diversos"
+                ]
+            },
+            {
+                "id": "annual",
+                "title": "Anual",
+                "price": "499,90",
+                "period": "por ano (Mar-Nov 2026)",
+                "tag": "MELHOR CUSTO-BENEFÍCIO",
+                "color": "border-primary",
+                "btnColor": "bg-primary text-white hover:bg-primary/90 shadow-neon-pink",
+                "features": [
+                    "R$ 10 de desconto na janta",
+                    "R$ 10 de desconto na taxa adm/ staff",
+                    "5k fichas adicionais no addon",
+                    "Bet free R$ 5 por evento",
+                    "Sorteio de 1 add on por evento",
+                    "5 pontos adicionais no ranking por evento",
+                    "Participar Get Up",
+                    "Prioridade em assento em caso de lotação máxima",
+                    "20% desconto bar e cozinha",
+                    "R$ 30 em créditos mensais no app Chip Race",
+                    "*Valor total dos bônus no ano: R$ 1.200 + benefícios diversos"
+                ]
+            },
+            {
+                "id": "master",
+                "title": "Master",
+                "price": "1.990,90",
+                "period": "ano (Mar-Nov 2026)",
+                "limit": "APENAS 3 COTAS POR CLUBE",
+                "color": "border-yellow-400",
+                "btnColor": "bg-gradient-to-r from-yellow-600 to-yellow-400 text-black font-black hover:scale-105 shadow-[0_0_30px_rgba(250,204,21,0.4)]",
+                "isMaster": true,
+                "features": [
+                    "Vaga The Chosen 30k+ (Destaque)",
+                    "5k fichas adicionais no addon",
+                    "Bet free R$ 5 por evento",
+                    "Sorteio de 1 add on por evento",
+                    "5 pontos adicionais no ranking por evento",
+                    "Participar Get Up",
+                    "Prioridade em assento em caso de lotação máxima",
+                    "R$ 100 em créditos mensais no app Chip Race",
+                    "50% desconto bar/ cozinha",
+                    "Staff free em todos eventos",
+                    "Janta cortesia em todos eventos",
+                    "Boné e camiseta Chip Race oficial",
+                    "Grupo direto com diretoria e direito a voto",
+                    "Nome destacado VIP Master no app",
+                    "*Valor total dos bônus no ano: R$ 4.550 + benefícios"
+                ]
+            }
+        ]
+    },
+    "events": {
+        "parallelProducts": [
+            {
+                "id": "last-longer",
+                "label": "Last Longer",
+                "style": "text-pink-400 border-pink-500/30 bg-pink-500/10"
+            },
+            {
+                "id": "jackpot",
+                "label": "Jackpot",
+                "style": "text-yellow-400 border-yellow-500/30 bg-yellow-500/10"
+            },
+            {
+                "id": "bet",
+                "label": "Bet",
+                "style": "text-green-400 border-green-500/30 bg-green-500/10"
+            },
+            {
+                "id": "get-up",
+                "label": "Get Up",
+                "style": "text-cyan-400 border-cyan-500/30 bg-cyan-500/10"
+            },
+            {
+                "id": "satellite",
+                "label": "Satélite",
+                "style": "text-blue-400 border-blue-500/30 bg-blue-500/10"
+            },
+            {
+                "id": "sit-n-go",
+                "label": "Sit & Go",
+                "style": "text-gray-400 border-gray-500/30 bg-gray-500/10"
+            }
+        ]
+    }
+}

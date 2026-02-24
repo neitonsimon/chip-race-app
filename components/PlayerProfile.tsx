@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PlayerStats, RankingPlayer, TournamentResult, Event, ExperienceLevel, Message, Poll, MessageCategory, DailyReward, RankingInstance } from '../types';
 import { supabase } from '../src/lib/supabase';
+import appConfig from '../src/config/appConfig.json';
+import { ProfileStatsSkeleton } from './Skeleton';
 
 interface PlayerProfileProps {
     isAdmin?: boolean;
@@ -39,61 +41,18 @@ interface PlayerProfileProps {
     onReply?: (id: string, text: string) => void;
     rankings?: RankingInstance[];
     rankingPlayers?: RankingPlayer[];
+    isLoading?: boolean;
 }
 
 // Dicionário de Estilos de Jogo com Descrições
-const PLAY_STYLE_DEFINITIONS: Record<string, string> = {
-    "Iniciante": "Está começando agora a jornada no poker, aprendendo as regras e dinâmicas básicas.",
-    "Experiente": "Jogador com boa bagagem, conhece bem as mecânicas, leitura de jogo e gestão de banca.",
-    "Agressivo": "Joga muitas mãos e pressiona os oponentes com apostas frequentes.",
-    "Passivo": "Joga poucas mãos, prefere dar check e call a apostar.",
-    "Tight": "Seletivo. Joga apenas com mãos iniciais fortes.",
-    "Loose": "Joga uma grande variedade de mãos iniciais.",
-    "Maniac": "Extremamente agressivo, aposta alto com quase qualquer mão.",
-    "Rock": "Extremamente sólido e previsível, só entra no pote com o topo do baralho.",
-    "Calling Station": "Paga muitas apostas para ver o flop/turn/river, dificilmente folda.",
-    "GTO Wizard": "Tenta jogar a estratégia matematicamente perfeita e inexplorável.",
-    "Exploitative": "Foca em encontrar e explorar os erros específicos dos oponentes.",
-    "Bluffer": "Gosta de contar histórias e tentar ganhar potes sem a melhor mão.",
-    "Trapper": "Gosta de fazer armadilhas (slow play) com mãos muito fortes.",
-    "Nit": "Super conservador, joga com medo de perder fichas.",
-    "TAG": "Tight-Aggressive: Seleciona bem as mãos, mas joga elas de forma agressiva.",
-    "LAG": "Loose-Aggressive: Joga muitas mãos e de forma agressiva.",
-    "Short Stack Ninja": "Especialista em jogar com poucas fichas (<20BB), sabe as tabelas de push/fold.",
-    "Deep Stack Pro": "Especialista em jogar com muitas fichas (>100BB) e pós-flop complexo.",
-    "ICM Suicide": "Ignora a pressão do dinheiro em reta final e joga pela vitória a qualquer custo.",
-    "Bubble Abuser": "Usa seu stack grande para pressionar os stacks médios na bolha da premiação.",
-    "Satellite King": "Especialista em sobreviver para pegar a vaga, evitando riscos desnecessários.",
-    "Cash Game Pro": "Jogador focado em mesas a dinheiro, especialista em jogar deep.",
-    "MTT Grinder": "Jogador de volume em torneios multimesas, focado em longo prazo.",
-    "Heads-Up Specialist": "Especialista em duelo 1x1, entende muito de ranges amplos.",
-    "Limper": "Gosta de entrar nas mãos apenas pagando o blind (estratégia passiva).",
-    "3-Bet Machine": "Reaumenta (re-raise) com muita frequência pré-flop.",
-    "Check-Raiser": "Adora dar check para aumentar a aposta do oponente em seguida.",
-    "River Rat": "Tem o hábito de acertar a carta milagrosa no final frequentemente.",
-    "Math Geek": "Toma decisões baseadas puramente em probabilidades e equidade.",
-    "Feel Player": "Joga baseado em intuição, instinto e leitura corporal.",
-    "Tiltless": "Controle emocional absoluto, não se abala com bad beats.",
-    "Table Captain": "Domina a mesa, impõe o ritmo do jogo e intimida adversários.",
-    "Soul Reader": "Lê a mão do adversário com precisão assustadora.",
-    "Variable": "Muda de estilo conforme a situação, imprevisível.",
-    "Mixed Games": "Joga outras modalidades (Omaha, Stud, etc) além de Texas Hold'em."
-};
+const PLAY_STYLE_DEFINITIONS: Record<string, string> = appConfig.playerProfile.playStyleDefinitions;
 
 const ALL_PLAY_STYLES = Object.keys(PLAY_STYLE_DEFINITIONS);
 
-const DEFAULT_AVATAR = "https://ui-avatars.com/api/?name=User&background=333&color=fff";
+const DEFAULT_AVATAR = appConfig.playerProfile.defaultAvatar;
 
 // Daily Reward Config
-const FALLBACK_DAILY_REWARDS: DailyReward[] = [
-    { day: 1, reward_type: 'xp', reward_value: 100, reward_label: '100 XP' },
-    { day: 2, reward_type: 'xp', reward_value: 200, reward_label: '200 XP' },
-    { day: 3, reward_type: 'chipz', reward_value: 50, reward_label: '50 Chipz' },
-    { day: 4, reward_type: 'xp', reward_value: 400, reward_label: '400 XP' },
-    { day: 5, reward_type: 'chipz', reward_value: 100, reward_label: '100 Chipz' },
-    { day: 6, reward_type: 'xp', reward_value: 800, reward_label: '800 XP' },
-    { day: 7, reward_type: 'brl', reward_value: 10, reward_label: 'R$ 10,00' }
-];
+const FALLBACK_DAILY_REWARDS: DailyReward[] = appConfig.playerProfile.fallbackDailyRewards as DailyReward[];
 
 
 type TabView = 'overview' | 'edit' | 'inbox' | 'notifications' | 'comprovantes' | 'pendencias';
@@ -117,7 +76,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     onReply,
     rankings,
     rankingPlayers = [],
-    events = []
+    events = [],
+    isLoading
 }) => {
     const [activeTab, setActiveTab] = useState<TabView>('overview');
     const [viewClosedEvent, setViewClosedEvent] = useState<Event | null>(null);
@@ -205,12 +165,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     const claimedRewardRef = useRef<DailyReward | null>(null);
     const [showRewardsTable, setShowRewardsTable] = useState(false);
 
-    // --- BADGE MANAGEMENT STATES (Admin only) ---
-    const [newBadgeTitle, setNewBadgeTitle] = useState('');
-    const [newBadgeDesc, setNewBadgeDesc] = useState('');
-    const [newBadgeIcon, setNewBadgeIcon] = useState('stars');
-    const [newBadgeRankingId, setNewBadgeRankingId] = useState('');
-    const [isAddingBadge, setIsAddingBadge] = useState(false);
+
 
     // --- EDITOR DE IMAGEM (CROP) STATES ---
     const [editorImage, setEditorImage] = useState<string | null>(null);
@@ -234,11 +189,11 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
     // Default data (My Profile)
     const myProfileData: PlayerStats = {
-        id: 'CR-1029',
-        name: 'Neiton Simon',
-        avatar: 'https://ui-avatars.com/api/?name=Neiton+Simon&background=random',
-        city: 'Venâncio Aires - RS',
-        bio: "Este é o seu perfil pessoal. Seus dados e estatísticas aparecerão aqui.",
+        id: appConfig.playerProfile.defaultMyProfile.id,
+        name: appConfig.playerProfile.defaultMyProfile.name,
+        avatar: `https://ui-avatars.com/api/?name=${appConfig.playerProfile.defaultMyProfile.name.replace(' ', '+')}&background=random`,
+        city: appConfig.playerProfile.defaultMyProfile.city,
+        bio: appConfig.playerProfile.defaultMyProfile.bio,
         rank: 0,
         points: 0,
         balanceBrl: 0,
@@ -544,7 +499,15 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         try {
             const { error } = await supabase.from('profiles').update({ is_verified: newStatus }).eq('id', targetIdRef.current);
             if (error) throw error;
-            setPlayer(prev => ({ ...prev, isVerified: newStatus }));
+
+            const updatedPlayer = { ...player, isVerified: newStatus };
+            setPlayer(updatedPlayer);
+
+            // Sync with parent context so other views (like Ranking list) update immediately
+            if (onUpdateProfile) {
+                onUpdateProfile(targetIdRef.current, updatedPlayer);
+            }
+
             alert(`Jogador ${newStatus ? 'verificado' : 'desverificado'} com sucesso!`);
         } catch (err: any) {
             alert('Erro ao atualizar verificação: ' + err.message);
@@ -1000,55 +963,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         }
     };
 
-    const handleAddBadge = async () => {
-        if (!newBadgeTitle || !newBadgeIcon) {
-            alert("Título e Ícone são obrigatórios.");
-            return;
-        }
-        setIsAddingBadge(true);
-        try {
-            const newBadge = {
-                user_id: targetIdRef.current,
-                ranking_id: newBadgeRankingId || null,
-                title: newBadgeTitle,
-                description: newBadgeDesc,
-                icon: newBadgeIcon
-            };
-            const { data, error } = await supabase.from('user_badges').insert(newBadge).select().single();
-            if (error) throw error;
 
-            setPlayer(prev => ({
-                ...prev,
-                badges: [data, ...(prev.badges || [])]
-            }));
-
-            setNewBadgeTitle('');
-            setNewBadgeDesc('');
-            setNewBadgeIcon('stars');
-            setNewBadgeRankingId('');
-            alert("Insígnia concedida com sucesso!");
-        } catch (err: any) {
-            console.error('Erro ao adicionar badge:', err);
-            alert('Falha ao conceder insignía: ' + err.message);
-        } finally {
-            setIsAddingBadge(false);
-        }
-    };
-
-    const handleDeleteBadge = async (badgeId: string) => {
-        if (!window.confirm("Tem certeza que deseja remover esta insígnia permanentemente?")) return;
-        try {
-            const { error } = await supabase.from('user_badges').delete().eq('id', badgeId);
-            if (error) throw error;
-            setPlayer(prev => ({
-                ...prev,
-                badges: (prev.badges || []).filter(b => b.id !== badgeId)
-            }));
-        } catch (err: any) {
-            console.error('Erro ao deletar badge:', err);
-            alert('Falha ao remover insígnia.');
-        }
-    };
 
     // Calculate real nextLevelExp based on experienceLevels table
     const currentLvlObj = experienceLevels?.find(l => l.level === player.level);
@@ -1365,50 +1280,54 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                         <div className="lg:col-span-2 space-y-8">
 
                             {/* Main Stats Cards */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-primary/50 transition-colors">
-                                    <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                                        <span className="material-icons-outlined text-4xl">leaderboard</span>
-                                    </div>
-                                    <div className="text-3xl font-display font-black text-white">
-                                        {(() => {
-                                            if (rankings) {
-                                                const legacy = rankings.find(r => r.id === 'legacy');
-                                                if (legacy) {
-                                                    const match = legacy.players.find(p =>
-                                                        (p.id && player.id && p.id === player.id) ||
-                                                        p.name.toLowerCase() === player.name.toLowerCase()
-                                                    );
-                                                    if (match && match.rank > 0) return match.rank + 'º';
+                            {isLoading ? (
+                                <ProfileStatsSkeleton />
+                            ) : (
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                    <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-primary/50 transition-colors">
+                                        <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                                            <span className="material-icons-outlined text-4xl">leaderboard</span>
+                                        </div>
+                                        <div className="text-3xl font-display font-black text-white">
+                                            {(() => {
+                                                if (rankings) {
+                                                    const legacy = rankings.find(r => r.id === 'legacy');
+                                                    if (legacy) {
+                                                        const match = legacy.players.find(p =>
+                                                            (p.id && player.id && p.id === player.id) ||
+                                                            p.name.toLowerCase() === player.name.toLowerCase()
+                                                        );
+                                                        if (match && match.rank > 0) return match.rank + 'º';
+                                                    }
                                                 }
-                                            }
-                                            return player.rank > 0 ? player.rank + 'º' : '-';
-                                        })()}
+                                                return player.rank > 0 ? player.rank + 'º' : '-';
+                                            })()}
+                                        </div>
+                                        <div className="text-sm text-gray-500 uppercase tracking-wider">Ranking Geral</div>
                                     </div>
-                                    <div className="text-sm text-gray-500 uppercase tracking-wider">Ranking Geral</div>
-                                </div>
-                                <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-secondary/50 transition-colors">
-                                    <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                                        <span className="material-icons-outlined text-4xl">payments</span>
+                                    <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-secondary/50 transition-colors">
+                                        <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                                            <span className="material-icons-outlined text-4xl">payments</span>
+                                        </div>
+                                        <div className="text-xl font-display font-black text-secondary">{player.winnings}</div>
+                                        <div className="text-sm text-gray-500 uppercase tracking-wider">Ganhos Totais</div>
                                     </div>
-                                    <div className="text-xl font-display font-black text-secondary">{player.winnings}</div>
-                                    <div className="text-sm text-gray-500 uppercase tracking-wider">Ganhos Totais</div>
-                                </div>
-                                <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-cyan-500/50 transition-colors">
-                                    <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                                        <span className="material-icons-outlined text-4xl">emoji_events</span>
+                                    <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-cyan-500/50 transition-colors">
+                                        <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                                            <span className="material-icons-outlined text-4xl">emoji_events</span>
+                                        </div>
+                                        <div className="text-3xl font-display font-black text-cyan-500">{player.titles}</div>
+                                        <div className="text-sm text-gray-500 uppercase tracking-wider">Títulos</div>
                                     </div>
-                                    <div className="text-3xl font-display font-black text-cyan-500">{player.titles}</div>
-                                    <div className="text-sm text-gray-500 uppercase tracking-wider">Títulos</div>
-                                </div>
-                                <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-pink-500/50 transition-colors">
-                                    <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                                        <span className="material-icons-outlined text-4xl">pie_chart</span>
+                                    <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-pink-500/50 transition-colors">
+                                        <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                                            <span className="material-icons-outlined text-4xl">pie_chart</span>
+                                        </div>
+                                        <div className="text-3xl font-display font-black text-pink-500">{player.itm}</div>
+                                        <div className="text-sm text-gray-500 uppercase tracking-wider">ITM %</div>
                                     </div>
-                                    <div className="text-3xl font-display font-black text-pink-500">{player.itm}</div>
-                                    <div className="text-sm text-gray-500 uppercase tracking-wider">ITM %</div>
                                 </div>
-                            </div>
+                            )}
 
                             {/* Tournament Log - CONDENSED MOBILE VIEW */}
                             <div className="bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/5 rounded-3xl overflow-hidden shadow-xl">
@@ -1849,108 +1768,13 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                     </div>
                                 </div>
 
-                                {/* Badge Management (Admin Only) */}
-                                {isAdmin && (
-                                    <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-2xl p-6 space-y-4 mb-6">
-                                        <h4 className="text-lg font-bold text-yellow-500 flex items-center gap-2">
-                                            <span className="material-icons-outlined">military_tech</span>
-                                            Gerenciar Insígnias de Honra
-                                        </h4>
-                                        <p className="text-xs text-gray-500 mb-4 italic">Apenas administradores podem conceder ou remover insígnias raras.</p>
 
-                                        {/* List Current Badges */}
-                                        {player.badges && player.badges.length > 0 && (
-                                            <div className="space-y-2 mb-6 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                                                {player.badges.map(badge => (
-                                                    <div key={badge.id} className="flex items-center justify-between bg-black/40 border border-white/10 rounded-xl p-3">
-                                                        <div className="flex items-center gap-3">
-                                                            <span className="material-icons-outlined text-yellow-400">{badge.icon}</span>
-                                                            <div>
-                                                                <p className="text-sm font-bold text-white">{badge.title}</p>
-                                                                <p className="text-[10px] text-gray-500">{badge.description}</p>
-                                                            </div>
-                                                        </div>
-                                                        <button
-                                                            onClick={() => handleDeleteBadge(badge.id)}
-                                                            className="text-red-500 hover:text-red-400 p-2"
-                                                            title="Remover Insígnia"
-                                                        >
-                                                            <span className="material-icons-outlined text-sm">delete</span>
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        {/* Add New Badge Form */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="md:col-span-2">
-                                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Título da Conquista</label>
-                                                <input
-                                                    type="text"
-                                                    value={newBadgeTitle}
-                                                    onChange={e => setNewBadgeTitle(e.target.value)}
-                                                    placeholder="Ex: Campeão O Legado 2025"
-                                                    className="w-full bg-black/30 border border-white/10 rounded p-2.5 text-sm text-white focus:border-yellow-500 outline-none"
-                                                />
-                                            </div>
-                                            <div className="md:col-span-2">
-                                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Descrição</label>
-                                                <input
-                                                    type="text"
-                                                    value={newBadgeDesc}
-                                                    onChange={e => setNewBadgeDesc(e.target.value)}
-                                                    placeholder="Ex: Vencedor do Ranking Geral anual"
-                                                    className="w-full bg-black/30 border border-white/10 rounded p-2.5 text-sm text-white focus:border-yellow-500 outline-none"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Ícone (Material Icon)</label>
-                                                <select
-                                                    value={newBadgeIcon}
-                                                    onChange={e => setNewBadgeIcon(e.target.value)}
-                                                    className="w-full bg-black/30 border border-white/10 rounded p-2.5 text-sm text-white focus:border-yellow-500 outline-none"
-                                                >
-                                                    <option value="stars">⭐ Estrela</option>
-                                                    <option value="emoji_events">🏆 Troféu</option>
-                                                    <option value="military_tech">🎖️ Medalha</option>
-                                                    <option value="workspace_premium">📜 Premium</option>
-                                                    <option value="diamond">💎 Diamante</option>
-                                                    <option value="auto_awesome">✨ Brilho</option>
-                                                    <option value="rocket_launch">🚀 Foguete</option>
-                                                    <option value="crown">👑 Coroa</option>
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Vincular Ranking (Opcional)</label>
-                                                <select
-                                                    value={newBadgeRankingId}
-                                                    onChange={e => setNewBadgeRankingId(e.target.value)}
-                                                    className="w-full bg-black/30 border border-white/10 rounded p-2.5 text-sm text-white focus:border-yellow-500 outline-none"
-                                                >
-                                                    <option value="">Nenhum</option>
-                                                    {rankings && rankings.map(r => (
-                                                        <option key={r.id} value={r.id}>{r.label}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={handleAddBadge}
-                                            disabled={isAddingBadge}
-                                            className="w-full bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 text-black font-black py-3 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 mt-2"
-                                        >
-                                            {isAddingBadge ? 'Concedendo...' : 'Conceder Insígnia'}
-                                            {!isAddingBadge && <span className="material-icons-outlined text-sm">add_circle</span>}
-                                        </button>
-                                    </div>
-                                )}
 
                                 {/* Gallery Manager */}
                                 <div>
                                     <div className="flex justify-between items-end mb-2">
                                         <label className="block text-sm font-bold text-gray-500 uppercase">Gerenciar Galeria</label>
-                                        <button onClick={handleOpenUploadModal} className="text-sm text-secondary hover:underline font-bold">+ Adicionar Foto Mock</button>
+                                        <button onClick={handleOpenUploadModal} className="text-sm text-secondary hover:underline font-bold">+ Adicionar Foto Exemplo</button>
                                     </div>
 
                                     <div className="grid grid-cols-4 gap-2">

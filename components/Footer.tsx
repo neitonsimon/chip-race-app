@@ -1,4 +1,5 @@
 import React from 'react';
+import appConfig from '../src/config/appConfig.json';
 
 interface FooterProps {
   onNavigate: (view: string) => void;
@@ -27,14 +28,10 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isAdmin }) => {
               <img src="/cr-logo.png" alt="Chip Race" className="h-16 w-auto group-hover:scale-105 transition-transform duration-300" />
             </a>
             <p className="text-gray-400 text-sm leading-relaxed max-w-xs">
-              A maior comunidade de poker do Brasil. Tecnologia, transparência e paixão pelo esporte da mente unidos em um único ecossistema.
+              {appConfig.footer.brand.description}
             </p>
             <div className="flex gap-4">
-              {[
-                { name: 'instagram', icon: 'camera_alt', url: 'https://instagram.com/chiprace' },
-                { name: 'whatsapp', icon: 'chat', url: '#' },
-                { name: 'youtube', icon: 'play_circle', url: '#' }
-              ].map((social) => (
+              {appConfig.footer.social.map((social) => (
                 <a
                   key={social.name}
                   href={social.url}
@@ -54,13 +51,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isAdmin }) => {
               Menu Principal
             </h4>
             <ul className="space-y-4 text-sm text-gray-400">
-              {[
-                { label: 'The Chosen 30K+', view: 'the-chosen-details' },
-                { label: 'Calendário de Eventos', view: 'calendar' },
-                { label: 'Rankings 2026', view: 'ranking' },
-                { label: 'Área VIP', view: 'vip' },
-                { label: 'Recargas & Chipz', view: 'recharge' },
-              ].map((item) => (
+              {appConfig.footer.menuPrincipal.map((item) => (
                 <li key={item.label}>
                   <a
                     href="#"
@@ -81,13 +72,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isAdmin }) => {
               Informações
             </h4>
             <ul className="space-y-4 text-sm text-gray-400">
-              {[
-                { label: 'Termos de Uso', view: 'home' },
-                { label: 'Política de Privacidade', view: 'home' },
-                { label: 'Regras do Clube', view: 'home' },
-                { label: 'Jogo Responsável', view: 'home' },
-                { label: 'Suporte Online', view: 'home' },
-              ].map((item) => (
+              {appConfig.footer.informacoes.map((item) => (
                 <li key={item.label}>
                   <a
                     href="#"

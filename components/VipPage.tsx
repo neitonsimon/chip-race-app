@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import appConfig from '../src/config/appConfig.json';
 import { supabase } from '../src/lib/supabase';
 import { PlayerStats, MessageCategory } from '../types';
 
@@ -20,11 +21,7 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate, currentUser, onUpd
       return;
     }
 
-    const basePrices: Record<string, number> = {
-      'quarterly': 189.90,
-      'annual': 499.90,
-      'master': 1990.90
-    };
+    const basePrices: Record<string, number> = appConfig.vip.basePrices;
 
     let discount = 0;
     const isCurrentlyVip = currentUser.isVip && currentUser.vipExpiresAt && new Date(currentUser.vipExpiresAt) > new Date();
@@ -59,10 +56,8 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate, currentUser, onUpd
     setIsProcessing(true);
     let newExpiresAt = new Date();
     // Definir expiração com datas fixas (Temporadas)
-    if (plan.id === 'quarterly') {
-      newExpiresAt = new Date('2026-05-25T23:59:59Z'); // Final 1º Trimestre
-    } else if (plan.id === 'annual' || plan.id === 'master') {
-      newExpiresAt = new Date('2026-11-20T23:59:59Z'); // Final Temporada Anual
+    if (appConfig.vip.expirationDates[plan.id as keyof typeof appConfig.vip.expirationDates]) {
+      newExpiresAt = new Date(appConfig.vip.expirationDates[plan.id as keyof typeof appConfig.vip.expirationDates]);
     }
 
     const vipStatusMap: Record<string, 'trimestral' | 'anual' | 'master'> = {
@@ -139,77 +134,7 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate, currentUser, onUpd
     }
   };
 
-  const plans = [
-    {
-      id: 'quarterly',
-      title: 'Trimestral',
-      price: '189,90',
-      period: 'trimestre (Mar-Mai 2026)',
-      color: 'border-secondary',
-      btnColor: 'bg-transparent border border-secondary text-secondary hover:bg-secondary hover:text-black',
-      features: [
-        'R$ 10 de desconto na janta',
-        'R$ 10 de desconto na taxa adm/ staff',
-        '5k fichas adicionais no addon',
-        'Bet free R$ 5 por evento',
-        'Sorteio de 1 add on por evento',
-        '5 pontos adicionais no ranking por evento',
-        'Participar Get Up',
-        'Prioridade em assento em caso de lotação máxima',
-        'R$ 10 em créditos mensais no app Chip Race',
-        '*Valor total dos bônus no trimestre: R$ 280 + benefícios diversos'
-      ]
-    },
-    {
-      id: 'annual',
-      title: 'Anual',
-      price: '499,90',
-      period: 'por ano (Mar-Nov 2026)',
-      tag: 'MELHOR CUSTO-BENEFÍCIO',
-      color: 'border-primary',
-      btnColor: 'bg-primary text-white hover:bg-primary/90 shadow-neon-pink',
-      features: [
-        'R$ 10 de desconto na janta',
-        'R$ 10 de desconto na taxa adm/ staff',
-        '5k fichas adicionais no addon',
-        'Bet free R$ 5 por evento',
-        'Sorteio de 1 add on por evento',
-        '5 pontos adicionais no ranking por evento',
-        'Participar Get Up',
-        'Prioridade em assento em caso de lotação máxima',
-        '20% desconto bar e cozinha',
-        'R$ 30 em créditos mensais no app Chip Race',
-        '*Valor total dos bônus no ano: R$ 1.200 + benefícios diversos'
-      ]
-    },
-    {
-      id: 'master',
-      title: 'Master',
-      price: '1.990,90',
-      period: 'ano (Mar-Nov 2026)',
-      limit: 'APENAS 3 COTAS POR CLUBE',
-      color: 'border-yellow-400',
-      btnColor: 'bg-gradient-to-r from-yellow-600 to-yellow-400 text-black font-black hover:scale-105 shadow-[0_0_30px_rgba(250,204,21,0.4)]',
-      isMaster: true,
-      features: [
-        'Vaga The Chosen 30k+ (Destaque)',
-        '5k fichas adicionais no addon',
-        'Bet free R$ 5 por evento',
-        'Sorteio de 1 add on por evento',
-        '5 pontos adicionais no ranking por evento',
-        'Participar Get Up',
-        'Prioridade em assento em caso de lotação máxima',
-        'R$ 100 em créditos mensais no app Chip Race',
-        '50% desconto bar/ cozinha',
-        'Staff free em todos eventos',
-        'Janta cortesia em todos eventos',
-        'Boné e camiseta Chip Race oficial',
-        'Grupo direto com diretoria e direito a voto',
-        'Nome destacado VIP Master no app',
-        '*Valor total dos bônus no ano: R$ 4.550 + benefícios'
-      ]
-    }
-  ];
+  const plans = appConfig.vip.plans;
 
   return (
     <div className="min-h-screen bg-background-dark py-20 relative overflow-hidden">
@@ -230,11 +155,7 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate, currentUser, onUpd
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
           {plans.map((plan) => {
-            const basePrices: Record<string, number> = {
-              'quarterly': 189.90,
-              'annual': 499.90,
-              'master': 1990.90
-            };
+            const basePrices: Record<string, number> = appConfig.vip.basePrices;
             const isCurrentlyVip = !!(currentUser?.isVip && currentUser?.vipExpiresAt && new Date(currentUser.vipExpiresAt) > new Date());
             const userPlanCost = isCurrentlyVip && currentUser?.vipStatus ? basePrices[currentUser.vipStatus === 'master' ? 'master' : (currentUser.vipStatus === 'anual' ? 'annual' : 'quarterly')] || 0 : 0;
             const targetPlanCost = basePrices[plan.id] || 0;

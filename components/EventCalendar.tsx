@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Event, PlayerResult, RankingPlayer, RankingInstance, ScoringSchema, RankingFormula } from '../types';
 import { calculatePoints } from '../utils/scoring';
+import appConfig from '../src/config/appConfig.json';
+import { EventSkeleton } from './Skeleton';
 
 interface EventStats {
     totalRebuys: number;
@@ -18,20 +20,14 @@ interface EventCalendarProps {
     rankingPlayers: RankingPlayer[]; // Para autocomplete
     rankings: RankingInstance[]; // Rankings dinâmicos passados pelo App
     scoringSchemas: ScoringSchema[]; // Global scoring formulas
+    isLoading?: boolean;
 }
 
 // Tipos auxiliares para o Closing
 // Tipos auxiliares para o Closing
 
 // Lista de Produtos Paralelos com Estilos
-const PARALLEL_PRODUCTS = [
-    { id: 'last-longer', label: 'Last Longer', style: 'text-pink-400 border-pink-500/30 bg-pink-500/10' },
-    { id: 'jackpot', label: 'Jackpot', style: 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10' },
-    { id: 'bet', label: 'Bet', style: 'text-green-400 border-green-500/30 bg-green-500/10' },
-    { id: 'get-up', label: 'Get Up', style: 'text-cyan-400 border-cyan-500/30 bg-cyan-500/10' },
-    { id: 'satellite', label: 'Satélite', style: 'text-blue-400 border-blue-500/30 bg-blue-500/10' },
-    { id: 'sit-n-go', label: 'Sit & Go', style: 'text-gray-400 border-gray-500/30 bg-gray-500/10' }
-];
+const PARALLEL_PRODUCTS = appConfig.events.parallelProducts;
 
 export const EventCalendar: React.FC<EventCalendarProps> = ({
     isAdmin,
@@ -42,7 +38,8 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
     onDeleteEvent,
     rankingPlayers,
     rankings,
-    scoringSchemas
+    scoringSchemas,
+    isLoading
 }) => {
     const [editingEvent, setEditingEvent] = useState<Event | null>(null);
     const [viewEvent, setViewEvent] = useState<Event | null>(null); // Modal de Flyer (Eventos Abertos)

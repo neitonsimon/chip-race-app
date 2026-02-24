@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { RankingPlayer, Event, RankingInstance, ScoringSchema, RankingFormula, BadgeTemplate } from '../types';
 import { ScoringFormulaEditor } from './ScoringFormulaEditor';
 import { calculatePoints } from '../utils/scoring';
+import { RankingSkeleton } from './Skeleton';
 
 interface RankingTableProps {
     isAdmin?: boolean;
@@ -15,8 +16,8 @@ interface RankingTableProps {
     currentUser?: { name?: string };
     globalScoringSchemas?: ScoringSchema[];
     onUpdateGlobalSchemas?: (schemas: ScoringSchema[]) => void;
-    onAwardBadge?: (badge: { user_id: string; title: string; description: string; icon: string; ranking_id: string }) => Promise<void>;
     onFinalizeRanking?: (rankingId: string) => Promise<void>;
+    isLoading?: boolean;
     badgeTemplates?: BadgeTemplate[];
 }
 
@@ -35,9 +36,9 @@ export const RankingTable: React.FC<RankingTableProps> = ({
     events,
     globalScoringSchemas,
     onUpdateGlobalSchemas,
-    onAwardBadge,
     onFinalizeRanking,
-    badgeTemplates
+    isLoading,
+    badgeTemplates = []
 }) => {
     const [activeRankingId, setActiveRankingId] = useState<string>('annual');
     const [searchTerm, setSearchTerm] = useState('');
@@ -228,56 +229,6 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                             >
                                 <span className="material-icons-outlined">functions</span>
                             </button>
-                            {(activeRanking.rewardBadgeTitle || (activeRanking.tieredRewards && activeRanking.tieredRewards.length > 0)) && (
-                                <button
-                                    onClick={async () => {
-                                        const winner = activeRanking.players.find(p => p.rank === 1);
-                                        if (!winner || !winner.id) {
-                                            alert("Vendedor (Rank 1) não identificado.");
-                                            return;
-                                        }
-
-                                        let count = 0;
-                                        if (window.confirm(`Deseja distribuir as insígnias de premiação para os qualificados deste ranking?`)) {
-                                            if (onAwardBadge) {
-                                                // Award Top 1
-                                                if (activeRanking.rewardBadgeTitle) {
-                                                    await onAwardBadge({
-                                                        user_id: winner.id,
-                                                        title: activeRanking.rewardBadgeTitle,
-                                                        description: activeRanking.rewardBadgeDesc || '',
-                                                        icon: activeRanking.rewardBadgeIcon || 'stars',
-                                                        ranking_id: activeRanking.id
-                                                    });
-                                                    count++;
-                                                }
-
-                                                // Award Others
-                                                if (activeRanking.tieredRewards) {
-                                                    for (const tr of activeRanking.tieredRewards) {
-                                                        const recipient = activeRanking.players.find(p => p.rank === tr.position);
-                                                        if (recipient && recipient.id && tr.badgeTitle) {
-                                                            await onAwardBadge({
-                                                                user_id: recipient.id,
-                                                                title: tr.badgeTitle,
-                                                                description: tr.badgeDesc || '',
-                                                                icon: tr.badgeIcon || 'stars',
-                                                                ranking_id: activeRanking.id
-                                                            });
-                                                            count++;
-                                                        }
-                                                    }
-                                                }
-                                                alert(`Sucesso! ${count} insígnias distribuídas.`);
-                                            }
-                                        }
-                                    }}
-                                    className="bg-yellow-500/10 p-2 rounded-full hover:bg-yellow-500 hover:text-white text-yellow-500 transition-colors border border-yellow-500/20"
-                                    title="Distribuir Insígnias de Premiação"
-                                >
-                                    <span className="material-icons-outlined">military_tech</span>
-                                </button>
-                            )}
 
                             {activeRanking.isActive !== false && (
                                 <button
@@ -602,86 +553,98 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200 dark:divide-white/5">
-                                {filteredRanking.map((player) => (
-                                    <tr
-                                        key={player.name + player.rank} // Key composta para evitar erros
-                                        className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group cursor-pointer"
-                                        onClick={() => onSelectPlayer && onSelectPlayer(player)}
-                                    >
-                                        <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-center md:text-left">
-                                            <div className="flex items-center justify-center md:justify-start gap-2">
-                                                <div className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-lg font-display font-bold text-sm md:text-lg shadow-lg group-hover:scale-110 transition-transform ${player.rank === 1 ? 'bg-gradient-to-br from-primary to-cyan-700 text-white border border-primary/50' :
-                                                    player.rank === 2 ? 'bg-gradient-to-br from-secondary to-cyan-700 text-black border border-secondary/50' :
-                                                        player.rank === 3 ? 'bg-gradient-to-br from-gray-600 to-gray-800 text-white border border-gray-500/50' :
-                                                            'bg-gray-100 dark:bg-white/5 text-gray-500 border border-gray-200 dark:border-white/5'
-                                                    }`}>
-                                                    {player.rank}
-                                                </div>
+                                {isLoading ? (
+                                    <tr>
+                                        <td colSpan={5} className="p-4">
+                                            <div className="space-y-4">
+                                                {[1, 2, 3, 4, 5].map(i => (
+                                                    <RankingSkeleton key={i} />
+                                                ))}
                                             </div>
-                                        </td>
-                                        <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap">
-                                            <div className="flex items-center gap-3 md:gap-4">
-                                                <div className="relative shrink-0">
-                                                    <img
-                                                        src={player.avatar || `https://ui-avatars.com/api/?name=${player.name.replace(' ', '+')}&background=random`}
-                                                        alt={player.name}
-                                                        className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border-2 border-gray-200 dark:border-white/10 group-hover:border-primary transition-colors"
-                                                    />
-                                                    {player.change === 'up' && <div className="absolute -top-1 -right-1 w-3 h-3 md:w-4 md:h-4 bg-green-500 rounded-full border-2 border-white dark:border-surface-dark flex items-center justify-center"><span className="material-icons-outlined text-[8px] md:text-[10px] text-white">arrow_drop_up</span></div>}
-                                                    {player.change === 'down' && <div className="absolute -top-1 -right-1 w-3 h-3 md:w-4 md:h-4 bg-red-500 rounded-full border-2 border-white dark:border-surface-dark flex items-center justify-center"><span className="material-icons-outlined text-[8px] md:text-[10px] text-white">arrow_drop_down</span></div>}
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <span className="block font-bold text-gray-900 dark:text-gray-200 group-hover:text-primary transition-colors text-sm md:text-lg truncate max-w-[120px] sm:max-w-none">
-                                                        {player.name}
-                                                    </span>
-                                                    <span className="text-[10px] md:text-xs uppercase tracking-wider text-gray-500 block truncate max-w-[120px]">
-                                                        {player.numericId ? `CR#${String(player.numericId).padStart(3, '0')}` : 'CR#INV'} · {player.city}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </td>
-
-                                        {/* Latest Scores Column (Replaces Origem) */}
-                                        <td className="px-6 py-4 whitespace-nowrap hidden md:table-cell">
-                                            <div className="flex items-center gap-2">
-                                                {getLastScores(player.name).length > 0 ? (
-                                                    getLastScores(player.name).map((score, idx) => (
-                                                        <div key={idx} className="flex flex-col items-center">
-                                                            <span className="bg-white/5 border border-white/10 px-2 py-1 rounded text-xs font-bold text-secondary group-hover:bg-secondary group-hover:text-black transition-colors min-w-[32px] text-center">
-                                                                {score?.points}
-                                                            </span>
-                                                        </div>
-                                                    ))
-                                                ) : (
-                                                    <span className="text-gray-600 text-xs italic">-</span>
-                                                )}
-                                            </div>
-                                        </td>
-
-                                        <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-right">
-                                            <span className="font-display font-black text-base md:text-xl text-primary text-glow">
-                                                {player.points.toLocaleString()}
-                                            </span>
-                                            <span className="text-[10px] md:text-xs uppercase text-gray-500 ml-1">pts</span>
-                                        </td>
-                                        <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-center">
-                                            {isAdmin ? (
-                                                <input
-                                                    type="text"
-                                                    value={player.manualPrize || ''}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                    onChange={(e) => onUpdatePrize && onUpdatePrize(activeRankingId, player.name, e.target.value)}
-                                                    placeholder="-"
-                                                    className="bg-black/30 border border-white/10 rounded px-2 py-1 text-center text-xs md:text-sm text-secondary font-bold w-16 md:w-24 focus:border-secondary outline-none"
-                                                />
-                                            ) : (
-                                                <span className="text-xs md:text-base font-bold text-gray-500 dark:text-gray-400">
-                                                    {player.manualPrize || '-'}
-                                                </span>
-                                            )}
                                         </td>
                                     </tr>
-                                ))}
+                                ) : (
+                                    filteredRanking.map((player) => (
+                                        <tr
+                                            key={player.name + player.rank} // Key composta para evitar erros
+                                            className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group cursor-pointer"
+                                            onClick={() => onSelectPlayer && onSelectPlayer(player)}
+                                        >
+                                            <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-center md:text-left">
+                                                <div className="flex items-center justify-center md:justify-start gap-2">
+                                                    <div className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-lg font-display font-bold text-sm md:text-lg shadow-lg group-hover:scale-110 transition-transform ${player.rank === 1 ? 'bg-gradient-to-br from-primary to-cyan-700 text-white border border-primary/50' :
+                                                        player.rank === 2 ? 'bg-gradient-to-br from-secondary to-cyan-700 text-black border border-secondary/50' :
+                                                            player.rank === 3 ? 'bg-gradient-to-br from-gray-600 to-gray-800 text-white border border-gray-500/50' :
+                                                                'bg-gray-100 dark:bg-white/5 text-gray-500 border border-gray-200 dark:border-white/5'
+                                                        }`}>
+                                                        {player.rank}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap">
+                                                <div className="flex items-center gap-3 md:gap-4">
+                                                    <div className="relative shrink-0">
+                                                        <img
+                                                            src={player.avatar || `https://ui-avatars.com/api/?name=${player.name.replace(' ', '+')}&background=random`}
+                                                            alt={player.name}
+                                                            className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border-2 border-gray-200 dark:border-white/10 group-hover:border-primary transition-colors"
+                                                        />
+                                                        {player.change === 'up' && <div className="absolute -top-1 -right-1 w-3 h-3 md:w-4 md:h-4 bg-green-500 rounded-full border-2 border-white dark:border-surface-dark flex items-center justify-center"><span className="material-icons-outlined text-[8px] md:text-[10px] text-white">arrow_drop_up</span></div>}
+                                                        {player.change === 'down' && <div className="absolute -top-1 -right-1 w-3 h-3 md:w-4 md:h-4 bg-red-500 rounded-full border-2 border-white dark:border-surface-dark flex items-center justify-center"><span className="material-icons-outlined text-[8px] md:text-[10px] text-white">arrow_drop_down</span></div>}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <span className="block font-bold text-gray-900 dark:text-gray-200 group-hover:text-primary transition-colors text-sm md:text-lg truncate max-w-[120px] sm:max-w-none">
+                                                            {player.name}
+                                                        </span>
+                                                        <span className="text-[10px] md:text-xs uppercase tracking-wider text-gray-500 block truncate max-w-[120px]">
+                                                            {player.numericId ? `CR#${String(player.numericId).padStart(3, '0')}` : 'CR#INV'} · {player.city}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            {/* Latest Scores Column (Replaces Origem) */}
+                                            <td className="px-6 py-4 whitespace-nowrap hidden md:table-cell">
+                                                <div className="flex items-center gap-2">
+                                                    {getLastScores(player.name).length > 0 ? (
+                                                        getLastScores(player.name).map((score, idx) => (
+                                                            <div key={idx} className="flex flex-col items-center">
+                                                                <span className="bg-white/5 border border-white/10 px-2 py-1 rounded text-xs font-bold text-secondary group-hover:bg-secondary group-hover:text-black transition-colors min-w-[32px] text-center">
+                                                                    {score?.points}
+                                                                </span>
+                                                            </div>
+                                                        ))
+                                                    ) : (
+                                                        <span className="text-gray-600 text-xs italic">-</span>
+                                                    )}
+                                                </div>
+                                            </td>
+
+                                            <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-right">
+                                                <span className="font-display font-black text-base md:text-xl text-primary text-glow">
+                                                    {player.points.toLocaleString()}
+                                                </span>
+                                                <span className="text-[10px] md:text-xs uppercase text-gray-500 ml-1">pts</span>
+                                            </td>
+                                            <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-center">
+                                                {isAdmin ? (
+                                                    <input
+                                                        type="text"
+                                                        value={player.manualPrize || ''}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        onChange={(e) => onUpdatePrize && onUpdatePrize(activeRankingId, player.name, e.target.value)}
+                                                        placeholder="-"
+                                                        className="bg-black/30 border border-white/10 rounded px-2 py-1 text-center text-xs md:text-sm text-secondary font-bold w-16 md:w-24 focus:border-secondary outline-none"
+                                                    />
+                                                ) : (
+                                                    <span className="text-xs md:text-base font-bold text-gray-500 dark:text-gray-400">
+                                                        {player.manualPrize || '-'}
+                                                    </span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -808,215 +771,47 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                 </div>
                             </div>
 
-                            <div className="bg-white/5 p-4 rounded-xl border border-white/5">
-                                <h4 className="text-sm font-bold text-yellow-500 mb-2 flex items-center gap-2">
-                                    <span className="material-icons-outlined">military_tech</span>
-                                    Insígnia de Recompensa (Opcional)
+                            <div className="bg-primary/10 p-4 rounded-xl border border-primary/20 space-y-4">
+                                <h4 className="text-sm font-bold text-primary uppercase tracking-wider flex items-center gap-2">
+                                    <span className="material-icons-outlined text-sm">emoji_events</span>
+                                    Premiação Automática (Campeão)
                                 </h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    <div className="md:col-span-2">
-                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Título da Insígnia</label>
-                                        <input
-                                            type="text"
-                                            value={editingRanking.rewardBadgeTitle || ''}
-                                            onChange={e => setEditingRanking({ ...editingRanking, rewardBadgeTitle: e.target.value })}
-                                            placeholder="Ex: Campeão Anual 2025"
-                                            className="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm"
-                                        />
-                                    </div>
-                                    <div className="md:col-span-2">
-                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Descrição</label>
-                                        <input
-                                            type="text"
-                                            value={editingRanking.rewardBadgeDesc || ''}
-                                            onChange={e => setEditingRanking({ ...editingRanking, rewardBadgeDesc: e.target.value })}
-                                            placeholder="Ex: Conquistou o ranking geral anual"
-                                            className="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm"
-                                        />
-                                    </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Ícone</label>
-                                        <select
-                                            value={editingRanking.rewardBadgeIcon || 'stars'}
-                                            onChange={e => setEditingRanking({ ...editingRanking, rewardBadgeIcon: e.target.value })}
-                                            className="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm"
-                                        >
-                                            <option value="stars">⭐ Estrela</option>
-                                            <option value="emoji_events">🏆 Troféu</option>
-                                            <option value="military_tech">🎖️ Medalha</option>
-                                            <option value="workspace_premium">📜 Premium</option>
-                                            <option value="diamond">💎 Diamante</option>
-                                            <option value="auto_awesome">✨ Brilho</option>
-                                            <option value="rocket_launch">🚀 Foguete</option>
-                                            <option value="crown">👑 Coroa</option>
-                                        </select>
-                                    </div>
-                                    <div className="md:col-span-2 mt-4 pt-4 border-t border-white/10">
-                                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Ou escolha de um template:</label>
-                                        <div className="flex flex-wrap gap-2">
-                                            {badgeTemplates?.map(template => (
-                                                <button
-                                                    key={template.id}
-                                                    type="button"
-                                                    onClick={() => setEditingRanking({
-                                                        ...editingRanking,
-                                                        rewardBadgeTitle: template.title,
-                                                        rewardBadgeDesc: template.description,
-                                                        rewardBadgeIcon: template.icon,
-                                                        badgeTemplateId: template.id
-                                                    })}
-                                                    className="px-3 py-1 bg-white/5 hover:bg-yellow-500/20 border border-white/10 rounded-full text-[10px] text-gray-300 transition-colors flex items-center gap-1"
-                                                >
-                                                    <span className="material-icons-outlined text-sm">{template.icon}</span>
-                                                    {template.title}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="bg-white/5 p-4 rounded-xl border border-white/5">
-                                <h4 className="text-sm font-bold text-cyan-400 mb-2 flex items-center gap-2">
-                                    <span className="material-icons-outlined">payments</span>
-                                    Prêmios de Finalização (Top 1)
-                                </h4>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Créditos R$ (Carteira)</label>
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Prêmio em R$</label>
                                         <input
                                             type="number"
-                                            value={editingRanking.rewardBrl || 0}
-                                            onChange={e => setEditingRanking({ ...editingRanking, rewardBrl: Number(e.target.value) })}
-                                            className="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm"
+                                            value={editingRanking.brlReward || ''}
+                                            onChange={e => setEditingRanking({ ...editingRanking, brlReward: Number(e.target.value) })}
+                                            className="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-xs outline-none focus:border-primary"
+                                            placeholder="Ex: 500"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Fichas Chipz</label>
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Prêmio em Chipz</label>
                                         <input
                                             type="number"
-                                            value={editingRanking.rewardChipz || 0}
-                                            onChange={e => setEditingRanking({ ...editingRanking, rewardChipz: Number(e.target.value) })}
-                                            className="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm"
+                                            value={editingRanking.chipzReward || ''}
+                                            onChange={e => setEditingRanking({ ...editingRanking, chipzReward: Number(e.target.value) })}
+                                            className="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-xs outline-none focus:border-primary"
+                                            placeholder="Ex: 1000"
                                         />
                                     </div>
                                 </div>
-                            </div>
-
-                            <div className="bg-white/5 p-4 rounded-xl border border-white/5">
-                                <div className="flex justify-between items-center mb-4">
-                                    <h4 className="text-sm font-bold text-accent mb-0 flex items-center gap-2">
-                                        <span className="material-icons-outlined">workspace_premium</span>
-                                        Premiações Adicionais (Top 2+)
-                                    </h4>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            const nextPos = (editingRanking.tieredRewards?.length || 0) + 2;
-                                            setEditingRanking({
-                                                ...editingRanking,
-                                                tieredRewards: [...(editingRanking.tieredRewards || []), { position: nextPos, brl: 0, chipz: 0 }]
-                                            });
-                                        }}
-                                        className="text-[10px] font-bold text-accent hover:underline uppercase"
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Insígnia de Campeão</label>
+                                    <select
+                                        value={editingRanking.badgeTemplateId || ''}
+                                        onChange={e => setEditingRanking({ ...editingRanking, badgeTemplateId: e.target.value })}
+                                        className="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-xs outline-none focus:border-primary"
                                     >
-                                        + Adicionar Posição
-                                    </button>
-                                </div>
-
-                                <div className="space-y-4">
-                                    {(!editingRanking.tieredRewards || editingRanking.tieredRewards.length === 0) && (
-                                        <p className="text-[10px] text-gray-500 italic text-center py-2">Nenhuma premiação extra configurada.</p>
-                                    )}
-                                    {editingRanking.tieredRewards?.map((tr, idx) => (
-                                        <div key={idx} className="bg-black/20 p-3 rounded-lg border border-white/5 relative group">
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    const newList = editingRanking.tieredRewards?.filter((_, i) => i !== idx);
-                                                    setEditingRanking({ ...editingRanking, tieredRewards: newList });
-                                                }}
-                                                className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                            >
-                                                <span className="material-icons-outlined text-[10px]">close</span>
-                                            </button>
-
-                                            <div className="grid grid-cols-6 gap-3">
-                                                <div className="col-span-1">
-                                                    <label className="block text-[8px] font-bold text-gray-500 uppercase mb-1">Pos.</label>
-                                                    <input
-                                                        type="number"
-                                                        value={tr.position}
-                                                        onChange={e => {
-                                                            const newList = [...(editingRanking.tieredRewards || [])];
-                                                            newList[idx] = { ...tr, position: Number(e.target.value) };
-                                                            setEditingRanking({ ...editingRanking, tieredRewards: newList });
-                                                        }}
-                                                        className="w-full bg-black/30 border border-white/10 rounded p-1.5 text-white text-xs text-center"
-                                                    />
-                                                </div>
-                                                <div className="col-span-1">
-                                                    <label className="block text-[8px] font-bold text-gray-500 uppercase mb-1">R$</label>
-                                                    <input
-                                                        type="number"
-                                                        value={tr.brl || 0}
-                                                        onChange={e => {
-                                                            const newList = [...(editingRanking.tieredRewards || [])];
-                                                            newList[idx] = { ...tr, brl: Number(e.target.value) };
-                                                            setEditingRanking({ ...editingRanking, tieredRewards: newList });
-                                                        }}
-                                                        className="w-full bg-black/30 border border-white/10 rounded p-1.5 text-white text-xs"
-                                                    />
-                                                </div>
-                                                <div className="col-span-1">
-                                                    <label className="block text-[8px] font-bold text-gray-500 uppercase mb-1">Chipz</label>
-                                                    <input
-                                                        type="number"
-                                                        value={tr.chipz || 0}
-                                                        onChange={e => {
-                                                            const newList = [...(editingRanking.tieredRewards || [])];
-                                                            newList[idx] = { ...tr, chipz: Number(e.target.value) };
-                                                            setEditingRanking({ ...editingRanking, tieredRewards: newList });
-                                                        }}
-                                                        className="w-full bg-black/30 border border-white/10 rounded p-1.5 text-white text-xs"
-                                                    />
-                                                </div>
-                                                <div className="col-span-3">
-                                                    <label className="block text-[8px] font-bold text-gray-500 uppercase mb-1">Insígnia (Título)</label>
-                                                    <div className="flex gap-2">
-                                                        <input
-                                                            type="text"
-                                                            value={tr.badgeTitle || ''}
-                                                            onChange={e => {
-                                                                const newList = [...(editingRanking.tieredRewards || [])];
-                                                                newList[idx] = { ...tr, badgeTitle: e.target.value };
-                                                                setEditingRanking({ ...editingRanking, tieredRewards: newList });
-                                                            }}
-                                                            placeholder="Ex: Vice Campeão"
-                                                            className="flex-grow bg-black/30 border border-white/10 rounded p-1.5 text-white text-xs"
-                                                        />
-                                                        <select
-                                                            value={tr.badgeIcon || 'stars'}
-                                                            onChange={e => {
-                                                                const newList = [...(editingRanking.tieredRewards || [])];
-                                                                newList[idx] = { ...tr, badgeIcon: e.target.value };
-                                                                setEditingRanking({ ...editingRanking, tieredRewards: newList });
-                                                            }}
-                                                            className="bg-black/40 border border-white/10 rounded p-1 text-white text-[10px]"
-                                                        >
-                                                            <option value="stars">⭐</option>
-                                                            <option value="emoji_events">🏆</option>
-                                                            <option value="military_tech">🎖️</option>
-                                                            <option value="workspace_premium">📜</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
+                                        <option value="">Nenhuma</option>
+                                        {badgeTemplates.map(b => (
+                                            <option key={b.id} value={b.id}>{b.title}</option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
-
 
                             <div className="bg-white/5 p-4 rounded-xl border border-white/5">
                                 <h4 className="text-sm font-bold text-primary mb-3 uppercase tracking-wider">Mapeamento de Fórmulas</h4>
@@ -1152,31 +947,7 @@ const FinisherModal: React.FC<{
                         ></textarea>
                     </div>
 
-                    <div className="space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-black/20 p-3 rounded-xl border border-white/5">
-                                <span className="text-[10px] text-gray-500 uppercase font-bold block mb-1">1º Lugar: R$</span>
-                                <span className="text-lg font-display font-black text-green-400">R$ {Number(ranking.rewardBrl || 0).toFixed(2)}</span>
-                            </div>
-                            <div className="bg-black/20 p-3 rounded-xl border border-white/5">
-                                <span className="text-[10px] text-gray-500 uppercase font-bold block mb-1">1º Lugar: Chipz</span>
-                                <span className="text-lg font-display font-black text-secondary">{ranking.rewardChipz || 0}</span>
-                            </div>
-                        </div>
-
-                        {ranking.tieredRewards?.map((tr, i) => (
-                            <div key={i} className="grid grid-cols-2 gap-3">
-                                <div className="bg-black/10 p-3 rounded-xl border border-white/5 opacity-80">
-                                    <span className="text-[10px] text-gray-500 uppercase font-bold block mb-1">{tr.position}º Lugar: R$</span>
-                                    <span className="text-sm font-bold text-green-400">R$ {Number(tr.brl || 0).toFixed(2)}</span>
-                                </div>
-                                <div className="bg-black/10 p-3 rounded-xl border border-white/5 opacity-80">
-                                    <span className="text-[10px] text-gray-500 uppercase font-bold block mb-1">{tr.position}º Lugar: Chipz</span>
-                                    <span className="text-sm font-bold text-secondary">{tr.chipz || 0}</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                    {/* Prizes and Chips display removed as requested */}
                 </div>
 
                 <div className="flex gap-4">

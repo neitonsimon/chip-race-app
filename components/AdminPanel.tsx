@@ -112,6 +112,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const [pollQuestion, setPollQuestion] = useState('');
     const [pollOptions, setPollOptions] = useState(['', '']);
     const [cashAmount, setCashAmount] = useState('');
+    const [usersWithSelectedBadge, setUsersWithSelectedBadge] = useState<Set<string>>(new Set());
+
+    useEffect(() => {
+        const fetchBadgeOwners = async () => {
+            if (giftType === 'badge' && selectedBadgeId) {
+                const { data } = await supabase.from('user_badges').select('user_id').eq('badge_template_id', selectedBadgeId);
+                if (data) setUsersWithSelectedBadge(new Set(data.map(d => d.user_id)));
+            } else {
+                setUsersWithSelectedBadge(new Set());
+            }
+        };
+        fetchBadgeOwners();
+    }, [giftType, selectedBadgeId]);
+
+    const [debtSearchQuery, setDebtSearchQuery] = useState('');
+    const [debtSearchResults, setDebtSearchResults] = useState<any[]>([]);
+    const [debtFilter, setDebtFilter] = useState('');
+    const [showNewDebtForm, setShowNewDebtForm] = useState(false);
+    const [newDebtData, setNewDebtData] = useState({ userId: '', amount: '', eventId: '', description: '' });
 
     const handleAddPollOption = () => setPollOptions([...pollOptions, '']);
     const handleUpdatePollOption = (index: number, val: string) => {
@@ -246,7 +265,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             const { error } = await supabase.from('products').insert({
                 name: newProduct.name,
                 category: newProduct.category,
-                price_brl: parseFloat(newProduct.price),
+                price: parseFloat(newProduct.price),
                 description: newProduct.description,
                 active: true
             });
@@ -272,11 +291,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         fetchProducts();
     };
     const fetchOpenCommands = async (eventId: string) => {
-        const { data } = await supabase.from('commands').select('*, profiles!user_id(name, numeric_id, avatar_url, vip_status, role, balance_brl)').eq('event_id', eventId).eq('status', 'open').order('created_at', { ascending: false });
+        const { data } = await supabase.from('commands').select('*, profiles!user_id(name, numeric_id, avatar_url, vip_status, role, balance_brl, debt_limit_brl, total_pending_debt)').eq('event_id', eventId).eq('status', 'open').order('created_at', { ascending: false });
         if (data) setOpenCommands(data);
     };
     const fetchClosedCommands = async (eventId: string) => {
-        const { data } = await supabase.from('commands').select('*, profiles!user_id(name, numeric_id, avatar_url, vip_status, balance_brl)').eq('event_id', eventId).eq('status', 'closed').order('closed_at', { ascending: false });
+        const { data } = await supabase.from('commands').select('*, profiles!user_id(name, numeric_id, avatar_url, vip_status, balance_brl, debt_limit_brl, total_pending_debt)').eq('event_id', eventId).eq('status', 'closed').order('closed_at', { ascending: false });
         if (data) setClosedCommands(data);
     };
     const fetchCommandItems = async (commandId: string) => {
@@ -366,7 +385,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
 
     const fetchDebts = async () => {
         const { data } = await supabase.from('debts')
-            .select('*, profiles!user_id(name, numeric_id, avatar_url, balance_brl, debt_limit_brl), events(title)')
+            .select('*, profiles!user_id(name, numeric_id, avatar_url, balance_brl, debt_limit_brl, total_pending_debt), events(title)')
             .eq('status', 'pending')
             .order('created_at', { ascending: false });
         if (data) {
@@ -419,7 +438,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         setSearchQuery(query);
         if (query.length < 2) { setSearchResults([]); return; }
         const isNumeric = /^\d+$/.test(query);
-        let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, vip_status, balance_brl');
+        let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, vip_status, balance_brl, debt_limit_brl, total_pending_debt');
         q = isNumeric ? q.eq('numeric_id', parseInt(query)) : q.ilike('name', `%${query}%`);
         const { data } = await q.limit(5);
         setSearchResults(data || []);
@@ -428,7 +447,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const handleOpenCommand = async (player: any) => {
         if (!selectedEvent) { alert('Selecione um evento primeiro.'); return; }
         if (openCommands.find(c => c.user_id === player.id)) { alert('Jogador já tem comanda aberta.'); return; }
-        const { data, error } = await supabase.from('commands').insert({ event_id: selectedEvent.id, user_id: player.id, status: 'open', opened_by: currentUser.id }).select('*, profiles!user_id(name, numeric_id, avatar_url, vip_status, role, balance_brl)').single();
+        const { data, error } = await supabase.from('commands').insert({ event_id: selectedEvent.id, user_id: player.id, status: 'open', opened_by: currentUser.id }).select('*, profiles!user_id(name, numeric_id, avatar_url, vip_status, role, balance_brl, debt_limit_brl, total_pending_debt)').single();
         if (error) { alert('Erro: ' + error.message); return; }
         setOpenCommands([data, ...openCommands]);
         setSearchQuery(''); setSearchResults([]);
@@ -439,10 +458,58 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         setGiftSearchQuery(query);
         if (query.length < 2) { setGiftSearchResults([]); return; }
         const isNumeric = /^\d+$/.test(query);
-        let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, vip_status, balance_brl, balance_chipz');
+        let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, vip_status, balance_brl, balance_chipz, debt_limit_brl, total_pending_debt');
         q = isNumeric ? q.eq('numeric_id', parseInt(query)) : q.ilike('name', `%${query}%`);
         const { data } = await q.limit(10);
         setGiftSearchResults(data || []);
+    };
+
+    const handleDebtSearch = async (query: string) => {
+        setDebtSearchQuery(query);
+        if (query.length < 2) { setDebtSearchResults([]); return; }
+        const isNumeric = /^\d+$/.test(query);
+        let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, vip_status, balance_brl, debt_limit_brl, total_pending_debt');
+        q = isNumeric ? q.eq('numeric_id', parseInt(query)) : q.ilike('name', `%${query}%`);
+        const { data } = await q.limit(5);
+        setDebtSearchResults(data || []);
+    };
+
+    const handleRegisterDebt = async () => {
+        if (!isAdmin || !newDebtData.userId || !newDebtData.amount || !newDebtData.eventId) {
+            alert("Preencha todos os campos obrigatórios.");
+            return;
+        }
+        setIsLoading(true);
+        try {
+            const { error } = await supabase.from('debts').insert({
+                user_id: newDebtData.userId,
+                event_id: newDebtData.eventId,
+                amount_brl: parseFloat(newDebtData.amount),
+                description: newDebtData.description,
+                status: 'pending'
+            });
+            if (error) throw error;
+
+            await supabase.from('messages').insert({
+                user_id: newDebtData.userId,
+                sender: 'Sistema',
+                sender_id: currentUser.id,
+                content: `Um novo débito de R$ ${parseFloat(newDebtData.amount).toFixed(2)} foi registrado administrativamente.`,
+                category: 'system',
+                is_read: false
+            });
+
+            alert("Débito registrado com sucesso!");
+            setShowNewDebtForm(false);
+            setNewDebtData({ userId: '', amount: '', eventId: '', description: '' });
+            setDebtSearchQuery('');
+            setDebtSearchResults([]);
+            fetchDebts();
+        } catch (err: any) {
+            alert("Erro ao registrar débito: " + err.message);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const getTournamentItems = () => {
@@ -779,6 +846,39 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
 
         setIsLoading(true);
         try {
+            // DUPLICATE BADGE PROTECTION
+            if (giftType === 'badge') {
+                const template = badgeTemplates.find(b => b.id === selectedBadgeId);
+                if (template) {
+                    const { data: duplicates } = await supabase.from('user_badges')
+                        .select('user_id, profiles!user_id(name)')
+                        .in('user_id', targetUserIds)
+                        .eq('badge_template_id', template.id);
+
+                    if (duplicates && duplicates.length > 0) {
+                        const names = (duplicates as any[]).map(d => d.profiles?.name || 'Jogador').join(', ');
+                        if (giftTarget !== 'all') {
+                            alert(`🚫 BLOQUEADO: Os seguintes jogadores já possuem a insígnia "${template.title}":\n\n${names}\n\nO sistema não permite o envio repetido da mesma honraria para o mesmo jogador.`);
+                            setIsLoading(false);
+                            return;
+                        } else {
+                            if (!window.confirm(`Aviso: ${duplicates.length} jogadores já possuem a insígnia "${template.title}" e serão ignorados nesta operação. Deseja prosseguir com os demais ${targetUserIds.length - duplicates.length}?`)) {
+                                setIsLoading(false);
+                                return;
+                            }
+                            const duplicateIds = duplicates.map(d => d.user_id);
+                            targetUserIds = targetUserIds.filter(id => !duplicateIds.includes(id));
+                        }
+                    }
+                }
+            }
+
+            if (targetUserIds.length === 0) {
+                alert('Nenhum usuário apto a receber esta recompensa no momento.');
+                setIsLoading(false);
+                return;
+            }
+
             const finalAmount = giftType === 'chipz' ? Math.floor(amount) : amount;
             const logMsg = giftType === 'brl' ? `R$ ${finalAmount.toFixed(2)}` : giftType === 'chipz' ? `${finalAmount} Chipz` : `Insígnia: ${badgeTemplates.find(b => b.id === selectedBadgeId)?.title}`;
             const finalDescription = giftDescription.trim() || `Atribuição de Admin: ${logMsg}`;
@@ -820,7 +920,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                         sender_id: currentUser.id,
                         subject: giftType === 'badge' ? '🎖️ Você recebeu uma Insígnia!' : '🎁 Você recebeu um Presente!',
                         content: `${finalDescription}. ${giftType !== 'badge' ? 'O saldo já foi atualizado e está disponível para uso.' : ''}`,
-                        category: giftType === 'badge' ? 'system' : 'gift',
+                        category: 'gift',
                         is_read: false
                     });
                 }));
@@ -1631,7 +1731,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                                             <div className="flex items-center gap-2">
                                                                 <span className="text-[10px] text-gray-500 uppercase font-black">{p.category}</span>
                                                                 <span className="w-1 h-1 rounded-full bg-gray-700"></span>
-                                                                <span className="text-[10px] text-primary font-black">R$ {Number(p.price_brl || 0).toFixed(2)}</span>
+                                                                <span className="text-[10px] text-primary font-black">R$ {Number(p.price || 0).toFixed(2)}</span>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -1761,18 +1861,33 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                                 className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary transition-all" />
                                             {giftSearchResults.length > 0 && (
                                                 <div className="absolute top-full left-0 right-0 mt-1 bg-[#0a0720] border border-white/10 rounded-xl overflow-hidden shadow-2xl z-20">
-                                                    {giftSearchResults.map(u => (
-                                                        <button key={u.id} onClick={() => {
-                                                            if (!selectedGiftUsers.find(x => x.id === u.id)) setSelectedGiftUsers([...selectedGiftUsers, u]);
-                                                            setGiftSearchQuery(''); setGiftSearchResults([]);
-                                                        }} className="w-full flex items-center gap-3 p-3 hover:bg-primary/20 text-left border-b border-white/5 last:border-0">
-                                                            <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${u.name}&background=random`} className="w-8 h-8 rounded-full" />
-                                                            <div>
-                                                                <p className="text-xs font-bold text-white">{u.name}</p>
-                                                                <p className="text-[10px] text-primary font-black uppercase">CR#{String(u.numeric_id).padStart(3, '0')}</p>
-                                                            </div>
-                                                        </button>
-                                                    ))}
+                                                    {giftSearchResults.map(u => {
+                                                        const alreadyHasBadge = giftType === 'badge' && usersWithSelectedBadge.has(u.id);
+                                                        return (
+                                                            <button
+                                                                key={u.id}
+                                                                onClick={() => {
+                                                                    if (!selectedGiftUsers.find(x => x.id === u.id)) setSelectedGiftUsers([...selectedGiftUsers, u]);
+                                                                    setGiftSearchQuery(''); setGiftSearchResults([]);
+                                                                }}
+                                                                className={`w-full flex items-center justify-between p-3 hover:bg-primary/20 text-left border-b border-white/5 last:border-0 ${alreadyHasBadge ? 'opacity-60 grayscale-[0.5]' : ''}`}
+                                                            >
+                                                                <div className="flex items-center gap-3">
+                                                                    <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${u.name}&background=random`} className="w-8 h-8 rounded-full" />
+                                                                    <div>
+                                                                        <p className="text-xs font-bold text-white">{u.name}</p>
+                                                                        <p className="text-[10px] text-primary font-black uppercase">CR#{String(u.numeric_id).padStart(3, '0')}</p>
+                                                                    </div>
+                                                                </div>
+                                                                {alreadyHasBadge && (
+                                                                    <div className="flex items-center gap-1.5 text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded-lg border border-yellow-500/20">
+                                                                        <span className="material-icons text-xs">info</span>
+                                                                        <span className="text-[9px] font-black uppercase">Já possui</span>
+                                                                    </div>
+                                                                )}
+                                                            </button>
+                                                        );
+                                                    })}
                                                 </div>
                                             )}
                                         </div>
@@ -1782,20 +1897,32 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                                 <div className="text-center py-8 text-gray-600 border border-dashed border-white/5 rounded-2xl">
                                                     <p className="text-xs italic">Nenhum usuário selecionado.</p>
                                                 </div>
-                                            ) : selectedGiftUsers.map(u => (
-                                                <div key={u.id} className="bg-white/5 border border-white/10 rounded-xl p-3 flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
-                                                        <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${u.name}&background=random`} className="w-8 h-8 rounded-full" />
-                                                        <div>
-                                                            <p className="text-xs font-bold text-white">{u.name}</p>
-                                                            <p className="text-[10px] text-gray-500">Saldo: R$ {Number(u.balance_brl || 0).toFixed(2)} · {u.balance_chipz || 0} Chipz</p>
+                                            ) : selectedGiftUsers.map(u => {
+                                                const alreadyHasBadge = giftType === 'badge' && usersWithSelectedBadge.has(u.id);
+                                                return (
+                                                    <div key={u.id} className={`bg-white/5 border rounded-xl p-3 flex items-center justify-between transition-all ${alreadyHasBadge ? 'border-yellow-500/40 bg-yellow-500/5' : 'border-white/10'}`}>
+                                                        <div className="flex items-center gap-3">
+                                                            <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${u.name}&background=random`} className="w-8 h-8 rounded-full" />
+                                                            <div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <p className="text-xs font-bold text-white">{u.name}</p>
+                                                                    {alreadyHasBadge && (
+                                                                        <span className="text-[8px] bg-yellow-500 text-black px-1.5 py-0.5 rounded font-black uppercase animate-pulse">Aviso</span>
+                                                                    )}
+                                                                </div>
+                                                                {alreadyHasBadge ? (
+                                                                    <p className="text-[9px] text-yellow-500/80 font-bold italic mt-0.5">⚠️ Este jogador já possui a insígnia selecionada.</p>
+                                                                ) : (
+                                                                    <p className="text-[10px] text-gray-500">Saldo: R$ {Number(u.balance_brl || 0).toFixed(2)} · {u.balance_chipz || 0} Chipz</p>
+                                                                )}
+                                                            </div>
                                                         </div>
+                                                        <button onClick={() => setSelectedGiftUsers(selectedGiftUsers.filter(x => x.id !== u.id))} className="text-gray-500 hover:text-red-500 transition-colors">
+                                                            <span className="material-icons-outlined text-base">remove_circle_outline</span>
+                                                        </button>
                                                     </div>
-                                                    <button onClick={() => setSelectedGiftUsers(selectedGiftUsers.filter(x => x.id !== u.id))} className="text-gray-500 hover:text-red-500 transition-colors">
-                                                        <span className="material-icons-outlined text-base">remove_circle_outline</span>
-                                                    </button>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 </div>
@@ -1804,8 +1931,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                     )}
 
                     {activeTab === 'debts' && (
-                        <div className="p-8 max-w-5xl mx-auto">
-                            <div className="flex items-center justify-between mb-8">
+                        <div className="p-8 max-w-5xl mx-auto space-y-6">
+                            <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4">
                                     <div className="w-14 h-14 rounded-2xl bg-red-500/20 border border-red-500/40 flex items-center justify-center shadow-neon-red">
                                         <span className="material-icons-outlined text-red-500 text-3xl">receipt_long</span>
@@ -1815,82 +1942,196 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                         <p className="text-gray-400 text-sm">Gerenciamento de débitos pendentes dos jogadores.</p>
                                     </div>
                                 </div>
-                                <div className="text-right">
-                                    <p className="text-[10px] text-gray-500 font-black uppercase mb-1">Total Pendurado (Agregado)</p>
-                                    <p className="text-3xl font-display font-black text-red-500">R$ {totalActiveDebt.toFixed(2)}</p>
+                                <div className="flex items-center gap-6">
+                                    <div className="text-right">
+                                        <p className="text-[10px] text-gray-500 font-black uppercase mb-1">Total Pendurado</p>
+                                        <p className="text-2xl font-display font-black text-red-500">R$ {totalActiveDebt.toFixed(2)}</p>
+                                    </div>
+                                    <button
+                                        onClick={() => setShowNewDebtForm(!showNewDebtForm)}
+                                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-2 ${showNewDebtForm ? 'bg-white text-black' : 'bg-red-600 text-white shadow-neon-red'}`}
+                                    >
+                                        <span className="material-icons-outlined text-sm">{showNewDebtForm ? 'close' : 'add_circle'}</span>
+                                        {showNewDebtForm ? 'Cancelar' : 'Novo Registro'}
+                                    </button>
                                 </div>
                             </div>
+
+                            {showNewDebtForm && (
+                                <div className="bg-red-500/5 border border-red-500/20 rounded-3xl p-6 animate-in fade-in slide-in-from-top-4 duration-300">
+                                    <h4 className="text-sm font-black text-white uppercase mb-6 flex items-center gap-2">
+                                        <span className="material-icons-outlined text-red-500">person_add</span>
+                                        Registrar Novo Débito Manual
+                                    </h4>
+
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                        <div className="space-y-4">
+                                            <div className="relative">
+                                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">1. Procurar Jogador</label>
+                                                <div className="relative">
+                                                    <span className="material-icons-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">search</span>
+                                                    <input
+                                                        type="text"
+                                                        value={debtSearchQuery}
+                                                        onChange={e => handleDebtSearch(e.target.value)}
+                                                        placeholder="Nome ou CR#..."
+                                                        className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white text-sm outline-none focus:border-red-500 transition-all"
+                                                    />
+                                                </div>
+
+                                                {debtSearchResults.length > 0 && (
+                                                    <div className="absolute top-full left-0 right-0 mt-1 bg-[#0a0720] border border-red-500/30 rounded-xl overflow-hidden shadow-2xl z-20">
+                                                        {debtSearchResults.map(u => (
+                                                            <button
+                                                                key={u.id}
+                                                                onClick={() => {
+                                                                    setNewDebtData({ ...newDebtData, userId: u.id });
+                                                                    setDebtSearchQuery(u.name);
+                                                                    setDebtSearchResults([]);
+                                                                }}
+                                                                className={`w-full flex items-center gap-3 p-3 text-left border-b border-white/5 last:border-0 transition-colors ${newDebtData.userId === u.id ? 'bg-red-500/20' : 'hover:bg-white/5'}`}
+                                                            >
+                                                                <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${u.name}&background=random`} className="w-8 h-8 rounded-full" />
+                                                                <div>
+                                                                    <p className="text-xs font-bold text-white">{u.name}</p>
+                                                                    <p className="text-[10px] text-red-400 font-black uppercase">CR#{String(u.numeric_id).padStart(3, '0')}</p>
+                                                                </div>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">2. Evento Correspondente</label>
+                                                <select
+                                                    value={newDebtData.eventId}
+                                                    onChange={e => setNewDebtData({ ...newDebtData, eventId: e.target.value })}
+                                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-red-500 outline-none transition-all"
+                                                >
+                                                    <option value="" style={{ backgroundColor: '#0a0720' }}>Selecionar Evento</option>
+                                                    {events.map(ev => <option key={ev.id} value={ev.id} style={{ backgroundColor: '#0a0720' }}>{ev.title} ({new Date(ev.date + 'T12:00:00').toLocaleDateString('pt-BR')})</option>)}
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">3. Valor do Débito (R$)</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-black text-sm">R$</span>
+                                                    <input
+                                                        type="number"
+                                                        value={newDebtData.amount}
+                                                        onChange={e => setNewDebtData({ ...newDebtData, amount: e.target.value })}
+                                                        placeholder="0,00"
+                                                        className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white font-black text-lg focus:border-red-500 outline-none transition-all"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">4. Motivo / Descrição</label>
+                                                <input
+                                                    type="text"
+                                                    value={newDebtData.description}
+                                                    onChange={e => setNewDebtData({ ...newDebtData, description: e.target.value })}
+                                                    placeholder="Ex: Compra de fichas não paga..."
+                                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-red-500 outline-none transition-all"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-6 flex justify-end">
+                                        <button
+                                            onClick={handleRegisterDebt}
+                                            disabled={isLoading || !newDebtData.userId || !newDebtData.amount || !newDebtData.eventId}
+                                            className="bg-red-600 hover:bg-white hover:text-black text-white font-black py-4 px-10 rounded-2xl transition-all shadow-neon-red uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-30"
+                                        >
+                                            {isLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <><span className="material-icons-outlined text-sm">save</span> Salvar Pendência</>}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="bg-black/40 border border-white/10 rounded-3xl overflow-hidden">
                                 <div className="p-4 border-b border-white/10 bg-black/20 flex items-center justify-between gap-4">
                                     <div className="relative flex-1 max-w-md">
-                                        <span className="material-icons-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">search</span>
+                                        <span className="material-icons-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">filter_alt</span>
                                         <input
                                             type="text"
-                                            placeholder="Filtrar por nome ou ID..."
-                                            onChange={(e) => {
-                                                const q = e.target.value.toLowerCase();
-                                                // Local filtering can be handled by a filteredDebts state if list grows large
-                                            }}
-                                            className="w-full bg-[#050214] border border-white/10 rounded-xl pl-10 pr-4 py-2 text-white text-xs focus:border-primary outline-none"
+                                            placeholder="Filtrar pendências existentes..."
+                                            value={debtFilter}
+                                            onChange={(e) => setDebtFilter(e.target.value)}
+                                            className="w-full bg-[#050214] border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white text-xs focus:border-primary outline-none transition-all"
                                         />
                                     </div>
-                                    <button onClick={fetchDebts} className="p-2 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all">
-                                        <span className="material-icons-outlined text-sm text-gray-400">refresh</span>
+                                    <button onClick={fetchDebts} className="p-2.5 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all text-gray-400 hover:text-white">
+                                        <span className="material-icons-outlined text-sm">refresh</span>
                                     </button>
                                 </div>
 
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-xs">
                                         <thead>
-                                            <tr className="border-b border-white/5 bg-black/40 text-gray-500 uppercase font-bold">
-                                                <th className="text-left px-6 py-4">Jogador</th>
-                                                <th className="text-left px-6 py-4">Evento / Data</th>
-                                                <th className="text-center px-6 py-4">Valor</th>
-                                                <th className="text-right px-6 py-4">Ações</th>
+                                            <tr className="border-b border-white/5 bg-black/40 text-gray-500 uppercase font-black tracking-wider">
+                                                <th className="text-left px-6 py-5">Jogador</th>
+                                                <th className="text-left px-6 py-5">Evento / Data</th>
+                                                <th className="text-center px-6 py-5">Valor Devido</th>
+                                                <th className="text-right px-6 py-5">Ações</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-white/5">
-                                            {activeDebts.length === 0 ? (
+                                            {activeDebts.filter(d =>
+                                                (d.profiles?.name || '').toLowerCase().includes(debtFilter.toLowerCase()) ||
+                                                String(d.profiles?.numeric_id || '').includes(debtFilter)
+                                            ).length === 0 ? (
                                                 <tr>
                                                     <td colSpan={4} className="px-6 py-12 text-center text-gray-600 italic">
-                                                        Nenhuma pendência encontrada.
+                                                        {debtFilter ? 'Nenhum resultado para o filtro.' : 'Nenhuma pendência encontrada.'}
                                                     </td>
                                                 </tr>
-                                            ) : activeDebts.map(debt => (
-                                                <tr key={debt.id} className="hover:bg-white/5 transition-colors">
+                                            ) : activeDebts.filter(d =>
+                                                (d.profiles?.name || '').toLowerCase().includes(debtFilter.toLowerCase()) ||
+                                                String(d.profiles?.numeric_id || '').includes(debtFilter)
+                                            ).map(debt => (
+                                                <tr key={debt.id} className="hover:bg-white/5 transition-colors group/row">
                                                     <td className="px-6 py-4">
                                                         <div className="flex items-center gap-3">
-                                                            <img src={debt.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${debt.profiles?.name}&background=random`} className="w-9 h-9 rounded-full border border-white/10" alt="" />
+                                                            <div className="relative">
+                                                                <img src={debt.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${debt.profiles?.name}&background=random`} className="w-10 h-10 rounded-full border border-white/10 shadow-lg" alt="" />
+                                                                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-red-500 border-2 border-[#050214] rounded-full"></div>
+                                                            </div>
                                                             <div>
-                                                                <p className="text-white font-bold">{debt.profiles?.name}</p>
+                                                                <p className="text-white font-bold text-sm tracking-tight">{debt.profiles?.name}</p>
                                                                 <div className="flex items-center gap-2">
-                                                                    <span className="text-[10px] text-primary font-black">CR#{String(debt.profiles?.numeric_id).padStart(3, '0')}</span>
+                                                                    <span className="text-[10px] text-primary font-black uppercase tracking-widest">CR#{String(debt.profiles?.numeric_id).padStart(3, '0')}</span>
+                                                                    <span className="w-1 h-1 rounded-full bg-gray-700"></span>
                                                                     <span className="text-[10px] text-green-400 font-black">💵 R$ {Number(debt.profiles?.balance_brl || 0).toFixed(2)}</span>
                                                                 </div>
                                                             </div>
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        <p className="text-gray-300 font-bold">{debt.events?.title || 'Evento'}</p>
-                                                        <p className="text-[10px] text-gray-500">{new Date(debt.created_at).toLocaleString('pt-BR')}</p>
+                                                        <p className="text-gray-300 font-bold">{debt.events?.title || 'Lançamento Manual'}</p>
+                                                        <p className="text-[10px] text-gray-500 uppercase font-black">{new Date(debt.created_at).toLocaleString('pt-BR')}</p>
                                                     </td>
                                                     <td className="px-6 py-4 text-center">
-                                                        <span className="text-red-500 font-display font-black text-base">R$ {Number(debt.amount_brl).toFixed(2)}</span>
+                                                        <span className="text-red-500 font-display font-black text-lg">R$ {Number(debt.amount_brl).toFixed(2)}</span>
                                                     </td>
                                                     <td className="px-6 py-4 text-right">
-                                                        <div className="flex justify-end gap-2">
+                                                        <div className="flex justify-end gap-2 opacity-80 group-hover/row:opacity-100 transition-opacity">
                                                             <button
                                                                 onClick={() => handleSettleDebt(debt, 'balance')}
                                                                 disabled={isLoading || Number(debt.profiles?.balance_brl || 0) < Number(debt.amount_brl)}
-                                                                className="px-3 py-1.5 bg-green-500/10 border border-green-500/30 text-green-400 text-[10px] font-black uppercase rounded-lg hover:bg-green-500 hover:text-white transition-all disabled:opacity-30 disabled:grayscale"
+                                                                className="px-4 py-2 bg-green-500/10 border border-green-500/30 text-green-400 text-[9px] font-black uppercase rounded-xl hover:bg-green-500 hover:text-white transition-all disabled:opacity-20 disabled:grayscale"
                                                             >
                                                                 Quitar c/ Saldo
                                                             </button>
                                                             <button
                                                                 onClick={() => handleSettleDebt(debt, 'manual')}
                                                                 disabled={isLoading}
-                                                                className="px-3 py-1.5 bg-white/5 border border-white/10 text-gray-400 text-[10px] font-black uppercase rounded-lg hover:bg-white/20 hover:text-white transition-all"
+                                                                className="px-4 py-2 bg-white/5 border border-white/10 text-gray-400 text-[9px] font-black uppercase rounded-xl hover:bg-white/20 hover:text-white transition-all"
                                                             >
                                                                 Baixa Manual
                                                             </button>

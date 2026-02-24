@@ -144,17 +144,12 @@ export interface ChipzPackage {
   stock: number;
   popular: boolean;
   active: boolean;
+  name?: string; // Mantido como opcional para compatibilidade temporária
+  bonus?: number; // Mantido como opcional para compatibilidade temporária
 }
 
-export interface TieredReward {
-  position: number;
-  brl?: number;
-  chipz?: number;
-  badgeTitle?: string;
-  badgeDesc?: string;
-  badgeIcon?: string;
-  badgeTemplateId?: string;
-}
+// tier rewards removed as requested
+
 
 // NOVA INTERFACE PARA RANKINGS DINÂMICOS
 export type CriterionType = 'participants' | 'buyin' | 'itm' | 'winnings' | 'rake' | 'spent' | 'isFt' | 'isVip' | 'profit_loss';
@@ -187,14 +182,10 @@ export interface RankingInstance {
   players: RankingPlayer[];
   scoringSchemas?: ScoringSchema[]; // Fallback schemas
   scoringSchemaMap?: Record<string, string>; // Maps event.rankingType (weekly, monthly, special) to scoringSchemaId
-  rewardBadgeTitle?: string;
-  rewardBadgeDesc?: string;
-  rewardBadgeIcon?: string;
-  rewardBrl?: number;
-  rewardChipz?: number;
   isActive?: boolean;
+  brlReward?: number;
+  chipzReward?: number;
   badgeTemplateId?: string;
-  tieredRewards?: TieredReward[];
 }
 
 export interface TournamentResult {
@@ -289,15 +280,7 @@ export interface DailyReward {
   reward_label: string | null;
 }
 
-export interface ChipzPackage {
-  id: string;
-  name: string;
-  amount: number;
-  bonus: number;
-  price_brl: number;
-  active: boolean;
-  image_url: string | null;
-}
+
 
 export type RankingFormula = 'weekly' | 'monthly' | 'special' | 'cash_online' | 'mtt_online' | 'sit_n_go' | 'satellite' | 'legacy_weekly' | 'legacy_monthly' | 'legacy_special';
 

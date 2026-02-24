@@ -3,6 +3,7 @@ import { ContentDB, TournamentCategory } from '../types';
 import { EditableContent } from './EditableContent';
 import { TheChosenQualifiers } from './TheChosenQualifiers';
 import { supabase } from '../src/lib/supabase';
+import appConfig from '../src/config/appConfig.json';
 
 interface TheChosenDetailsProps {
     isAdmin?: boolean;
@@ -26,17 +27,156 @@ interface TheChosenDetailsProps {
 }
 
 // Fallback content if not provided (should be provided by App)
-const DEFAULT_CONTENT = {
-    header_title: "THE CHOSEN",
-    header_subtitle: "O Capítulo Final da temporada 2026 da Chip Race.",
-    concept_title: "CONCEITO",
-    concept_desc: "Diferente de torneios abertos, o The Chosen é um evento exclusivo para quem provou seu valor durante o ano. Não é possível comprar o buy-in diretamente para o Capítulo Final. Você deve conquistar sua vaga. Isso garante um field de altíssimo nível e uma atmosfera de verdadeira final de campeonato.",
-    plus_title: "DINÂMICA PLUS",
-    plus_desc: "O garantido inicial é de R$ 30.000,00, mas a Chip Race desafia a comunidade. A cada mês, se atingirmos metas de classificados, a Chip Race injeta mais dinheiro no garantido. O pote cresce junto com o engajamento dos jogadores.",
-    ways_title: "8 Caminhos para a Glória"
+const DEFAULT_CONTENT = appConfig.initialDefaults.contentDB.details;
+
+// Mapeamento dos Regulamentos (Cópia fiel do conteúdo de TournamentCategories para consistência)
+const REGULATIONS_DATA: Record<string, { title: string; icon: string; color: string; rules: string }> = {
+    'rankings': {
+        title: 'Rankings 2026',
+        icon: 'leaderboard',
+        color: 'text-primary',
+        rules: `
+  1. O Ranking Geral Anual soma pontos de todos os torneios regulares presenciais e online da temporada 2026.
+  2. Os 10 jogadores com maior pontuação acumulada ao final do ciclo classificatório (Outubro/2026) garantem vaga direta (Direct Entry) no dia 1 do The Chosen.
+  3. Em caso de empate na 10ª colocação, o critério de desempate será o valor total de premiações (winnings) arrecadado no ano.
+  4. A vaga é intransferível e não pode ser trocada por dinheiro.
+  
+  --------------------------------------------------
+  FÓRMULAS DE PONTUAÇÃO (2026)
+  --------------------------------------------------
+  
+  ► TORNEIOS SEMANAIS (Regular):
+  Pontos = (Total Jogadores / 3) + (Buy-in Gasto / 3) + (10 se Mesa Final) + (Premiação ITM / 10) + (5 se VIP)
+  
+  ► TORNEIOS MENSAIS (High Rollers/Deep):
+  Pontos = (Total Jogadores / 3) + (Buy-in Gasto / 4) + (15 se Mesa Final) + (Premiação ITM / 15) + (5 se VIP)
+  
+  ► ESPECIAIS (Majors/Estaduais):
+  Pontos = (Total Jogadores / 4) + (Buy-in Gasto / 6) + (30 se Mesa Final) + (Premiação ITM / 25) + (5 se VIP)
+          `
+    },
+    'jackpot': {
+        title: 'Jackpot',
+        icon: 'attach_money',
+        color: 'text-secondary',
+        rules: `
+  1. Satélites Jackpot ocorrem semanalmente no aplicativo online Chip Race.
+  2. O vencedor de cada satélite Jackpot recebe um Ticket The Chosen.
+  3. Jogadores também podem ganhar vagas através de mãos premiadas específicas em mesas de Cash Game (Jackpot Hands) definidas mensalmente.
+  4. Vagas ganhas via Jackpot são acumulativas para o sistema de Bônus de Stack.
+          `
+    },
+    'get-up': {
+        title: 'Get Up',
+        icon: 'psychology',
+        color: 'text-secondary',
+        rules: `
+  1. Eventos designados como "Major" no calendário presencial do QG Chip Race oferecem uma vaga extra ao campeão.
+  2. Esta vaga é adicionada ao prêmio regular do torneio, sem descontar do pote garantido.
+  3. A lista de torneios Major é divulgada no início de cada mês no calendário oficial.
+          `
+    },
+    'sit-n-go': {
+        title: 'Sit & Go Satélite',
+        icon: 'satellite_alt',
+        color: 'text-primary',
+        rules: `
+  1. Sit & Gos qualificatórios podem ser abertos sob demanda com 6 a 10 jogadores.
+  2. Torneios High Roller mensais garantem vaga direta ao campeão (ou TOP 2 dependendo do field).
+  3. A estrutura destes satélites é Turbo ou Hyper-Turbo.
+          `
+    },
+    'red-omaha': { // ID mapeado para "Last Longer" conforme App.tsx
+        title: 'Last Longer',
+        icon: 'timer',
+        color: 'text-secondary',
+        rules: `
+  1. Disputa de resistência paralela realizada em torneios selecionados.
+  2. Os jogadores pagam uma inscrição extra para o Last Longer. O último jogador restante deste grupo (o que cair por último no torneio) leva a vaga.
+  3. Válido apenas para quem se inscrever no Last Longer antes do início do torneio.
+          `
+    },
+    'ladies-league': { // ID mapeado para "Vip's" conforme App.tsx
+        title: "Vip's",
+        icon: 'diamond',
+        color: 'text-primary',
+        rules: `
+  1. Torneio restrito a jogadores que atingiram o status VIP na plataforma ou no clube.
+  2. O evento VIP ocorre trimestralmente e distribui múltiplas vagas para o The Chosen.
+  3. Jogadores VIPs têm buy-in descontado ou freebuy dependendo do nível de fidelidade.
+          `
+    },
+    'bet': {
+        title: 'Bet',
+        icon: 'casino',
+        color: 'text-cyan-500',
+        rules: `
+  1. Campanhas promocionais de apostas esportivas parceiras da Chip Race.
+  2. Desafios de repescagem através do "Bet": Sorteios de vagas entre os bolhas dos torneios Major.
+  3. Regras específicas são divulgadas a cada campanha "Bet & Win".
+          `
+    },
+    'quests': {
+        title: 'Quests',
+        icon: 'explore',
+        color: 'text-primary',
+        rules: `
+  1. Complete missões diárias no App (ex: Jogue 50 mãos, Ganhe com AA, etc) para ganhar fragmentos.
+  2. Junte fragmentos suficientes para trocar por um Ticket The Chosen na loja do clube.
+  3. Existem "Quests Secretas" presenciais que são reveladas apenas durante os eventos ao vivo.
+          `
+    }
 };
 
-// Mock data and calculation logic removed in favor of real component
+const getColors = (color: string) => {
+    switch (color) {
+        case 'primary': return {
+            border: 'hover:border-primary/50',
+            icon: 'text-primary',
+            shadow: 'group-hover:shadow-neon-pink',
+            glow: 'from-primary/10',
+            text: 'group-hover:text-primary',
+            btn: 'text-primary',
+            badge: 'bg-primary/20 text-primary border-primary/40'
+        };
+        case 'secondary': return {
+            border: 'hover:border-secondary/50',
+            icon: 'text-secondary',
+            shadow: 'group-hover:shadow-neon-blue',
+            glow: 'from-secondary/10',
+            text: 'group-hover:text-secondary',
+            btn: 'text-secondary',
+            badge: 'bg-secondary/20 text-secondary border-secondary/40'
+        };
+        case 'cyan': return {
+            border: 'hover:border-cyan-500/50',
+            icon: 'text-cyan-500',
+            shadow: 'group-hover:shadow-[0_0_20px_rgba(168,85,247,0.5)]',
+            glow: 'from-cyan-500/10',
+            text: 'group-hover:text-cyan-500',
+            btn: 'text-cyan-500',
+            badge: 'bg-cyan-500/20 text-cyan-500 border-cyan-500/40'
+        };
+        case 'pink': return {
+            border: 'hover:border-pink-500/50',
+            icon: 'text-pink-500',
+            shadow: 'group-hover:shadow-[0_0_20px_rgba(236,72,153,0.5)]',
+            glow: 'from-pink-500/10',
+            text: 'group-hover:text-pink-500',
+            btn: 'text-pink-500',
+            badge: 'bg-pink-500/20 text-pink-500 border-pink-500/40'
+        };
+        default: return {
+            border: 'hover:border-gray-500',
+            icon: 'text-gray-500',
+            shadow: '',
+            glow: 'from-gray-500/10',
+            text: '',
+            btn: 'text-gray-500',
+            badge: 'bg-gray-500/20 text-gray-500 border-gray-500/40'
+        };
+    }
+};
 
 export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
     isAdmin,
@@ -170,136 +310,6 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
     const remainingQualifiers = nextGoal.qualifiers > totalQualifiers ? nextGoal.qualifiers - totalQualifiers : 0;
     const progressPercentage = Math.min(100, (totalQualifiers / nextGoal.qualifiers) * 100);
 
-    const qualifyingMethods = [
-        {
-            id: 'rankings', // Updated to match App.tsx
-            title: 'Rankings',
-            desc: 'A principal porta de entrada. Pontue no Live e Online para garantir sua vaga.',
-            icon: 'leaderboard',
-            color: 'text-primary',
-            badge: 'bg-primary/20 text-primary border-primary/40',
-            glow: 'shadow-neon-pink',
-            rules: `
-              1. O Ranking Geral Anual soma pontos de todos os torneios regulares presenciais e online da temporada 2026.
-              2. Os 10 jogadores com maior pontuação acumulada ao final do ciclo classificatório (Outubro/2026) garantem vaga direta (Direct Entry) no dia 1 do The Chosen.
-              3. Em caso de empate na 10ª colocação, o critério de desempate será o valor total de premiações (winnings) arrecadado no ano.
-              4. A vaga é intransferível e não pode ser trocada por dinheiro.
-
-              --------------------------------------------------
-              FÓRMULAS DE PONTUAÇÃO (2026)
-              --------------------------------------------------
-
-              ► TORNEIOS SEMANAIS (Regular):
-              Pontos = (Total Jogadores / 3) + (Buy-in Gasto / 3) + (10 se Mesa Final) + (Premiação ITM / 10) + (5 se VIP)
-
-              ► TORNEIOS MENSAIS (High Rollers/Deep):
-              Pontos = (Total Jogadores / 3) + (Buy-in Gasto / 4) + (15 se Mesa Final) + (Premiação ITM / 15) + (5 se VIP)
-
-              ► ESPECIAIS (Majors/Estaduais):
-              Pontos = (Total Jogadores / 4) + (Buy-in Gasto / 6) + (30 se Mesa Final) + (Premiação ITM / 25) + (5 se VIP)
-          `
-        },
-        {
-            id: 'jackpot',
-            title: 'Jackpot',
-            desc: 'Classifique-se jogando de casa através dos nossos satélites semanais.',
-            icon: 'attach_money',
-            color: 'text-secondary',
-            badge: 'bg-secondary/20 text-secondary border-secondary/40',
-            glow: 'shadow-neon-blue',
-            rules: `
-              1. Satélites Jackpot ocorrem semanalmente no aplicativo online Chip Race.
-              2. O vencedor de cada satélite Jackpot recebe um Ticket The Chosen.
-              3. Jogadores também podem ganhar vagas através de mãos premiadas específicas em mesas de Cash Game (Jackpot Hands) definidas mensalmente.
-              4. Vagas ganhas via Jackpot são acumulativas para o sistema de Bônus de Stack.
-          `
-        },
-        {
-            id: 'red-omaha', // Updated to match App.tsx (formerly last-longer)
-            title: 'Last Longer',
-            desc: 'Aposte em quem vai mais longe. Uma disputa de resistência paralela ao torneio.',
-            icon: 'timer',
-            color: 'text-secondary',
-            badge: 'bg-secondary/20 text-secondary border-secondary/40',
-            glow: 'shadow-neon-blue',
-            rules: `
-              1. Disputa de resistência paralela realizada em torneios selecionados.
-              2. Os jogadores pagam uma inscrição extra para o Last Longer. O último jogador restante deste grupo (o que cair por último no torneio) leva a vaga.
-              3. Válido apenas para quem se inscrever no Last Longer antes do início do torneio.
-          `
-        },
-        {
-            id: 'bet',
-            title: 'Bet',
-            desc: 'Desafios de apostas e repescagem. A última chance de entrar no 30K+.',
-            icon: 'casino',
-            color: 'text-cyan-500',
-            badge: 'bg-cyan-500/20 text-cyan-500 border-cyan-500/40',
-            glow: 'shadow-[0_0_20px_rgba(168,85,247,0.5)]',
-            rules: `
-              1. Campanhas promocionais de apostas esportivas parceiras da Chip Race.
-              2. Desafios de repescagem através do "Bet": Sorteios de vagas entre os bolhas dos torneios Major.
-              3. Regras específicas são divulgadas a cada campanha "Bet & Win".
-          `
-        },
-        {
-            id: 'get-up',
-            title: 'Get Up',
-            desc: 'Vença torneios presenciais selecionados na sede e ganhe o Golden Ticket.',
-            icon: 'psychology',
-            color: 'text-secondary',
-            badge: 'bg-secondary/20 text-secondary border-secondary/40',
-            glow: 'shadow-neon-blue',
-            rules: `
-              1. Eventos designados como "Major" no calendário presencial do QG Chip Race oferecem uma vaga extra ao campeão.
-              2. Esta vaga é adicionada ao prêmio regular do torneio, sem descontar do pote garantido.
-              3. A lista de torneios Major é divulgada no início de cada mês no calendário oficial.
-          `
-        },
-        {
-            id: 'sit-n-go',
-            title: 'SNG / Sat',
-            desc: 'Para quem joga caro. Os campeões dos HRs mensais garantem vaga direta.',
-            icon: 'satellite_alt',
-            color: 'text-primary',
-            badge: 'bg-primary/20 text-primary border-primary/40',
-            glow: 'shadow-neon-pink',
-            rules: `
-              1. Sit & Gos qualificatórios podem ser abertos sob demanda com 6 a 10 jogadores.
-              2. Torneios High Roller mensais garantem vaga direta ao campeão (ou TOP 2 dependendo do field).
-              3. A estrutura destes satélites é Turbo ou Hyper-Turbo.
-          `
-        },
-        {
-            id: 'quests',
-            title: 'Quests',
-            desc: 'Missões diárias e desafios secretos que desbloqueiam vagas para o The Chosen.',
-            icon: 'explore',
-            color: 'text-primary',
-            badge: 'bg-primary/20 text-primary border-primary/40',
-            glow: 'shadow-neon-pink',
-            rules: `
-              1. Complete missões diárias no App (ex: Jogue 50 mãos, Ganhe com AA, etc) para ganhar fragmentos.
-              2. Junte fragmentos suficientes para trocar por um Ticket The Chosen na loja do clube.
-              3. Existem "Quests Secretas" presenciais que são reveladas apenas durante os eventos ao vivo.
-          `
-        },
-        {
-            id: 'ladies-league', // Updated to match App.tsx (formerly vips)
-            title: "VIP",
-            desc: 'Torneio especial e exclusivo focado em promover a experiência VIP.',
-            icon: 'diamond',
-            color: 'text-primary',
-            badge: 'bg-primary/20 text-primary border-primary/40',
-            glow: 'shadow-neon-pink',
-            rules: `
-              1. Torneio restrito a jogadores que atingiram o status VIP na plataforma ou no clube.
-              2. O evento VIP ocorre trimestralmente e distribui múltiplas vagas para o The Chosen.
-              3. Jogadores VIPs têm buy-in descontado ou freebuy dependendo do nível de fidelidade.
-          `
-        },
-    ];
-
     // Calculation logic moved to TheChosenQualifiers component
 
     return (
@@ -419,13 +429,13 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                 </div>
 
 
-                {/* 8 Ways to Qualify */}
+                {/* Ecosystem Categories Section */}
                 <div className="mb-20">
                     <div className="text-center mb-12">
                         <h2 className="text-3xl font-display font-bold text-white mb-4">
                             <EditableContent
                                 isAdmin={isAdmin}
-                                value={content.ways_title}
+                                value={content.ways_title || "Ecossistema Chip Race"}
                                 onSave={(val) => onUpdateContent('ways_title', val)}
                             />
                         </h2>
@@ -433,37 +443,47 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {qualifyingMethods.map((item) => {
-                            // Find the category object from props to get the slot count
-                            const categoryData = categories.find(cat => cat.id === item.id);
-                            const slotCount = categoryData ? categoryData.slots : 0;
-                            const catIndex = categories.findIndex(cat => cat.id === item.id);
+                        {categories.map((cat, index) => {
+                            const styles = getColors(cat.color);
 
                             return (
-                                <div key={item.id} className="relative bg-[#0f0a20] border border-white/5 p-8 rounded-2xl hover:border-primary/30 transition-colors flex flex-col h-full text-center items-center shadow-lg group hover:-translate-y-2 duration-300">
+                                <div key={cat.id} className="relative bg-[#0f0a20] border border-white/5 p-8 rounded-2xl hover:border-primary/30 transition-colors flex flex-col h-full text-center items-center shadow-lg group hover:-translate-y-2 duration-300">
 
-                                    {/* SLOT BADGE EDITABLE */}
-                                    <div className={`absolute top-4 right-4 text-[10px] font-black uppercase px-2 py-1 rounded-full border ${item.badge} z-20 flex items-center gap-1`}>
+                                    {/* SLOT/QUALIFIER BADGE EDITABLE (Only relevant for some categories, but keeping it as a generic 'Stat' for now) */}
+                                    <div className={`absolute top-4 right-4 text-[10px] font-black uppercase px-2 py-1 rounded-full border ${styles.badge} z-20 flex items-center gap-1`}>
                                         <EditableContent
                                             isAdmin={isAdmin}
-                                            value={String(slotCount)}
-                                            onSave={(val) => catIndex >= 0 && onUpdateCategory(catIndex, 'slots', parseInt(val) || 0)}
+                                            value={String(cat.slots || 0)}
+                                            onSave={(val) => onUpdateCategory(index, 'slots', parseInt(val) || 0)}
                                         />
                                         <span>Vagas</span>
                                     </div>
 
                                     <div className="mb-6 relative mt-4">
-                                        <div className={`w-16 h-16 rounded-full bg-black border border-white/10 flex items-center justify-center relative z-10 group-hover:${item.glow} transition-shadow duration-300`}>
-                                            <span className={`material-icons-outlined text-3xl ${item.color}`}>{item.icon}</span>
+                                        <div className={`w-16 h-16 rounded-full bg-black border border-white/10 flex items-center justify-center relative z-10 group-hover:${styles.glow} transition-all duration-300`}>
+                                            <span className={`material-icons-outlined text-3xl ${styles.icon}`}>{cat.icon}</span>
                                         </div>
                                     </div>
                                     <div className="flex-1 flex flex-col items-center">
-                                        <h3 className="text-xl font-display font-bold text-white mb-3 uppercase tracking-wide">{item.title}</h3>
-                                        <p className="text-xs text-gray-500 mb-6 leading-relaxed max-w-[200px]">{item.desc}</p>
+                                        <h3 className="text-xl font-display font-bold text-white mb-3 uppercase tracking-wide">
+                                            <EditableContent
+                                                isAdmin={isAdmin}
+                                                value={cat.title}
+                                                onSave={(val) => onUpdateCategory(index, 'title', val)}
+                                            />
+                                        </h3>
+                                        <p className="text-xs text-gray-500 mb-6 leading-relaxed max-w-[200px]">
+                                            <EditableContent
+                                                isAdmin={isAdmin}
+                                                value={cat.description}
+                                                onSave={(val) => onUpdateCategory(index, 'description', val)}
+                                                type="textarea"
+                                            />
+                                        </p>
                                     </div>
                                     <button
-                                        onClick={() => setActiveRegulation(item.id)}
-                                        className={`mt-auto text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-current hover:bg-white/10 transition-all ${item.color}`}
+                                        onClick={() => setActiveRegulation(cat.id)}
+                                        className={`mt-auto text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-current hover:bg-white/10 transition-all ${styles.icon}`}
                                     >
                                         VER MAIS <span className="material-icons-outlined text-xs">add_circle</span>
                                     </button>
@@ -549,7 +569,7 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
             </div>
 
             {/* MODAL PRODUTO / DETALHES ESPECÍFICOS */}
-            {activeRegulation && (qualifyingMethods.some(m => m.id === activeRegulation) || productDetails) && (
+            {activeRegulation && (REGULATIONS_DATA[activeRegulation] || productDetails || categories.some(cat => cat.id === activeRegulation)) && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
                     <div className="bg-[#0f0a28] border border-white/10 rounded-3xl w-full max-w-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] relative animate-float overflow-hidden flex flex-col max-h-[90vh]">
 
@@ -565,21 +585,22 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                             </button>
 
                             {(() => {
-                                const method = qualifyingMethods.find(m => m.id === activeRegulation);
+                                const category = categories.find(c => c.id === activeRegulation);
+                                const styles = getColors(category?.color || '');
                                 return (
-                                    <div key={method?.id || 'product'}>
+                                    <div key={category?.id || 'product'}>
                                         <div className="flex flex-col items-center text-center mb-8 pt-4">
                                             <div className={`w-24 h-24 rounded-3xl bg-black border border-white/10 flex items-center justify-center mb-6 shadow-2xl relative overflow-hidden group`}>
-                                                <div className={`absolute inset-0 opacity-20 bg-gradient-to-br from-primary/20 to-secondary/20`}></div>
+                                                <div className={`absolute inset-0 opacity-20 bg-gradient-to-br ${styles.glow}`}></div>
                                                 {productDetails?.image_url ? (
                                                     <img src={productDetails.image_url} alt={productDetails.name} className="w-full h-full object-cover relative z-10" />
                                                 ) : (
-                                                    <span className={`material-icons-outlined text-5xl relative z-10 ${method?.color || 'text-primary'}`}>{method?.icon || 'star'}</span>
+                                                    <span className={`material-icons-outlined text-5xl relative z-10 ${styles.icon}`}>{category?.icon || 'star'}</span>
                                                 )}
                                             </div>
 
                                             <h3 className="text-3xl font-display font-black text-white uppercase tracking-wider mb-2">
-                                                {productDetails?.name || method?.title}
+                                                {productDetails?.name || category?.title}
                                             </h3>
                                             <div className="h-1 w-16 bg-gradient-to-r from-primary to-secondary rounded-full"></div>
                                         </div>
@@ -590,7 +611,7 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                                                     {productDetails ? 'DESCRIÇÃO DO PRODUTO' : 'INFORMAÇÕES GERAIS'}
                                                 </h4>
                                                 <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap font-light">
-                                                    {productDetails?.description || method?.rules}
+                                                    {productDetails?.description || REGULATIONS_DATA[activeRegulation]?.rules || category?.description}
                                                 </div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
@@ -604,10 +625,10 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                                                 </div>
                                                 <div className="bg-white/5 border border-white/5 p-4 rounded-xl">
                                                     <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">
-                                                        {productDetails ? 'Disponível' : 'Método'}
+                                                        {productDetails ? 'Disponível' : 'Vagas'}
                                                     </p>
                                                     <p className="text-white font-bold uppercase">
-                                                        {productDetails ? `${productDetails.stock} unidades` : activeRegulation}
+                                                        {productDetails ? `${productDetails.stock} unidades` : `${category?.slots || 0} Vagas`}
                                                     </p>
                                                 </div>
                                             </div>

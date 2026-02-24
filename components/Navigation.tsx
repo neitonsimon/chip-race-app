@@ -16,6 +16,8 @@ interface NavigationProps {
     isAdmin?: boolean;
 }
 
+import appConfig from '../src/config/appConfig.json';
+
 export const Navigation: React.FC<NavigationProps> = ({
     currentView,
     onNavigate,
@@ -40,12 +42,10 @@ export const Navigation: React.FC<NavigationProps> = ({
     const [replyText, setReplyText] = useState('');
     const [quickReplies, setQuickReplies] = useState<Record<string, string>>({});
 
-    const links: NavLink[] = [
-        { label: 'Início', view: 'home' },
-        { label: `The Chosen ${prizeLabel}`, view: 'the-chosen-details' },
-        { label: 'Calendário', view: 'calendar' },
-        { label: 'Rankings', view: 'ranking' },
-    ];
+    const links: NavLink[] = appConfig.navigation.links.map(link => ({
+        ...link,
+        label: link.label.replace('${prizeLabel}', prizeLabel)
+    }));
 
     useEffect(() => {
         const handleScroll = () => {
