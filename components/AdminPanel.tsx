@@ -649,9 +649,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
 
         if (!window.confirm(`Reabrir comanda de ${cmd.profiles?.name}? O valor pago de R$ ${refundedAmount.toFixed(2)} será reembolsado ao saldo.`)) return;
 
-        // Atomically refund the actual balance paid
         if (refundedAmount > 0) {
-            const { error } = await supabase.rpc('increment_balance_brl', { p_user_id: cmd.user_id, p_amount: refundedAmount });
+            const { error } = await supabase.rpc('secure_balance_transaction', {
+                p_user_id: cmd.user_id,
+                p_brl_amount: refundedAmount,
+                p_chipz_amount: 0,
+                p_description: `Reembolso por reabertura de comanda ${cmd.id.slice(0, 8)}`,
+                p_category: 'wallet_deposit',
+                p_metadata: { command_id: cmd.id, event_id: cmd.event_id }
+            });
             if (error) { alert('Erro ao reembolsar saldo: ' + error.message); return; }
         }
 
@@ -1039,28 +1045,27 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             // 2a. If player PROFITED: credit them (only the credit portion, not cash-in-hands)
             if (hasProfit) {
                 if (profitCredit > 0) {
-                    const { error: creditErr } = await supabase.rpc('increment_balance_brl', {
+                    const { error: creditErr } = await supabase.rpc('secure_balance_transaction', {
                         p_user_id: selectedCommand.user_id,
-                        p_amount: profitCredit
+                        p_brl_amount: profitCredit,
+                        p_chipz_amount: 0,
+                        p_description: `Lucro Cash Game — Comanda encerrada${profitCash > 0 ? ` (R$ ${profitCash.toFixed(2)} pago em mãos)` : ''}`,
+                        p_category: 'wallet_deposit',
+                        p_metadata: { command_id: selectedCommand.id, event_id: selectedCommand.event_id, profit_total: profit, cash_payment: profitCash }
                     });
                     if (creditErr) throw creditErr;
                     updatePlayerBalanceLocally(selectedCommand.user_id, profitCredit);
                 }
-
-                // Log the profit in transactions (full profit for transparency)
-                await supabase.from('transactions').insert({
-                    user_id: selectedCommand.user_id,
-                    amount_brl: profitCredit,
-                    amount_chipz: 0,
-                    description: `Lucro Cash Game — Comanda encerrada${profitCash > 0 ? ` (R$ ${profitCash.toFixed(2)} pago em mãos)` : ''}`,
-                    category: 'wallet_deposit'
-                });
             }
             // 2b. Normal deduction from balance
             else if (finalToDeduct > 0) {
-                const { error: deductErr } = await supabase.rpc('deduct_balance_brl', {
+                const { error: deductErr } = await supabase.rpc('secure_balance_transaction', {
                     p_user_id: selectedCommand.user_id,
-                    p_amount: finalToDeduct
+                    p_brl_amount: -finalToDeduct,
+                    p_chipz_amount: 0,
+                    p_description: `Pagamento de comanda ${selectedCommand.id.slice(0, 8)}`,
+                    p_category: 'purchase',
+                    p_metadata: { command_id: selectedCommand.id, event_id: selectedCommand.event_id, total_consumo: total }
                 });
                 if (deductErr) throw deductErr;
                 updatePlayerBalanceLocally(selectedCommand.user_id, -finalToDeduct);
@@ -1139,9 +1144,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         try {
             // Deduct from balance if paying via balance
             if (type === 'balance') {
-                const { error: deductErr } = await supabase.rpc('deduct_balance_brl', {
+                const { error: deductErr } = await supabase.rpc('secure_balance_transaction', {
                     p_user_id: debt.user_id,
-                    p_amount: payAmount
+                    p_brl_amount: -payAmount,
+                    p_chipz_amount: 0,
+                    p_description: `Baixa de pendura (Comanda ${debt.command_id?.slice(0, 8)})`,
+                    p_category: 'purchase',
+                    p_metadata: { debt_id: debt.id, command_id: debt.command_id }
                 });
                 if (deductErr) throw deductErr;
                 updatePlayerBalanceLocally(debt.user_id, -payAmount);
@@ -1197,35 +1206,26 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         try {
             const userId = selectedCommand.user_id;
 
-            // 1. Credit BRL balance
-            const { error: incrErr } = await supabase.rpc('increment_balance_brl', {
-                p_user_id: userId,
-                p_amount: amount
-            });
-            if (incrErr) { alert('Erro ao creditar: ' + incrErr.message); return; }
-
-            updatePlayerBalanceLocally(userId, amount);
-
-            // 2. Calculate bonuses: R$20 = 1 EXP, R$100 = 1 Chipz
+            // 1. Calculate bonuses: R$20 = 1 EXP, R$100 = 1 Chipz
             const expBonus = Math.floor(amount / 20);
             const chipzBonus = Math.floor(amount / 100);
 
-            // 3. Award EXP
+            const { error: topUpErr } = await supabase.rpc('secure_balance_transaction', {
+                p_user_id: userId,
+                p_brl_amount: amount,
+                p_chipz_amount: chipzBonus,
+                p_description: `Recarga de crédito via Admin${chipzBonus > 0 ? ` (+${chipzBonus} Chipz bônus)` : ''}`,
+                p_category: 'wallet_deposit',
+                p_metadata: { admin_id: currentUser.id, exp_bonus: expBonus }
+            });
+            if (topUpErr) { alert('Erro ao processar recarga: ' + topUpErr.message); return; }
+
+            updatePlayerBalanceLocally(userId, amount);
+
+            // 2. Award EXP (Keep separate as it's not a financial currency in transactions table yet)
             if (expBonus > 0) {
                 const { data: profData } = await supabase.from('profiles').select('current_exp').eq('id', userId).single();
                 await supabase.from('profiles').update({ current_exp: (Number(profData?.current_exp) || 0) + expBonus }).eq('id', userId);
-            }
-
-            // 4. Award Chipz
-            if (chipzBonus > 0) {
-                await supabase.rpc('add_chipz_balance', { user_id: userId, amount: chipzBonus });
-                await supabase.from('transactions').insert({
-                    user_id: userId,
-                    amount_brl: 0,
-                    amount_chipz: chipzBonus,
-                    description: `Bônus Chipz por depósito de R$ ${amount.toFixed(2)}`,
-                    category: 'wallet_deposit'
-                });
             }
 
             // 5. Base system message
@@ -1342,17 +1342,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                                 title: template.title,
                                 description: finalDescription || template.description,
                                 icon: template.icon || 'stars',
+                                color: template.color || '#00E5FF',
                                 badge_template_id: template.id
                             });
                         }
                     } else {
                         // Use secure_balance_transaction for logging and safety
                         await supabase.rpc('secure_balance_transaction', {
-                            user_id: uid,
-                            brl_amount: giftType === 'brl' ? finalAmount : 0,
-                            chipz_amount: giftType === 'chipz' ? finalAmount : 0,
-                            description: finalDescription,
-                            category: 'gift'
+                            p_user_id: uid,
+                            p_brl_amount: giftType === 'brl' ? finalAmount : 0,
+                            p_chipz_amount: giftType === 'chipz' ? finalAmount : 0,
+                            p_description: finalDescription,
+                            p_category: 'gift',
+                            p_metadata: { admin_id: currentUser.id }
                         });
                         updatePlayerBalanceLocally(uid, finalAmount, giftType);
                     }

@@ -27,8 +27,10 @@ type SubView = 'transactions' | 'balances';
 const categoryIcon: Record<string, string> = {
     gift: 'card_giftcard',
     vip: 'diamond',
+    chipz: 'token',
     chipz_purchase: 'token',
     wallet_deposit: 'account_balance_wallet',
+    purchase: 'point_of_sale',
     command_charge: 'point_of_sale',
     debt_payment: 'receipt_long',
     system: 'settings',
@@ -39,8 +41,10 @@ const categoryIcon: Record<string, string> = {
 const categoryColor: Record<string, string> = {
     gift: 'text-yellow-400',
     vip: 'text-purple-400',
+    chipz: 'text-primary',
     chipz_purchase: 'text-primary',
     wallet_deposit: 'text-green-400',
+    purchase: 'text-red-400',
     command_charge: 'text-red-400',
     debt_payment: 'text-orange-400',
     system: 'text-gray-400',

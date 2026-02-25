@@ -351,26 +351,45 @@ const BADGE_ICONS = [
 ];
 
 // ─── Badge Preview Component ─────────────────────────────────────────────────
-const BadgePreview: React.FC<{ icon: string; size?: 'sm' | 'lg'; active?: boolean }> = ({ icon, size = 'sm', active }) => {
+const BadgePreview: React.FC<{ icon: string; color?: string; size?: 'sm' | 'lg'; active?: boolean }> = ({ icon, color = '#00E5FF', size = 'sm', active }) => {
     const isLg = size === 'lg';
     return (
-        <div className={`relative flex items-center justify-center transition-all duration-300 ${isLg ? 'w-20 h-20 rounded-[2rem]' : 'w-12 h-12 rounded-2xl'
-            } ${active
-                ? 'bg-primary/15 border-2 border-primary shadow-neon-pink text-primary'
-                : 'bg-white/5 border border-white/10 text-gray-400 group-hover:border-primary/50 group-hover:text-primary group-hover:bg-primary/5'
-            }`}>
+        <div
+            className={`relative flex items-center justify-center transition-all duration-300 ${isLg ? 'w-20 h-20 rounded-[2rem]' : 'w-12 h-12 rounded-2xl'
+                } ${active ? 'border-2' : 'border border-white/10'}`}
+            style={{
+                backgroundColor: active ? `${color}26` : 'rgba(255,255,255,0.05)',
+                borderColor: active ? color : 'rgba(255,255,255,0.1)',
+                color: active ? color : '#9ca3af',
+                boxShadow: active ? `0 0 20px ${color}40` : 'none'
+            }}
+        >
             <span className={`material-icons-outlined ${isLg ? 'text-4xl' : 'text-2xl'}`}>{icon}</span>
-            {active && <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full border-2 border-[#0c0920] animate-pulse" />}
+            {active && (
+                <div
+                    className="absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0c0920] animate-pulse"
+                    style={{ backgroundColor: color }}
+                />
+            )}
         </div>
     );
 };
 
+const RARITY_COLORS = [
+    { id: 'comum', label: 'Comum', color: '#00E5FF' }, // Azul Clara / Cyan
+    { id: 'incomum', label: 'Incomum', color: '#22c55e' }, // Verde
+    { id: 'rara', label: 'Rara', color: '#ec4899' }, // Rosa
+    { id: 'epica', label: 'Épica', color: '#ef4444' }, // Vermelha
+    { id: 'lendaria', label: 'Lendária', color: '#eab308' }, // Dourada
+];
+
 // ─── Icon Picker Modal ────────────────────────────────────────────────────────
 const IconPickerModal: React.FC<{
     currentIcon: string;
+    currentColor?: string;
     onSelect: (icon: string) => void;
     onClose: () => void;
-}> = ({ currentIcon, onSelect, onClose }) => {
+}> = ({ currentIcon, currentColor = '#00E5FF', onSelect, onClose }) => {
     const [search, setSearch] = React.useState('');
     const [rows, setRows] = React.useState(3);
 
@@ -428,7 +447,7 @@ const IconPickerModal: React.FC<{
                                 onClick={() => { onSelect(icon.id); onClose(); }}
                                 className="group flex flex-col items-center gap-2"
                             >
-                                <BadgePreview icon={icon.id} size="sm" active={currentIcon === icon.id} />
+                                <BadgePreview icon={icon.id} size="sm" active={currentIcon === icon.id} color={currentColor} />
                                 <span className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter truncate w-full text-center group-hover:text-white transition-colors">{icon.label}</span>
                             </button>
                         ))}
@@ -471,15 +490,27 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
     handleSendGifts, handleGiftSearch, onCreateBadgeTemplate, isLoading
 }) => {
     const [showNewBadgeForm, setShowNewBadgeForm] = React.useState(false);
-    const [newBadge, setNewBadge] = React.useState({ title: '', description: '', icon: 'stars' });
+    const [newBadge, setNewBadge] = React.useState({ title: '', description: '', icon: 'stars', color: '#00E5FF' });
     const [showIconPicker, setShowIconPicker] = React.useState(false);
     const [badgeSearchFilter, setBadgeSearchFilter] = React.useState('');
 
     const handleCreateBadge = async () => {
         if (!onCreateBadgeTemplate || !newBadge.title) return;
+
+        // Check for duplicates (same icon AND same color)
+        const isDuplicate = badgeTemplates.some(b =>
+            b.icon === newBadge.icon &&
+            (b.color === newBadge.color || (!b.color && newBadge.color === '#00E5FF'))
+        );
+
+        if (isDuplicate) {
+            alert('⚠️ Já existe uma insígnia com este mesmo ícone e cor. Use uma combinação única!');
+            return;
+        }
+
         await onCreateBadgeTemplate(newBadge);
         setShowNewBadgeForm(false);
-        setNewBadge({ title: '', description: '', icon: 'stars' });
+        setNewBadge({ title: '', description: '', icon: 'stars', color: '#00E5FF' });
     };
 
     const filteredBadgeTemplates = badgeSearchFilter
@@ -517,28 +548,57 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                     </h4>
 
                     {/* Preview */}
-                    <div className="flex items-center gap-4 mb-6 p-4 bg-black/30 border border-white/5 rounded-2xl">
-                        <BadgePreview icon={newBadge.icon} size="lg" active />
-                        <div>
-                            <p className="text-white font-bold text-lg leading-tight">{newBadge.title || 'Nome da Insígnia'}</p>
-                            <p className="text-gray-500 text-xs mt-1">{newBadge.description || 'Descrição da honraria...'}</p>
-                            <p className="text-primary font-black text-[10px] uppercase mt-2 flex items-center gap-1.5 opacity-80">
-                                <span className="material-icons-outlined text-xs">style</span>
-                                Ícone Selecionado: {newBadge.icon}
-                            </p>
+                    <div className="flex items-center gap-6 mb-8 p-6 bg-black/30 border border-white/5 rounded-3xl">
+                        <BadgePreview icon={newBadge.icon} color={newBadge.color} size="lg" active />
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-[10px] font-black px-2 py-0.5 rounded bg-white/10 text-gray-400 uppercase tracking-widest">Preview</span>
+                                <span
+                                    className="text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest"
+                                    style={{ backgroundColor: `${newBadge.color}20`, color: newBadge.color, border: `1px solid ${newBadge.color}40` }}
+                                >
+                                    {RARITY_COLORS.find(r => r.color === newBadge.color)?.label}
+                                </span>
+                            </div>
+                            <p className="text-white font-black text-xl leading-tight truncate">{newBadge.title || 'Nome da Insígnia'}</p>
+                            <p className="text-gray-500 text-xs mt-1 line-clamp-2">{newBadge.description || 'Explique como o jogador conquista esta honraria...'}</p>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Nome da Insígnia</label>
-                            <input
-                                type="text"
-                                value={newBadge.title}
-                                onChange={e => setNewBadge({ ...newBadge, title: e.target.value })}
-                                placeholder="Ex: Campeão 2026"
-                                className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-yellow-500 outline-none"
-                            />
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Nome da Insígnia</label>
+                                <input
+                                    type="text"
+                                    value={newBadge.title}
+                                    onChange={e => setNewBadge({ ...newBadge, title: e.target.value })}
+                                    placeholder="Ex: Campeão 2026"
+                                    className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none transition-all"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Raridade & Cor</label>
+                                <div className="grid grid-cols-5 gap-2">
+                                    {RARITY_COLORS.map((rarity) => (
+                                        <button
+                                            key={rarity.id}
+                                            onClick={() => setNewBadge({ ...newBadge, color: rarity.color })}
+                                            className={`flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all ${newBadge.color === rarity.color
+                                                ? 'bg-white/10 border-white/20 scale-105'
+                                                : 'bg-black/20 border-white/5 hover:border-white/10 opacity-60'}`}
+                                            title={rarity.label}
+                                        >
+                                            <div
+                                                className="w-6 h-6 rounded-full shadow-lg"
+                                                style={{ backgroundColor: rarity.color, boxShadow: `0 0 10px ${rarity.color}60` }}
+                                            />
+                                            <span className="text-[8px] font-black uppercase tracking-tighter text-gray-400">{rarity.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
 
                         {/* Icon picker button */}
@@ -546,12 +606,12 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                             <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Ícone da Insígnia</label>
                             <button
                                 onClick={() => setShowIconPicker(true)}
-                                className="w-full bg-[#050214] border border-white/10 hover:border-primary/50 rounded-xl px-4 py-2.5 flex items-center gap-3 transition-all group"
+                                className="w-full bg-[#050214] border border-white/10 hover:border-primary/50 rounded-xl px-4 py-3 flex items-center gap-3 transition-all group h-[74px]"
                             >
-                                <BadgePreview icon={newBadge.icon} size="sm" active />
+                                <BadgePreview icon={newBadge.icon} color={newBadge.color} size="sm" active />
                                 <div className="flex-1 text-left">
                                     <p className="text-white text-sm font-bold">{BADGE_ICONS.find(i => i.id === newBadge.icon)?.label || newBadge.icon}</p>
-                                    <p className="text-gray-600 text-[9px] uppercase font-black">Clique para alterar · {BADGE_ICONS.length}+ ícones</p>
+                                    <p className="text-gray-600 text-[9px] uppercase font-black">Alterar Ícone · {BADGE_ICONS.length}+ opções</p>
                                 </div>
                                 <span className="material-icons-outlined text-gray-500 group-hover:text-primary transition-colors text-sm">open_in_new</span>
                             </button>
@@ -638,12 +698,18 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                                                 key={b.id}
                                                 onClick={() => setSelectedBadgeId(b.id)}
                                                 className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all hover:scale-105 ${selectedBadgeId === b.id
-                                                    ? 'bg-primary/15 border-primary shadow-neon-pink'
+                                                    ? 'bg-white/5'
                                                     : 'bg-black/20 border-white/5 hover:border-primary/20'
                                                     }`}
+                                                style={selectedBadgeId === b.id ? { borderColor: b.color || '#00E5FF', boxShadow: `0 0 15px ${(b.color || '#00E5FF')}40` } : {}}
                                             >
-                                                <BadgePreview icon={b.icon || 'stars'} size="sm" active={selectedBadgeId === b.id} />
-                                                <span className={`text-[10px] font-black uppercase truncate w-full text-center ${selectedBadgeId === b.id ? 'text-primary' : 'text-white'}`}>{b.title}</span>
+                                                <BadgePreview icon={b.icon || 'stars'} color={b.color} size="sm" active={selectedBadgeId === b.id} />
+                                                <span
+                                                    className="text-[10px] font-black uppercase truncate w-full text-center"
+                                                    style={selectedBadgeId === b.id ? { color: b.color || '#00E5FF' } : { color: 'white' }}
+                                                >
+                                                    {b.title}
+                                                </span>
                                             </button>
                                         ))}
                                         {filteredBadgeTemplates.length === 0 && (
@@ -718,9 +784,9 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                                                     </div>
                                                 </div>
                                                 {alreadyHasBadge && (
-                                                    <div className="flex items-center gap-1.5 text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded-lg border border-yellow-500/20">
+                                                    <div className="flex items-center gap-1.5 text-amber-500/80 bg-amber-500/5 px-2 py-1 rounded-lg border border-amber-500/10">
                                                         <span className="material-icons text-xs">info</span>
-                                                        <span className="text-[9px] font-black uppercase">Já possui</span>
+                                                        <span className="text-[9px] font-black uppercase tracking-wider">Já possui</span>
                                                     </div>
                                                 )}
                                             </button>
@@ -738,18 +804,18 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                             ) : selectedGiftUsers.map(u => {
                                 const alreadyHasBadge = giftType === 'badge' && usersWithSelectedBadge.has(u.id);
                                 return (
-                                    <div key={u.id} className={`bg-white/5 border rounded-xl p-3 flex items-center justify-between transition-all ${alreadyHasBadge ? 'border-yellow-500/40 bg-yellow-500/5' : 'border-white/10'}`}>
+                                    <div key={u.id} className={`bg-white/5 border rounded-xl p-3 flex items-center justify-between transition-all ${alreadyHasBadge ? 'border-amber-500/20 bg-amber-500/5' : 'border-white/10'}`}>
                                         <div className="flex items-center gap-3">
                                             <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${u.name}&background=random`} className="w-8 h-8 rounded-full" alt="" />
                                             <div>
                                                 <div className="flex items-center gap-2">
                                                     <p className="text-xs font-bold text-white">{u.name}</p>
                                                     {alreadyHasBadge && (
-                                                        <span className="text-[8px] bg-yellow-500 text-black px-1.5 py-0.5 rounded font-black uppercase animate-pulse">Aviso</span>
+                                                        <span className="text-[7px] bg-amber-500/20 text-amber-500 border border-amber-500/30 px-1.5 py-0.5 rounded font-black uppercase">Atenção</span>
                                                     )}
                                                 </div>
                                                 {alreadyHasBadge
-                                                    ? <p className="text-[9px] text-yellow-500/80 font-bold italic mt-0.5">⚠️ Este jogador já possui a insígnia.</p>
+                                                    ? <p className="text-[9px] text-amber-500/60 font-bold italic mt-0.5">Jogador já possui esta honraria.</p>
                                                     : <p className="text-[10px] text-gray-500">Saldo: R$ {Number(u.balance_brl || 0).toFixed(2)} · {u.balance_chipz || 0} Chipz</p>
                                                 }
                                             </div>
@@ -769,6 +835,7 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
             {showIconPicker && (
                 <IconPickerModal
                     currentIcon={newBadge.icon}
+                    currentColor={newBadge.color}
                     onSelect={icon => setNewBadge({ ...newBadge, icon })}
                     onClose={() => setShowIconPicker(false)}
                 />

@@ -216,7 +216,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (ecoCategoriesData) setContentDB(prev => ({ ...prev, categories: ecoCategoriesData }));
 
             const { data: profilesData } = await supabase.from('profiles_public').select('*');
-            const { data: allUserBadges } = await supabase.from('user_badges').select('*');
+            const { data: allUserBadges } = await supabase.from('user_badges').select('*, badge_templates(*)');
 
             if (profilesData) {
                 setAllProfiles(profilesData.map(p => ({
@@ -240,7 +240,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     playStyles: p.play_styles || undefined,
                     isVerified: p.is_verified || false,
                     totalPendingDebt: p.total_pending_debt || 0,
-                    badges: allUserBadges?.filter(ub => ub.user_id === p.id) || []
+                    badges: allUserBadges?.filter(ub => ub.user_id === p.id).map(ub => ({
+                        ...ub,
+                        color: ub.color // Ensure color is passed
+                    })) || []
                 })));
             }
 
@@ -290,7 +293,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     role: data.role,
                     badges: []
                 };
-                const { data: userBadges } = await supabase.from('user_badges').select('*').eq('user_id', userId).order('awarded_at', { ascending: false });
+                const { data: userBadges } = await supabase.from('user_badges').select('*, badge_templates(*)').eq('user_id', userId).order('awarded_at', { ascending: false });
                 if (userBadges) userData.badges = userBadges;
                 setCurrentUser(userData);
             }
@@ -300,13 +303,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const handleCreateBadgeTemplate = async (badge: Partial<BadgeTemplate>) => {
         setIsLoading(true);
         try {
+            // Check for duplicates locally first
+            const isDuplicate = badgeTemplates.some(b =>
+                b.icon === badge.icon && b.color === badge.color
+            );
+
+            if (isDuplicate) {
+                alert('Erro: Já existe uma insígnia com este ícone e cor.');
+                setIsLoading(false);
+                return;
+            }
+
             const { data, error } = await supabase
                 .from('badge_templates')
                 .insert([badge])
                 .select()
                 .single();
 
-            if (error) throw error;
+            if (error) {
+                if (error.code === '23505') {
+                    alert('Erro: Esta combinação de ícone e cor já existe (Unique Constraint).');
+                } else {
+                    throw error;
+                }
+                return;
+            }
+
             if (data) {
                 setBadgeTemplates(prev => [...prev, data]);
                 alert('Insignia criada com sucesso!');
@@ -466,9 +488,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             })
             .subscribe();
 
+        const badgeChannel = supabase.channel('realtime-badges')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'user_badges' }, () => {
+                fetchSupabaseData();
+                if (currentUserId) fetchProfile(currentUserId);
+            })
+            .subscribe();
+
         return () => {
             supabase.removeChannel(msgChannel);
             supabase.removeChannel(profileChannel);
+            supabase.removeChannel(badgeChannel);
             if (notificationTimer.current) clearTimeout(notificationTimer.current);
         };
     }, [isLoggedIn, currentUserId]);
@@ -500,7 +530,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                                 isVip: profile?.isVip || r.isVip || false, vipStatus: profile?.vipStatus || 'nao_vip',
                                 social: profile?.social, bio: profile?.bio, level: profile?.level, currentExp: profile?.currentExp,
                                 nextLevelExp: profile?.nextLevelExp, gallery: profile?.gallery, playStyles: profile?.playStyles,
-                                isVerified: profile?.isVerified || false
+                                isVerified: profile?.isVerified || false,
+                                badges: profile?.badges || []
                             });
                         }
                         const p = playerMap.get(playerKey)!;
@@ -622,6 +653,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     const handleSaveEvent = async (event: Event) => {
+        if (!isAdmin) return;
+
         const isNew = !events.some(e => e.id === event.id) || event.id.length < 20;
         const dbData: any = {
             title: event.title, date: event.date, time: event.time, type: event.type, buyin: event.buyin, guaranteed: event.guaranteed,
@@ -641,17 +674,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             staff_expenses_brl: event.staffExpensesBrl || 0,
             prize_payout_brl: event.prizePayoutBrl || 0
         };
+
         try {
             if (isNew) {
                 const { data, error } = await supabase.from('events').insert([dbData]).select();
                 if (error) throw error;
-                if (data && data[0]) setEvents(prev => [...prev.filter(e => e.id !== event.id), { ...event, id: data[0].id }]);
+                const finalEvent = data && data[0] ? { ...event, id: data[0].id } : event;
+                setEvents(prev => [...prev.filter(e => e.id !== event.id), finalEvent]);
             } else {
                 const { error } = await supabase.from('events').update(dbData).eq('id', event.id);
                 if (error) throw error;
                 setEvents(prev => prev.map(e => e.id === event.id ? event : e));
             }
-        } catch (e) { console.error('Error saving event:', e); }
+        } catch (e) {
+            console.error('Error saving event:', e);
+            fetchSupabaseData();
+        }
     };
 
     const handleDeleteEventAcrossApp = async (eventId: string) => {
@@ -772,7 +810,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (isAdmin && !id.startsWith('custom-')) await supabase.from('rankings').delete().eq('id', id);
     };
 
-    const handleAwardBadge = async (badge: { user_id: string; badge_template_id?: string; title: string; description?: string; icon?: string }) => {
+    const handleAwardBadge = async (badge: { user_id: string; badge_template_id?: string; title: string; description?: string; icon?: string; color?: string }) => {
         if (!isAdmin) return { error: 'not_admin' };
 
         // 1. Check for duplicates if badge_template_id is provided
@@ -823,7 +861,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                         badge_template_id: template.id,
                         title: template.title,
                         description: customJustification || template.description,
-                        icon: template.icon || 'emoji_events'
+                        icon: template.icon || 'emoji_events',
+                        color: template.color || '#00E5FF'
                     });
                 }
             }

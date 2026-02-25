@@ -201,7 +201,7 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
     const [activeRegulation, setActiveRegulation] = useState<string | null>(null);
     const [expandMobileTimeline, setExpandMobileTimeline] = useState(false);
     const [productDetails, setProductDetails] = useState<any>(null);
-    const [activeTemplateSelect, setActiveTemplateSelect] = useState<number | null>(null);
+    const [activeTemplateSelect, setActiveTemplateSelect] = useState<number | string | null>(null);
 
     useEffect(() => {
         if (activeRegulation) {
@@ -455,59 +455,12 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                                         </div>
                                         <p className="text-[10px] font-black uppercase text-gray-600 tracking-widest mb-4">Slot {index + 1} Livre</p>
 
-                                        <div className="relative">
-                                            <button
-                                                onClick={() => setActiveTemplateSelect(activeTemplateSelect === `new-${index}` ? null : `new-${index}`)}
-                                                className="bg-primary/20 hover:bg-primary/40 text-primary text-[10px] font-black px-4 py-2 rounded-lg transition-all"
-                                            >
-                                                CONFIGURAR CATEGORIA
-                                            </button>
-
-                                            {(activeTemplateSelect === `new-${index}`) && (
-                                                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setActiveTemplateSelect(null)}>
-                                                    <div
-                                                        className="w-full max-w-[280px] bg-[#1a1438] border border-white/20 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] p-3 animate-in fade-in zoom-in duration-200"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest p-2 border-b border-white/5 mb-1 flex justify-between items-center">
-                                                            <span>Categorias do Sistema</span>
-                                                            <button onClick={() => setActiveTemplateSelect(null)}><span className="material-icons-outlined text-xs">close</span></button>
-                                                        </div>
-                                                        <div className="max-h-64 overflow-y-auto custom-scrollbar">
-                                                            {Object.entries(REGULATIONS_DATA).map(([key, data]) => (
-                                                                <button
-                                                                    key={key}
-                                                                    onClick={async () => {
-                                                                        const colorValue = (data.color.replace('text-', '').replace('-500', '') as any);
-                                                                        const firstRule = data.rules.trim().split('\n')[0].replace(/^\d+\.\s*/, '');
-                                                                        const { error } = await supabase.from('ecosystem_categories').insert({
-                                                                            id: key,
-                                                                            title: data.title,
-                                                                            icon: data.icon,
-                                                                            description: firstRule,
-                                                                            color: colorValue === 'primary' || colorValue === 'secondary' || colorValue === 'cyan' || colorValue === 'pink' ? colorValue : 'primary',
-                                                                            order: index,
-                                                                            slots: 1
-                                                                        });
-
-                                                                        if (error) {
-                                                                            alert('Erro ao criar categoria: ' + error.message);
-                                                                        } else {
-                                                                            window.location.reload();
-                                                                        }
-                                                                        setActiveTemplateSelect(null);
-                                                                    }}
-                                                                    className="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-white/5 transition-colors flex items-center gap-2 group/item"
-                                                                >
-                                                                    <span className={`material-icons-outlined text-sm ${data.color}`}>{data.icon}</span>
-                                                                    <span className="text-gray-300 group-hover/item:text-white truncate">{data.title}</span>
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
+                                        <button
+                                            onClick={() => setActiveTemplateSelect(`new-${index}`)}
+                                            className="bg-primary/20 hover:bg-primary/40 text-primary text-[10px] font-black px-4 py-2 rounded-lg transition-all"
+                                        >
+                                            CONFIGURAR CATEGORIA
+                                        </button>
                                     </div>
                                 );
                             }
@@ -555,52 +508,13 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                                                 showIcon={false}
                                             />
                                             {isAdmin && (
-                                                <div className="relative">
-                                                    <button
-                                                        onClick={() => setActiveTemplateSelect(activeTemplateSelect === index ? null : index)}
-                                                        className="p-1 hover:bg-white/10 rounded transition-colors text-gray-500 hover:text-primary"
-                                                        title="Escolher Categoria do Sistema"
-                                                    >
-                                                        <span className="material-icons-outlined text-sm">settings</span>
-                                                    </button>
-
-                                                    {activeTemplateSelect === index && (
-                                                        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setActiveTemplateSelect(null)}>
-                                                            <div
-                                                                className="w-full max-w-[280px] bg-[#1a1438] border border-white/20 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] p-3 animate-in fade-in zoom-in duration-200"
-                                                                onClick={(e) => e.stopPropagation()}
-                                                            >
-                                                                <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest p-2 border-b border-white/5 mb-1 flex justify-between items-center">
-                                                                    <span>Categorias do Sistema</span>
-                                                                    <button onClick={() => setActiveTemplateSelect(null)}><span className="material-icons-outlined text-xs">close</span></button>
-                                                                </div>
-                                                                <div className="max-h-64 overflow-y-auto custom-scrollbar">
-                                                                    {Object.entries(REGULATIONS_DATA).map(([key, data]) => (
-                                                                        <button
-                                                                            key={key}
-                                                                            onClick={() => {
-                                                                                const colorValue = (data.color.replace('text-', '').replace('-500', '') as any);
-                                                                                const firstRule = data.rules.trim().split('\n')[0].replace(/^\d+\.\s*/, '');
-                                                                                onUpdateCategory(index, {
-                                                                                    id: key,
-                                                                                    title: data.title,
-                                                                                    icon: data.icon,
-                                                                                    description: firstRule,
-                                                                                    color: colorValue === 'primary' || colorValue === 'secondary' || colorValue === 'cyan' || colorValue === 'pink' ? colorValue : 'primary'
-                                                                                });
-                                                                                setActiveTemplateSelect(null);
-                                                                            }}
-                                                                            className="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-white/5 transition-colors flex items-center gap-2 group/item"
-                                                                        >
-                                                                            <span className={`material-icons-outlined text-sm ${data.color}`}>{data.icon}</span>
-                                                                            <span className="text-gray-300 group-hover/item:text-white truncate">{data.title}</span>
-                                                                        </button>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                <button
+                                                    onClick={() => setActiveTemplateSelect(index)}
+                                                    className="p-1 hover:bg-white/10 rounded transition-colors text-gray-500 hover:text-primary"
+                                                    title="Escolher Categoria do Sistema"
+                                                >
+                                                    <span className="material-icons-outlined text-sm">settings</span>
+                                                </button>
                                             )}
                                         </h3>
                                         <p className="text-[10px] md:text-xs text-gray-400 mb-4 md:mb-6 leading-relaxed max-w-[150px] md:max-w-[200px]">
@@ -674,7 +588,7 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                     <div className="mt-8 text-center space-y-4">
                         <div className="bg-black/20 p-6 rounded-xl border border-white/5 text-sm text-gray-400 max-w-3xl mx-auto text-left space-y-4">
                             <div className="pt-2">
-                                <p className="text-yellow-500 flex items-start gap-2">
+                                <p className="text-amber-500/90 flex items-start gap-2">
                                     <span className="material-icons-outlined text-base mt-0.5">info</span>
                                     <span>
                                         <strong>Regra de Valor Plus:</strong> O valor base de Rebuy e Add-on é de R$ 200,00.
@@ -708,13 +622,16 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                         {/* Header Background Glow */}
                         <div className={`absolute -top-20 -right-20 w-64 h-64 rounded-full blur-[100px] opacity-20 bg-gradient-to-br from-primary/20 to-secondary/20`}></div>
 
-                        <div className="p-8 overflow-y-auto custom-scrollbar relative z-10">
-                            <button
-                                onClick={() => setActiveRegulation(null)}
-                                className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors p-2 bg-white/5 rounded-full"
-                            >
-                                <span className="material-icons-outlined text-2xl">close</span>
-                            </button>
+                        {/* Fixed Close Button */}
+                        <button
+                            onClick={() => setActiveRegulation(null)}
+                            className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors p-2 bg-white/5 rounded-full z-[30]"
+                        >
+                            <span className="material-icons-outlined text-2xl">close</span>
+                        </button>
+
+                        {/* Content Area - Scrollable */}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 sm:p-8 relative z-10 pt-16 sm:pt-10">
 
                             {(() => {
                                 const category = categories.find(c => c.id === activeRegulation);
@@ -722,16 +639,16 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                                 return (
                                     <div key={category?.id || 'product'}>
                                         <div className="flex flex-col items-center text-center mb-8 pt-4">
-                                            <div className={`w-24 h-24 rounded-3xl bg-black border border-white/10 flex items-center justify-center mb-6 shadow-2xl relative overflow-hidden group`}>
+                                            <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-black border border-white/10 flex items-center justify-center mb-6 shadow-2xl relative overflow-hidden group`}>
                                                 <div className={`absolute inset-0 opacity-20 bg-gradient-to-br ${styles.glow}`}></div>
                                                 {productDetails?.image_url ? (
                                                     <img src={productDetails.image_url} alt={productDetails.name} className="w-full h-full object-cover relative z-10" />
                                                 ) : (
-                                                    <span className={`material-icons-outlined text-5xl relative z-10 ${styles.icon}`}>{category?.icon || 'star'}</span>
+                                                    <span className={`material-icons-outlined text-4xl sm:text-5xl relative z-10 ${styles.icon}`}>{category?.icon || 'star'}</span>
                                                 )}
                                             </div>
 
-                                            <h3 className="text-3xl font-display font-black text-white uppercase tracking-wider mb-2">
+                                            <h3 className="text-2xl sm:text-3xl font-display font-black text-white uppercase tracking-wider mb-2">
                                                 {productDetails?.name || category?.title}
                                             </h3>
                                             <div className="h-1 w-16 bg-gradient-to-r from-primary to-secondary rounded-full"></div>
@@ -742,7 +659,7 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                                                 <h4 className="text-xs font-black text-primary uppercase tracking-[0.2em] mb-4">
                                                     {productDetails ? 'DESCRIÇÃO DO PRODUTO' : 'INFORMAÇÕES GERAIS'}
                                                 </h4>
-                                                <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap font-light">
+                                                <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap font-light max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
                                                     {productDetails?.description || REGULATIONS_DATA[activeRegulation]?.rules || category?.description}
                                                 </div>
                                             </div>
@@ -751,7 +668,7 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                                                     <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">
                                                         {productDetails ? 'Valor' : 'Status'}
                                                     </p>
-                                                    <p className="text-white font-bold">
+                                                    <p className="text-white font-bold text-sm">
                                                         {productDetails ? `R$ ${parseFloat(productDetails.price).toFixed(2).replace('.', ',')}` : 'Disponível'}
                                                     </p>
                                                 </div>
@@ -759,24 +676,82 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                                                     <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">
                                                         {productDetails ? 'Disponível' : 'Vagas'}
                                                     </p>
-                                                    <p className="text-white font-bold uppercase">
-                                                        {productDetails ? `${productDetails.stock} unidades` : `${category?.slots || 0} Vagas`}
+                                                    <p className="text-white font-bold uppercase text-sm">
+                                                        {productDetails ? `${productDetails.stock} uni.` : `${category?.slots || 0} Vagas`}
                                                     </p>
                                                 </div>
                                             </div>
                                         </div>
-
-                                        <div className="mt-10">
-                                            <button
-                                                onClick={() => setActiveRegulation(null)}
-                                                className="w-full py-4 bg-gradient-to-r from-primary to-accent text-white rounded-xl font-black uppercase tracking-widest shadow-lg hover:shadow-primary/50 transition-all hover:scale-[1.02]"
-                                            >
-                                                {productDetails ? 'Adquirir via App' : 'Entendido'}
-                                            </button>
-                                        </div>
                                     </div>
                                 );
                             })()}
+                        </div>
+
+                        {/* Footer Action Area */}
+                        <div className="p-6 sm:p-8 bg-[#0f0a28]/80 backdrop-blur-md border-t border-white/5 relative z-20">
+                            <button
+                                onClick={() => setActiveRegulation(null)}
+                                className="w-full py-4 bg-gradient-to-r from-primary to-accent text-white rounded-xl font-black uppercase tracking-widest shadow-lg hover:shadow-primary/50 transition-all hover:scale-[1.01]"
+                            >
+                                {productDetails ? 'Adquirir via App' : 'Entendido'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* CATEGORY TEMPLATE SELECTOR MODAL (FIXED POSITION OUTSIDE MAP LOOP) */}
+            {activeTemplateSelect !== null && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setActiveTemplateSelect(null)}>
+                    <div
+                        className="w-full max-w-[280px] bg-[#1a1438] border border-white/20 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] p-3 animate-in fade-in zoom-in duration-200"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest p-2 border-b border-white/5 mb-1 flex justify-between items-center">
+                            <span>Categorias do Sistema</span>
+                            <button onClick={() => setActiveTemplateSelect(null)} className="hover:text-white transition-colors">
+                                <span className="material-icons-outlined text-xs font-black">close</span>
+                            </button>
+                        </div>
+                        <div className="max-h-64 overflow-y-auto custom-scrollbar">
+                            {Object.entries(REGULATIONS_DATA).map(([key, data]) => (
+                                <button
+                                    key={key}
+                                    onClick={async () => {
+                                        const isNew = typeof activeTemplateSelect === 'string' && activeTemplateSelect.startsWith('new-');
+                                        const index = isNew ? parseInt(activeTemplateSelect.toString().split('-')[1]) : activeTemplateSelect as number;
+
+                                        const colorValue = (data.color.replace('text-', '').replace('-500', '') as any);
+                                        const firstRule = data.rules.trim().split('\n')[0].replace(/^\d+\.\s*/, '');
+
+                                        if (isNew) {
+                                            const { error } = await supabase.from('ecosystem_categories').insert({
+                                                id: key,
+                                                title: data.title,
+                                                icon: data.icon,
+                                                description: firstRule,
+                                                color: colorValue === 'primary' || colorValue === 'secondary' || colorValue === 'cyan' || colorValue === 'pink' ? colorValue : 'primary',
+                                                order: index,
+                                                slots: 1
+                                            });
+                                            if (error) alert('Erro ao criar: ' + error.message);
+                                            else window.location.reload();
+                                        } else {
+                                            onUpdateCategory(index, {
+                                                id: key,
+                                                title: data.title,
+                                                icon: data.icon,
+                                                description: firstRule,
+                                                color: colorValue === 'primary' || colorValue === 'secondary' || colorValue === 'cyan' || colorValue === 'pink' ? colorValue : 'primary'
+                                            });
+                                        }
+                                        setActiveTemplateSelect(null);
+                                    }}
+                                    className="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-white/5 transition-colors flex items-center gap-2 group/item"
+                                >
+                                    <span className={`material-icons-outlined text-sm ${data.color}`}>{data.icon}</span>
+                                    <span className="text-gray-300 group-hover/item:text-white truncate">{data.title}</span>
+                                </button>
+                            ))}
                         </div>
                     </div>
                 </div>

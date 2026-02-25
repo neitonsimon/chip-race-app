@@ -477,9 +477,13 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         setIsSavingExp(true);
         try {
             // 1. Deduct balance using backend RPC
-            const { error: deductErr } = await supabase.rpc('deduct_balance_brl', {
+            const { error: deductErr } = await supabase.rpc('secure_balance_transaction', {
                 p_user_id: player.id,
-                p_amount: amount
+                p_brl_amount: -amount,
+                p_chipz_amount: 0,
+                p_description: `Pagamento de comanda ${cmd.id.slice(0, 8)} (vía perfil)`,
+                p_category: 'purchase',
+                p_metadata: { command_id: cmd.id, event_id: cmd.event_id }
             });
             if (deductErr) throw deductErr;
 
@@ -539,9 +543,13 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         setIsSavingExp(true);
         try {
             // 1. Deduct from balance
-            const { error: deductErr } = await supabase.rpc('deduct_balance_brl', {
+            const { error: deductErr } = await supabase.rpc('secure_balance_transaction', {
                 p_user_id: player.id,
-                p_amount: payAmount
+                p_brl_amount: -payAmount,
+                p_chipz_amount: 0,
+                p_description: `Pagamento ${isPartial ? 'parcial' : 'total'} de pendura (Comanda ${debt.command_id?.slice(0, 8)})`,
+                p_category: 'purchase',
+                p_metadata: { debt_id: debt.id, command_id: debt.command_id }
             });
             if (deductErr) throw deductErr;
 

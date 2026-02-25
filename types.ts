@@ -6,6 +6,7 @@ export interface TournamentCategory {
   icon: string;
   color: 'primary' | 'secondary' | 'cyan' | 'pink';
   slots: number; // Número de vagas fixas/editáveis
+  is_mystery?: boolean;
 }
 
 export interface NavLink {
@@ -27,6 +28,7 @@ export interface Badge {
   title: string;
   description: string;
   icon: string;
+  color?: string;
   image_url?: never;
   awarded_at: string;
 }
@@ -36,6 +38,7 @@ export interface BadgeTemplate {
   title: string;
   description: string;
   icon: string;
+  color?: string;
   image_url?: never;
 }
 

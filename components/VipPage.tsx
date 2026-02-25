@@ -68,11 +68,12 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate, currentUser, onUpd
 
     try {
       const { error } = await supabase.rpc('secure_balance_transaction', {
-        user_id: currentUser.id,
-        brl_amount: -costToCharge,
-        chipz_amount: 0,
-        description: `Compra: Plano VIP ${plan.title} ${discount > 0 ? '(Upgrade)' : ''}`,
-        category: 'vip'
+        p_user_id: currentUser.id,
+        p_brl_amount: -costToCharge,
+        p_chipz_amount: 0,
+        p_description: `Compra: Plano VIP ${plan.title} ${discount > 0 ? '(Upgrade)' : ''}`,
+        p_category: 'vip',
+        p_metadata: { plan_id: plan.id, discount_applied: discount, upgrade: discount > 0 }
       });
 
       if (error) {

@@ -230,10 +230,19 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                             >
                                 <span className="material-icons-outlined">functions</span>
                             </button>
-
-
-
-
+                            {activeRanking.isActive !== false && (
+                                <button
+                                    onClick={() => {
+                                        if (window.confirm(`Deseja realmente ENCERRAR o ${activeRanking.label} e atribuir as recompensas ao vencedor?`)) {
+                                            onFinalizeRanking && onFinalizeRanking(activeRanking.id);
+                                        }
+                                    }}
+                                    className="bg-white/5 p-2 rounded-full hover:bg-yellow-500 hover:text-black text-gray-400 transition-colors"
+                                    title="Encerrar e Premiar Vencedor"
+                                >
+                                    <span className="material-icons-outlined">workspace_premium</span>
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>
@@ -737,6 +746,43 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                     onChange={e => setEditingRanking({ ...editingRanking, description: e.target.value })}
                                     className="w-full bg-black/30 border border-white/10 rounded p-3 text-white focus:border-primary outline-none"
                                 />
+                            </div>
+
+                            <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-4">
+                                <h4 className="text-sm font-bold text-secondary mb-1 uppercase tracking-wider">Recompensas de 1º Lugar</h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Prêmio em R$</label>
+                                        <input
+                                            type="number"
+                                            value={editingRanking.brlReward || 0}
+                                            onChange={e => setEditingRanking({ ...editingRanking, brlReward: parseFloat(e.target.value) || 0 })}
+                                            className="w-full bg-black/30 border border-white/10 rounded p-2 text-white focus:border-secondary outline-none"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Prêmio em Chipz</label>
+                                        <input
+                                            type="number"
+                                            value={editingRanking.chipzReward || 0}
+                                            onChange={e => setEditingRanking({ ...editingRanking, chipzReward: parseInt(e.target.value) || 0 })}
+                                            className="w-full bg-black/30 border border-white/10 rounded p-2 text-white focus:border-secondary outline-none"
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Insígnia Automática</label>
+                                    <select
+                                        value={editingRanking.badgeTemplateId || ''}
+                                        onChange={e => setEditingRanking({ ...editingRanking, badgeTemplateId: e.target.value })}
+                                        className="w-full bg-black/30 border border-white/10 rounded p-2 text-white focus:border-secondary outline-none"
+                                    >
+                                        <option value="">Nenhuma</option>
+                                        {badgeTemplates.map(b => (
+                                            <option key={b.id} value={b.id}>{b.title}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">

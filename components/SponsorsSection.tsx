@@ -86,33 +86,55 @@ export function SponsorsSection() {
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 {/* Package 1 */}
-                                <div className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-primary/30 transition-all">
+                                <div className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-primary/30 transition-all flex flex-col">
                                     <h4 className="font-bold text-primary mb-1 uppercase text-xs">Trimestral</h4>
-                                    <div className="text-2xl font-black text-white mb-4">R$ 2.500<span className="text-xs text-gray-500 font-normal"> /tri</span></div>
-                                    <ul className="space-y-2 text-xs text-gray-400">
-                                        <li className="flex gap-2"><span className="material-icons text-primary/80 text-[14px]">check</span> Visibilidade básica completa</li>
-                                        <li className="flex gap-2"><span className="material-icons text-primary/80 text-[14px]">check</span> Naming rights Ranking Trimestral</li>
-                                        <li className="flex gap-2"><span className="material-icons text-orange-500/80 text-[14px]">timer</span> Limitado a 1 por trimestre</li>
+                                    <div className="text-lg font-black text-white mb-4 uppercase tracking-tighter">1 por trimestre</div>
+                                    <ul className="space-y-2 text-xs text-gray-400 flex-1">
+                                        <li className="flex gap-2"><span className="material-icons text-primary/80 text-[14px]">check</span> Logo em todos os flyer do trimestre</li>
+                                        <li className="flex gap-2"><span className="material-icons text-primary/80 text-[14px]">check</span> Nome no ranking do trimestre</li>
+                                        <li className="flex gap-2"><span className="material-icons text-primary/80 text-[14px]">check</span> Exposição no banner da foto dos campeões</li>
+                                        <li className="flex gap-2"><span className="material-icons text-primary/80 text-[14px]">check</span> Exposição nos vídeos e live da Chip Race</li>
+                                        <li className="flex gap-2 mt-2 pt-2 border-t border-white/5 text-[10px] text-orange-500/70 uppercase font-bold">
+                                            <span className="material-icons text-[12px]">info</span> Máximo 3 patrocinadores
+                                        </li>
                                     </ul>
                                 </div>
 
                                 {/* Package 2 */}
-                                <div className="bg-primary/5 border-2 border-primary rounded-2xl p-6 relative">
+                                <div className="bg-primary/5 border-2 border-primary rounded-2xl p-6 relative flex flex-col">
                                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-background-dark text-[10px] font-black px-3 py-1 rounded-full uppercase">Master</div>
                                     <h4 className="font-bold text-primary mb-1 uppercase text-xs">Anual Master</h4>
-                                    <div className="text-2xl font-black text-white mb-4">R$ 8.000<span className="text-xs text-gray-500 font-normal"> /ano</span></div>
-                                    <ul className="space-y-2 text-xs text-gray-400">
-                                        <li className="flex gap-2"><span className="material-icons text-primary text-[14px]">check</span> Naming rights The Chosen (1 etapa)</li>
-                                        <li className="flex gap-2"><span className="material-icons text-primary text-[14px]">check</span> Destaque máximo em todo o clube</li>
-                                        <li className="flex gap-2"><span className="material-icons text-orange-500 text-[14px]">lock</span> Exclusividade total anual</li>
+                                    <div className="text-lg font-black text-white mb-4 uppercase tracking-tighter">Exclusividade Anual</div>
+                                    <ul className="space-y-2 text-xs text-gray-400 flex-1">
+                                        <li className="flex gap-2"><span className="material-icons text-primary text-[14px]">check</span> Logo em todos flyers do ano</li>
+                                        <li className="flex gap-2"><span className="material-icons text-primary text-[14px]">check</span> Nome no rank anual</li>
+                                        <li className="flex gap-2"><span className="material-icons text-primary text-[14px]">check</span> Exposição da marca no banner do 3-Handed</li>
+                                        <li className="flex gap-2"><span className="material-icons text-primary text-[14px]">check</span> Logo nos troféus</li>
+                                        <li className="flex gap-2"><span className="material-icons text-primary text-[14px]">check</span> Exposição nos vídeos e live da Chip Race</li>
+                                        <li className="flex gap-2"><span className="material-icons text-primary text-[14px]">check</span> Prioridade de divulgação em marketing</li>
+                                        <li className="flex gap-2 mt-2 pt-2 border-t border-primary/20 text-[10px] text-primary uppercase font-bold">
+                                            <span className="material-icons text-[12px]">verified_user</span> Apenas 1 patrocinador
+                                        </li>
                                     </ul>
                                 </div>
                             </div>
 
-                            <div className="mt-8 p-4 bg-black/30 rounded-xl border border-white/5">
-                                <p className="text-xs text-gray-400 leading-relaxed italic">
-                                    "O Poker é um ambiente de alta fidelização. Sua marca será vista por decisores, empresários e um público AA engajado com o esporte da mente."
-                                </p>
+                            <div className="mt-8 flex flex-col gap-4">
+                                <a
+                                    href="https://wa.me/5551992425186"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-full bg-[#25D366] hover:bg-[#20ba5a] text-white font-black py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-3 uppercase tracking-wider"
+                                >
+                                    <span className="material-icons">whatsapp</span>
+                                    Falar Direto no WhatsApp
+                                </a>
+
+                                <div className="p-4 bg-black/30 rounded-xl border border-white/5">
+                                    <p className="text-xs text-gray-400 leading-relaxed italic">
+                                        "O Poker é um ambiente de alta fidelização. Sua marca será vista por decisores, empresários e um público AA engajado com o esporte da mente."
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
@@ -159,8 +181,8 @@ export function SponsorsSection() {
                                     <div>
                                         <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">Plano de Interesse</label>
                                         <select className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-primary/50 outline-none transition-all appearance-none">
-                                            <option value="trimestral" className="bg-surface-dark">Cota Trimestral (R$ 2.500)</option>
-                                            <option value="anual" className="bg-surface-dark">Anual Master (R$ 8.000)</option>
+                                            <option value="trimestral" className="bg-surface-dark">Cota Trimestral</option>
+                                            <option value="anual" className="bg-surface-dark">Anual Master</option>
                                             <option value="custom" className="bg-surface-dark">Outra Forma de Apoio</option>
                                         </select>
                                     </div>

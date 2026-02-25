@@ -63,11 +63,12 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
 
                 // Chamar RPC para atualizar ambos os saldos de forma segura
                 const { error: txError } = await supabase.rpc('secure_balance_transaction', {
-                    user_id: currentUser.id,
-                    brl_amount: -cost,
-                    chipz_amount: totalChipz,
-                    description: `Compra: Pacote Chipz - ${packageName}`,
-                    category: 'chipz'
+                    p_user_id: currentUser.id,
+                    p_brl_amount: -cost,
+                    p_chipz_amount: totalChipz,
+                    p_description: `Compra: Pacote Chipz - ${packageName}`,
+                    p_category: 'chipz',
+                    p_metadata: { package_id: id, package_name: packageName }
                 });
 
                 if (txError) {
@@ -94,11 +95,12 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
 
                 // Usar RPC para adicionar saldo de forma segura
                 const { error: txError } = await supabase.rpc('secure_balance_transaction', {
-                    user_id: currentUser.id,
-                    brl_amount: amountToAdd,
-                    chipz_amount: 0,
-                    description: `Depósito: Adicionar Reais`,
-                    category: 'wallet_deposit'
+                    p_user_id: currentUser.id,
+                    p_brl_amount: amountToAdd,
+                    p_chipz_amount: 0,
+                    p_description: `Depósito: Adicionar Reais`,
+                    p_category: 'wallet_deposit',
+                    p_metadata: { method: 'automatic' }
                 });
 
                 if (txError) {

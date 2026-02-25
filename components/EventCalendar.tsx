@@ -260,18 +260,18 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                     return;
                 }
                 onSaveEvent(editingEvent);
-            } else {
-                setEvents(currentEvents => {
-                    const existingIndex = currentEvents.findIndex(ev => ev.id === editingEvent.id);
-                    if (existingIndex >= 0) {
-                        // Edit existing - map return new array
-                        return currentEvents.map(ev => ev.id === editingEvent.id ? editingEvent : ev);
-                    } else {
-                        // Create new
-                        return [...currentEvents, editingEvent];
-                    }
-                });
             }
+
+            // Sempre atualizar o estado local para garantir exibição imediata (Optimistic Update)
+            setEvents(currentEvents => {
+                const existingIndex = currentEvents.findIndex(ev => ev.id === editingEvent.id);
+                if (existingIndex >= 0) {
+                    return currentEvents.map(ev => ev.id === editingEvent.id ? editingEvent : ev);
+                } else {
+                    return [...currentEvents, editingEvent];
+                }
+            });
+
             setEditingEvent(null);
         }
     };

@@ -266,114 +266,109 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
           </p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          {(showAll ? categories : categories.slice(0, 8)).map((cat, index) => {
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
+          {(showAll ? categories : categories.slice(0, 12)).map((cat, index) => {
             const styles = getColors(cat.color);
+            const isMystery = cat.is_mystery;
 
             return (
               <div
-
-                className={`group relative bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/5 rounded-2xl p-4 sm:p-6 ${styles.border} transition-all duration-300 hover:-translate-y-2 overflow-hidden`}
+                key={cat.id || index}
+                className={`group relative bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/5 rounded-2xl p-4 sm:p-5 ${styles.border} transition-all duration-300 hover:-translate-y-2 overflow-hidden`}
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${styles.glow} to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
 
+                {/* Padlock Icon for Admin to toggle Mystery/Lock */}
+                {isAdmin && (
+                  <button
+                    onClick={() => onUpdateCategory(index, { is_mystery: !cat.is_mystery })}
+                    className={`absolute top-3 right-3 z-30 p-1.5 rounded-lg border transition-all ${cat.is_mystery
+                      ? 'bg-primary/20 border-primary/50 text-primary shadow-neon-pink'
+                      : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'
+                      }`}
+                    title={cat.is_mystery ? 'Desbloquear Categoria' : 'Tornar Mistério'}
+                  >
+                    <span className="material-icons-outlined text-sm">
+                      {cat.is_mystery ? 'lock' : 'lock_open'}
+                    </span>
+                  </button>
+                )}
 
+                <div className="relative z-10 flex flex-col items-center text-center mt-2">
+                  {isMystery && !isAdmin ? (
+                    // Mystery Card Content for regular users
+                    <div className="flex flex-col items-center justify-center py-6">
+                      <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-4 text-gray-600 animate-pulse">
+                        <span className="material-icons-outlined text-4xl">lock</span>
+                      </div>
+                      <h3 className="text-lg font-display font-black text-gray-700 uppercase tracking-widest">
+                        Em Breve
+                      </h3>
+                      <p className="text-[10px] text-gray-500 uppercase font-black mt-2">Mistério!</p>
+                    </div>
+                  ) : (
+                    // Standard Card Content
+                    <>
+                      <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-b from-gray-800 to-black flex items-center justify-center mb-3 sm:mb-4 shadow-lg ${styles.shadow} transition-shadow duration-300 border border-white/10`}>
+                        <span className={`material-icons-outlined text-2xl sm:text-3xl ${styles.icon}`}>{cat.icon}</span>
+                      </div>
 
-                <div className="relative z-10 flex flex-col items-center text-center mt-4">
-                  <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-b from-gray-800 to-black flex items-center justify-center mb-3 sm:mb-4 shadow-lg ${styles.shadow} transition-shadow duration-300 border border-white/10`}>
-                    <span className={`material-icons-outlined text-2xl sm:text-3xl ${styles.icon}`}>{cat.icon}</span>
-                  </div>
+                      <h3 className={`text-xs sm:text-base font-display font-bold text-gray-900 dark:text-white mb-1 ${styles.text} transition-colors w-full flex items-center justify-center gap-2`}>
+                        <EditableContent
+                          isAdmin={isAdmin}
+                          value={cat.title}
+                          onSave={(val) => onUpdateCategory(index, { title: val })}
+                          showIcon={false}
+                        />
 
-                  <h3 className={`text-sm sm:text-lg font-display font-bold text-gray-900 dark:text-white mb-1 sm:mb-2 ${styles.text} transition-colors w-full flex items-center justify-center gap-2`}>
-                    <EditableContent
-                      isAdmin={isAdmin}
-                      value={cat.title}
-                      onSave={(val) => onUpdateCategory(index, { title: val })}
-                      showIcon={false}
-                    />
-
-                    {isAdmin && (
-                      <div className="relative">
-                        <button
-                          onClick={() => setActiveTemplateSelect(activeTemplateSelect === index ? null : index)}
-                          className="p-1 hover:bg-white/10 rounded transition-colors text-gray-500 hover:text-primary"
-                          title="Escolher Categoria do Sistema"
-                        >
-                          <span className="material-icons-outlined text-sm">settings</span>
-                        </button>
-
-                        {activeTemplateSelect === index && (
-                          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setActiveTemplateSelect(null)}>
-                            <div
-                              className="w-full max-w-[280px] bg-[#1a1438] border border-white/20 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] p-3 animate-in fade-in zoom-in duration-200"
-                              onClick={(e) => e.stopPropagation()}
+                        {isAdmin && (
+                          <div className="relative">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setActiveTemplateSelect(index); }}
+                              className="p-1 hover:bg-white/10 rounded transition-colors text-gray-500 hover:text-primary"
+                              title="Configurações"
                             >
-                              <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest p-2 border-b border-white/5 mb-1 flex justify-between items-center">
-                                <span>Categorias do Sistema</span>
-                                <button onClick={() => setActiveTemplateSelect(null)}><span className="material-icons-outlined text-xs">close</span></button>
-                              </div>
-                              <div className="max-h-64 overflow-y-auto custom-scrollbar">
-                                {Object.entries(REGULATIONS_DATA).map(([key, data]) => (
-                                  <button
-                                    key={key}
-                                    onClick={() => {
-                                      const colorValue = (data.color.replace('text-', '').replace('-500', '') as any);
-                                      // Pega a primeira linha das regras para usar como descrição curta se não houver uma
-                                      const firstRule = data.rules.trim().split('\n')[0].replace(/^\d+\.\s*/, '');
-                                      onUpdateCategory(index, {
-                                        id: key,
-                                        title: data.title,
-                                        icon: data.icon,
-                                        description: firstRule,
-                                        color: colorValue === 'primary' || colorValue === 'secondary' || colorValue === 'cyan' || colorValue === 'pink' ? colorValue : 'primary'
-                                      });
-                                      setActiveTemplateSelect(null);
-                                    }}
-                                    className="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-white/5 transition-colors flex items-center gap-2 group/item"
-                                  >
-                                    <span className={`material-icons-outlined text-sm ${data.color}`}>{data.icon}</span>
-                                    <span className="text-gray-300 group-hover/item:text-white truncate">{data.title}</span>
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
+                              <span className="material-icons-outlined text-[10px]">settings</span>
+                            </button>
                           </div>
                         )}
-                      </div>
-                    )}
-                  </h3>
+                      </h3>
 
-                  <p className="hidden sm:flex text-base text-gray-500 dark:text-gray-400 mb-4 min-h-[60px] items-center justify-center w-full">
-                    <EditableContent
-                      isAdmin={isAdmin}
-                      value={cat.description}
-                      onSave={(val) => onUpdateCategory(index, { description: val })}
-                      type="textarea"
-                      className="w-full"
-                      showIcon={false}
-                    />
-                  </p>
+                      <p className="hidden md:flex text-xs text-gray-500 dark:text-gray-400 mb-4 min-h-[40px] items-center justify-center w-full px-2">
+                        <EditableContent
+                          isAdmin={isAdmin}
+                          value={cat.description}
+                          onSave={(val) => onUpdateCategory(index, { description: val })}
+                          type="textarea"
+                          className="w-full"
+                          showIcon={false}
+                        />
+                      </p>
 
-                  <button
-                    onClick={(e) => handleOpenRegulation(e, cat.id)}
-                    className={`text-[10px] sm:text-sm font-bold uppercase tracking-wider ${styles.btn} hover:scale-105 transition-all flex items-center gap-1 sm:gap-2 cursor-pointer bg-white/5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/10 hover:border-white/30 shadow-sm group-hover:bg-white/10`}
-                  >
-                    Ver <span className="hidden sm:inline">Mais</span> <span className="material-icons-outlined text-xs sm:text-sm">add_circle</span>
-                  </button>
+                      <button
+                        onClick={(e) => handleOpenRegulation(e, cat.id)}
+                        className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider ${styles.btn} hover:scale-105 transition-all flex items-center gap-1 sm:gap-2 cursor-pointer bg-white/5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/10 hover:border-white/30 shadow-sm group-hover:bg-white/10`}
+                      >
+                        Ver <span className="hidden sm:inline">Mais</span> <span className="material-icons-outlined text-xs sm:text-sm">add_circle</span>
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
 
-        {categories.length > 8 && (
-          <div className="mt-12 flex justify-center sm:hidden">
+        {categories.length > 12 && (
+          <div className="mt-12 flex justify-center">
             <button
               onClick={() => setShowAll(!showAll)}
-              className="bg-surface-dark border border-white/10 px-8 py-3 rounded-full text-white font-black uppercase tracking-widest text-xs hover:bg-white/5 transition-all flex items-center gap-2"
+              className="bg-surface-dark border border-white/10 px-10 py-4 rounded-2xl text-white font-black uppercase tracking-widest text-[10px] sm:text-xs hover:bg-white/5 transition-all flex items-center gap-3 group shadow-xl hover:border-primary/50"
             >
-              {showAll ? 'Ver Menos' : 'Ver Todas Categorias'}
-              <span className="material-icons-outlined text-sm">
+              <span className="text-gray-400 group-hover:text-primary transition-colors">
+                {showAll ? 'Mostrar Apenas Essenciais' : 'Ver mais produtos e serviços da chip race'}
+              </span>
+              <span className="material-icons-outlined text-sm group-hover:translate-y-1 transition-transform">
                 {showAll ? 'expand_less' : 'expand_more'}
               </span>
             </button>
@@ -389,14 +384,16 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
             {/* Header Background Glow */}
             <div className={`absolute -top-20 -right-20 w-64 h-64 rounded-full blur-[100px] opacity-20 bg-gradient-to-br ${getColors(categories.find(c => c.id === activeRegulation)?.color || '').glow}`}></div>
 
-            <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar relative z-10">
-              <button
-                onClick={() => setActiveRegulation(null)}
-                className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors p-2 bg-white/5 rounded-full"
-              >
-                <span className="material-icons-outlined text-2xl">close</span>
-              </button>
+            {/* Fixed Close Button */}
+            <button
+              onClick={() => setActiveRegulation(null)}
+              className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors p-2 bg-white/5 rounded-full z-[30]"
+            >
+              <span className="material-icons-outlined text-2xl">close</span>
+            </button>
 
+            {/* Content Area - Scrollable */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 sm:p-8 relative z-10 pt-16 sm:pt-10">
 
               {isEditingProduct ? (
                 <div className="pt-8 flex flex-col gap-4">
@@ -412,8 +409,6 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
                     <textarea value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })} className="w-full bg-black/50 border border-white/10 rounded p-3 text-white focus:border-primary outline-none min-h-[150px]" />
                   </div>
 
-                  {/* Campos de valor, estoque e imagem removidos a pedido do usuário */}
-
                   <div className="flex gap-4 mt-6">
                     <button onClick={() => setIsEditingProduct(false)} className="flex-1 py-3 bg-gray-800 text-white rounded-xl font-bold uppercase hover:bg-gray-700 transition-colors">Cancelar</button>
                     <button onClick={handleSaveProduct} className="flex-1 py-3 bg-secondary text-black rounded-xl font-black uppercase hover:scale-105 transition-all shadow-[0_0_15px_rgba(45,212,191,0.4)]">Salvar no Banco</button>
@@ -422,12 +417,12 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
               ) : (
                 <>
                   <div className="flex flex-col items-center text-center mb-8 pt-4">
-                    <div className={`w-24 h-24 rounded-3xl bg-black border border-white/10 flex items-center justify-center mb-6 shadow-2xl relative overflow-hidden group`}>
+                    <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-black border border-white/10 flex items-center justify-center mb-6 shadow-2xl relative overflow-hidden group`}>
                       <div className={`absolute inset-0 opacity-20 bg-gradient-to-br ${getColors(categories.find(c => c.id === activeRegulation)?.color || '').glow}`}></div>
                       {productDetails?.image_url ? (
                         <img src={productDetails.image_url} alt={productDetails.name} className="w-full h-full object-cover relative z-10" />
                       ) : (
-                        <span className={`material-icons-outlined text-5xl relative z-10 ${REGULATIONS_DATA[activeRegulation]?.color || 'text-primary'}`}>
+                        <span className={`material-icons-outlined text-4xl sm:text-5xl relative z-10 ${REGULATIONS_DATA[activeRegulation]?.color || 'text-primary'}`}>
                           {REGULATIONS_DATA[activeRegulation]?.icon || 'star'}
                         </span>
                       )}
@@ -444,24 +439,65 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
                       <h4 className="text-xs font-black text-primary uppercase tracking-[0.2em] mb-4">
                         {productDetails ? 'DESCRIÇÃO DO PRODUTO' : 'INFORMAÇÕES GERAIS'}
                       </h4>
-                      <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap font-light">
+                      <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap font-light max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
                         {productDetails?.description || REGULATIONS_DATA[activeRegulation]?.rules}
                       </div>
                     </div>
-
-                    {/* Campos de valor e disponível removidos na visualização também */}
-                  </div>
-
-                  <div className="mt-10">
-                    <button
-                      onClick={() => setActiveRegulation(null)}
-                      className="w-full py-4 bg-gradient-to-r from-primary to-accent text-white rounded-xl font-black uppercase tracking-widest shadow-lg hover:shadow-primary/50 transition-all hover:scale-[1.02]"
-                    >
-                      {productDetails ? 'Adquirir via App' : 'Entendido'}
-                    </button>
                   </div>
                 </>
               )}
+            </div>
+
+            {/* Footer Action Area */}
+            {!isEditingProduct && (
+              <div className="p-6 sm:p-8 bg-[#0f0a28]/80 backdrop-blur-md border-t border-white/5 relative z-20">
+                <button
+                  onClick={() => setActiveRegulation(null)}
+                  className="w-full py-4 bg-gradient-to-r from-primary to-accent text-white rounded-xl font-black uppercase tracking-widest shadow-lg hover:shadow-primary/50 transition-all hover:scale-[1.01]"
+                >
+                  {productDetails ? 'Adquirir via App' : 'Entendido'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {/* CATEGORY TEMPLATE SELECTOR MODAL (FIXED POSITION OUTSIDE MAP LOOP) */}
+      {activeTemplateSelect !== null && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setActiveTemplateSelect(null)}>
+          <div
+            className="w-full max-w-[280px] bg-[#1a1438] border border-white/20 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] p-3 animate-in fade-in zoom-in duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest p-2 border-b border-white/5 mb-1 flex justify-between items-center">
+              <span>Categorias do Sistema</span>
+              <button onClick={() => setActiveTemplateSelect(null)} className="hover:text-white transition-colors">
+                <span className="material-icons-outlined text-xs font-black">close</span>
+              </button>
+            </div>
+            <div className="max-h-64 overflow-y-auto custom-scrollbar">
+              {Object.entries(REGULATIONS_DATA).map(([key, data]) => (
+                <button
+                  key={key}
+                  onClick={() => {
+                    const index = activeTemplateSelect as number;
+                    const colorValue = (data.color.replace('text-', '').replace('-500', '') as any);
+                    const firstRule = data.rules.trim().split('\n')[0].replace(/^\d+\.\s*/, '');
+                    onUpdateCategory(index, {
+                      id: key,
+                      title: data.title,
+                      icon: data.icon,
+                      description: firstRule,
+                      color: colorValue === 'primary' || colorValue === 'secondary' || colorValue === 'cyan' || colorValue === 'pink' ? colorValue : 'primary'
+                    });
+                    setActiveTemplateSelect(null);
+                  }}
+                  className="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-white/5 transition-colors flex items-center gap-2 group/item"
+                >
+                  <span className={`material-icons-outlined text-sm ${data.color}`}>{data.icon}</span>
+                  <span className="text-gray-300 group-hover/item:text-white truncate">{data.title}</span>
+                </button>
+              ))}
             </div>
           </div>
         </div>

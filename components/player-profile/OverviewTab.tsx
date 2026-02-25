@@ -106,16 +106,43 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                     {player.badges && player.badges.length > 0 && (
                         <div className="mb-8 flex flex-wrap justify-center gap-3">
                             {player.badges.map((badge: any) => {
-                                const originalDesc = badge.badge_templates?.description;
+                                const template = badge.badge_templates;
+                                const badgeColor = badge.color || template?.color || '#00E5FF';
+                                const originalDesc = template?.description;
+
                                 return (
                                     <div key={badge.id}
-                                        className="group relative w-12 h-12 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center transition-all cursor-help transform hover:scale-110 hover:border-primary/50 hover:bg-primary/5">
+                                        className="group relative w-12 h-12 flex items-center justify-center transition-all cursor-help transform hover:scale-110 rounded-2xl border"
+                                        style={{
+                                            backgroundColor: 'rgba(255,255,255,0.05)',
+                                            borderColor: `${badgeColor}33`,
+                                            boxShadow: `0 4px 15px ${badgeColor}15`,
+                                            '--hover-color': badgeColor
+                                        } as any}
+                                    >
+                                        <style dangerouslySetInnerHTML={{
+                                            __html: `
+                                            .badge-hover-${badge.id}:hover {
+                                                border-color: ${badgeColor} !important;
+                                                background-color: ${badgeColor}20 !important;
+                                                box-shadow: 0 0 20px ${badgeColor}40 !important;
+                                            }
+                                        `}} />
 
-                                        <span className="material-icons-outlined text-primary text-2xl">{badge.icon || 'stars'}</span>
+                                        <div className={`w-full h-full flex items-center justify-center rounded-2xl transition-all badge-hover-${badge.id}`}>
+                                            {badge.image_url ? (
+                                                <img src={badge.image_url} alt={badge.title} className="w-8 h-8 object-contain" />
+                                            ) : (
+                                                <span className="material-icons-outlined text-2xl" style={{ color: badgeColor }}>{badge.icon || 'stars'}</span>
+                                            )}
+                                        </div>
 
                                         {/* Tooltip */}
-                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-48 bg-[#0c0920] text-white text-[10px] p-3 rounded-2xl border border-white/10 opacity-0 group-hover:opacity-100 pointer-events-none transition-all z-50 shadow-2xl scale-90 group-hover:scale-100">
-                                            <p className="font-black text-primary uppercase tracking-widest mb-1 leading-none">{badge.title}</p>
+                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-48 bg-[#0c0920] text-white text-[10px] p-4 rounded-2xl border border-white/10 opacity-0 group-hover:opacity-100 pointer-events-none transition-all z-50 shadow-2xl scale-90 group-hover:scale-100">
+                                            <div className="flex items-center gap-2 mb-1.5">
+                                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: badgeColor, boxShadow: `0 0 8px ${badgeColor}` }}></div>
+                                                <p className="font-black uppercase tracking-widest leading-none" style={{ color: badgeColor }}>{badge.title}</p>
+                                            </div>
                                             <p className="text-gray-400 leading-relaxed font-medium">{originalDesc || badge.description}</p>
                                             {/* Arrow */}
                                             <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#0c0920] border-b border-r border-white/10 transform rotate-45" />
