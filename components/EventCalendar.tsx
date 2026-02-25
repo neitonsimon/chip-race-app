@@ -622,6 +622,12 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                             </div>
                                         )}
 
+                                        {event.description && (
+                                            <div className="text-[11px] text-gray-400 mb-3 line-clamp-2 italic bg-primary/5 p-2 rounded border-l-2 border-primary/30">
+                                                "{event.description}"
+                                            </div>
+                                        )}
+
                                         <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-3">
                                             <span className="flex items-center gap-1 bg-white/5 px-2 py-1 rounded border border-white/5" title={event.gameMode === 'cash_game' ? "Mínimo / Máximo" : "Valor da Entrada"}>
                                                 <span className="material-icons-outlined text-sm text-green-500">payments</span>
@@ -812,6 +818,13 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                     <h2 className="text-2xl sm:text-3xl font-display font-black text-white uppercase leading-[0.9] text-glow mb-4 drop-shadow-2xl">
                                         {viewEvent.title}
                                     </h2>
+                                    {viewEvent.description && (
+                                        <div className="mb-4 px-4 py-2 bg-white/5 rounded-xl border border-white/10 backdrop-blur-sm max-w-[90%]">
+                                            <p className="text-[11px] sm:text-xs text-gray-300 italic leading-relaxed">
+                                                "{viewEvent.description}"
+                                            </p>
+                                        </div>
+                                    )}
                                     {viewEvent.gameMode !== 'cash_game' && (
                                         <div className="flex justify-center items-center gap-8 w-full">
                                             <div className="flex flex-col items-center">
@@ -893,12 +906,6 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                     {renderStructureRow("Add-on Duplo", viewEvent.doubleAddonValue, viewEvent.doubleAddonChips, "text-secondary", "auto_awesome_motion")}
                                                     {/* Staff Bonus moved to buy-in row */}
                                                     {renderStructureRow("Time Chip", viewEvent.timeChipValue, viewEvent.timeChipChips, "text-green-500", "schedule")}
-                                                    {viewEvent.description && (
-                                                        <div className="bg-white/5 p-3 rounded-lg border border-white/10 mt-2">
-                                                            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block mb-1">Regras & Detalhes</span>
-                                                            <p className="text-[11px] text-gray-300 leading-relaxed italic">"{viewEvent.description}"</p>
-                                                        </div>
-                                                    )}
                                                 </>
                                             )}
                                         </div>
@@ -962,6 +969,13 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                             <div className="pt-4 pb-1 px-6 text-center shrink-0 flex flex-col items-center">
                                 <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">{viewClosedEvent.date.split('-').reverse().join('/')}</div>
                                 <h3 className="text-lg md:text-xl font-bold text-white mb-2 uppercase tracking-wider">{viewClosedEvent.title}</h3>
+                                {viewClosedEvent.description && (
+                                    <div className="mb-4 px-4 py-2 bg-white/5 rounded-xl border border-white/10 backdrop-blur-sm max-w-[90%] mx-auto">
+                                        <p className="text-[10px] text-gray-400 italic leading-relaxed">
+                                            "{viewClosedEvent.description}"
+                                        </p>
+                                    </div>
+                                )}
 
                                 {/* CHAMPION DISPLAY - FIXED SPACING */}
                                 {(() => {
