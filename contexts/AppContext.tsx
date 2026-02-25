@@ -612,7 +612,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             }
 
             // Persist to Supabase if it's a UUID and the user is an admin or it's their own profile
-            const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetId);
+            const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetId);
             if (isUUID && (isAdmin || targetId === currentUserId)) {
                 // Prepare a clean update object with only defined fields
                 const dbUpdate: any = {};
@@ -644,11 +644,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 if (Object.keys(dbUpdate).length > 0) {
                     // Use upsert to handle new users who might not have a profile row yet
                     const { error } = await supabase.from('profiles').upsert({ id: targetId, ...dbUpdate }, { onConflict: 'id' });
-                    if (error) console.error('Error persisting profile update:', error);
+                    if (error) {
+                        console.error('Error persisting profile update:', error);
+                        throw error;
+                    }
                 }
             }
         } catch (error) {
             console.error('Error handling profile update:', error);
+            throw error;
         }
     };
 

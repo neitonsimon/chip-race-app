@@ -890,26 +890,34 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         }
     };
 
-    const handleSaveProfile = () => {
-        // Only send editable fields to parent update function to avoid overwriting 
-        // sensitive fields like EXP or balance with stale local data.
-        if (onUpdateProfile) {
-            const editableData = {
-                name: player.name,
-                avatar: player.avatar,
-                city: player.city,
-                bio: player.bio,
-                social: player.social,
-                playStyles: player.playStyles,
-                gallery: player.gallery
-            };
-            onUpdateProfile(targetIdRef.current, editableData as any);
-            // Atualiza a ref para o novo nome caso tenha mudado
-            originalNameRef.current = player.name;
-        }
+    const handleSaveProfile = async () => {
+        setIsSavingExp(true);
+        try {
+            // Only send editable fields to parent update function to avoid overwriting 
+            // sensitive fields like EXP or balance with stale local data.
+            if (onUpdateProfile) {
+                const editableData = {
+                    name: player.name,
+                    avatar: player.avatar,
+                    city: player.city,
+                    bio: player.bio,
+                    social: player.social,
+                    playStyles: player.playStyles,
+                    gallery: player.gallery
+                };
+                await onUpdateProfile(targetIdRef.current, editableData as any);
+                // Atualiza a ref para o novo nome caso tenha mudado
+                originalNameRef.current = player.name;
+            }
 
-        alert("Perfil atualizado com sucesso!");
-        setActiveTab('overview');
+            alert("Perfil atualizado com sucesso!");
+            setActiveTab('overview');
+        } catch (err: any) {
+            console.error("Error saving profile:", err);
+            alert("Erro ao salvar perfil: " + (err.message || "Por favor, tente novamente."));
+        } finally {
+            setIsSavingExp(false);
+        }
     };
 
     const handleExpConfigChange = (index: number, newRequiredExp: string) => {
