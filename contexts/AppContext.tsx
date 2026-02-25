@@ -194,6 +194,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     cashGameCapacity: e.cash_game_capacity,
                     cashGameMinMax: e.cash_game_min_max,
                     cashGameDinner: e.cash_game_dinner,
+                    cashGameOpenBar: e.cash_game_open_bar,
                     cashGameNotes: e.cash_game_notes,
                     staffExpensesBrl: e.staff_expenses_brl || 0,
                     prizePayoutBrl: e.prize_payout_brl || 0
@@ -575,6 +576,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             cash_game_capacity: event.cashGameCapacity,
             cash_game_min_max: event.cashGameMinMax,
             cash_game_dinner: event.cashGameDinner || false,
+            cash_game_open_bar: event.cashGameOpenBar || false,
             cash_game_notes: event.cashGameNotes || '',
             staff_expenses_brl: event.staffExpensesBrl || 0,
             prize_payout_brl: event.prizePayoutBrl || 0

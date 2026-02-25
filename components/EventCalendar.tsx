@@ -845,8 +845,9 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                             {viewEvent.gameMode === 'cash_game' ? (
                                                 <>
                                                     {renderStructureRow("Mínimo / Máximo", viewEvent.cashGameMinMax, undefined, "text-yellow-400", "payments")}
-                                                    {viewEvent.cashGameDinner && renderStructureRow("Jantar / Open Bar", "Incluso", "Cortesia da Casa", "text-green-400", "restaurant")}
-                                                    {viewEvent.parallelProducts?.includes('jackpot') && renderStructureRow("Jackpot Dinâmico", "Ativo", "Participe", "text-secondary", "trending_up")}
+                                                    {viewEvent.cashGameDinner && renderStructureRow("Jantar Cortesia", "Incluso", "Cortesia da Casa", "text-green-400", "restaurant")}
+                                                    {viewEvent.cashGameOpenBar && renderStructureRow("Open Bar", "Incluso", "Cortesia da Casa", "text-local_bar", "local_bar")}
+                                                    {viewEvent.parallelProducts?.includes('jackpot') && renderStructureRow("Jackpot", "Ativo", "Participe", "text-secondary", "trending_up")}
                                                     {viewEvent.cashGameNotes && (
                                                         <div className="bg-white/5 p-3 rounded-lg border border-white/10 mt-2">
                                                             <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1">Regras / Observações</span>
@@ -1490,7 +1491,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                     <input type="text" value={editingEvent.cashGameCapacity || ''} onChange={(e) => setEditingEvent({ ...editingEvent, cashGameCapacity: e.target.value })} className="w-full bg-black/20 border border-white/10 rounded p-3 text-white focus:border-yellow-500 outline-none" placeholder="Ex: 9 Lugares" />
                                                 </div>
 
-                                                <div className="md:col-span-2 pt-2 border-t border-white/5 mt-2">
+                                                <div className="md:col-span-2 pt-2 border-t border-white/5 mt-2 flex flex-col gap-3">
                                                     <label className="flex items-center gap-3 cursor-pointer group">
                                                         <input
                                                             type="checkbox"
@@ -1498,7 +1499,16 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                             onChange={(e) => setEditingEvent({ ...editingEvent, cashGameDinner: e.target.checked })}
                                                             className="w-5 h-5 accent-yellow-500 bg-black border-white/20 rounded"
                                                         />
-                                                        <span className="text-sm text-gray-300 font-bold uppercase tracking-wider group-hover:text-white transition-colors">Jantar Cortesia / Open Bar 🍽️🍻</span>
+                                                        <span className="text-sm text-gray-300 font-bold uppercase tracking-wider group-hover:text-white transition-colors">Jantar Cortesia 🍽️</span>
+                                                    </label>
+                                                    <label className="flex items-center gap-3 cursor-pointer group">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={editingEvent.cashGameOpenBar || false}
+                                                            onChange={(e) => setEditingEvent({ ...editingEvent, cashGameOpenBar: e.target.checked })}
+                                                            className="w-5 h-5 accent-yellow-500 bg-black border-white/20 rounded"
+                                                        />
+                                                        <span className="text-sm text-gray-300 font-bold uppercase tracking-wider group-hover:text-white transition-colors">Open Bar 🍻</span>
                                                     </label>
                                                 </div>
 
@@ -1510,7 +1520,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                             onChange={() => toggleParallelProduct('jackpot')}
                                                             className="w-5 h-5 accent-yellow-500 bg-black border-white/20 rounded"
                                                         />
-                                                        <span className="text-sm text-gray-300 font-bold uppercase tracking-wider group-hover:text-white transition-colors">Participa do Jackpot Dinâmico 💰</span>
+                                                        <span className="text-sm text-gray-300 font-bold uppercase tracking-wider group-hover:text-white transition-colors">Participa do Jackpot 💰</span>
                                                     </label>
                                                 </div>
 

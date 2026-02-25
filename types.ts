@@ -87,6 +87,7 @@ export interface Event {
   cashGameCapacity?: string;
   cashGameMinMax?: string;
   cashGameDinner?: boolean;
+  cashGameOpenBar?: boolean;
   cashGameNotes?: string;
   flyerUrl?: string;
   // Double Options (Novos campos)
