@@ -27,6 +27,7 @@ export interface Badge {
   title: string;
   description: string;
   icon: string;
+  image_url?: string;
   awarded_at: string;
 }
 
@@ -35,6 +36,7 @@ export interface BadgeTemplate {
   title: string;
   description: string;
   icon: string;
+  image_url?: string;
 }
 
 // Interface para resultados de fechamento de evento (Movida para cima para ser usada em Event)
@@ -274,6 +276,7 @@ export interface PollVote {
 export interface ExperienceLevel {
   level: number;
   required_exp: number;
+  credit_limit: number;
 }
 
 export interface DailyReward {

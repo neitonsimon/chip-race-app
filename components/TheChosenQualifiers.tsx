@@ -200,7 +200,7 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
 
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
                 <div>
-                    <h3 className="text-2xl lg:text-3xl font-display font-black text-white uppercase tracking-tight flex items-center gap-3">
+                    <h3 className="text-xl sm:text-2xl lg:text-3xl font-display font-black text-white uppercase tracking-tight flex items-center gap-3">
                         <span className="material-icons-outlined text-primary">groups</span>
                         Classificados Capítulo Final
                     </h3>
@@ -303,14 +303,14 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
 
                                 {/* Initial Stack */}
                                 <td className="bg-white/5 backdrop-blur-md py-4 text-center border-y border-white/5">
-                                    <span className="text-xl font-display font-black text-primary text-glow-pink">
+                                    <span className="text-lg sm:text-xl font-display font-black text-primary text-glow-pink">
                                         {player.initialStack > 0 ? `${player.initialStack}k` : '-'}
                                     </span>
                                 </td>
 
                                 {/* Bonus Stack */}
                                 <td className="bg-white/5 backdrop-blur-md py-4 text-center rounded-r-2xl border-y border-r border-white/5 pr-6 transition-colors group-hover:border-primary/20">
-                                    <span className="text-lg font-display font-black text-secondary">
+                                    <span className="text-base sm:text-lg font-display font-black text-secondary">
                                         {player.bonusStack > 0 ? `+${player.bonusStack}k` : '-'}
                                     </span>
                                 </td>

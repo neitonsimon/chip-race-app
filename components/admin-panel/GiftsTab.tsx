@@ -21,27 +21,121 @@ interface GiftsTabProps {
     usersWithSelectedBadge: Set<string>;
     handleSendGifts: () => Promise<void>;
     handleGiftSearch: (query: string) => Promise<void>;
+    onCreateBadgeTemplate?: (badge: any) => Promise<void>;
     isLoading: boolean;
 }
+
+const BADGE_ICONS = [
+    { id: 'stars', label: 'Estrela' },
+    { id: 'workspace_premium', label: 'Premium' },
+    { id: 'military_tech', label: 'Medalha' },
+    { id: 'emoji_events', label: 'Troféu' },
+    { id: 'diamond', label: 'Diamante' },
+    { id: 'verified', label: 'Verificado' },
+    { id: 'local_fire_department', label: 'Fogo' },
+    { id: 'auto_awesome', label: 'Brilho' },
+    { id: 'flash_on', label: 'Raio' },
+    { id: 'public', label: 'Global' }
+];
 
 export const GiftsTab: React.FC<GiftsTabProps> = ({
     giftTarget, setGiftTarget, giftType, setGiftType, giftAmount, setGiftAmount,
     giftSearchQuery, setGiftSearchQuery, giftDescription, setGiftDescription,
     selectedBadgeId, setSelectedBadgeId, giftSearchResults, setGiftSearchResults,
     badgeTemplates, selectedGiftUsers, setSelectedGiftUsers, usersWithSelectedBadge,
-    handleSendGifts, handleGiftSearch, isLoading
+    handleSendGifts, handleGiftSearch, onCreateBadgeTemplate, isLoading
 }) => {
+    const [showNewBadgeForm, setShowNewBadgeForm] = React.useState(false);
+    const [newBadge, setNewBadge] = React.useState({ title: '', description: '', icon: 'stars', image_url: '' });
+
+    const handleCreateBadge = async () => {
+        if (!onCreateBadgeTemplate || !newBadge.title) return;
+        await onCreateBadgeTemplate(newBadge);
+        setShowNewBadgeForm(false);
+        setNewBadge({ title: '', description: '', icon: 'stars', image_url: '' });
+    };
+
     return (
         <div className="p-8 max-w-4xl mx-auto">
-            <div className="flex items-center gap-4 mb-8">
-                <div className="w-14 h-14 rounded-2xl bg-primary/20 border border-primary/40 flex items-center justify-center shadow-neon-pink">
-                    <span className="material-icons-outlined text-primary text-3xl">stars</span>
+            <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-primary/20 border border-primary/40 flex items-center justify-center shadow-neon-pink">
+                        <span className="material-icons-outlined text-primary text-3xl">stars</span>
+                    </div>
+                    <div>
+                        <h3 className="text-2xl font-display font-black text-white uppercase tracking-widest">Prêmios & Honrarias</h3>
+                        <p className="text-gray-400 text-sm">Distribua créditos, fichas ou insígnias por mérito ou glória.</p>
+                    </div>
                 </div>
-                <div>
-                    <h3 className="text-2xl font-display font-black text-white uppercase tracking-widest">Prêmios & Honrarias</h3>
-                    <p className="text-gray-400 text-sm">Distribua créditos, fichas ou insígnias por mérito ou glória.</p>
-                </div>
+                <button
+                    onClick={() => setShowNewBadgeForm(!showNewBadgeForm)}
+                    className="px-4 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 text-[10px] font-black uppercase hover:bg-yellow-500/20 transition-all flex items-center gap-2 shadow-neon-yellow"
+                >
+                    <span className="material-icons-outlined text-sm">{showNewBadgeForm ? 'close' : 'add_circle'}</span>
+                    {showNewBadgeForm ? 'Cancelar' : 'Criar Nova Insígnia'}
+                </button>
             </div>
+
+            {/* CREATE BADGE FORM */}
+            {showNewBadgeForm && (
+                <div className="mb-8 bg-black/40 border border-yellow-500/30 rounded-3xl p-6 animate-in slide-in-from-top-4">
+                    <h4 className="text-sm font-black text-white uppercase mb-6 flex items-center gap-2 text-yellow-500">
+                        <span className="material-icons-outlined text-sm">new_label</span>
+                        Lançar Nova Insígnia no Banco
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Nome da Insígnia</label>
+                            <input
+                                type="text"
+                                value={newBadge.title}
+                                onChange={e => setNewBadge({ ...newBadge, title: e.target.value })}
+                                placeholder="Ex: Campeão 30k"
+                                className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-yellow-500 outline-none"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Modelo de Ícone (Dropdown)</label>
+                            <select
+                                value={newBadge.icon}
+                                onChange={e => setNewBadge({ ...newBadge, icon: e.target.value })}
+                                className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-yellow-500 outline-none appearance-none"
+                            >
+                                {BADGE_ICONS.map(icon => (
+                                    <option key={icon.id} value={icon.id}>{icon.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Descrição</label>
+                            <input
+                                type="text"
+                                value={newBadge.description}
+                                onChange={e => setNewBadge({ ...newBadge, description: e.target.value })}
+                                placeholder="Explique como o jogador conquista esta honraria..."
+                                className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-yellow-500 outline-none"
+                            />
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">URL da Imagem PNG (Opcional - Substitui o ícone)</label>
+                            <input
+                                type="text"
+                                value={newBadge.image_url}
+                                onChange={e => setNewBadge({ ...newBadge, image_url: e.target.value })}
+                                placeholder="https://exemplo.com/medalha.png"
+                                className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-yellow-500 outline-none"
+                            />
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleCreateBadge}
+                        disabled={isLoading || !newBadge.title}
+                        className="w-full mt-6 bg-yellow-500 hover:bg-white hover:text-black text-black font-black py-4 rounded-2xl transition-all shadow-neon-yellow uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                        {isLoading ? <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"></div> : <><span className="material-icons-outlined text-sm">save</span> Salvar Nova Insígnia</>}
+                    </button>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Configuration */}
@@ -90,7 +184,11 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                                                 onClick={() => setSelectedBadgeId(b.id)}
                                                 className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${selectedBadgeId === b.id ? 'bg-white/10 border-yellow-500/50' : 'bg-black/20 border-white/5 hover:border-white/20'}`}
                                             >
-                                                <span className="material-icons text-xl text-yellow-400">{b.icon || 'stars'}</span>
+                                                {b.image_url ? (
+                                                    <img src={b.image_url} alt={b.title} className="w-6 h-6 object-contain" />
+                                                ) : (
+                                                    <span className="material-icons text-xl text-yellow-400">{b.icon || 'stars'}</span>
+                                                )}
                                                 <span className="text-[10px] font-black text-white uppercase truncate w-full text-center">{b.title}</span>
                                             </button>
                                         ))}

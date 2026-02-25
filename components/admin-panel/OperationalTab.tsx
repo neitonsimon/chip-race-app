@@ -337,18 +337,20 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                 <div className="flex items-center justify-between mb-3">
                                     <p className="text-[10px] font-black text-gray-500 uppercase">Categorias</p>
                                     <div className="flex gap-1 overflow-x-auto pb-1 max-w-[250px] custom-scrollbar">
-                                        {(['torneio', 'cash', 'bar', 'opcionais'] as const).map(cat => (
-                                            <button
-                                                key={cat}
-                                                onClick={() => setProductSection(cat)}
-                                                className={`px-2 py-1 rounded-md text-[8px] font-black uppercase transition-all whitespace-nowrap ${productSection === cat ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}
-                                            >
-                                                {cat}
-                                            </button>
-                                        ))}
-                                        {/* Dynamic categories that are not the defaults above */}
+                                        <button
+                                            onClick={() => setProductSection('torneio')}
+                                            className={`px-2 py-1 rounded-md text-[8px] font-black uppercase transition-all whitespace-nowrap ${productSection === 'torneio' ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}
+                                        >
+                                            Torneio
+                                        </button>
+                                        <button
+                                            onClick={() => setProductSection('cash')}
+                                            className={`px-2 py-1 rounded-md text-[8px] font-black uppercase transition-all whitespace-nowrap ${productSection === 'cash' ? 'bg-white text-black bg-white shadow-neon-blue' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}
+                                        >
+                                            Cash
+                                        </button>
                                         {productCategories
-                                            .filter(c => !['torneio', 'cash', 'bar', 'produtos', 'vestuario', 'aluguel', 'curso', 'online', 'bet', 'jackpot'].includes(c.name))
+                                            .filter(c => !['torneio', 'cash'].includes(c.name))
                                             .map(cat => (
                                                 <button
                                                     key={cat.name}

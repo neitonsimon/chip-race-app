@@ -50,7 +50,7 @@ export const FAQSection: React.FC<FAQSectionProps> = ({ isAdmin, faqs = [], onUp
         <div className="py-20 bg-background-dark relative border-t border-white/5">
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-16">
-                    <h2 className="text-3xl md:text-4xl font-display font-bold text-gray-900 dark:text-white mb-4">
+                    <h2 className="text-2xl sm:text-3xl md:text-4xl font-display font-bold text-gray-900 dark:text-white mb-4">
                         PERGUNTAS <span className="text-primary">FREQUENTES</span>
                     </h2>
                     <div className="h-1 w-24 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>

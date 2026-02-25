@@ -779,17 +779,17 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                         <span className="text-gray-600 text-xs">•</span>
                                         <span className="text-xs font-bold text-gray-300 tracking-wider">{viewEvent.time}</span>
                                     </div>
-                                    <h2 className="text-3xl font-display font-black text-white uppercase leading-[0.9] text-glow mb-4 drop-shadow-2xl">
+                                    <h2 className="text-2xl sm:text-3xl font-display font-black text-white uppercase leading-[0.9] text-glow mb-4 drop-shadow-2xl">
                                         {viewEvent.title}
                                     </h2>
                                     {viewEvent.gameMode !== 'cash_game' && (
                                         <div className="flex justify-center items-center gap-8 w-full">
                                             <div className="flex flex-col items-center">
                                                 <span className="text-xs font-bold text-gray-500 uppercase tracking-[0.2em] mb-1">Buy-in</span>
-                                                <div className="flex items-baseline gap-1.5">
-                                                    <span className="text-4xl font-display font-black text-primary drop-shadow-[0_0_15px_rgba(217,0,255,0.4)]">{viewEvent.buyin}</span>
+                                                <div className="flex items-baseline gap-1.5 font-display">
+                                                    <span className="text-2xl sm:text-4xl font-black text-primary drop-shadow-[0_0_15px_rgba(217,0,255,0.4)]">{viewEvent.buyin}</span>
                                                     {viewEvent.staffBonusValue && viewEvent.staffBonusValue !== '0' && (
-                                                        <span className="text-xl font-display font-bold text-yellow-500">
+                                                        <span className="text-lg sm:text-xl font-bold text-yellow-500">
                                                             + {viewEvent.staffBonusValue}
                                                         </span>
                                                     )}
@@ -798,7 +798,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                             <div className="w-px h-8 bg-white/10"></div>
                                             <div className="flex flex-col items-center">
                                                 <span className="text-xs font-bold text-gray-500 uppercase tracking-[0.2em] mb-1">Garantido</span>
-                                                <span className="text-4xl font-display font-black text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.4)]">{viewEvent.guaranteed}</span>
+                                                <span className="text-2xl sm:text-4xl font-display font-black text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.4)]">{viewEvent.guaranteed}</span>
                                             </div>
                                         </div>
                                     )}
@@ -952,9 +952,9 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
                                             {/* Name and Prize - Separated with margin */}
                                             <div className="text-center mt-1">
-                                                <h2 className="text-3xl font-display font-black text-white leading-tight">{winner.name}</h2>
+                                                <h2 className="text-2xl sm:text-3xl font-display font-black text-white leading-tight">{winner.name}</h2>
                                                 {winner.prize > 0 && (
-                                                    <div className="text-xl font-bold text-green-400 mt-1">
+                                                    <div className="text-lg sm:text-xl font-bold text-green-400 mt-1">
                                                         R$ {winner.prize.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                     </div>
                                                 )}
@@ -972,7 +972,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
                             {/* 2. Stats Grid */}
                             <div className="px-6 mb-4 shrink-0">
-                                <div className="grid grid-cols-4 bg-white/[0.03] rounded-xl border border-white/5 divide-x divide-white/5 p-3">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 bg-white/[0.03] rounded-xl border border-white/5 divide-x-0 sm:divide-x divide-y sm:divide-y-0 divide-white/5 p-3">
                                     <div className="flex flex-col items-center justify-center p-1">
                                         <span className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mb-1">Jogadores</span>
                                         <span className="text-sm font-bold text-white">{viewClosedEvent.results?.length || 0}</span>

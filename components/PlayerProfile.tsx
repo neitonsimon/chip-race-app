@@ -706,88 +706,35 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     const activeDailyRewards = dailyRewards.length > 0 ? dailyRewards : FALLBACK_DAILY_REWARDS;
 
     const handleClaimToday = async () => {
-        // 1. Calculate Rewards
-        const streakIndex = Math.min(player.dailyStreak, activeDailyRewards.length - 1);
-        const reward = activeDailyRewards[streakIndex];
+        setIsSavingExp(true);
+        try {
+            const { data, error } = await supabase.rpc('process_daily_login', { u_id: targetIdRef.current });
+            if (error) throw error;
 
-        // Store claimed reward values BEFORE state update
-        claimedRewardRef.current = reward;
-
-        // 2. Logic: Update relevant balances
-        let newExp = player.currentExp;
-        let newLevel = player.level;
-        let requiredExp = player.nextLevelExp;
-        let newBalanceBrl = player.balanceBrl || 0;
-        let newBalanceChipz = player.balanceChipz || 0;
-
-        if (reward.reward_type === 'xp') {
-            newExp += reward.reward_value;
-            // Level Up Logic using table
-            if (experienceLevels && experienceLevels.length > 0) {
-                let nextLvl = experienceLevels.find(l => l.level === newLevel + 1);
-                while (nextLvl && newExp >= nextLvl.required_exp) {
-                    newLevel++;
-                    nextLvl = experienceLevels.find(l => l.level === newLevel + 1);
+            if (data && data.status === 'success') {
+                setClaimAnimation(true);
+                // The reward is applied in backend, we just need to refresh
+                if (onUpdateProfile) {
+                    // This will trigger a re-fetch of the profile in parent
+                    onUpdateProfile(targetIdRef.current, { ...player });
                 }
-                requiredExp = nextLvl ? nextLvl.required_exp : (experienceLevels[experienceLevels.length - 1].required_exp + 1000);
-            } else {
-                // Fallback legacy logic if table not loaded
-                while (newExp >= requiredExp) {
-                    newExp -= requiredExp;
-                    newLevel++;
-                    requiredExp = Math.floor(requiredExp * 1.2);
-                }
+
+                // Show animation then close
+                setTimeout(() => {
+                    setClaimAnimation(false);
+                    setShowClaimModal(false);
+                    setCanClaimDaily(false);
+                }, 3000);
+            } else if (data && data.status === 'already_claimed') {
+                alert('Você já resgatou sua recompensa de hoje!');
+                setCanClaimDaily(false);
+                setShowClaimModal(false);
             }
-        } else if (reward.reward_type === 'chipz') {
-            newBalanceChipz += reward.reward_value;
-        } else if (reward.reward_type === 'brl') {
-            newBalanceBrl += reward.reward_value;
+        } catch (err: any) {
+            alert('Erro ao resgatar: ' + err.message);
+        } finally {
+            setIsSavingExp(false);
         }
-
-        // 3. Update Player State -> RESET STREAK TO 0 ON CLAIM
-        const newPlayerData = {
-            ...player,
-            level: newLevel,
-            currentExp: newExp,
-            nextLevelExp: requiredExp,
-            balanceBrl: newBalanceBrl,
-            balanceChipz: newBalanceChipz,
-            lastDailyClaim: new Date().toISOString(),
-            dailyStreak: 0
-        };
-
-        // 3.1. Se for recompensa financeira, garantir persistência via RPC primeiro
-        if (reward.reward_type === 'chipz' || reward.reward_type === 'brl') {
-            try {
-                const { error: txError } = await supabase.rpc('secure_balance_transaction', {
-                    user_id: targetIdRef.current,
-                    brl_amount: reward.reward_type === 'brl' ? reward.reward_value : 0,
-                    chipz_amount: reward.reward_type === 'chipz' ? reward.reward_value : 0,
-                    description: `Recompensa Diária: ${reward.reward_name}`
-                });
-
-                if (txError) throw txError;
-            } catch (err) {
-                console.error('Erro ao processar recompensa financeira:', err);
-                alert('Erro ao processar recompensa. Tente novamente.');
-                return;
-            }
-        }
-
-        setPlayer(newPlayerData);
-        setCanClaimDaily(false);
-        setClaimAnimation(true);
-
-        // Persist to "DB" (App State - para XP, Nível e Datas)
-        if (onUpdateProfile) {
-            onUpdateProfile(targetIdRef.current, newPlayerData);
-        }
-
-        // 4. Show animation then close modal automatically
-        setTimeout(() => {
-            setClaimAnimation(false);
-            setShowClaimModal(false); // Close the modal after animation
-        }, 3000);
     };
 
     const handleSkipToday = () => {
@@ -1193,7 +1140,11 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                     <div className="mb-6 flex flex-wrap justify-center gap-2">
                                         {player.badges.map(badge => (
                                             <div key={badge.id} title={`${badge.title} - ${badge.description}`} className="group relative w-12 h-12 bg-gradient-to-br from-[#1a1438] to-[#0f0a28] border border-yellow-500/50 rounded-lg flex items-center justify-center shadow-[0_0_10px_rgba(234,179,8,0.2)] hover:shadow-[0_0_20px_rgba(234,179,8,0.5)] transition-all cursor-help transform hover:scale-110">
-                                                <span className="material-icons-outlined text-yellow-400 text-2xl filter drop-shadow-[0_0_5px_rgba(234,179,8,0.8)]">{badge.icon}</span>
+                                                {badge.image_url ? (
+                                                    <img src={badge.image_url} alt={badge.title} className="w-8 h-8 object-contain filter drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]" />
+                                                ) : (
+                                                    <span className="material-icons-outlined text-yellow-400 text-2xl filter drop-shadow-[0_0_5px_rgba(234,179,8,0.8)]">{badge.icon}</span>
+                                                )}
                                                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-black/90 text-white text-[10px] p-2 rounded border border-white/10 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
                                                     <p className="font-bold text-yellow-400 mb-1">{badge.title}</p>
                                                     <p className="text-gray-300 relative z-50 whitespace-normal break-words">{badge.description}</p>
@@ -1406,6 +1357,35 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                         </div>
                                         <div className="text-3xl font-display font-black text-pink-500">{player.itm}</div>
                                         <div className="text-sm text-gray-500 uppercase tracking-wider">ITM %</div>
+                                    </div>
+                                    {/* NEW: CREDIT LIMIT CARD */}
+                                    <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-green-500/50 transition-colors col-span-2 sm:col-span-4">
+                                        <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                                            <span className="material-icons-outlined text-4xl">credit_card</span>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <div className="text-2xl font-display font-black text-green-500">
+                                                    R$ {((player as any).debtLimitBrl || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                </div>
+                                                <div className="text-xs text-gray-500 uppercase tracking-wider">Limite de Crédito (Nível {player.level})</div>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="text-[10px] text-gray-500 uppercase font-bold mb-1">Próximo Limite</div>
+                                                <div className="text-sm font-black text-white/40">
+                                                    {(() => {
+                                                        const nextLvl = experienceLevels?.find(l => l.level === player.level + 1);
+                                                        return nextLvl ? `R$ ${nextLvl.credit_limit.toFixed(2)}` : 'Limite Máximo';
+                                                    })()}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Explainer for the level system */}
+                                        <div className="mt-4 pt-4 border-t border-white/5 text-[10px] text-gray-500 leading-relaxed italic">
+                                            O seu nível Chip Race reflete sua frequência, engajamento e paixão pelo esporte.
+                                            Quanto mais você participa dos eventos e interage no app, mais EXP ganha, evoluindo seu nível e desbloqueando benefícios como maiores limites de pendura e recompensas exclusivas.
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -2523,7 +2503,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                         </div>
 
                                         <div className="text-center">
-                                            <h2 className="text-3xl md:text-4xl font-display font-black text-white leading-tight uppercase">{winner.name}</h2>
+                                            <h2 className="text-2xl sm:text-3xl md:text-4xl font-display font-black text-white leading-tight uppercase">{winner.name}</h2>
                                             {winner.prize > 0 && (
                                                 <div className="text-2xl font-bold text-green-400 mt-2">
                                                     R$ {winner.prize.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -2542,7 +2522,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
                         {/* 2. Stats Grid */}
                         <div className="px-8 mb-6 shrink-0">
-                            <div className="grid grid-cols-4 bg-white/[0.03] rounded-2xl border border-white/5 divide-x divide-white/5 p-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 bg-white/[0.03] rounded-2xl border border-white/5 divide-x-0 sm:divide-x divide-y sm:divide-y-0 divide-white/5 p-4">
                                 <div className="flex flex-col items-center justify-center">
                                     <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Jogadores</span>
                                     <span className="text-lg font-bold text-white">{viewClosedEvent.results?.length || 0}</span>

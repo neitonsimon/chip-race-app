@@ -22,7 +22,7 @@ export function SponsorsSection() {
                     <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-bold tracking-wider uppercase mb-2 shadow-[0_0_15px_rgba(var(--primary-rgb),0.2)]">
                         Parcerias Estratégicas
                     </span>
-                    <h2 className="text-4xl md:text-6xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-tight">
+                    <h2 className="text-2xl sm:text-4xl md:text-6xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-tight">
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-accent to-secondary text-glow animate-pulse">Patrocine</span> a Chip Race
                     </h2>
                     <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto text-base leading-relaxed">

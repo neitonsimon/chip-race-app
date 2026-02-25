@@ -125,7 +125,7 @@ export const Hero: React.FC<HeroProps> = ({
 
         {/* Main Text */}
         <div className="mb-16">
-          <h1 className="text-6xl lg:text-8xl font-display font-black text-gray-900 dark:text-white mb-6 leading-tight">
+          <h1 className="text-4xl sm:text-6xl lg:text-8xl font-display font-black text-gray-900 dark:text-white mb-6 leading-tight">
             <EditableContent
               isAdmin={isAdmin}
               value={content.title_line1}
@@ -135,7 +135,7 @@ export const Hero: React.FC<HeroProps> = ({
               {prizeLabel}
             </span>
           </h1>
-          <p className="mt-4 text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto font-light leading-relaxed">
+          <p className="mt-4 text-lg sm:text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto font-light leading-relaxed">
             <EditableContent
               isAdmin={isAdmin}
               value={content.subtitle}
@@ -147,11 +147,11 @@ export const Hero: React.FC<HeroProps> = ({
           <div className="flex justify-center mt-12 mb-4">
             <button
               onClick={() => onNavigate('the-chosen-details')}
-              className="group relative bg-gradient-to-r from-primary via-accent to-secondary text-white font-black py-4 px-10 rounded-2xl shadow-[0_0_30px_rgba(var(--primary-rgb),0.3)] hover:shadow-[0_0_50px_rgba(var(--primary-rgb),0.6)] transition-all duration-500 transform hover:-translate-y-2 flex items-center gap-4 uppercase tracking-[0.2em] text-sm overflow-hidden"
+              className="group relative bg-gradient-to-r from-primary via-accent to-secondary text-white font-black py-3 px-6 sm:py-4 sm:px-10 rounded-2xl shadow-[0_0_30px_rgba(var(--primary-rgb),0.3)] hover:shadow-[0_0_50px_rgba(var(--primary-rgb),0.6)] transition-all duration-500 transform hover:-translate-y-2 flex items-center gap-2 sm:gap-4 uppercase tracking-[0.2em] text-xs sm:text-sm overflow-hidden"
             >
               <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12"></div>
-              <span className="material-icons-outlined text-2xl animate-pulse">stars</span>
-              <span className="relative z-10">THE CHOSEN <span className="text-secondary-light">30K+</span></span>
+              <span className="material-icons-outlined text-xl sm:text-2xl animate-pulse">stars</span>
+              <span className="relative z-10">THE CHOSEN <span className="text-secondary-light">{prizeLabel}</span></span>
               <span className="material-icons group-hover:translate-x-2 transition-transform relative z-10">arrow_forward</span>
             </button>
           </div>
@@ -161,7 +161,7 @@ export const Hero: React.FC<HeroProps> = ({
         {showTimeline && (
           <div className="max-w-6xl mx-auto mb-16 px-4">
             <div className="flex items-center justify-between mb-8">
-              <h3 className="text-xl font-display font-bold text-white uppercase tracking-widest flex items-center gap-2">
+              <h3 className="text-lg sm:text-xl font-display font-bold text-white uppercase tracking-widest flex items-center gap-2">
                 <EditableContent
                   isAdmin={isAdmin}
                   value={content.timeline_title}

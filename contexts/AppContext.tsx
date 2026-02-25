@@ -63,6 +63,7 @@ interface AppContextType {
     handleSendMessage: (toPlayerName: string, content: string) => Promise<void>;
     handleReplyMessage: (messageId: string, replyText: string) => void;
     handleMarkAsRead: (id: string) => Promise<void>;
+    handleCreateBadgeTemplate: (badge: Partial<BadgeTemplate>) => Promise<void>;
     updateContent: (section: keyof ContentDB, field: string, value: any) => Promise<void>;
     updateCategory: (index: number, field: keyof TournamentCategory, value: any) => Promise<void>;
     setNewNotification: (msg: Message | null) => void;
@@ -295,6 +296,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         } catch (error) { console.error('Error fetching profile:', error); }
     };
 
+    const handleCreateBadgeTemplate = async (badge: Partial<BadgeTemplate>) => {
+        setIsLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('badge_templates')
+                .insert([badge])
+                .select()
+                .single();
+
+            if (error) throw error;
+            if (data) {
+                setBadgeTemplates(prev => [...prev, data]);
+                alert('Insignia criada com sucesso!');
+            }
+        } catch (error: any) {
+            console.error('Error creating badge template:', error);
+            alert('Erro ao criar insignia: ' + error.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const fetchMessages = async (userId: string) => {
         try {
             const { data } = await supabase.from('messages').select('*').or(`user_id.eq.${userId},user_id.is.null`).order('created_at', { ascending: false });
@@ -349,6 +372,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 setIsLoggedIn(true);
                 setCurrentUserId(session.user.id);
                 fetchProfile(session.user.id);
+                handleCheckDailyLogin(session.user.id);
             }
         });
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -356,6 +380,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 setIsLoggedIn(true);
                 setCurrentUserId(session.user.id);
                 fetchProfile(session.user.id);
+                handleCheckDailyLogin(session.user.id);
             } else {
                 setIsLoggedIn(false);
                 setCurrentUserId(null);
@@ -365,6 +390,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
         return () => subscription.unsubscribe();
     }, []);
+
+    const handleCheckDailyLogin = async (userId: string) => {
+        try {
+            const { data, error } = await supabase.rpc('process_daily_login', { u_id: userId });
+            if (error) throw error;
+            if (data && data.status === 'success') {
+                // Award happened, notify user
+                const msg = `Recompensa Diária Resgatada! Dia ${data.streak}: ${data.reward_label}. Seu sistema de níveis e limite de crédito foi atualizado!`;
+                await supabase.from('messages').insert({
+                    user_id: userId,
+                    sender: 'Chip Race',
+                    subject: '🎁 Login Diário',
+                    content: msg,
+                    category: 'gift',
+                    is_read: false
+                });
+                // Refresh profile to see new stats
+                fetchProfile(userId);
+            }
+        } catch (e) {
+            console.error('Error in daily login check:', e);
+        }
+    };
 
     useEffect(() => {
         if (!isLoggedIn || !currentUserId) return;
@@ -557,11 +605,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const updatedEvent: Event = { ...eventToUpdate, status: 'closed', results, totalRebuys: stats.totalRebuys, totalAddons: stats.totalAddons, totalPrize: stats.totalPrize };
         setEvents(prev => prev.map(e => e.id === eventId ? updatedEvent : e));
         if (isAdmin && eventId.length >= 20) {
-            try { await supabase.from('events').update({ status: 'closed', results, total_rebuys: stats.totalRebuys, total_addons: stats.totalAddons, total_prize: stats.totalPrize }).eq('id', eventId); } catch (e) { console.error('Error closing event:', e); }
+            try {
+                await supabase.from('events').update({ status: 'closed', results, total_rebuys: stats.totalRebuys, total_addons: stats.totalAddons, total_prize: stats.totalPrize }).eq('id', eventId);
+
+                // Award 5 EXP to each participant with a userId
+                const participantIds = results.filter(r => r.userId).map(r => r.userId);
+                if (participantIds.length > 0) {
+                    await supabase.rpc('bulk_add_event_exp', {
+                        p_user_ids: participantIds,
+                        p_exp_amount: 5
+                    });
+                }
+            } catch (e) {
+                console.error('Error closing event:', e);
+            }
         }
         if (results) {
             results.forEach(r => {
-                if (r.userId) supabase.from('messages').insert({ user_id: r.userId, sender: 'Chip Race', subject: '🏆 Resultado de Torneio', content: `${eventToUpdate.title} encerrado, você terminou na posição ${r.position}!`, category: 'tournament', is_read: false });
+                if (r.userId) supabase.from('messages').insert({ user_id: r.userId, sender: 'Chip Race', subject: '🏆 Resultado de Torneio', content: `${eventToUpdate.title} encerrado, você terminou na posição ${r.position}! Você também ganhou +5 de EXP por participar!`, category: 'tournament', is_read: false });
             });
         }
     };

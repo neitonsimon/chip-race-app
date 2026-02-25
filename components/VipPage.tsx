@@ -145,7 +145,7 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate, currentUser, onUpd
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
 
         <div className="text-center mb-16">
-          <h1 className="text-5xl md:text-6xl font-display font-black text-white mb-6">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-display font-black text-white mb-6">
             ELEVE SEU <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">NÍVEL</span>
           </h1>
           <p className="text-xl text-gray-400 max-w-2xl mx-auto font-light">
@@ -194,7 +194,7 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate, currentUser, onUpd
                   <div className="flex flex-col items-center justify-center min-h-[100px]">
                     <div className="flex items-center justify-center gap-1">
                       <span className={`text-sm font-bold ${isUpgrade ? 'text-gray-500' : 'text-gray-400'}`}>R$</span>
-                      <span className={`font-display font-black leading-none ${isUpgrade ? 'text-3xl text-gray-500 line-through' : 'text-6xl text-white'}`}>
+                      <span className={`font-display font-black leading-none ${isUpgrade ? 'text-2xl sm:text-3xl text-gray-500 line-through' : 'text-4xl sm:text-6xl text-white'}`}>
                         {plan.price}
                       </span>
                     </div>

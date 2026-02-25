@@ -21,19 +21,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
     handleCreateProduct, toggleProductStatus, deleteProduct, isLoading,
     productCategories, newCategory, setNewCategory, handleAddCategory
 }) => {
-    // Default categories if none exist in DB
-    const displayCategories = productCategories.length > 0 ? productCategories : [
-        { name: 'torneio', label: 'Torneio' },
-        { name: 'cash', label: 'Cash Game' },
-        { name: 'bar', label: 'Bar & Gastronomia' },
-        { name: 'produtos', label: 'Acessórios & Poker Gear' },
-        { name: 'vestuario', label: 'Vestuário' },
-        { name: 'aluguel', label: 'Aluguel' },
-        { name: 'curso', label: 'Curso' },
-        { name: 'online', label: 'Online' },
-        { name: 'bet', label: 'Bet' },
-        { name: 'jackpot', label: 'Jackpot' }
-    ];
+    const displayCategories = productCategories;
 
     return (
         <div className="p-8 max-w-6xl mx-auto pb-32">

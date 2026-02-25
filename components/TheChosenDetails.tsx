@@ -325,14 +325,14 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                 <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-primary/10 via-background-dark/50 to-transparent pointer-events-none"></div>
 
                 <div className="relative z-10 max-w-4xl mx-auto px-4 text-center mt-8">
-                    <h1 className="text-5xl md:text-7xl font-display font-black text-white mb-4 drop-shadow-lg">
+                    <h1 className="text-4xl sm:text-5xl md:text-7xl font-display font-black text-white mb-4 drop-shadow-lg">
                         <EditableContent
                             isAdmin={isAdmin}
                             value={content.header_title}
                             onSave={(val) => onUpdateContent('header_title', val)}
                         /> <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">{prizeLabel}</span>
                     </h1>
-                    <p className="text-xl md:text-2xl text-gray-400 font-light max-w-2xl mx-auto">
+                    <p className="text-lg md:text-2xl text-gray-400 font-light max-w-2xl mx-auto">
                         <EditableContent
                             isAdmin={isAdmin}
                             value={content.header_subtitle}
@@ -347,10 +347,9 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
 
                 {/* Introduction Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-10 mb-16">
-                    {/* ... (Cards Conceito e Plus Mantidos) ... */}
-                    <div className="bg-white/[0.03] backdrop-blur-md border border-white/5 border-l-4 border-l-primary p-8 rounded-2xl relative overflow-hidden group hover:bg-white/[0.05] transition-all hover:shadow-[0_0_30px_rgba(217,0,255,0.1)]">
-                        <h2 className="text-2xl font-display font-bold text-primary mb-4 flex items-center gap-2 text-glow">
-                            <span className="material-icons-outlined text-primary text-2xl">lightbulb</span>
+                    <div className="bg-white/[0.03] backdrop-blur-md border border-white/5 border-l-4 border-l-primary p-6 sm:p-8 rounded-2xl relative overflow-hidden group hover:bg-white/[0.05] transition-all hover:shadow-[0_0_30px_rgba(217,0,255,0.1)]">
+                        <h2 className="text-xl sm:text-2xl font-display font-bold text-primary mb-4 flex items-center gap-2 text-glow">
+                            <span className="material-icons-outlined text-primary text-xl sm:text-2xl">lightbulb</span>
                             <EditableContent
                                 isAdmin={isAdmin}
                                 value={content.concept_title}
@@ -367,9 +366,9 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                         </p>
                     </div>
 
-                    <div className="bg-white/[0.03] backdrop-blur-md border border-white/5 border-l-4 border-l-secondary p-8 rounded-2xl relative overflow-hidden group hover:bg-white/[0.05] transition-all hover:shadow-[0_0_30px_rgba(0,224,255,0.1)]">
-                        <h2 className="text-2xl font-display font-bold text-secondary mb-4 flex items-center gap-2 text-glow-blue">
-                            <span className="material-icons-outlined text-secondary text-2xl">add_circle</span>
+                    <div className="bg-white/[0.03] backdrop-blur-md border border-white/5 border-l-4 border-l-secondary p-6 sm:p-8 rounded-2xl relative overflow-hidden group hover:bg-white/[0.05] transition-all hover:shadow-[0_0_30px_rgba(0,224,255,0.1)]">
+                        <h2 className="text-xl sm:text-2xl font-display font-bold text-secondary mb-4 flex items-center gap-2 text-glow-blue">
+                            <span className="material-icons-outlined text-secondary text-xl sm:text-2xl">add_circle</span>
                             <EditableContent
                                 isAdmin={isAdmin}
                                 value={content.plus_title}
@@ -448,7 +447,7 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                             const styles = getColors(cat.color);
 
                             return (
-                                <div key={cat.id} className="relative bg-[#0f0a20] border border-white/5 p-8 rounded-2xl hover:border-primary/30 transition-colors flex flex-col h-full text-center items-center shadow-lg group hover:-translate-y-2 duration-300">
+                                <div key={cat.id} className="relative bg-[#0f0a20] border border-white/5 p-6 sm:p-8 rounded-2xl hover:border-primary/30 transition-colors flex flex-col h-full text-center items-center shadow-lg group hover:-translate-y-2 duration-300">
 
                                     {/* SLOT/QUALIFIER BADGE EDITABLE (Only relevant for some categories, but keeping it as a generic 'Stat' for now) */}
                                     <div className={`absolute top-4 right-4 text-[10px] font-black uppercase px-2 py-1 rounded-full border ${styles.badge} z-20 flex items-center gap-1`}>
@@ -549,30 +548,30 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
 
                         {/* Stack Inicial */}
                         <div className="flex flex-col items-center bg-black/20 rounded-xl p-4 border border-white/5 relative">
-                            <div className="text-3xl lg:text-4xl font-display font-black text-white mb-1 flex items-start">
+                            <div className="text-2xl sm:text-3xl lg:text-4xl font-display font-black text-white mb-1 flex items-start">
                                 25K<span className="text-primary text-xl -mt-1 ml-0.5">*</span>
                             </div>
-                            <div className="text-sm text-gray-500 mb-2">Fichas</div>
+                            <div className="text-xs text-gray-500 mb-2">Fichas</div>
                             <div className="text-primary font-bold uppercase text-xs lg:text-sm">Stack Inicial Base</div>
                         </div>
 
                         {/* Rebuy */}
                         <div className="flex flex-col items-center bg-black/20 rounded-xl p-4 border border-white/5">
-                            <div className="text-3xl lg:text-4xl font-display font-black text-white mb-1">R$ 200</div>
+                            <div className="text-2xl sm:text-3xl lg:text-4xl font-display font-black text-white mb-1">R$ 200</div>
                             <div className="text-sm text-gray-400 mb-2">25K Fichas <span className="text-secondary font-bold text-[10px]">+ BÔNUS</span></div>
                             <div className="text-primary font-bold uppercase text-xs lg:text-sm">Rebuy / Reentrada</div>
                         </div>
 
                         {/* Add-on */}
                         <div className="flex flex-col items-center bg-black/20 rounded-xl p-4 border border-white/5">
-                            <div className="text-3xl lg:text-4xl font-display font-black text-white mb-1">R$ 200</div>
+                            <div className="text-2xl sm:text-3xl lg:text-4xl font-display font-black text-white mb-1">R$ 200</div>
                             <div className="text-sm text-gray-400 mb-2">50K Fichas <span className="text-secondary font-bold text-[10px]">+ BÔNUS</span></div>
                             <div className="text-primary font-bold uppercase text-xs lg:text-sm">Add-on</div>
                         </div>
 
                         {/* Blinds */}
                         <div className="flex flex-col items-center bg-black/20 rounded-xl p-4 border border-white/5">
-                            <div className="text-3xl lg:text-4xl font-display font-black text-white mb-1">30</div>
+                            <div className="text-2xl sm:text-3xl lg:text-4xl font-display font-black text-white mb-1">30</div>
                             <div className="text-sm text-gray-500 mb-2">Minutos</div>
                             <div className="text-primary font-bold uppercase text-xs lg:text-sm">Tempo de Blind</div>
                         </div>

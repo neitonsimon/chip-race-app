@@ -256,11 +256,11 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
     <div className="pt-10 pb-20 bg-background-light dark:bg-background-dark relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-display font-bold text-gray-900 dark:text-white mb-4">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-display font-bold text-gray-900 dark:text-white mb-4">
             ECOSSISTEMA <span className="text-primary">CHIP RACE</span>
           </h2>
           <div className="h-1 w-24 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>
-          <p className="mt-4 text-gray-500 max-w-2xl mx-auto text-lg">
+          <p className="mt-4 text-gray-500 max-w-2xl mx-auto text-base sm:text-lg">
             Explore o universo Chip Race: uma curadoria completa de produtos e serviços desenvolvidos para elevar sua experiência no poker ao próximo nível.
           </p>
         </div>
@@ -356,12 +356,12 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
       {/* MODAL DE PRODUTO / DETALHES (POP-UP) */}
       {activeRegulation && (REGULATIONS_DATA[activeRegulation] || productDetails) && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-[#0f0a28] border border-white/10 rounded-3xl w-full max-w-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] relative animate-float overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="bg-[#0f0a28] border border-white/10 rounded-3xl w-full md:max-w-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] relative animate-float overflow-hidden flex flex-col max-h-[95vh]">
 
             {/* Header Background Glow */}
             <div className={`absolute -top-20 -right-20 w-64 h-64 rounded-full blur-[100px] opacity-20 bg-gradient-to-br ${getColors(categories.find(c => c.id === activeRegulation)?.color || '').glow}`}></div>
 
-            <div className="p-8 overflow-y-auto custom-scrollbar relative z-10">
+            <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar relative z-10">
               <button
                 onClick={() => setActiveRegulation(null)}
                 className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors p-2 bg-white/5 rounded-full"
@@ -414,7 +414,7 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
                       )}
                     </div>
 
-                    <h3 className="text-3xl font-display font-black text-white uppercase tracking-wider mb-2">
+                    <h3 className="text-2xl sm:text-3xl font-display font-black text-white uppercase tracking-wider mb-2">
                       {productDetails?.name || REGULATIONS_DATA[activeRegulation]?.title}
                     </h3>
                     <div className="h-1 w-16 bg-gradient-to-r from-primary to-secondary rounded-full"></div>

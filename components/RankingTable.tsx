@@ -197,8 +197,8 @@ export const RankingTable: React.FC<RankingTableProps> = ({
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
 
                 <div className="text-center mb-10 group relative">
-                    <h2 className="text-4xl font-display font-black text-gray-900 dark:text-white tracking-wider uppercase">
-                        {activeRanking?.label || 'Ranking'}
+                    <h2 className="text-2xl sm:text-4xl font-display font-black text-gray-900 dark:text-white tracking-wider uppercase">
+                        Soberano <span className="text-primary text-shadow-glow">Ranking</span>
                     </h2>
                     <div className="h-1 w-24 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full mt-4"></div>
                     <p className="text-gray-500 dark:text-gray-400 mt-4 font-light tracking-wide uppercase text-sm">
@@ -467,7 +467,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                 {/* Custom Prize/Highlight Box */}
                 {activeRanking?.prizeInfoTitle && (
                     <div className="max-w-3xl mx-auto mb-8">
-                        <h3 className="text-primary font-bold text-2xl mb-6 flex items-center justify-center gap-2">
+                        <h3 className="text-primary font-bold text-xl sm:text-2xl mb-6 flex items-center justify-center gap-2">
                             <span className="material-icons-outlined">emoji_events</span> Ranking Geral 2026
                         </h3>
                         <div className="bg-gradient-to-r from-primary/10 to-accent/10 p-6 rounded-2xl border border-primary/20 backdrop-blur-sm flex flex-col md:flex-row items-center justify-between gap-6">

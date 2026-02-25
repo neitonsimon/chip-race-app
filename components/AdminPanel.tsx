@@ -18,6 +18,7 @@ interface AdminPanelProps {
     isAdmin?: boolean;
     onUpdateProfile?: (id: string, stats: any) => void;
     badgeTemplates?: any[];
+    onCreateBadgeTemplate?: (badge: any) => Promise<void>;
     onSendAdminMessage?: (subject: string, content: string, category: 'admin' | 'system' | 'tournament') => void;
     onCreatePoll?: (question: string, options: string[]) => void;
 }
@@ -57,7 +58,7 @@ function getOneTimeKeyFromNote(note: string): string | null {
     return null;
 }
 
-export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, isAdmin = false, onUpdateProfile, badgeTemplates = [], onSendAdminMessage, onCreatePoll }) => {
+export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, isAdmin = false, onUpdateProfile, badgeTemplates = [], onCreateBadgeTemplate, onSendAdminMessage, onCreatePoll }) => {
     const [activeTab, setActiveTab] = useState<'operational' | 'reports' | 'launch' | 'send-gifts' | 'debts' | 'communications'>('operational');
     const [events, setEvents] = useState<any[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
@@ -90,7 +91,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const toastTimer = useRef<any>(null);
 
     // Launch Tab State
-    const [newProduct, setNewProduct] = useState({ name: '', category: 'bar', price: '', description: '', price_unit: '' });
+    const [newProduct, setNewProduct] = useState({ name: '', category: '', price: '', description: '', price_unit: '' });
     const [allProducts, setAllProducts] = useState<any[]>([]); // Includes inactive
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [productCategories, setProductCategories] = useState<any[]>([]);
@@ -231,6 +232,90 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         }
     };
 
+    const updatePlayerDebtLocally = (userId: string, amount: number) => {
+        const field = 'total_pending_debt';
+
+        // Update selectedCommand if matches
+        if (selectedCommand && selectedCommand.user_id === userId) {
+            setSelectedCommand((prev: any) => prev ? ({
+                ...prev,
+                profiles: {
+                    ...prev.profiles,
+                    [field]: (Number(prev.profiles?.[field]) || 0) + amount
+                }
+            }) : null);
+        }
+
+        // Update in openCommands
+        setOpenCommands(prev => prev.map(cmd => {
+            if (cmd.user_id === userId) {
+                return {
+                    ...cmd,
+                    profiles: {
+                        ...cmd.profiles,
+                        [field]: (Number(cmd.profiles?.[field]) || 0) + amount
+                    }
+                };
+            }
+            return cmd;
+        }));
+
+        // Update in closedCommands
+        setClosedCommands(prev => prev.map(cmd => {
+            if (cmd.user_id === userId) {
+                return {
+                    ...cmd,
+                    profiles: {
+                        ...cmd.profiles,
+                        [field]: (Number(cmd.profiles?.[field]) || 0) + amount
+                    }
+                };
+            }
+            return cmd;
+        }));
+
+        // Update in searchResults
+        setSearchResults(prev => prev.map(p => {
+            if (p.id === userId) {
+                return {
+                    ...p,
+                    [field]: (Number(p[field]) || 0) + amount
+                };
+            }
+            return p;
+        }));
+
+        // Update searchResults for gifts and debts
+        setGiftSearchResults(prev => prev.map(p => {
+            if (p.id === userId) {
+                return {
+                    ...p,
+                    [field]: (Number(p[field]) || 0) + amount
+                };
+            }
+            return p;
+        }));
+
+        setDebtSearchResults(prev => prev.map(p => {
+            if (p.id === userId) {
+                return {
+                    ...p,
+                    [field]: (Number(p[field]) || 0) + amount
+                };
+            }
+            return p;
+        }));
+
+        // Also update the global currentUser if it's the admin themselves
+        if (currentUser && currentUser.id === userId && onUpdateProfile) {
+            const updatedStats = {
+                ...currentUser,
+                totalPendingDebt: (Number(currentUser.totalPendingDebt) || 0) + amount
+            };
+            onUpdateProfile(userId, updatedStats);
+        }
+    };
+
     useEffect(() => { fetchEvents(); fetchProducts(); fetchAllProducts(); fetchDebts(); fetchProductCategories(); }, []);
     useEffect(() => {
         if (activeTab === 'debts') fetchDebts();
@@ -273,18 +358,29 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         if (data) setAllProducts(data);
     };
     const fetchProductCategories = async () => {
-        const { data } = await supabase.from('product_categories').select('*').order('label');
-        if (data) setProductCategories(data);
+        const { data } = await supabase.from('ecosystem_categories').select('*').order('order', { ascending: true });
+        if (data) {
+            // Map table fields to frontend 'name/label' used by InventoryTab/OperationalTab
+            setProductCategories(data.map(c => ({
+                id: c.id,
+                name: c.id, // Using id as the internal name
+                label: c.title,
+                icon: c.icon,
+                active: true
+            })));
+        }
     };
     const handleAddCategory = async () => {
         if (!newCategory.name || !newCategory.label) { alert('Nome e Rótulo são obrigatórios.'); return; }
         setIsLoading(true);
         try {
-            const { error } = await supabase.from('product_categories').insert({
-                name: newCategory.name.toLowerCase().replace(/\s+/g, '_'),
-                label: newCategory.label,
+            const id = newCategory.name.toLowerCase().replace(/\s+/g, '_');
+            const { error } = await supabase.from('ecosystem_categories').insert({
+                id,
+                title: newCategory.label,
                 icon: newCategory.icon,
-                active: true
+                color: 'primary', // Default color
+                order: productCategories.length + 1
             });
             if (error) throw error;
             alert('✅ Categoria criada com sucesso!');
@@ -581,6 +677,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             });
             if (error) throw error;
 
+            updatePlayerDebtLocally(newDebtData.userId, parseFloat(newDebtData.amount));
+
             await supabase.from('messages').insert({
                 user_id: newDebtData.userId,
                 sender: 'Sistema',
@@ -801,6 +899,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                     status: 'pending'
                 });
                 if (debtErr) throw debtErr;
+                updatePlayerDebtLocally(selectedCommand.user_id, debt);
             }
 
             // 2. Deduct the remainder from player balance
@@ -871,6 +970,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                 paid_at: new Date().toISOString()
             }).eq('id', debt.id);
             if (updateErr) throw updateErr;
+
+            updatePlayerDebtLocally(debt.user_id, -amount);
 
             await supabase.from('messages').insert({
                 user_id: debt.user_id,
@@ -1201,6 +1302,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             usersWithSelectedBadge={usersWithSelectedBadge}
                             handleSendGifts={handleSendGifts}
                             handleGiftSearch={handleGiftSearch}
+                            onCreateBadgeTemplate={onCreateBadgeTemplate}
                             isLoading={isLoading}
                         />
                     )}

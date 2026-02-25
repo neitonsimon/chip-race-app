@@ -36,7 +36,7 @@ export const AppRouter: React.FC = () => {
         handleVoteOnPoll, handleSendAdminMessage, handleSendMessage,
         handleReplyMessage, handleMarkAsRead, updateContent, updateCategory,
         badgeTemplates, experienceLevels, setEvents, setExperienceLevels,
-        dailyRewards, setDailyRewards, getAllUniquePlayers
+        dailyRewards, setDailyRewards, getAllUniquePlayers, handleCreateBadgeTemplate
     } = useApp();
 
     const renderContent = () => {
@@ -139,6 +139,7 @@ export const AppRouter: React.FC = () => {
                     isAdmin={isAdmin}
                     onUpdateProfile={handleProfileUpdate}
                     badgeTemplates={badgeTemplates}
+                    onCreateBadgeTemplate={handleCreateBadgeTemplate}
                     onSendAdminMessage={handleSendAdminMessage}
                     onCreatePoll={handleCreatePoll}
                 />;
