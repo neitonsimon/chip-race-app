@@ -877,7 +877,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             handleEventClosure, handleUpdateRankingMeta, handleUpdateGlobalSchemas, handleAddRanking, handleDeleteRanking, handleAwardBadge,
             handleFinalizeRanking, handleUpdateRankingPrize, handleUpdateTotalQualifiers, handleUpdateMonth, handleToggleMonthStatus,
             handleNavigateToPlayerByName, handleCreatePoll, handleVoteOnPoll, handleSendAdminMessage, handleSendMessage, handleReplyMessage,
-            handleMarkAsRead, updateContent, updateCategory, setNewNotification, getAllUniquePlayers,
+            handleMarkAsRead, handleCreateBadgeTemplate, updateContent, updateCategory, setNewNotification, getAllUniquePlayers,
             setEvents, setExperienceLevels, setDailyRewards
         }}>
             {children}
