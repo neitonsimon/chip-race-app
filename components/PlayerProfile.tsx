@@ -56,6 +56,12 @@ const FALLBACK_DAILY_REWARDS: DailyReward[] = appConfig.playerProfile.fallbackDa
 
 
 type TabView = 'overview' | 'edit' | 'inbox' | 'notifications' | 'comprovantes' | 'pendencias';
+import { DebtPayCard } from './player-profile/DebtPayCard';
+import { PendenciasTab } from './player-profile/PendenciasTab';
+import { ComprovantesTab } from './player-profile/ComprovantesTab';
+import { EditTab } from './player-profile/EditTab';
+import { InboxTab } from './player-profile/InboxTab';
+import { OverviewTab } from './player-profile/OverviewTab';
 
 export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     isAdmin,
@@ -169,6 +175,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
     // --- EDITOR DE IMAGEM (CROP) STATES ---
     const [editorImage, setEditorImage] = useState<string | null>(null);
+    const [cropTarget, setCropTarget] = useState<'avatar' | 'gallery'>('avatar');
     const [zoom, setZoom] = useState(1);
     const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
@@ -239,13 +246,10 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                 rank: initialData.rank,
                 points: initialData.points,
                 winnings: 'R$ ' + (initialData.points * 3.5).toFixed(2),
-                gallery: initialData.gallery || [
-                    'https://images.unsplash.com/photo-1605153322277-dd0d7f608b4d?w=400&h=400&fit=crop',
-                    'https://images.unsplash.com/photo-1544552866-d3ed42536cfd?w=400&h=400&fit=crop'
-                ],
-                playStyles: initialData.playStyles || ["Agressivo", "Math Geek"],
+                gallery: initialData.gallery || [],
+                playStyles: initialData.playStyles || [],
                 social: initialData.social || {
-                    instagram: "@" + initialData.name.split(' ')[0].toLowerCase(),
+                    instagram: "",
                     twitter: "",
                     discord: ""
                 },
@@ -415,7 +419,13 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     useEffect(() => {
         const fetchBadges = async () => {
             if (!targetIdRef.current) return;
-            const { data: userBadges } = await supabase.from('user_badges').select('*').eq('user_id', targetIdRef.current).order('awarded_at', { ascending: false });
+            // Join with badge_templates to get the original creation description
+            const { data: userBadges } = await supabase
+                .from('user_badges')
+                .select('*, badge_templates(description)')
+                .eq('user_id', targetIdRef.current)
+                .order('awarded_at', { ascending: false });
+
             if (userBadges) {
                 setPlayer(prev => ({ ...prev, badges: userBadges }));
             }
@@ -493,7 +503,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             const newBalance = player.balanceBrl - amount;
             const updatedPlayer = { ...player, balanceBrl: newBalance };
             setPlayer(updatedPlayer);
-            if (onUpdateProfile) onUpdateProfile(player.id, updatedPlayer);
+            if (onUpdateProfile) onUpdateProfile(player.id, { balanceBrl: newBalance } as any);
 
             fetchPlayerCommands();
             setViewingReceipt(null);
@@ -505,37 +515,63 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         }
     };
 
-    const handlePayDebt = async (debt: any) => {
+    const handlePayDebt = async (debt: any, customAmount?: number) => {
         if (!isLoggedIn || !isOwnProfile) return;
-        const amount = Number(debt.amount_brl);
-        if (player.balanceBrl < amount) {
-            alert('Saldo insuficiente para quitar esta pendência!');
+        const fullAmount = Number(debt.amount_brl);
+        const payAmount = customAmount ?? fullAmount;
+        const isPartial = payAmount < fullAmount;
+
+        if (payAmount <= 0 || payAmount > fullAmount) {
+            alert('Valor inválido.');
+            return;
+        }
+        if (player.balanceBrl < payAmount) {
+            alert('Saldo insuficiente para este pagamento!');
             return;
         }
 
-        if (!window.confirm(`Deseja quitar a pendência de R$ ${amount.toFixed(2)} usando seu saldo?`)) return;
+        if (!window.confirm(
+            isPartial
+                ? `Pagar R$ ${payAmount.toFixed(2)} agora? R$ ${(fullAmount - payAmount).toFixed(2)} continua em aberto.`
+                : `Quitar a pendência de R$ ${fullAmount.toFixed(2)} usando seu saldo?`
+        )) return;
 
         setIsSavingExp(true);
         try {
+            // 1. Deduct from balance
             const { error: deductErr } = await supabase.rpc('deduct_balance_brl', {
                 p_user_id: player.id,
-                p_amount: amount
+                p_amount: payAmount
             });
             if (deductErr) throw deductErr;
 
-            const { error: updateErr } = await supabase.from('debts').update({
-                status: 'paid',
-                paid_at: new Date().toISOString()
-            }).eq('id', debt.id);
-            if (updateErr) throw updateErr;
+            // 2. Update debt record
+            if (isPartial) {
+                // Reduce amount, keep pending
+                const { error: updateErr } = await supabase.from('debts').update({
+                    amount_brl: fullAmount - payAmount
+                }).eq('id', debt.id);
+                if (updateErr) throw updateErr;
+            } else {
+                // Mark fully paid
+                const { error: updateErr } = await supabase.from('debts').update({
+                    status: 'paid',
+                    paid_at: new Date().toISOString()
+                }).eq('id', debt.id);
+                if (updateErr) throw updateErr;
+            }
 
-            const newBalance = player.balanceBrl - amount;
+            // 3. Update local player state
+            const newBalance = player.balanceBrl - payAmount;
             const updatedPlayer = { ...player, balanceBrl: newBalance };
             setPlayer(updatedPlayer);
-            if (onUpdateProfile) onUpdateProfile(player.id, updatedPlayer);
+            if (onUpdateProfile) onUpdateProfile(player.id, { balanceBrl: newBalance } as any);
 
+            // 4. Refresh debts
             fetchUserDebts();
-            alert('Pendência quitada com sucesso!');
+            alert(isPartial
+                ? `Pagamento parcial de R$ ${payAmount.toFixed(2)} realizado! Saldo restante da pendência: R$ ${(fullAmount - payAmount).toFixed(2)}.`
+                : 'Pendência quitada com sucesso!');
         } catch (err: any) {
             alert('Erro ao pagar: ' + err.message);
         } finally {
@@ -586,7 +622,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
             // Sync with parent context so other views (like Ranking list) update immediately
             if (onUpdateProfile) {
-                onUpdateProfile(targetIdRef.current, updatedPlayer);
+                onUpdateProfile(targetIdRef.current, { isVerified: newStatus } as any);
             }
 
             alert(`Jogador ${newStatus ? 'verificado' : 'desverificado'} com sucesso!`);
@@ -595,85 +631,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         }
     };
 
-    const renderInbox = () => {
-        const mList = messages || [];
-        const filtered = inboxFilter === 'all' ? mList : mList.filter(m => m.category === inboxFilter);
 
-        return (
-            <div className="space-y-8 animate-in fade-in duration-500 p-8">
-
-
-                {/* FILTROS */}
-                <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                    {['all', 'system', 'gift', 'admin', 'private', 'tournament', 'poll'].map(cat => (
-                        <button
-                            key={cat}
-                            onClick={() => setInboxFilter(cat as any)}
-                            className={`px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${inboxFilter === cat ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
-                        >
-                            {cat === 'all' ? '📬 Todas' :
-                                cat === 'system' ? '⚙️ Sistema' :
-                                    cat === 'gift' ? '🎁 Presentes' :
-                                        cat === 'admin' ? '📣 Admin' :
-                                            cat === 'private' ? '💬 Privadas' :
-                                                cat === 'tournament' ? '🏆 Torneio' :
-                                                    cat === 'poll' ? '📊 Enquetes' : cat}
-                        </button>
-                    ))}
-                </div>
-
-                {/* LISTA DE MENSAGENS */}
-                <div className="grid grid-cols-1 gap-4">
-                    {filtered.length === 0 ? (
-                        <div className="py-24 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
-                            <span className="material-icons-outlined text-6xl text-gray-700 mb-4 block">mail_outline</span>
-                            <p className="text-gray-500 text-lg">Sua caixa de entrada está vazia.</p>
-                        </div>
-                    ) : (
-                        filtered.map(msg => (
-                            <div
-                                key={msg.id}
-                                onClick={() => {
-                                    setViewedMessage(msg);
-                                    if (!msg.read && onMarkAsRead) onMarkAsRead(msg.id);
-                                }}
-                                className={`p-6 rounded-3xl border transition-all cursor-pointer group flex gap-6 items-center ${msg.read ? 'bg-black/20 border-white/5 opacity-80' : 'bg-surface-dark border-primary/30 shadow-[0_0_30px_rgba(217,0,255,0.05)] hover:border-primary/60'}`}
-                            >
-                                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${msg.category === 'poll' ? 'bg-cyan-500/20 text-cyan-400' :
-                                    msg.category === 'private' ? 'bg-secondary/20 text-secondary' :
-                                        msg.category === 'admin' ? 'bg-red-500/20 text-red-400' :
-                                            msg.category === 'gift' ? 'bg-yellow-500/20 text-yellow-400' :
-                                                'bg-primary/20 text-primary'
-                                    }`}>
-                                    <span className="material-icons-outlined text-3xl">
-                                        {msg.category === 'poll' ? 'poll' :
-                                            msg.category === 'private' ? 'chat' :
-                                                msg.category === 'gift' ? 'redeem' :
-                                                    msg.category === 'tournament' ? 'stars' :
-                                                        'notifications'}
-                                    </span>
-                                </div>
-                                <div className="flex-grow min-w-0">
-                                    <div className="flex justify-between items-start mb-1">
-                                        <span className="text-sm font-bold text-gray-400 flex items-center gap-2">
-                                            {msg.from}
-                                            {!msg.read && <span className="w-2 h-2 bg-primary rounded-full animate-pulse"></span>}
-                                        </span>
-                                        <span className="text-[10px] text-gray-600 font-mono tracking-tighter uppercase">{msg.date}</span>
-                                    </div>
-                                    <h4 className="text-xl font-bold text-white mb-2 group-hover:text-primary transition-colors truncate">{msg.subject}</h4>
-                                    <p className="text-base text-gray-500 line-clamp-1 leading-relaxed">{msg.content}</p>
-                                </div>
-                                <div className="text-gray-600 group-hover:text-primary transition-colors">
-                                    <span className="material-icons-outlined">chevron_right</span>
-                                </div>
-                            </div>
-                        ))
-                    )}
-                </div>
-            </div>
-        );
-    };
 
     // Lógica de Verificação de Resgate (Reset às 21h)
     const checkClaimAvailability = (lastClaim: string | null) => {
@@ -713,11 +671,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
             if (data && data.status === 'success') {
                 setClaimAnimation(true);
-                // The reward is applied in backend, we just need to refresh
-                if (onUpdateProfile) {
-                    // This will trigger a re-fetch of the profile in parent
-                    onUpdateProfile(targetIdRef.current, { ...player });
-                }
+                // The reward is applied in backend via RPC. 
+                // Rely on realtime subscription for update.
 
                 // Show animation then close
                 setTimeout(() => {
@@ -753,7 +708,10 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         setShowClaimModal(false);
 
         if (onUpdateProfile) {
-            onUpdateProfile(targetIdRef.current, newPlayerData);
+            onUpdateProfile(targetIdRef.current, {
+                lastDailyClaim: newPlayerData.lastDailyClaim,
+                dailyStreak: newPlayerData.dailyStreak
+            } as any);
         }
     };
 
@@ -810,10 +768,16 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         if (file) {
             const reader = new FileReader();
             reader.onloadend = () => {
-                setNewPhotoUrl(reader.result as string);
+                // Abre o editor de foto para a galeria também
+                setCropTarget('gallery');
+                setEditorImage(reader.result as string);
+                setZoom(0.3); // Zoom mais afastado para galeria (landscape friendly)
+                setCropOffset({ x: 0, y: 0 });
+                setShowUploadModal(false); // Fecha o seletor
             };
             reader.readAsDataURL(file);
         }
+        e.target.value = '';
     };
 
     // Handler específico para Avatar (Abre Editor)
@@ -822,14 +786,13 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         if (file) {
             const reader = new FileReader();
             reader.onloadend = () => {
-                // Em vez de atualizar direto, abre o modal de edição
+                setCropTarget('avatar');
                 setEditorImage(reader.result as string);
-                setZoom(0.4); // Zoom inicial mais afastado
+                setZoom(0.4);
                 setCropOffset({ x: 0, y: 0 });
             };
             reader.readAsDataURL(file);
         }
-        // Reset input value to allow selecting same file again
         e.target.value = '';
     };
 
@@ -859,31 +822,23 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         if (!editorImage || !imageRef.current) return;
 
         const canvas = document.createElement('canvas');
-        const size = 400; // Resolução final
+        const size = 600; // Resolution enhanced for gallery
         canvas.width = size;
         canvas.height = size;
         const ctx = canvas.getContext('2d');
 
         if (ctx) {
-            // Fill background just in case
             ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, size, size);
 
-            // O "viewport" na tela tem tamanho fixo (ex: 280px).
-            // Precisamos mapear a transformação da tela para o canvas final.
             const viewportSize = 280;
             const scaleFactor = size / viewportSize;
 
-            // Move para o centro do canvas
             ctx.translate(size / 2, size / 2);
-            // Aplica o deslocamento do usuário (ajustado pela escala de resolução)
             ctx.translate(cropOffset.x * scaleFactor, cropOffset.y * scaleFactor);
-            // Aplica o zoom
             ctx.scale(zoom, zoom);
-            // Move o ponto de origem da imagem para o centro dela mesma, para que o zoom/rotate seja centralizado
             ctx.translate(-imageRef.current.width * scaleFactor / 2, -imageRef.current.height * scaleFactor / 2);
 
-            // Desenha a imagem redimensionada
             ctx.drawImage(
                 imageRef.current,
                 0,
@@ -892,10 +847,16 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                 imageRef.current.height * scaleFactor
             );
 
-            // Converte para Base64 e Salva
             const croppedBase64 = canvas.toDataURL('image/jpeg', 0.9);
-            handleUpdate('avatar', croppedBase64);
-            setEditorImage(null); // Fecha o modal
+
+            if (cropTarget === 'avatar') {
+                handleUpdate('avatar', croppedBase64);
+            } else {
+                // Envia para o estado da galeria
+                setPlayer(prev => ({ ...prev, gallery: [...prev.gallery, croppedBase64] }));
+            }
+
+            setEditorImage(null);
         }
     };
     // -----------------------
@@ -922,9 +883,19 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     };
 
     const handleSaveProfile = () => {
-        // Chama a função de update do pai para persistir no "banco"
+        // Only send editable fields to parent update function to avoid overwriting 
+        // sensitive fields like EXP or balance with stale local data.
         if (onUpdateProfile) {
-            onUpdateProfile(targetIdRef.current, player);
+            const editableData = {
+                name: player.name,
+                avatar: player.avatar,
+                city: player.city,
+                bio: player.bio,
+                social: player.social,
+                playStyles: player.playStyles,
+                gallery: player.gallery
+            };
+            onUpdateProfile(targetIdRef.current, editableData as any);
             // Atualiza a ref para o novo nome caso tenha mudado
             originalNameRef.current = player.name;
         }
@@ -1011,1106 +982,399 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         <div className="py-12 bg-background-light dark:bg-background-dark min-h-screen">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
 
-                {/* PROFILE TABS */}
-                <div className="flex items-center justify-between mb-8 border-b border-gray-200 dark:border-white/10 pb-1">
-                    <div className="flex gap-4">
+                {/* PROFILE TABS COMPACT */}
+                <div className="flex items-center gap-1 md:gap-2 mb-10 overflow-x-auto no-scrollbar pb-2 px-1">
+                    <button
+                        onClick={() => setActiveTab('overview')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-[0.15em] transition-all whitespace-nowrap ${activeTab === 'overview'
+                            ? 'bg-primary text-white shadow-neon-pink'
+                            : 'bg-white/5 text-gray-500 hover:bg-white/10 hover:text-white'
+                            }`}
+                    >
+                        <span className="material-icons-outlined text-sm md:text-lg">account_circle</span>
+                        <span>Sobre</span>
+                    </button>
+
+                    {canEdit && (
                         <button
-                            onClick={() => setActiveTab('overview')}
-                            className={`pb-3 px-4 text-base font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'overview'
-                                ? 'border-primary text-primary'
-                                : 'border-transparent text-gray-500 hover:text-white'
+                            onClick={() => setActiveTab('edit')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-[0.15em] transition-all whitespace-nowrap ${activeTab === 'edit'
+                                ? 'bg-secondary text-black shadow-[0_0_20px_rgba(0,224,255,0.3)]'
+                                : 'bg-white/5 text-gray-500 hover:bg-white/10 hover:text-white'
                                 }`}
                         >
-                            Visão Geral
+                            <span className="material-icons-outlined text-sm md:text-lg">edit</span>
+                            <span>Editar</span>
                         </button>
-                        {canEdit && (
-                            <button
-                                onClick={() => setActiveTab('edit')}
-                                className={`pb-3 px-4 text-base font-bold uppercase tracking-wider transition-all border-b-2 flex items-center gap-2 ${activeTab === 'edit'
-                                    ? 'border-secondary text-secondary'
-                                    : 'border-transparent text-gray-500 hover:text-white'
-                                    }`}
-                            >
-                                <span className="material-icons-outlined text-base">edit</span> Editar Perfil
-                            </button>
-                        )}
-                        {isOwnProfile && (
-                            <button
-                                onClick={() => setActiveTab('inbox')}
-                                className={`pb-3 px-4 text-base font-bold uppercase tracking-wider transition-all border-b-2 flex items-center gap-2 ${activeTab === 'inbox'
-                                    ? 'border-primary text-primary'
-                                    : 'border-transparent text-gray-500 hover:text-white'
-                                    }`}
-                            >
-                                <span className="material-icons-outlined text-base">notifications</span> Mensagens
-                                {messages && messages.filter(m => !m.read).length > 0 && (
-                                    <span className="bg-primary text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">
-                                        {messages.filter(m => !m.read).length}
-                                    </span>
-                                )}
-                            </button>
-                        )}
-                        {isOwnProfile && (
-                            <button
-                                onClick={() => setActiveTab('comprovantes')}
-                                className={`pb-3 px-4 text-base font-bold uppercase tracking-wider transition-all border-b-2 flex items-center gap-2 ${activeTab === 'comprovantes'
-                                    ? 'border-green-400 text-green-400'
-                                    : 'border-transparent text-gray-500 hover:text-white'
-                                    }`}
-                            >
-                                <span className="material-icons-outlined text-base">receipt_long</span> Comprovantes
-                            </button>
-                        )}
-                        {isOwnProfile && (
-                            <button
-                                onClick={() => setActiveTab('pendencias')}
-                                className={`pb-3 px-4 text-base font-bold uppercase tracking-wider transition-all border-b-2 flex items-center gap-2 ${activeTab === 'pendencias'
-                                    ? 'border-red-500 text-red-500'
-                                    : 'border-transparent text-gray-500 hover:text-white'
-                                    }`}
-                            >
-                                <span className="material-icons-outlined text-base">error_outline</span> Pendências
-                                {totalUserDebt > 0 && (
-                                    <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1 animate-pulse">
-                                        R$ {totalUserDebt.toFixed(0)}
-                                    </span>
-                                )}
-                            </button>
-                        )}
-                    </div>
+                    )}
+
+                    {isOwnProfile && (
+                        <button
+                            onClick={() => setActiveTab('inbox')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-[0.15em] transition-all whitespace-nowrap relative ${activeTab === 'inbox'
+                                ? 'bg-primary text-white shadow-neon-pink'
+                                : 'bg-white/5 text-gray-500 hover:bg-white/10 hover:text-white'
+                                }`}
+                        >
+                            <span className="material-icons-outlined text-sm md:text-lg">mail</span>
+                            <span>Inbox</span>
+                            {messages && messages.filter(m => !m.read).length > 0 && (
+                                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-600 text-white text-[9px] flex items-center justify-center rounded-full animate-pulse border border-white/20">
+                                    {messages.filter(m => !m.read).length}
+                                </span>
+                            )}
+                        </button>
+                    )}
+
+                    {isOwnProfile && (
+                        <button
+                            onClick={() => setActiveTab('comprovantes')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-[0.15em] transition-all whitespace-nowrap ${activeTab === 'comprovantes'
+                                ? 'bg-green-500 text-white shadow-[0_0_20px_rgba(34,197,94,0.3)]'
+                                : 'bg-white/5 text-gray-500 hover:bg-white/10 hover:text-white'
+                                }`}
+                        >
+                            <span className="material-icons-outlined text-sm md:text-lg">receipt_long</span>
+                            <span>Recibos</span>
+                        </button>
+                    )}
+
+                    {isOwnProfile && (
+                        <button
+                            onClick={() => setActiveTab('pendencias')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-[0.15em] transition-all whitespace-nowrap relative ${activeTab === 'pendencias'
+                                ? 'bg-red-500 text-white shadow-neon-red'
+                                : 'bg-white/5 text-gray-500 hover:bg-white/10 hover:text-white'
+                                }`}
+                        >
+                            <span className="material-icons-outlined text-sm md:text-lg">pending_actions</span>
+                            <span>Pendura</span>
+                            {totalUserDebt > 0 && (
+                                <span className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-red-600 text-white text-[9px] flex items-center justify-center rounded-full animate-pulse border border-white/20">
+                                    {totalUserDebt.toFixed(0)}
+                                </span>
+                            )}
+                        </button>
+                    )}
                 </div>
 
 
                 {/* ======================= OVERVIEW TAB ======================= */}
                 {activeTab === 'overview' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in duration-500">
-                        {/* Left Column: Main Info */}
-                        <div className="lg:col-span-1">
-                            <div className="bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/5 rounded-3xl p-8 text-center relative overflow-hidden shadow-xl">
-                                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-secondary"></div>
-
-                                <div className="relative inline-block mb-6 group">
-                                    <img
-                                        src={player.avatar}
-                                        alt={player.name}
-                                        className="w-40 h-40 rounded-full border-4 border-gray-100 dark:border-white/10 p-1 mx-auto object-cover"
-                                    />
-                                    {(player.vipStatus === 'master') ? (
-                                        <div className="absolute bottom-2 right-[-10px] bg-gradient-to-r from-yellow-600 to-yellow-400 text-black text-[10px] md:text-xs font-black px-3 py-1 rounded-full border-2 border-surface-dark z-20 shadow-[0_0_15px_rgba(250,204,21,0.5)] flex items-center gap-1 animate-pulse">
-                                            <span className="material-icons-outlined text-[10px] md:text-xs">diamond</span>
-                                            VIP MASTER
-                                        </div>
-                                    ) : (player.vipStatus === 'anual') ? (
-                                        <div className="absolute bottom-2 right-2 bg-primary text-white text-[10px] md:text-xs font-black px-3 py-1 rounded-full border-2 border-surface-dark z-20 shadow-neon-blue flex items-center gap-1">
-                                            <span className="material-icons-outlined text-[10px] md:text-xs">diamond</span>
-                                            VIP GOLD
-                                        </div>
-                                    ) : (player.vipStatus === 'trimestral') ? (
-                                        <div className="absolute bottom-2 right-2 bg-secondary text-black text-[10px] md:text-xs font-black px-3 py-1 rounded-full border-2 border-surface-dark z-20 shadow-[0_0_15px_rgba(0,224,255,0.5)] flex items-center gap-1">
-                                            <span className="material-icons-outlined text-[10px] md:text-xs">diamond</span>
-                                            VIP BRONZE
-                                        </div>
-                                    ) : (player.isVip) ? (
-                                        <div className="absolute bottom-2 right-2 bg-primary text-white text-[10px] md:text-xs font-black px-2 md:px-3 py-1 rounded-full border-2 border-surface-dark z-20 shadow-neon-blue flex items-center gap-1">
-                                            <span className="material-icons-outlined text-[10px] md:text-xs">diamond</span>
-                                            VIP
-                                        </div>
-                                    ) : null}
-                                </div>
-
-                                <div className="flex items-center justify-center gap-2 mb-0.5">
-                                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white uppercase tracking-tight">{player.name}</h1>
-                                    {(player.isVerified || isAdmin) && (
-                                        <span
-                                            onClick={isAdmin ? toggleVerification : undefined}
-                                            className={`material-icons text-xl transition-all ${player.isVerified ? 'text-cyan-400' : 'text-white/10'} ${isAdmin ? 'cursor-pointer hover:scale-110 active:scale-95' : ''}`}
-                                            title={player.isVerified ? "Usuário Verificado" : isAdmin ? "Clique para verificar usuário" : ""}
-                                        >
-                                            verified
-                                        </span>
-                                    )}
-                                </div>
-                                <div className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-4 bg-primary/10 inline-block px-3 py-1 rounded-full border border-primary/20">
-                                    ID: {player.numericId ? `CR#${String(player.numericId).padStart(3, '0')}` : 'CR#GUEST'}
-                                </div>
-                                <p className="text-gray-500 dark:text-gray-400 text-base mb-6">{player.city}</p>
-
-                                {/* Badges Section */}
-                                {player.badges && player.badges.length > 0 && (
-                                    <div className="mb-6 flex flex-wrap justify-center gap-2">
-                                        {player.badges.map(badge => (
-                                            <div key={badge.id} title={`${badge.title} - ${badge.description}`} className="group relative w-12 h-12 bg-gradient-to-br from-[#1a1438] to-[#0f0a28] border border-yellow-500/50 rounded-lg flex items-center justify-center shadow-[0_0_10px_rgba(234,179,8,0.2)] hover:shadow-[0_0_20px_rgba(234,179,8,0.5)] transition-all cursor-help transform hover:scale-110">
-                                                {badge.image_url ? (
-                                                    <img src={badge.image_url} alt={badge.title} className="w-8 h-8 object-contain filter drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]" />
-                                                ) : (
-                                                    <span className="material-icons-outlined text-yellow-400 text-2xl filter drop-shadow-[0_0_5px_rgba(234,179,8,0.8)]">{badge.icon}</span>
-                                                )}
-                                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-black/90 text-white text-[10px] p-2 rounded border border-white/10 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
-                                                    <p className="font-bold text-yellow-400 mb-1">{badge.title}</p>
-                                                    <p className="text-gray-300 relative z-50 whitespace-normal break-words">{badge.description}</p>
-                                                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-black/90 border-b border-r border-white/10 transform rotate-45"></div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-
-
-                                {/* Social Media Section */}
-                                <div className="flex justify-center gap-4 mb-8">
-                                    {player.social.instagram && (
-                                        <a
-                                            href={`https://instagram.com/${player.social.instagram.replace('@', '')}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="w-10 h-10 rounded-full bg-white/5 hover:bg-pink-600/20 hover:text-pink-500 flex items-center justify-center transition-colors"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                                                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-                                                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-                                            </svg>
-                                        </a>
-                                    )}
-                                    {player.social.twitter && (
-                                        <a
-                                            href={`https://twitter.com/${player.social.twitter.replace('@', '')}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="w-10 h-10 rounded-full bg-white/5 hover:bg-blue-400/20 hover:text-blue-400 flex items-center justify-center transition-colors"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                                <path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"></path>
-                                            </svg>
-                                        </a>
-                                    )}
-                                    {player.social.discord && (
-                                        <a
-                                            href="https://discord.com/app"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="w-10 h-10 rounded-full bg-white/5 hover:bg-[#5865F2]/20 hover:text-[#5865F2] flex items-center justify-center transition-colors"
-                                            title={`ID: ${player.social.discord}`}
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                                                <path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z" />
-                                            </svg>
-                                        </a>
-                                    )}
-                                </div>
-
-                                <div className="border-t border-white/10 pt-6">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div title={`UUID: ${player.id}`}>
-                                            <div className="text-xs text-gray-500 uppercase tracking-wide">ID Chip Race</div>
-                                            <div className="text-xl font-display font-black text-primary">
-                                                {player.numericId ? `CR#${String(player.numericId).padStart(3, '0')}` : 'CR#GUEST'}
-                                            </div>
-                                        </div>
-                                        {/* NEW XP & LEVEL UI */}
-                                        <div className="flex flex-col items-center">
-                                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Nível {player.level}</div>
-                                            <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden relative">
-                                                <div
-                                                    className="h-full bg-gradient-to-r from-blue-500 to-cyan-400"
-                                                    style={{ width: `${xpPercentage}%` }}
-                                                ></div>
-                                            </div>
-                                            <div className="text-[9px] text-gray-400 mt-1">{currentExpInTier} / {displayNextExp} XP</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {!isOwnProfile && (
-                                    <div className="mt-6">
-                                        <button
-                                            onClick={() => setShowMessageModal(true)}
-                                            className="w-full py-2 bg-primary hover:bg-primary/90 text-white rounded-lg text-base font-bold shadow-lg transition-colors flex items-center justify-center gap-2"
-                                        >
-                                            <span className="material-icons-outlined text-base">mail</span> Enviar Mensagem
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* DAILY LOGIN SECTION (Replaced Trophy Room) */}
-                            <div className="mt-8 bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/5 rounded-3xl p-6 shadow-xl relative overflow-hidden group">
-                                {/* Glow Effect if Claim Available */}
-                                {isOwnProfile && canClaimDaily && <div className="absolute inset-0 bg-primary/5 animate-pulse pointer-events-none"></div>}
-
-                                <div className="flex justify-between items-center mb-4 w-full">
-                                    <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                        <span className="material-icons-outlined text-yellow-400">calendar_today</span>
-                                        Login Diário
-                                    </h3>
-                                    <div className="flex items-center gap-2">
-                                        {isAdmin && isOwnProfile && (
-                                            <button
-                                                onClick={() => {
-                                                    const yesterday = new Date();
-                                                    yesterday.setDate(yesterday.getDate() - 1);
-                                                    const newLastClaim = yesterday.toISOString();
-                                                    const newPlayerData = { ...player, lastDailyClaim: newLastClaim };
-                                                    setPlayer(newPlayerData);
-                                                    checkClaimAvailability(newLastClaim);
-                                                    if (onUpdateProfile) onUpdateProfile(targetIdRef.current, newPlayerData);
-                                                }}
-                                                className="px-2 py-1 bg-cyan-600/20 text-cyan-400 text-[10px] font-bold rounded uppercase hover:bg-cyan-600 hover:text-white transition-colors flex items-center gap-1"
-                                                title="DEV: Forçar reset de 24h"
-                                            >
-                                                <span className="material-icons-outlined text-[12px]">fast_forward</span> DEV: +1 DIA
-                                            </button>
-                                        )}
-                                        <div className="text-xs bg-black/20 px-2 py-1 rounded text-gray-400">
-                                            Reset: 21:00
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col items-center justify-center text-center py-2">
-                                    {isOwnProfile ? (
-                                        <>
-                                            <div className="mb-4 relative">
-                                                <div className={`w-16 h-16 rounded-full flex items-center justify-center border-2 transition-all ${canClaimDaily
-                                                    ? 'bg-primary border-primary shadow-neon-pink animate-bounce'
-                                                    : 'bg-gray-800 border-gray-700'
-                                                    }`}>
-                                                    <span className="material-icons-outlined text-3xl text-white">
-                                                        {canClaimDaily ? 'redeem' : 'check'}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            <h4 className="text-lg font-bold text-white mb-1">
-                                                {canClaimDaily ? 'Recompensa Disponível!' : 'Volte amanhã'}
-                                            </h4>
-                                            <p className="text-sm text-gray-500 mb-4 max-w-[200px]">
-                                                {canClaimDaily
-                                                    ? 'Resgate agora seu bônus diário de XP e itens exclusivos.'
-                                                    : 'Você já resgatou seu bônus de hoje. O reset ocorre às 21:00.'}
-                                            </p>
-
-                                            <button
-                                                onClick={() => setShowClaimModal(true)}
-                                                disabled={!canClaimDaily}
-                                                className={`w-full py-3 rounded-xl font-bold uppercase tracking-widest transition-all ${canClaimDaily
-                                                    ? 'bg-gradient-to-r from-primary to-accent text-white hover:shadow-neon-pink hover:scale-105'
-                                                    : 'bg-white/5 text-gray-600 cursor-not-allowed'
-                                                    }`}
-                                            >
-                                                {canClaimDaily ? 'RESGATAR BÔNUS' : 'JÁ RESGATADO'}
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <p className="text-sm text-gray-500 italic">Visível apenas para o dono do perfil.</p>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Right Column: Stats & Analysis */}
-                        <div className="lg:col-span-2 space-y-8">
-
-                            {/* Main Stats Cards */}
-                            {isLoading ? (
-                                <ProfileStatsSkeleton />
-                            ) : (
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                    <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-primary/50 transition-colors">
-                                        <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                                            <span className="material-icons-outlined text-4xl">leaderboard</span>
-                                        </div>
-                                        <div className="text-3xl font-display font-black text-white">
-                                            {(() => {
-                                                if (rankings) {
-                                                    const legacy = rankings.find(r => r.id === 'legacy');
-                                                    if (legacy) {
-                                                        const match = legacy.players.find(p =>
-                                                            (p.id && player.id && p.id === player.id) ||
-                                                            p.name.toLowerCase() === player.name.toLowerCase()
-                                                        );
-                                                        if (match && match.rank > 0) return match.rank + 'º';
-                                                    }
-                                                }
-                                                return player.rank > 0 ? player.rank + 'º' : '-';
-                                            })()}
-                                        </div>
-                                        <div className="text-sm text-gray-500 uppercase tracking-wider">Ranking Geral</div>
-                                    </div>
-                                    <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-secondary/50 transition-colors">
-                                        <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                                            <span className="material-icons-outlined text-4xl">payments</span>
-                                        </div>
-                                        <div className="text-xl font-display font-black text-secondary">{player.winnings}</div>
-                                        <div className="text-sm text-gray-500 uppercase tracking-wider">Ganhos Totais</div>
-                                    </div>
-                                    <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-cyan-500/50 transition-colors">
-                                        <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                                            <span className="material-icons-outlined text-4xl">emoji_events</span>
-                                        </div>
-                                        <div className="text-3xl font-display font-black text-cyan-500">{player.titles}</div>
-                                        <div className="text-sm text-gray-500 uppercase tracking-wider">Títulos</div>
-                                    </div>
-                                    <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-pink-500/50 transition-colors">
-                                        <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                                            <span className="material-icons-outlined text-4xl">pie_chart</span>
-                                        </div>
-                                        <div className="text-3xl font-display font-black text-pink-500">{player.itm}</div>
-                                        <div className="text-sm text-gray-500 uppercase tracking-wider">ITM %</div>
-                                    </div>
-                                    {/* NEW: CREDIT LIMIT CARD */}
-                                    <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-green-500/50 transition-colors col-span-2 sm:col-span-4">
-                                        <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                                            <span className="material-icons-outlined text-4xl">credit_card</span>
-                                        </div>
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <div className="text-2xl font-display font-black text-green-500">
-                                                    R$ {((player as any).debtLimitBrl || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                </div>
-                                                <div className="text-xs text-gray-500 uppercase tracking-wider">Limite de Crédito (Nível {player.level})</div>
-                                            </div>
-                                            <div className="text-right">
-                                                <div className="text-[10px] text-gray-500 uppercase font-bold mb-1">Próximo Limite</div>
-                                                <div className="text-sm font-black text-white/40">
-                                                    {(() => {
-                                                        const nextLvl = experienceLevels?.find(l => l.level === player.level + 1);
-                                                        return nextLvl ? `R$ ${nextLvl.credit_limit.toFixed(2)}` : 'Limite Máximo';
-                                                    })()}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Explainer for the level system */}
-                                        <div className="mt-4 pt-4 border-t border-white/5 text-[10px] text-gray-500 leading-relaxed italic">
-                                            O seu nível Chip Race reflete sua frequência, engajamento e paixão pelo esporte.
-                                            Quanto mais você participa dos eventos e interage no app, mais EXP ganha, evoluindo seu nível e desbloqueando benefícios como maiores limites de pendura e recompensas exclusivas.
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Tournament Log - CONDENSED MOBILE VIEW */}
-                            <div className="bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/5 rounded-3xl overflow-hidden shadow-xl">
-                                <div className="p-6 border-b border-white/5">
-                                    <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                        <span className="material-icons-outlined text-primary">history</span>
-                                        Histórico de Torneios
-                                    </h3>
-                                </div>
-                                <div className="overflow-hidden">
-                                    <table className="w-full text-left text-sm md:text-base text-gray-400">
-                                        <thead className="bg-black/20 text-[10px] md:text-xs uppercase font-bold text-gray-500">
-                                            <tr>
-                                                <th className="px-3 md:px-6 py-3 hidden sm:table-cell">Data</th>
-                                                <th className="px-3 md:px-6 py-3">Evento</th>
-                                                <th className="px-2 md:px-6 py-3 text-center">Pos</th>
-                                                <th className="px-3 md:px-6 py-3 text-right">Prêmio</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-white/5">
-                                            {player.tournamentLog && player.tournamentLog.length > 0 ? (
-                                                player.tournamentLog.map((log, index) => (
-                                                    <tr
-                                                        key={index}
-                                                        className="hover:bg-white/5 transition-colors cursor-pointer group/row"
-                                                        onClick={() => handleOpenFlyer(log)}
-                                                    >
-                                                        <td className="px-3 md:px-6 py-4 whitespace-nowrap hidden sm:table-cell">{log.date}</td>
-                                                        <td className="px-3 md:px-6 py-4 font-bold text-white truncate max-w-[120px] md:max-w-none">
-                                                            <div className="flex flex-col">
-                                                                <span className="group-hover/row:text-primary transition-colors">{log.eventName}</span>
-                                                                <span className="text-[9px] text-gray-500 sm:hidden block mt-0.5">{log.date}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-2 md:px-6 py-4 text-center">
-                                                            <span className={`px-2 py-1 rounded text-[10px] md:text-sm font-bold ${log.position === 1 ? 'bg-yellow-500/20 text-yellow-500' :
-                                                                log.position <= 3 ? 'bg-gray-500/20 text-gray-300' : 'text-gray-500'
-                                                                }`}>
-                                                                {log.position}º
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-3 md:px-6 py-4 text-right text-white text-xs md:text-base">{log.prize}</td>
-                                                    </tr>
-                                                ))
-                                            ) : (
-                                                <tr>
-                                                    <td colSpan={4} className="px-6 py-8 text-center text-gray-600 italic">
-                                                        Nenhum torneio registrado nesta temporada.
-                                                    </td>
-                                                </tr>
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                            {/* Play Style & Gallery */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/5 rounded-3xl p-6 flex flex-col overflow-visible">
-                                    <h3 className="font-bold text-gray-900 dark:text-white mb-4">Estilo de Jogo</h3>
-                                    <div className="flex flex-wrap gap-2 mb-4">
-                                        {player.playStyles.map((style, idx) => {
-                                            const colors = [
-                                                'text-red-500 border-red-500/20 bg-red-500/10',
-                                                'text-blue-500 border-blue-500/20 bg-blue-500/10',
-                                                'text-cyan-500 border-cyan-500/20 bg-cyan-500/10',
-                                                'text-green-500 border-green-500/20 bg-green-500/10',
-                                                'text-yellow-500 border-yellow-500/20 bg-yellow-500/10',
-                                            ];
-                                            const colorClass = colors[idx % colors.length];
-                                            return (
-                                                <div key={idx} className="group relative">
-                                                    <span className={`cursor-help px-3 py-1 text-sm font-bold rounded-full border ${colorClass}`}>
-                                                        {style}
-                                                    </span>
-                                                    {/* Tooltip */}
-                                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-3 bg-surface-dark border border-white/20 rounded-xl text-xs text-white shadow-2xl invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all z-[100] pointer-events-none">
-                                                        <div className="font-bold mb-1 text-primary">{style}</div>
-                                                        <div className="text-gray-300 leading-snug">{PLAY_STYLE_DEFINITIONS[style] || "Sem descrição."}</div>
-                                                        {/* Arrow */}
-                                                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-white/20"></div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                        {player.playStyles.length === 0 && (
-                                            <span className="text-gray-500 text-sm italic">Nenhum estilo definido.</span>
-                                        )}
-                                    </div>
-                                    <div className="mt-6">
-                                        <h4 className="font-bold text-gray-900 dark:text-white mb-2 text-sm">Bio</h4>
-                                        <p className="text-gray-500 text-base leading-relaxed italic">
-                                            "{player.bio}"
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/5 rounded-3xl p-6">
-                                    <h3 className="font-bold text-gray-900 dark:text-white mb-4">Galeria</h3>
-                                    {player.gallery.length > 0 ? (
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {player.gallery.map((img, idx) => (
-                                                <div
-                                                    key={idx}
-                                                    className="aspect-square rounded-lg overflow-hidden relative group cursor-pointer"
-                                                    onClick={() => setSelectedImage(img)}
-                                                >
-                                                    <img src={img} alt="Gallery" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                        <span className="material-icons-outlined text-white text-3xl">zoom_in</span>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="h-40 flex items-center justify-center text-gray-500 text-sm italic border border-white/5 rounded-lg">
-                                            Sem fotos.
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                        </div>
-                    </div>
+                    <OverviewTab
+                        player={player}
+                        isAdmin={isAdmin}
+                        isOwnProfile={isOwnProfile}
+                        canClaimDaily={canClaimDaily}
+                        toggleVerification={toggleVerification}
+                        xpPercentage={xpPercentage}
+                        currentExpInTier={currentExpInTier}
+                        displayNextExp={displayNextExp}
+                        setShowMessageModal={setShowMessageModal}
+                        checkClaimAvailability={checkClaimAvailability}
+                        onUpdateProfile={onUpdateProfile}
+                        targetIdRef={targetIdRef}
+                        setShowClaimModal={setShowClaimModal}
+                        isLoading={isLoading}
+                        rankings={rankings}
+                        experienceLevels={experienceLevels}
+                        handleOpenFlyer={handleOpenFlyer}
+                        setSelectedImage={setSelectedImage}
+                        setPlayer={setPlayer}
+                    />
                 )}
 
                 {/* ... (EDIT TAB CONTENT - Remains unchanged) ... */}
-                {activeTab === 'inbox' && isOwnProfile && renderInbox()}
+                {activeTab === 'inbox' && isOwnProfile && (
+                    <InboxTab
+                        messages={messages || []}
+                        inboxFilter={inboxFilter}
+                        setInboxFilter={setInboxFilter}
+                        setViewedMessage={setViewedMessage}
+                        onMarkAsRead={onMarkAsRead}
+                    />
+                )}
 
                 {/* ======================= PENDÊNCIAS TAB ======================= */}
                 {activeTab === 'pendencias' && isOwnProfile && (
-                    <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 p-8">
-                        <div className="flex items-center justify-between mb-8">
-                            <div className="flex items-center gap-4">
-                                <div className="w-14 h-14 rounded-2xl bg-red-500/20 border border-red-500/30 flex items-center justify-center shadow-neon-red">
-                                    <span className="material-icons-outlined text-red-500 text-3xl">receipt_long</span>
-                                </div>
-                                <div>
-                                    <h3 className="text-2xl font-display font-black text-white uppercase tracking-wider">Suas Pendências</h3>
-                                    <p className="text-gray-400 text-sm">Controle de débitos pendentes com o clube.</p>
-                                </div>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-[10px] text-gray-500 font-black uppercase mb-1">Total a Pagar</p>
-                                <p className="text-3xl font-display font-black text-red-500">R$ {totalUserDebt.toFixed(2)}</p>
-                            </div>
-                        </div>
-
-                        {userDebts.length === 0 ? (
-                            <div className="py-24 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
-                                <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                                    <span className="material-icons-outlined text-5xl text-green-500">check_circle</span>
-                                </div>
-                                <h4 className="text-xl font-bold text-white mb-2">Tudo em dia!</h4>
-                                <p className="text-gray-500">Você não possui nenhuma pendência registrada.</p>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 gap-4">
-                                {userDebts.map(debt => (
-                                    <div key={debt.id} className="bg-surface-dark border border-white/10 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6 hover:border-red-500/30 transition-all group">
-                                        <div className="flex items-center gap-4 flex-1">
-                                            <div className="w-12 h-12 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-center shrink-0">
-                                                <span className="material-icons-outlined text-red-500">pending_actions</span>
-                                            </div>
-                                            <div>
-                                                <h4 className="font-bold text-white text-lg">{debt.events?.title || 'Consumo no Clube'}</h4>
-                                                <p className="text-xs text-gray-500">{new Date(debt.created_at).toLocaleString('pt-BR')}</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex flex-col items-center sm:items-end gap-1 px-8">
-                                            <span className="text-[10px] text-gray-500 font-black uppercase">Valor</span>
-                                            <span className="text-2xl font-display font-black text-red-500">R$ {Number(debt.amount_brl).toFixed(2)}</span>
-                                        </div>
-
-                                        <div className="shrink-0 w-full sm:w-auto">
-                                            <button
-                                                onClick={() => handlePayDebt(debt)}
-                                                disabled={player.balanceBrl < Number(debt.amount_brl) || (setIsSavingExp as any) === true}
-                                                className="w-full sm:w-auto px-8 py-3 bg-red-500 text-white font-black uppercase text-xs rounded-xl shadow-neon-red hover:scale-105 transition-all disabled:opacity-30 disabled:grayscale disabled:scale-100"
-                                            >
-                                                {player.balanceBrl < Number(debt.amount_brl) ? 'Saldo Insuficiente' : 'Quitar agora'}
-                                            </button>
-                                            {player.balanceBrl < Number(debt.amount_brl) && (
-                                                <p className="text-[10px] text-red-400 mt-2 text-center sm:text-right font-bold uppercase animate-pulse">
-                                                    Recarregue para pagar
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
+                    <PendenciasTab
+                        userDebts={userDebts}
+                        totalUserDebt={totalUserDebt}
+                        playerBalance={player.balanceBrl}
+                        isSavingExp={setIsSavingExp as any === true}
+                        handlePayDebt={handlePayDebt}
+                    />
                 )}
+
 
                 {/* ======================= COMPROVANTES TAB ======================= */}
-                {activeTab === 'comprovantes' && isOwnProfile && (
-                    <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="flex items-center gap-4 mb-8">
-                            <div className="w-12 h-12 rounded-2xl bg-green-500/20 border border-green-500/30 flex items-center justify-center">
-                                <span className="material-icons-outlined text-green-400 text-2xl">receipt_long</span>
-                            </div>
-                            <div>
-                                <h3 className="text-2xl font-display font-black text-white uppercase tracking-wider">Histórico de Consumo</h3>
-                                <p className="text-gray-400 text-sm">Registro de comandas encerradas e serviços consumidos em etapas.</p>
-                            </div>
-                        </div>
-
-                        {(() => {
-                            const openCommands = playerCommands.filter(c => c.status === 'open');
-                            const closedCommands = playerCommands.filter(c => c.status === 'closed');
-
-                            return (
-                                <div className="space-y-8">
-                                    {/* SEÇÃO COMANDA EM ABERTO */}
-                                    {openCommands.length > 0 && (
-                                        <div>
-                                            <h4 className="text-sm font-bold text-red-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                                                Comanda em Aberto (Tempo Real)
-                                            </h4>
-                                            <div className="grid grid-cols-1 gap-4">
-                                                {openCommands.map(cmd => (
-                                                    <div key={cmd.id} className="bg-gradient-to-r from-red-900/40 to-black/40 border border-red-500/30 rounded-3xl overflow-hidden hover:border-red-400 p-6 transition-all group cursor-pointer relative"
-                                                        onClick={() => handleViewReceipt(cmd)}>
-                                                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-600 to-orange-500"></div>
-                                                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
-                                                            <div className="flex items-center gap-4">
-                                                                <div className="w-14 h-14 rounded-2xl bg-red-500/20 flex flex-col items-center justify-center shadow-[0_0_15px_rgba(239,68,68,0.4)]">
-                                                                    <span className="material-icons-outlined text-red-500 animate-bounce">restaurant</span>
-                                                                </div>
-                                                                <div>
-                                                                    <div className="text-xs text-red-400 font-bold uppercase tracking-widest mb-0.5 animate-pulse">Consumo Ativo</div>
-                                                                    <h4 className="text-xl font-bold text-white">{cmd.events?.title || 'Clube Chip Race'}</h4>
-                                                                </div>
-                                                            </div>
-                                                            <div className="sm:text-right bg-black/40 sm:bg-transparent p-3 sm:p-0 rounded-xl">
-                                                                <div className="text-xs text-gray-400 uppercase font-bold tracking-widest mb-1">Total Parcial</div>
-                                                                <span className="text-4xl font-display font-black text-red-400">R$ {Number(cmd.total_brl).toFixed(2)}</span>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex items-center justify-between bg-black/40 rounded-xl py-3 px-4 border border-white/5 group-hover:bg-red-500/10 transition-colors">
-                                                            <span className="text-sm text-gray-300 font-medium">Acompanhar lançamentos ao vivo</span>
-                                                            <span className="material-icons-outlined text-red-400">arrow_forward</span>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* SEÇÃO HISTÓRICO DE CONSUMO (FECHADAS) */}
-                                    {closedCommands.length > 0 && (
-                                        <div>
-                                            <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">
-                                                Histórico Fechado
-                                            </h4>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                {closedCommands.map(cmd => (
-                                                    <div key={cmd.id} className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:border-green-400/50 hover:shadow-[0_4px_20px_rgba(74,222,128,0.1)] transition-all group cursor-pointer"
-                                                        onClick={() => handleViewReceipt(cmd)}>
-                                                        <div className="p-5">
-                                                            <div className="flex justify-between items-start mb-4">
-                                                                <div className="w-10 h-10 rounded-xl bg-black/40 border border-white/5 flex items-center justify-center shrink-0">
-                                                                    <span className="material-icons-outlined text-green-400 text-xl">point_of_sale</span>
-                                                                </div>
-                                                                <span className="text-3xl font-display font-black text-white">R$ {Number(cmd.total_brl).toFixed(2)}</span>
-                                                            </div>
-
-                                                            <h4 className="text-base font-bold text-white leading-tight mb-1">{cmd.events?.title || 'Torneio'}</h4>
-                                                            <div className="flex items-center gap-2 text-xs text-gray-400 mb-4">
-                                                                <span className="material-icons-outlined text-xs">calendar_today</span>
-                                                                {cmd.closed_at ? new Date(cmd.closed_at).toLocaleDateString('pt-BR') : (cmd.events?.date ? new Date(cmd.events.date).toLocaleDateString('pt-BR') : '')}
-                                                                <span className="w-1 h-1 rounded-full bg-gray-600"></span>
-                                                                {cmd.closed_at ? new Date(cmd.closed_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
-                                                            </div>
-
-                                                            <div className="pt-4 border-t border-white/10 flex items-center justify-between text-xs font-bold text-green-400 group-hover:text-green-300 transition-colors">
-                                                                <span className="uppercase tracking-widest">Ver Detalhes</span>
-                                                                <span className="material-icons-outlined text-sm transform group-hover:translate-x-1 transition-transform">arrow_forward</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {playerCommands.length === 0 && (
-                                        <div className="bg-white/5 border border-white/10 rounded-3xl p-12 text-center flex flex-col items-center justify-center mt-8">
-                                            <div className="w-20 h-20 bg-gray-500/10 rounded-full flex items-center justify-center mb-4">
-                                                <span className="material-icons-outlined text-4xl text-gray-500 block">receipt_long</span>
-                                            </div>
-                                            <h4 className="text-xl font-bold text-white mb-2">Nenhum comprovante</h4>
-                                            <p className="text-gray-400 max-w-sm">Você ainda não possui comandas registradas em eventos do Chip Race.</p>
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })()}
-                    </div>
-                )}
+                {
+                    activeTab === 'comprovantes' && isOwnProfile && (
+                        <ComprovantesTab
+                            playerCommands={playerCommands}
+                            handleViewReceipt={handleViewReceipt}
+                        />
+                    )
+                }
 
                 {/* EDIT TAB CONTENT */}
-                {activeTab === 'edit' && canEdit && (
-                    <div className="bg-surface-dark border border-white/10 rounded-3xl p-8 lg:p-12 shadow-2xl animate-in slide-in-from-right duration-300">
-                        <div className="flex flex-col md:flex-row gap-8">
-                            {/* EDIT COLUMN 1: Identity */}
-                            <div className="w-full md:w-1/3 flex flex-col items-center">
-                                <div className="relative group mb-6">
-                                    <img
-                                        src={player.avatar}
-                                        alt={player.name}
-                                        className="w-48 h-48 rounded-full border-4 border-white/10 object-cover"
-                                    />
-                                    <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <label className="cursor-pointer p-3 bg-blue-600 rounded-full text-white hover:bg-blue-500 transition-colors shadow-lg" title="Trocar Foto">
-                                            <span className="material-icons-outlined">upload</span>
-                                            <input
-                                                type="file"
-                                                className="hidden"
-                                                accept="image/*"
-                                                onChange={handleAvatarChange}
-                                            />
-                                        </label>
-                                        <button
-                                            onClick={handleDeleteAvatar}
-                                            className="p-3 bg-red-600 rounded-full text-white hover:bg-red-500 transition-colors shadow-lg"
-                                            title="Remover Foto"
-                                        >
-                                            <span className="material-icons-outlined">delete_forever</span>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div className="w-full space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Nome de Exibição</label>
-                                        <input
-                                            type="text"
-                                            value={player.name}
-                                            onChange={(e) => handleUpdate('name', e.target.value)}
-                                            className="w-full bg-black/30 border border-white/10 rounded p-3 text-white focus:border-secondary outline-none"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Cidade / Estado</label>
-                                        <input
-                                            type="text"
-                                            value={player.city}
-                                            onChange={(e) => handleUpdate('city', e.target.value)}
-                                            className="w-full bg-black/30 border border-white/10 rounded p-3 text-white focus:border-secondary outline-none"
-                                        />
-                                    </div>
-                                    <div className="opacity-70">
-                                        <label className="block text-sm font-bold text-gray-500 uppercase mb-1">ID Chip Race (Fixo)</label>
-                                        <input
-                                            type="text"
-                                            value={player.numericId ? `CR#${String(player.numericId).padStart(3, '0')}` : (player.id?.length > 20 ? 'CR#GUEST (Pendente)' : `CR#INV (${player.id})`)}
-                                            disabled
-                                            className="w-full bg-black/20 border border-white/5 rounded p-3 text-primary font-bold cursor-not-allowed"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
+                {
+                    activeTab === 'edit' && canEdit && (
+                        <EditTab
+                            player={player}
+                            canEdit={canEdit}
+                            handleAvatarChange={handleAvatarChange}
+                            handleDeleteAvatar={handleDeleteAvatar}
+                            handleUpdate={handleUpdate}
+                            handleSocialUpdate={handleSocialUpdate}
+                            ALL_PLAY_STYLES={ALL_PLAY_STYLES}
+                            togglePlayStyle={togglePlayStyle}
+                            handleOpenUploadModal={handleOpenUploadModal}
+                            handleDeleteImage={handleDeleteImage}
+                            setActiveTab={setActiveTab}
+                            handleSaveProfile={handleSaveProfile}
+                        />
+                    )
+                }
 
-                            {/* EDIT COLUMN 2: Details */}
-                            <div className="w-full md:w-2/3 space-y-6">
-                                {/* Bio */}
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Biografia</label>
-                                    <textarea
-                                        value={player.bio}
-                                        onChange={(e) => handleUpdate('bio', e.target.value)}
-                                        className="w-full h-24 bg-black/30 border border-white/10 rounded p-3 text-white focus:border-secondary outline-none resize-none"
-                                        placeholder="Conte um pouco sobre sua trajetória no poker..."
-                                    ></textarea>
-                                </div>
-
-                                {/* Socials */}
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-bold text-pink-500 uppercase mb-1">Instagram</label>
-                                        <div className="flex items-center bg-black/30 border border-white/10 rounded px-3">
-                                            <span className="text-gray-500 select-none">@</span>
-                                            <input
-                                                type="text"
-                                                value={player.social.instagram?.replace('@', '') || ''}
-                                                onChange={(e) => handleSocialUpdate('instagram', '@' + e.target.value)}
-                                                className="w-full bg-transparent p-3 text-white outline-none"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-bold text-blue-400 uppercase mb-1">Twitter / X</label>
-                                        <div className="flex items-center bg-black/30 border border-white/10 rounded px-3">
-                                            <span className="text-gray-500 select-none">@</span>
-                                            <input
-                                                type="text"
-                                                value={player.social.twitter?.replace('@', '') || ''}
-                                                onChange={(e) => handleSocialUpdate('twitter', '@' + e.target.value)}
-                                                className="w-full bg-transparent p-3 text-white outline-none"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-bold text-green-500 uppercase mb-1">Discord ID</label>
-                                        <input
-                                            type="text"
-                                            value={player.social.discord || ''}
-                                            onChange={(e) => handleSocialUpdate('discord', e.target.value)}
-                                            className="w-full bg-black/30 border border-white/10 rounded p-3 text-white focus:border-secondary outline-none"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Play Styles */}
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-500 uppercase mb-2">Estilos de Jogo (Tags)</label>
-                                    <div className="bg-black/20 p-4 rounded-xl border border-white/5 flex flex-wrap gap-2 overflow-visible">
-                                        {ALL_PLAY_STYLES.map((style) => {
-                                            const isSelected = player.playStyles.includes(style);
-                                            return (
-                                                <div key={style} className="group relative">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => togglePlayStyle(style)}
-                                                        className={`px-3 py-1 text-sm font-bold rounded-full border transition-all ${isSelected
-                                                            ? 'bg-secondary text-black border-secondary shadow-neon-blue'
-                                                            : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/30 hover:text-white'
-                                                            }`}
-                                                    >
-                                                        {style}
-                                                    </button>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-
-
-
-                                {/* Gallery Manager */}
-                                <div>
-                                    <div className="flex justify-between items-end mb-2">
-                                        <label className="block text-sm font-bold text-gray-500 uppercase">Gerenciar Galeria</label>
-                                        <button onClick={handleOpenUploadModal} className="text-sm text-secondary hover:underline font-bold">+ Adicionar Foto Exemplo</button>
-                                    </div>
-
-                                    <div className="grid grid-cols-4 gap-2">
-                                        {player.gallery.map((img, idx) => (
-                                            <div key={idx} className="aspect-square rounded-lg overflow-hidden relative group border border-white/10">
-                                                <img src={img} alt="Gallery" className="w-full h-full object-cover" />
-                                                <button
-                                                    onClick={(e) => handleDeleteImage(e, idx)}
-                                                    className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    title="Remover"
-                                                >
-                                                    <span className="material-icons-outlined text-xs">close</span>
-                                                </button>
-                                            </div>
-                                        ))}
-                                        {player.gallery.length < 4 && (
-                                            <button
-                                                onClick={handleOpenUploadModal}
-                                                className="aspect-square rounded-lg border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-gray-600 hover:text-white hover:border-primary/50 hover:bg-white/5 transition-all"
-                                            >
-                                                <span className="material-icons-outlined">add_photo_alternate</span>
-                                                <span className="text-xs">Slot Livre</span>
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-
-
-
-                        <div className="border-t border-white/10 pt-8 mt-8 flex justify-end gap-4">
-                            <button onClick={() => setActiveTab('overview')} className="px-6 py-3 rounded-lg text-gray-400 font-bold hover:bg-white/5 transition-colors">Cancelar</button>
-                            <button onClick={handleSaveProfile} className="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-emerald-600 hover:to-green-500 text-white font-bold rounded-lg shadow-lg transform hover:scale-105 transition-all flex items-center gap-2">
-                                <span className="material-icons-outlined">save</span> Salvar Alterações
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-            </div>
+            </div >
 
             {/* FULLSCREEN IMAGE LIGHTBOX */}
-            {selectedImage && (
-                <div
-                    className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300"
-                    onClick={() => setSelectedImage(null)}
-                >
-                    <button className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors">
-                        <span className="material-icons-outlined text-4xl">close</span>
-                    </button>
-                    <img
-                        src={selectedImage}
-                        alt="Fullscreen view"
-                        className="max-h-screen max-w-full object-contain rounded-lg shadow-2xl"
-                        onClick={(e) => e.stopPropagation()}
-                    />
-                </div>
-            )}
+            {
+                selectedImage && (
+                    <div
+                        className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300"
+                        onClick={() => setSelectedImage(null)}
+                    >
+                        <button className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors">
+                            <span className="material-icons-outlined text-4xl">close</span>
+                        </button>
+                        <img
+                            src={selectedImage}
+                            alt="Fullscreen view"
+                            className="max-h-screen max-w-full object-contain rounded-lg shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                    </div>
+                )
+            }
 
             {/* MESSAGE DETAILS MODAL */}
-            {viewedMessage && (
-                <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-                    <div className="bg-surface-dark border border-white/10 rounded-[2.5rem] w-full max-w-2xl overflow-hidden animate-in zoom-in duration-300 shadow-[0_0_100px_rgba(0,0,0,0.5)]">
-                        {/* Header */}
-                        <div className={`p-8 flex justify-between items-center ${viewedMessage.category === 'poll' ? 'bg-cyan-600/20' :
-                            viewedMessage.category === 'private' ? 'bg-secondary/20' :
-                                viewedMessage.category === 'bonus' ? 'bg-green-600/20' :
-                                    'bg-primary/20'
-                            }`}>
-                            <div className="flex items-center gap-4">
-                                <span className="material-icons-outlined text-3xl">
-                                    {viewedMessage.category === 'poll' ? 'poll' :
-                                        viewedMessage.category === 'private' ? 'chat' :
-                                            viewedMessage.category === 'bonus' ? 'redeem' :
-                                                'notifications'}
-                                </span>
-                                <div>
-                                    <h3 className="text-2xl font-black text-white leading-tight">{viewedMessage.subject}</h3>
-                                    <p className="text-gray-400 text-sm font-bold uppercase tracking-widest">{viewedMessage.from} • {viewedMessage.date}</p>
-                                </div>
-                            </div>
-                            <button onClick={() => { setViewedMessage(null); setReplyMode(false); }} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-white">
-                                <span className="material-icons-outlined">close</span>
-                            </button>
-                        </div>
-
-                        {/* Content */}
-                        <div className="p-8 lg:p-10">
-                            <div className="text-gray-300 text-lg leading-relaxed mb-10 whitespace-pre-wrap">
-                                {viewedMessage.content}
-                            </div>
-
-                            {/* POLL SPECIFIC UI */}
-                            {viewedMessage.category === 'poll' && polls && (() => {
-                                const poll = polls.find(p => p.id === viewedMessage.pollId);
-                                if (!poll) return (
-                                    <div className="bg-black/20 border border-cyan-500/20 rounded-3xl p-6 mb-8 text-center">
-                                        <span className="material-icons-outlined text-cyan-400 text-3xl block mb-2">how_to_vote</span>
-                                        <p className="text-gray-400 text-sm">Esta enquete não está mais disponível.</p>
+            {
+                viewedMessage && (
+                    <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center sm:p-4 overflow-y-auto">
+                        <div className="bg-surface-dark border-x border-b sm:border border-white/10 rounded-b-3xl sm:rounded-[2.5rem] w-full max-w-2xl overflow-hidden animate-in zoom-in duration-300 shadow-[0_0_100px_rgba(0,0,0,0.5)]">
+                            {/* Header */}
+                            <div className={`p-6 sm:p-8 flex justify-between items-center ${viewedMessage.category === 'poll' ? 'bg-cyan-600/20' :
+                                viewedMessage.category === 'private' ? 'bg-secondary/20' :
+                                    viewedMessage.category === 'bonus' ? 'bg-green-600/20' :
+                                        'bg-primary/20'
+                                }`}>
+                                <div className="flex items-center gap-4">
+                                    <span className="material-icons-outlined text-3xl">
+                                        {viewedMessage.category === 'poll' ? 'poll' :
+                                            viewedMessage.category === 'private' ? 'chat' :
+                                                viewedMessage.category === 'bonus' ? 'redeem' :
+                                                    'notifications'}
+                                    </span>
+                                    <div>
+                                        <h3 className="text-xl sm:text-2xl font-black text-white leading-tight">{viewedMessage.subject}</h3>
+                                        <p className="text-gray-400 text-sm font-bold uppercase tracking-widest">{viewedMessage.from} • {viewedMessage.date}</p>
                                     </div>
-                                );
+                                </div>
+                                <button onClick={() => { setViewedMessage(null); setReplyMode(false); }} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-white">
+                                    <span className="material-icons-outlined">close</span>
+                                </button>
+                            </div>
 
-                                // Compute vote counts from poll_votes (passed via userVotes keys — admin sees all, user sees theirs)
-                                const userVote = userVotes ? userVotes[poll.id] : undefined;
-                                const opts: string[] = Array.isArray(poll.options) ? poll.options : [];
+                            {/* Content */}
+                            <div className="p-6 sm:p-8 lg:p-10">
+                                <div className="text-gray-300 text-lg leading-relaxed mb-10 whitespace-pre-wrap">
+                                    {viewedMessage.content}
+                                </div>
 
-                                // For vote percentages, count based on what's available
-                                // poll.vote_counts should come from DB aggregate — fallback to 0 if missing
-                                const voteCounts: number[] = opts.map((_, i) =>
-                                    (poll.vote_counts && poll.vote_counts[i]) ? poll.vote_counts[i] : 0
-                                );
-                                const totalVotes = voteCounts.reduce((a, b) => a + b, 0);
-
-                                return (
-                                    <div className="bg-gradient-to-b from-cyan-900/20 to-black/30 border border-cyan-500/20 rounded-3xl p-6 mb-8">
-                                        <div className="flex items-center gap-3 mb-6">
-                                            <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
-                                                <span className="material-icons-outlined text-cyan-400">how_to_vote</span>
-                                            </div>
-                                            <div>
-                                                <div className="text-xs text-cyan-400 font-black uppercase tracking-widest mb-0.5">Enquete Ativa</div>
-                                                <h4 className="text-white font-bold text-lg leading-tight">{poll.question}</h4>
-                                            </div>
+                                {/* POLL SPECIFIC UI */}
+                                {viewedMessage.category === 'poll' && polls && (() => {
+                                    const poll = polls.find(p => p.id === viewedMessage.pollId);
+                                    if (!poll) return (
+                                        <div className="bg-black/20 border border-cyan-500/20 rounded-3xl p-6 mb-8 text-center">
+                                            <span className="material-icons-outlined text-cyan-400 text-3xl block mb-2">how_to_vote</span>
+                                            <p className="text-gray-400 text-sm">Esta enquete não está mais disponível.</p>
                                         </div>
+                                    );
 
-                                        <div className="space-y-3">
-                                            {opts.map((opt, idx) => {
-                                                const count = voteCounts[idx] || 0;
-                                                const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
-                                                const isSelected = userVote === idx;
-                                                const hasVoted = userVote !== undefined;
+                                    // Compute vote counts from poll_votes (passed via userVotes keys — admin sees all, user sees theirs)
+                                    const userVote = userVotes ? userVotes[poll.id] : undefined;
+                                    const opts: string[] = Array.isArray(poll.options) ? poll.options : [];
 
-                                                return (
-                                                    <div key={idx} className="relative">
-                                                        <button
-                                                            disabled={hasVoted}
-                                                            onClick={() => onVotePoll && onVotePoll(poll.id, idx)}
-                                                            className={`w-full text-left p-4 rounded-2xl border transition-all relative overflow-hidden
-                                                                ${isSelected
-                                                                    ? 'border-cyan-500 bg-cyan-500/10 text-white'
-                                                                    : hasVoted
-                                                                        ? 'border-white/10 bg-black/20 text-gray-400 cursor-default'
-                                                                        : 'border-white/10 bg-black/20 hover:border-cyan-400/50 hover:bg-cyan-500/5 text-white cursor-pointer hover:scale-[1.01]'
-                                                                }`}
-                                                        >
-                                                            {/* Progress bar */}
-                                                            {hasVoted && (
-                                                                <div
-                                                                    className={`absolute inset-0 transition-all duration-1000 rounded-2xl ${isSelected ? 'bg-cyan-500/15' : 'bg-white/5'}`}
-                                                                    style={{ width: `${pct}%` }}
-                                                                />
-                                                            )}
-                                                            <div className="relative z-10 flex items-center justify-between">
-                                                                <div className="flex items-center gap-3">
-                                                                    {isSelected && (
-                                                                        <span className="material-icons-outlined text-cyan-400 text-sm">check_circle</span>
-                                                                    )}
-                                                                    {!isSelected && !hasVoted && (
-                                                                        <span className="w-5 h-5 rounded-full border-2 border-white/20 flex-shrink-0"></span>
-                                                                    )}
-                                                                    {!isSelected && hasVoted && (
-                                                                        <span className="w-5 h-5 rounded-full border-2 border-white/10 flex-shrink-0"></span>
-                                                                    )}
-                                                                    <span className="font-bold text-sm">{opt}</span>
-                                                                </div>
-                                                                {hasVoted && (
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className={`text-sm font-black ${isSelected ? 'text-cyan-400' : 'text-gray-500'}`}>{pct}%</span>
-                                                                        <span className="text-[10px] text-gray-600">{count} votos</span>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </button>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
+                                    // For vote percentages, count based on what's available
+                                    // poll.vote_counts should come from DB aggregate — fallback to 0 if missing
+                                    const voteCounts: number[] = opts.map((_, i) =>
+                                        (poll.vote_counts && poll.vote_counts[i]) ? poll.vote_counts[i] : 0
+                                    );
+                                    const totalVotes = voteCounts.reduce((a, b) => a + b, 0);
 
-                                        <div className="mt-4 flex items-center justify-between">
-                                            <p className="text-[10px] text-gray-600 uppercase tracking-widest">
-                                                {userVote !== undefined ? `Seu voto: "${opts[userVote]}" · ` : 'Clique para votar · '}
-                                                {totalVotes} {totalVotes === 1 ? 'voto' : 'votos'} registrados
-                                            </p>
-                                            {!poll.active && (
-                                                <span className="text-[9px] font-black text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-full uppercase">Encerrada</span>
-                                            )}
-                                        </div>
-
-                                        {/* ADMIN: Results table */}
-                                        {isAdmin && (
-                                            <div className="mt-6 pt-6 border-t border-white/10">
-                                                <div className="text-xs text-cyan-400 font-black uppercase tracking-widest mb-4 flex items-center gap-2">
-                                                    <span className="material-icons-outlined text-sm">bar_chart</span>
-                                                    Resultados (Admin)
+                                    return (
+                                        <div className="bg-gradient-to-b from-cyan-900/20 to-black/30 border border-cyan-500/20 rounded-3xl p-6 mb-8">
+                                            <div className="flex items-center gap-3 mb-6">
+                                                <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+                                                    <span className="material-icons-outlined text-cyan-400">how_to_vote</span>
                                                 </div>
-                                                <div className="space-y-2">
-                                                    {opts.map((opt, idx) => {
-                                                        const count = voteCounts[idx] || 0;
-                                                        const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
-                                                        return (
-                                                            <div key={idx} className="flex items-center gap-3">
-                                                                <span className="text-xs text-gray-400 w-32 truncate">{opt}</span>
-                                                                <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                                                <div>
+                                                    <div className="text-xs text-cyan-400 font-black uppercase tracking-widest mb-0.5">Enquete Ativa</div>
+                                                    <h4 className="text-white font-bold text-lg leading-tight">{poll.question}</h4>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-3">
+                                                {opts.map((opt, idx) => {
+                                                    const count = voteCounts[idx] || 0;
+                                                    const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+                                                    const isSelected = userVote === idx;
+                                                    const hasVoted = userVote !== undefined;
+
+                                                    return (
+                                                        <div key={idx} className="relative">
+                                                            <button
+                                                                disabled={hasVoted}
+                                                                onClick={() => onVotePoll && onVotePoll(poll.id, idx)}
+                                                                className={`w-full text-left p-4 rounded-2xl border transition-all relative overflow-hidden
+                                                                ${isSelected
+                                                                        ? 'border-cyan-500 bg-cyan-500/10 text-white'
+                                                                        : hasVoted
+                                                                            ? 'border-white/10 bg-black/20 text-gray-400 cursor-default'
+                                                                            : 'border-white/10 bg-black/20 hover:border-cyan-400/50 hover:bg-cyan-500/5 text-white cursor-pointer hover:scale-[1.01]'
+                                                                    }`}
+                                                            >
+                                                                {/* Progress bar */}
+                                                                {hasVoted && (
                                                                     <div
-                                                                        className="h-full bg-gradient-to-r from-cyan-500 to-cyan-300 rounded-full transition-all duration-700"
+                                                                        className={`absolute inset-0 transition-all duration-1000 rounded-2xl ${isSelected ? 'bg-cyan-500/15' : 'bg-white/5'}`}
                                                                         style={{ width: `${pct}%` }}
                                                                     />
+                                                                )}
+                                                                <div className="relative z-10 flex items-center justify-between">
+                                                                    <div className="flex items-center gap-3">
+                                                                        {isSelected && (
+                                                                            <span className="material-icons-outlined text-cyan-400 text-sm">check_circle</span>
+                                                                        )}
+                                                                        {!isSelected && !hasVoted && (
+                                                                            <span className="w-5 h-5 rounded-full border-2 border-white/20 flex-shrink-0"></span>
+                                                                        )}
+                                                                        {!isSelected && hasVoted && (
+                                                                            <span className="w-5 h-5 rounded-full border-2 border-white/10 flex-shrink-0"></span>
+                                                                        )}
+                                                                        <span className="font-bold text-sm">{opt}</span>
+                                                                    </div>
+                                                                    {hasVoted && (
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className={`text-sm font-black ${isSelected ? 'text-cyan-400' : 'text-gray-500'}`}>{pct}%</span>
+                                                                            <span className="text-[10px] text-gray-600">{count} votos</span>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
-                                                                <span className="text-xs font-bold text-white w-12 text-right">{count} ({pct}%)</span>
-                                                            </div>
-                                                        );
-                                                    })}
+                                                            </button>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            <div className="mt-4 flex items-center justify-between">
+                                                <p className="text-[10px] text-gray-600 uppercase tracking-widest">
+                                                    {userVote !== undefined ? `Seu voto: "${opts[userVote]}" · ` : 'Clique para votar · '}
+                                                    {totalVotes} {totalVotes === 1 ? 'voto' : 'votos'} registrados
+                                                </p>
+                                                {!poll.active && (
+                                                    <span className="text-[9px] font-black text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-full uppercase">Encerrada</span>
+                                                )}
+                                            </div>
+
+                                            {/* ADMIN: Results table */}
+                                            {isAdmin && (
+                                                <div className="mt-6 pt-6 border-t border-white/10">
+                                                    <div className="text-xs text-cyan-400 font-black uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                        <span className="material-icons-outlined text-sm">bar_chart</span>
+                                                        Resultados (Admin)
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        {opts.map((opt, idx) => {
+                                                            const count = voteCounts[idx] || 0;
+                                                            const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+                                                            return (
+                                                                <div key={idx} className="flex items-center gap-3">
+                                                                    <span className="text-xs text-gray-400 w-32 truncate">{opt}</span>
+                                                                    <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                                                                        <div
+                                                                            className="h-full bg-gradient-to-r from-cyan-500 to-cyan-300 rounded-full transition-all duration-700"
+                                                                            style={{ width: `${pct}%` }}
+                                                                        />
+                                                                    </div>
+                                                                    <span className="text-xs font-bold text-white w-12 text-right">{count} ({pct}%)</span>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                    <p className="text-[10px] text-gray-600 mt-3">Total: {totalVotes} respondentes</p>
                                                 </div>
-                                                <p className="text-[10px] text-gray-600 mt-3">Total: {totalVotes} respondentes</p>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
+
+                                {/* REPLY UI */}
+                                {viewedMessage.category === 'private' && (
+                                    <div className="mt-8 pt-8 border-t border-white/5">
+                                        {!replyMode ? (
+                                            <button
+                                                onClick={() => setReplyMode(true)}
+                                                className="flex items-center gap-2 text-secondary font-bold hover:underline"
+                                            >
+                                                <span className="material-icons-outlined">reply</span> Responder esta mensagem
+                                            </button>
+                                        ) : (
+                                            <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
+                                                <textarea
+                                                    className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-white resize-none h-32 focus:border-secondary outline-none transition-all"
+                                                    placeholder="Escreva sua resposta..."
+                                                    value={replyContent}
+                                                    onChange={e => setReplyContent(e.target.value)}
+                                                ></textarea>
+                                                <div className="flex gap-4">
+                                                    <button onClick={() => setReplyMode(false)} className="px-6 py-2 text-gray-500 font-bold hover:text-white transition-colors">Cancelar</button>
+                                                    <button
+                                                        onClick={() => {
+                                                            if (onReply && replyContent.trim()) {
+                                                                onReply(viewedMessage.id, replyContent);
+                                                                setReplyContent('');
+                                                                setReplyMode(false);
+                                                                setViewedMessage(null);
+                                                                alert('Resposta enviada!');
+                                                            }
+                                                        }}
+                                                        className="flex-grow bg-secondary hover:bg-white text-black font-bold py-2 rounded-xl transition-all shadow-neon-blue"
+                                                    >
+                                                        Enviar Resposta
+                                                    </button>
+                                                </div>
                                             </div>
                                         )}
                                     </div>
-                                );
-                            })()}
+                                )}
 
-                            {/* REPLY UI */}
-                            {viewedMessage.category === 'private' && (
-                                <div className="mt-8 pt-8 border-t border-white/5">
-                                    {!replyMode ? (
-                                        <button
-                                            onClick={() => setReplyMode(true)}
-                                            className="flex items-center gap-2 text-secondary font-bold hover:underline"
-                                        >
-                                            <span className="material-icons-outlined">reply</span> Responder esta mensagem
-                                        </button>
-                                    ) : (
-                                        <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
-                                            <textarea
-                                                className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-white resize-none h-32 focus:border-secondary outline-none transition-all"
-                                                placeholder="Escreva sua resposta..."
-                                                value={replyContent}
-                                                onChange={e => setReplyContent(e.target.value)}
-                                            ></textarea>
-                                            <div className="flex gap-4">
-                                                <button onClick={() => setReplyMode(false)} className="px-6 py-2 text-gray-500 font-bold hover:text-white transition-colors">Cancelar</button>
-                                                <button
-                                                    onClick={() => {
-                                                        if (onReply && replyContent.trim()) {
-                                                            onReply(viewedMessage.id, replyContent);
-                                                            setReplyContent('');
-                                                            setReplyMode(false);
-                                                            setViewedMessage(null);
-                                                            alert('Resposta enviada!');
-                                                        }
-                                                    }}
-                                                    className="flex-grow bg-secondary hover:bg-white text-black font-bold py-2 rounded-xl transition-all shadow-neon-blue"
-                                                >
-                                                    Enviar Resposta
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
+                                {/* ACTION BUTTONS */}
+                                <div className="mt-10 flex justify-center">
+                                    <button
+                                        onClick={() => setViewedMessage(null)}
+                                        className="px-12 py-3 bg-white/5 hover:bg-white/10 text-white font-bold rounded-2xl transition-all"
+                                    >
+                                        Fechar
+                                    </button>
                                 </div>
-                            )}
-
-                            {/* ACTION BUTTONS */}
-                            <div className="mt-10 flex justify-center">
-                                <button
-                                    onClick={() => setViewedMessage(null)}
-                                    className="px-12 py-3 bg-white/5 hover:bg-white/10 text-white font-bold rounded-2xl transition-all"
-                                >
-                                    Fechar
-                                </button>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* --- DAILY CLAIM MODAL --- */}
             {
@@ -2460,220 +1724,262 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                 )
             }
             {/* EVENT FLYER MODAL (RESULTADOS) */}
-            {viewClosedEvent && (
-                <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
-                    <div
-                        className="relative h-full max-h-[calc(100vh-40px)] aspect-[3/4] bg-[#050214] border border-secondary/30 rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(0,224,255,0.15)] flex flex-col"
-                    >
-                        {/* Background Glows */}
-                        <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[70%] h-[40%] bg-secondary/10 rounded-full blur-[80px] pointer-events-none"></div>
-
-                        {/* Close Button */}
-                        <button
-                            onClick={() => setViewClosedEvent(null)}
-                            className="absolute top-4 right-4 z-[130] w-10 h-10 flex items-center justify-center bg-black/40 text-white hover:text-red-500 rounded-full hover:bg-white/10 transition-colors backdrop-blur-sm border border-white/5"
+            {
+                viewClosedEvent && (
+                    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
+                        <div
+                            className="relative h-full max-h-[calc(100vh-40px)] aspect-[3/4] bg-[#050214] border border-secondary/30 rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(0,224,255,0.15)] flex flex-col"
                         >
-                            <span className="material-icons-outlined text-xl">close</span>
-                        </button>
+                            {/* Background Glows */}
+                            <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[70%] h-[40%] bg-secondary/10 rounded-full blur-[80px] pointer-events-none"></div>
 
-                        {/* --- RESULT FLYER CONTENT --- */}
+                            {/* Close Button */}
+                            <button
+                                onClick={() => setViewClosedEvent(null)}
+                                className="absolute top-4 right-4 z-[130] w-10 h-10 flex items-center justify-center bg-black/40 text-white hover:text-red-500 rounded-full hover:bg-white/10 transition-colors backdrop-blur-sm border border-white/5"
+                            >
+                                <span className="material-icons-outlined text-xl">close</span>
+                            </button>
 
-                        {/* 1. Header & Champion Section */}
-                        <div className="pt-8 pb-2 px-6 text-center shrink-0 flex flex-col items-center">
-                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
-                                {viewClosedEvent.date.split('-').reverse().join('/')}
-                            </div>
-                            <h3 className="text-xl md:text-2xl font-bold text-white mb-4 uppercase tracking-wider">{viewClosedEvent.title}</h3>
+                            {/* --- RESULT FLYER CONTENT --- */}
 
-                            {/* CHAMPION DISPLAY */}
-                            {(() => {
-                                const winner = viewClosedEvent.results?.find(r => r.position === 1);
-                                return winner ? (
-                                    <div className="flex flex-col items-center mb-4">
-                                        <div className="relative mb-6">
-                                            <div className="absolute -inset-6 bg-gradient-to-t from-secondary/20 to-transparent rounded-full blur-2xl"></div>
-                                            <img
-                                                src={getPlayerAvatar(winner.name)}
-                                                alt="Campeão"
-                                                className="w-28 h-28 md:w-32 md:h-32 rounded-full border-4 border-yellow-400 shadow-[0_0_40px_rgba(250,204,21,0.5)] object-cover relative z-10"
-                                            />
-                                            <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-yellow-400 text-black font-black text-xs px-4 py-1 rounded-full shadow-lg z-20 border-2 border-black">
-                                                CAMPEÃO
-                                            </div>
-                                        </div>
+                            {/* 1. Header & Champion Section */}
+                            <div className="pt-8 pb-2 px-6 text-center shrink-0 flex flex-col items-center">
+                                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
+                                    {viewClosedEvent.date.split('-').reverse().join('/')}
+                                </div>
+                                <h3 className="text-xl md:text-2xl font-bold text-white mb-4 uppercase tracking-wider">{viewClosedEvent.title}</h3>
 
-                                        <div className="text-center">
-                                            <h2 className="text-2xl sm:text-3xl md:text-4xl font-display font-black text-white leading-tight uppercase">{winner.name}</h2>
-                                            {winner.prize > 0 && (
-                                                <div className="text-2xl font-bold text-green-400 mt-2">
-                                                    R$ {winner.prize.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                {/* CHAMPION DISPLAY */}
+                                {(() => {
+                                    const winner = viewClosedEvent.results?.find(r => r.position === 1);
+                                    return winner ? (
+                                        <div className="flex flex-col items-center mb-4">
+                                            <div className="relative mb-6">
+                                                <div className="absolute -inset-6 bg-gradient-to-t from-secondary/20 to-transparent rounded-full blur-2xl"></div>
+                                                <img
+                                                    src={getPlayerAvatar(winner.name)}
+                                                    alt="Campeão"
+                                                    className="w-28 h-28 md:w-32 md:h-32 rounded-full border-4 border-yellow-400 shadow-[0_0_40px_rgba(250,204,21,0.5)] object-cover relative z-10"
+                                                />
+                                                <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-yellow-400 text-black font-black text-xs px-4 py-1 rounded-full shadow-lg z-20 border-2 border-black">
+                                                    CAMPEÃO
                                                 </div>
-                                            )}
-                                            <div className="text-xl font-display font-bold text-secondary mt-2 bg-secondary/10 px-4 py-1 rounded-full inline-block border border-secondary/30">
-                                                {winner.calculatedPoints} PTS
+                                            </div>
+
+                                            <div className="text-center">
+                                                <h2 className="text-2xl sm:text-3xl md:text-4xl font-display font-black text-white leading-tight uppercase">{winner.name}</h2>
+                                                {winner.prize > 0 && (
+                                                    <div className="text-2xl font-bold text-green-400 mt-2">
+                                                        R$ {winner.prize.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                    </div>
+                                                )}
+                                                <div className="text-xl font-display font-bold text-secondary mt-2 bg-secondary/10 px-4 py-1 rounded-full inline-block border border-secondary/30">
+                                                    {winner.calculatedPoints} PTS
+                                                </div>
                                             </div>
                                         </div>
+                                    ) : (
+                                        <div className="py-12 text-gray-500">Resultado não disponível.</div>
+                                    );
+                                })()}
+                            </div>
+
+                            {/* 2. Stats Grid */}
+                            <div className="px-8 mb-6 shrink-0">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 bg-white/[0.03] rounded-2xl border border-white/5 divide-x-0 sm:divide-x divide-y sm:divide-y-0 divide-white/5 p-4">
+                                    <div className="flex flex-col items-center justify-center">
+                                        <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Jogadores</span>
+                                        <span className="text-lg font-bold text-white">{viewClosedEvent.results?.length || 0}</span>
                                     </div>
-                                ) : (
-                                    <div className="py-12 text-gray-500">Resultado não disponível.</div>
-                                );
-                            })()}
-                        </div>
-
-                        {/* 2. Stats Grid */}
-                        <div className="px-8 mb-6 shrink-0">
-                            <div className="grid grid-cols-2 sm:grid-cols-4 bg-white/[0.03] rounded-2xl border border-white/5 divide-x-0 sm:divide-x divide-y sm:divide-y-0 divide-white/5 p-4">
-                                <div className="flex flex-col items-center justify-center">
-                                    <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Jogadores</span>
-                                    <span className="text-lg font-bold text-white">{viewClosedEvent.results?.length || 0}</span>
-                                </div>
-                                <div className="flex flex-col items-center justify-center">
-                                    <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Rebuys</span>
-                                    <span className="text-lg font-bold text-white">{viewClosedEvent.totalRebuys || 0}</span>
-                                </div>
-                                <div className="flex flex-col items-center justify-center">
-                                    <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Add-ons</span>
-                                    <span className="text-lg font-bold text-white">{viewClosedEvent.totalAddons || 0}</span>
-                                </div>
-                                <div className="flex flex-col items-center justify-center">
-                                    <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Premiação</span>
-                                    <span className="text-xs font-bold text-green-400 text-center leading-tight">
-                                        {viewClosedEvent.totalPrize ? `R$${viewClosedEvent.totalPrize.toLocaleString('pt-BR', { notation: 'compact' })}` : 'R$ 0'}
-                                    </span>
+                                    <div className="flex flex-col items-center justify-center">
+                                        <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Rebuys</span>
+                                        <span className="text-lg font-bold text-white">{viewClosedEvent.totalRebuys || 0}</span>
+                                    </div>
+                                    <div className="flex flex-col items-center justify-center">
+                                        <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Add-ons</span>
+                                        <span className="text-lg font-bold text-white">{viewClosedEvent.totalAddons || 0}</span>
+                                    </div>
+                                    <div className="flex flex-col items-center justify-center">
+                                        <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Premiação</span>
+                                        <span className="text-xs font-bold text-green-400 text-center leading-tight">
+                                            {viewClosedEvent.totalPrize ? `R$${viewClosedEvent.totalPrize.toLocaleString('pt-BR', { notation: 'compact' })}` : 'R$ 0'}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* 3. Results List (Scrollable) */}
-                        <div className="flex-1 overflow-y-auto custom-scrollbar px-6 pb-6">
-                            <div className="bg-black/20 rounded-2xl border border-white/5 overflow-hidden">
-                                <table className="w-full text-left text-sm">
-                                    <thead className="bg-white/5 text-gray-400 font-bold uppercase text-[10px] tracking-wider sticky top-0 backdrop-blur-md z-10">
-                                        <tr>
-                                            <th className="px-4 py-4 text-center w-12">#</th>
-                                            <th className="px-4 py-4">Jogador</th>
-                                            <th className="px-4 py-4 text-right">Prêmio</th>
-                                            <th className="px-4 py-4 text-center">Pts</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-white/5">
-                                        {viewClosedEvent.results
-                                            ?.filter(r => r.position > 1)
-                                            .sort((a, b) => a.position - b.position)
-                                            .map((result) => (
-                                                <tr key={result.id} className="hover:bg-white/5 transition-colors">
-                                                    <td className="px-4 py-4 text-center">
-                                                        <span className={`inline-block w-8 h-8 leading-8 rounded-full font-bold text-xs ${result.position === 2 ? 'bg-gray-400 text-black' :
-                                                            result.position === 3 ? 'bg-orange-700 text-white' :
-                                                                'bg-white/5 text-gray-500'
-                                                            }`}>
-                                                            {result.position}º
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-4 py-4 font-bold text-gray-300">
-                                                        {result.name}
-                                                    </td>
-                                                    <td className="px-4 py-4 text-right text-green-500 font-bold">
-                                                        {result.prize > 0 ? `R$ ${result.prize.toLocaleString('pt-BR')}` : '-'}
-                                                    </td>
-                                                    <td className="px-4 py-4 text-center font-display font-black text-secondary">
-                                                        {result.calculatedPoints}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                    </tbody>
-                                </table>
+                            {/* 3. Results List (Scrollable) */}
+                            <div className="flex-1 overflow-y-auto custom-scrollbar px-6 pb-6">
+                                <div className="bg-black/20 rounded-2xl border border-white/5 overflow-hidden">
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="bg-white/5 text-gray-400 font-bold uppercase text-[10px] tracking-wider sticky top-0 backdrop-blur-md z-10">
+                                            <tr>
+                                                <th className="px-4 py-4 text-center w-12">#</th>
+                                                <th className="px-4 py-4">Jogador</th>
+                                                <th className="px-4 py-4 text-right">Prêmio</th>
+                                                <th className="px-4 py-4 text-center">Pts</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-white/5">
+                                            {viewClosedEvent.results
+                                                ?.filter(r => r.position > 1)
+                                                .sort((a, b) => a.position - b.position)
+                                                .map((result) => (
+                                                    <tr key={result.id} className="hover:bg-white/5 transition-colors">
+                                                        <td className="px-4 py-4 text-center">
+                                                            <span className={`inline-block w-8 h-8 leading-8 rounded-full font-bold text-xs ${result.position === 2 ? 'bg-gray-400 text-black' :
+                                                                result.position === 3 ? 'bg-orange-700 text-white' :
+                                                                    'bg-white/5 text-gray-500'
+                                                                }`}>
+                                                                {result.position}º
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-4 font-bold text-gray-300">
+                                                            {result.name}
+                                                        </td>
+                                                        <td className="px-4 py-4 text-right text-green-500 font-bold">
+                                                            {result.prize > 0 ? `R$ ${result.prize.toLocaleString('pt-BR')}` : '-'}
+                                                        </td>
+                                                        <td className="px-4 py-4 text-center font-display font-black text-secondary">
+                                                            {result.calculatedPoints}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
-                        </div>
 
-                        {/* 4. Footer */}
-                        <div className="bg-[#050821] px-8 py-4 border-t border-white/5 flex justify-between items-center shrink-0">
-                            <div className="flex items-center h-8">
-                                <img src="/cr-logo.png" alt="Chip Race" className="h-full w-auto drop-shadow-md" />
-                            </div>
-                            <div className="text-[10px] text-gray-600 uppercase tracking-[0.2em] font-bold">
-                                Resultados Oficiais
+                            {/* 4. Footer */}
+                            <div className="bg-[#050821] px-8 py-4 border-t border-white/5 flex justify-between items-center shrink-0">
+                                <div className="flex items-center h-8">
+                                    <img src="/cr-logo.png" alt="Chip Race" className="h-full w-auto drop-shadow-md" />
+                                </div>
+                                <div className="text-[10px] text-gray-600 uppercase tracking-[0.2em] font-bold">
+                                    Resultados Oficiais
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Receipt Details Modal */}
-            {viewingReceipt && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-                    <div className="bg-[#0f0a28] border border-white/10 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200">
-                        <div className="p-5 flex-shrink-0 border-b border-white/10">
-                            <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-2xl bg-green-500/20 border border-green-500/40 flex items-center justify-center">
-                                        <span className="material-icons-outlined text-green-400 text-xl">receipt_long</span>
+            {
+                viewingReceipt && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center sm:p-4 bg-black/90 backdrop-blur-md">
+                        <div className="bg-[#0f0a28] border-x border-b sm:border border-white/10 rounded-b-3xl sm:rounded-3xl w-full max-w-md shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200">
+                            <div className="p-5 flex-shrink-0 border-b border-white/10">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-2xl bg-green-500/20 border border-green-500/40 flex items-center justify-center">
+                                            <span className="material-icons-outlined text-green-400 text-xl">receipt_long</span>
+                                        </div>
+                                        <div>
+                                            <h4 className="text-base font-display font-black text-white uppercase">{viewingReceipt.events?.title || 'Torneio'}</h4>
+                                            <p className="text-gray-500 text-xs">{viewingReceipt.closed_at ? new Date(viewingReceipt.closed_at).toLocaleString('pt-BR') : 'Sem data'}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h4 className="text-base font-display font-black text-white uppercase">{viewingReceipt.events?.title || 'Torneio'}</h4>
-                                        <p className="text-gray-500 text-xs">{viewingReceipt.closed_at ? new Date(viewingReceipt.closed_at).toLocaleString('pt-BR') : 'Sem data'}</p>
-                                    </div>
+                                    <button onClick={() => setViewingReceipt(null)} className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-red-500/20 transition-all">
+                                        <span className="material-icons-outlined text-gray-400 text-sm">close</span>
+                                    </button>
                                 </div>
-                                <button onClick={() => setViewingReceipt(null)} className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-red-500/20 transition-all">
-                                    <span className="material-icons-outlined text-gray-400 text-sm">close</span>
-                                </button>
                             </div>
-                        </div>
 
-                        <div className="flex-1 overflow-y-auto px-5 py-4 custom-scrollbar">
-                            {receiptItems.length === 0 ? (
-                                <p className="text-gray-600 text-sm italic text-center py-8">Nenhum item consumido.</p>
-                            ) : (
-                                <div className="space-y-2">
-                                    {receiptItems.map((item, i) => {
-                                        const time = item.created_at ? new Date(item.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-                                        const rawName = item.products?.name || item.notes?.split(' —')[0] || 'Item';
-                                        const name = rawName.replace(/(Lançado às \d{2}:\d{2})/g, '').replace(/Lançado às \d{2}:\d{2}/, '').trim();
-                                        const detail = item.notes?.includes('—') ? item.notes.split('— ')[1].replace(/(Lançado às \d{2}:\d{2})/g, '').trim() : null;
-                                        const price = Number(item.total_price_brl);
-                                        return (
-                                            <div key={item.id || i} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0 gap-3">
-                                                <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                    <span className="text-[10px] text-gray-500 font-mono flex-shrink-0 w-8">{time}</span>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-sm text-gray-300 font-bold truncate">{name}</p>
-                                                        {detail && <p className="text-[10px] text-gray-500 truncate">{detail}</p>}
+                            <div className="flex-1 overflow-y-auto px-5 py-4 custom-scrollbar">
+                                {receiptItems.length === 0 ? (
+                                    <p className="text-gray-600 text-sm italic text-center py-8">Nenhum item consumido.</p>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {receiptItems.map((item, i) => {
+                                            const time = item.created_at ? new Date(item.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+                                            const rawName = item.products?.name || item.notes?.split(' —')[0] || 'Item';
+                                            const name = rawName.replace(/(Lançado às \d{2}:\d{2})/g, '').replace(/Lançado às \d{2}:\d{2}/, '').trim();
+                                            const detail = item.notes?.includes('—') ? item.notes.split('— ')[1].replace(/(Lançado às \d{2}:\d{2})/g, '').trim() : null;
+                                            const price = Number(item.total_price_brl);
+                                            return (
+                                                <div key={item.id || i} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0 gap-3">
+                                                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                        <span className="text-[10px] text-gray-500 font-mono flex-shrink-0 w-8">{time}</span>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm text-gray-300 font-bold truncate">{name}</p>
+                                                            {detail && <p className="text-[10px] text-gray-500 truncate">{detail}</p>}
+                                                        </div>
                                                     </div>
+                                                    <span className={`text-sm font-black whitespace-nowrap ${price === 0 ? 'text-green-400' : 'text-white'}`}>
+                                                        {price === 0 ? 'GRÁTIS' : `R$ ${price.toFixed(2)}`}
+                                                    </span>
                                                 </div>
-                                                <span className={`text-sm font-black whitespace-nowrap ${price === 0 ? 'text-green-400' : 'text-white'}`}>
-                                                    {price === 0 ? 'GRÁTIS' : `R$ ${price.toFixed(2)}`}
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="px-5 py-4 border-t border-white/10 flex-shrink-0 bg-black/20 space-y-4">
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm font-black text-gray-400 uppercase tracking-widest">
-                                    {viewingReceipt.status === 'open' ? 'Total Parcial (Aberto)' : 'Total Pago'}
-                                </span>
-                                <span className={`text-xl font-display font-black ${viewingReceipt.status === 'open' ? 'text-red-400' : 'text-green-400'}`}>
-                                    R$ {Number(viewingReceipt.total_brl).toFixed(2)}
-                                </span>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
 
-                            {viewingReceipt.status === 'open' && Number(viewingReceipt.total_brl) > 0 && (
-                                <button
-                                    onClick={() => handlePayOpenCommand(viewingReceipt)}
-                                    disabled={setIsSavingExp as any === true}
-                                    className="w-full bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-black py-4 rounded-2xl transition-all shadow-neon-green uppercase tracking-widest flex items-center justify-center gap-2 group"
-                                >
-                                    <span className="material-icons-outlined text-xl group-hover:scale-110 transition-transform">payments</span>
-                                    {player.balanceBrl < Number(viewingReceipt.total_brl) ? 'Saldo Insuficiente' : 'Pagar com meu Saldo'}
-                                </button>
-                            )}
+                            <div className="px-5 py-4 border-t border-white/10 flex-shrink-0 bg-black/20 space-y-3">
+                                {viewingReceipt.status === 'closed' && (
+                                    <div className="space-y-2 border-b border-white/5 pb-3">
+                                        {Number(viewingReceipt.discount_brl) > 0 && (
+                                            <div className="flex justify-between text-xs">
+                                                <span className="text-gray-500 uppercase font-bold">Desconto</span>
+                                                <span className="text-pink-500">- R$ {Number(viewingReceipt.discount_brl).toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                        {Number(viewingReceipt.unpaid_amount_brl) > 0 && (
+                                            <div className="flex justify-between text-xs">
+                                                <span className="text-gray-500 uppercase font-bold">Pendura (Fiado)</span>
+                                                <span className="text-orange-400">R$ {Number(viewingReceipt.unpaid_amount_brl).toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                        {Number(viewingReceipt.chips_payment_brl) > 0 && (
+                                            <div className="flex justify-between text-xs">
+                                                <span className="text-gray-500 uppercase font-bold">Fichas Cash</span>
+                                                <span className="text-cyan-400">R$ {Number(viewingReceipt.chips_payment_brl).toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                        {/* Cálculo do que foi descontado do saldo */}
+                                        {(() => {
+                                            const total = Number(viewingReceipt.total_brl || 0);
+                                            const disc = Number(viewingReceipt.discount_brl || 0);
+                                            const debt = Number(viewingReceipt.unpaid_amount_brl || 0);
+                                            const chips = Number(viewingReceipt.chips_payment_brl || 0);
+                                            const balanceUsed = Math.max(0, total - disc - debt - chips);
+
+                                            return balanceUsed > 0 ? (
+                                                <div className="flex justify-between text-xs">
+                                                    <span className="text-gray-500 uppercase font-bold">Créditos App</span>
+                                                    <span className="text-green-400">R$ {balanceUsed.toFixed(2)}</span>
+                                                </div>
+                                            ) : null;
+                                        })()}
+                                    </div>
+                                )}
+
+                                <div className="flex items-center justify-between pt-1">
+                                    <span className="text-sm font-black text-gray-400 uppercase tracking-widest">
+                                        {viewingReceipt.status === 'open' ? 'Total Parcial' : 'Total Consumido'}
+                                    </span>
+                                    <span className={`text-xl font-display font-black ${viewingReceipt.status === 'open' ? 'text-red-400' : 'text-white'}`}>
+                                        R$ {Number(viewingReceipt.total_brl).toFixed(2)}
+                                    </span>
+                                </div>
+
+                                {viewingReceipt.status === 'open' && Number(viewingReceipt.total_brl) > 0 && (
+                                    <button
+                                        onClick={() => handlePayOpenCommand(viewingReceipt)}
+                                        disabled={setIsSavingExp as any === true}
+                                        className="w-full bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-black py-4 rounded-2xl transition-all shadow-neon-green uppercase tracking-widest flex items-center justify-center gap-2 group mt-2"
+                                    >
+                                        <span className="material-icons-outlined text-xl group-hover:scale-110 transition-transform">payments</span>
+                                        {player.balanceBrl < Number(viewingReceipt.total_brl) ? 'Saldo Insuficiente' : 'Pagar com meu Saldo'}
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 };

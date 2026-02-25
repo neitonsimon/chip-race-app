@@ -623,35 +623,65 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                         )}
 
                                         <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-3">
-                                            <span className="flex items-center gap-1 bg-white/5 px-2 py-1 rounded border border-white/5" title="Valor da Entrada">
+                                            <span className="flex items-center gap-1 bg-white/5 px-2 py-1 rounded border border-white/5" title={event.gameMode === 'cash_game' ? "Mínimo / Máximo" : "Valor da Entrada"}>
                                                 <span className="material-icons-outlined text-sm text-green-500">payments</span>
-                                                <span className="text-gray-300 font-bold">{event.buyin}</span>
+                                                <span className="text-gray-300 font-bold">
+                                                    {event.gameMode === 'cash_game' ? (event.cashGameMinMax || event.buyin) : event.buyin}
+                                                </span>
                                             </span>
-                                            <span className="flex items-center gap-1 bg-white/5 px-2 py-1 rounded border border-white/5" title="Premiação Garantida">
-                                                <span className="material-icons-outlined text-sm text-yellow-500">emoji_events</span>
-                                                <span className="text-gray-300 font-bold">{event.guaranteed}</span>
-                                            </span>
+                                            {event.gameMode !== 'cash_game' && (
+                                                <span className="flex items-center gap-1 bg-white/5 px-2 py-1 rounded border border-white/5" title="Premiação Garantida">
+                                                    <span className="material-icons-outlined text-sm text-yellow-500">emoji_events</span>
+                                                    <span className="text-gray-300 font-bold">{event.guaranteed}</span>
+                                                </span>
+                                            )}
+                                            {event.gameMode === 'cash_game' && event.cashGameType && (
+                                                <span className="flex items-center gap-1 bg-white/5 px-2 py-1 rounded border border-white/5" title="Modalidade">
+                                                    <span className="material-icons-outlined text-sm text-secondary">Style</span>
+                                                    <span className="text-gray-300 font-bold capitalize">
+                                                        {event.cashGameType === 'omaha4' ? 'Omaha 4' : event.cashGameType === 'omaha5' ? 'Omaha 5' : 'Texas'}
+                                                    </span>
+                                                </span>
+                                            )}
                                         </div>
 
-                                        {/* Detalhes Técnicos Resumidos */}
                                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-1 gap-x-4 text-xs text-gray-500 border-t border-gray-200 dark:border-white/5 pt-2 mb-2">
-                                            {event.stack && (
-                                                <div className="flex items-center gap-1" title="Stack Inicial">
-                                                    <span className="material-icons-outlined text-[12px] text-primary">layers</span>
-                                                    <span className="text-gray-400">{event.stack}</span>
-                                                </div>
-                                            )}
-                                            {event.blinds && (
-                                                <div className="flex items-center gap-1" title="Blinds">
-                                                    <span className="material-icons-outlined text-[12px] text-primary">timer</span>
-                                                    <span className="text-gray-400">{event.blinds}</span>
-                                                </div>
-                                            )}
-                                            {event.lateReg && (
-                                                <div className="flex items-center gap-1" title="Registro Tardio">
-                                                    <span className="material-icons-outlined text-[12px] text-primary">history_toggle_off</span>
-                                                    <span className="text-gray-400">{event.lateReg}</span>
-                                                </div>
+                                            {event.gameMode === 'cash_game' ? (
+                                                <>
+                                                    {event.cashGameBlinds && (
+                                                        <div className="flex items-center gap-1" title="Blinds">
+                                                            <span className="material-icons-outlined text-[12px] text-primary">timer</span>
+                                                            <span className="text-gray-400">{event.cashGameBlinds}</span>
+                                                        </div>
+                                                    )}
+                                                    {event.cashGameCapacity && (
+                                                        <div className="flex items-center gap-1" title="Lugares">
+                                                            <span className="material-icons-outlined text-[12px] text-primary">groups</span>
+                                                            <span className="text-gray-400">{event.cashGameCapacity}</span>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <>
+                                                    {event.stack && (
+                                                        <div className="flex items-center gap-1" title="Stack Inicial">
+                                                            <span className="material-icons-outlined text-[12px] text-primary">layers</span>
+                                                            <span className="text-gray-400">{event.stack}</span>
+                                                        </div>
+                                                    )}
+                                                    {event.blinds && (
+                                                        <div className="flex items-center gap-1" title="Blinds">
+                                                            <span className="material-icons-outlined text-[12px] text-primary">timer</span>
+                                                            <span className="text-gray-400">{event.blinds}</span>
+                                                        </div>
+                                                    )}
+                                                    {event.lateReg && (
+                                                        <div className="flex items-center gap-1" title="Registro Tardio">
+                                                            <span className="material-icons-outlined text-[12px] text-primary">history_toggle_off</span>
+                                                            <span className="text-gray-400">{event.lateReg}</span>
+                                                        </div>
+                                                    )}
+                                                </>
                                             )}
                                             <div className="flex items-center gap-1" title="Tipo de Ranking">
                                                 <span className="material-icons-outlined text-[12px] text-primary">leaderboard</span>
@@ -1139,63 +1169,75 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                     </div>
 
                                     {/* HEADER DA TABELA DE JOGADORES NA MODAL */}
-                                    <div className="flex justify-between px-2 pb-2 text-[10px] font-bold text-gray-500 uppercase gap-2">
-                                        <span className="w-1/4">Nome</span>
-                                        {formulaType === 'cash_online' ? (
-                                            <>
-                                                <span className="w-20 text-center">Rake</span>
-                                                <span className="w-20 text-center">Lucro/Perda</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <span className="w-12 text-center">Pos</span>
-                                                <span className="w-20 text-right">Prêmio (R$)</span>
-                                            </>
-                                        )}
-                                        <span className="w-12 text-center">VIP</span>
-                                        <span className="w-12 text-center">Pts</span>
-                                        <span className="w-6"></span>
-                                    </div>
+                                    {(() => {
+                                        const currentSchema = scoringSchemas.find(s => s.id === closingEvent?.scoringSchemaId);
+                                        const isCashLayout = formulaType === 'cash_online' || currentSchema?.criteria.some(c => c.type === 'rake' || c.type === 'profit_loss');
+
+                                        return (
+                                            <div className="flex justify-between px-2 pb-2 text-[10px] font-bold text-gray-500 uppercase gap-2">
+                                                <span className="w-1/4">Nome</span>
+                                                {isCashLayout ? (
+                                                    <>
+                                                        <span className="w-20 text-center">Rake</span>
+                                                        <span className="w-20 text-center">Lucro/Perda</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <span className="w-12 text-center">Pos</span>
+                                                        <span className="w-20 text-right">Prêmio (R$)</span>
+                                                    </>
+                                                )}
+                                                <span className="w-12 text-center">VIP</span>
+                                                <span className="w-12 text-center">Pts</span>
+                                                <span className="w-6"></span>
+                                            </div>
+                                        );
+                                    })()}
 
                                     <div className="flex-1 bg-black/20 rounded-xl border border-white/10 overflow-y-auto p-2">
                                         {playerResults.map(p => (
                                             <div key={p.id} className="flex justify-between items-center p-2 border-b border-white/5 text-sm hover:bg-white/5 gap-2">
                                                 <span className="text-white w-1/4 truncate font-bold">{p.name}</span>
 
-                                                {formulaType === 'cash_online' ? (
-                                                    <>
-                                                        <input
-                                                            type="number"
-                                                            placeholder="Rake"
-                                                            value={p.rake || ''}
-                                                            onChange={(e) => updatePlayerResult(p.id, 'rake', parseFloat(e.target.value) || 0)}
-                                                            className="w-20 bg-black/50 text-center text-white rounded border border-white/10"
-                                                        />
-                                                        <input
-                                                            type="number"
-                                                            placeholder="+/-"
-                                                            value={p.profitLoss || ''}
-                                                            onChange={(e) => updatePlayerResult(p.id, 'profitLoss', parseFloat(e.target.value) || 0)}
-                                                            className="w-20 bg-black/50 text-center text-white rounded border border-white/10"
-                                                        />
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <input
-                                                            type="number"
-                                                            value={p.position}
-                                                            onChange={(e) => updatePlayerResult(p.id, 'position', parseInt(e.target.value))}
-                                                            className="w-12 bg-black/50 text-center text-white rounded border border-white/10"
-                                                        />
-                                                        <input
-                                                            type="number"
-                                                            placeholder="0"
-                                                            value={p.prize || ''}
-                                                            onChange={(e) => updatePlayerResult(p.id, 'prize', parseFloat(e.target.value) || 0)}
-                                                            className="w-20 bg-black/50 text-right text-green-400 font-bold rounded border border-white/10 px-2"
-                                                        />
-                                                    </>
-                                                )}
+                                                {(() => {
+                                                    const currentSchema = scoringSchemas.find(s => s.id === closingEvent?.scoringSchemaId);
+                                                    const isCashLayout = formulaType === 'cash_online' || currentSchema?.criteria.some(c => c.type === 'rake' || c.type === 'profit_loss');
+
+                                                    return isCashLayout ? (
+                                                        <>
+                                                            <input
+                                                                type="number"
+                                                                placeholder="Rake"
+                                                                value={p.rake || ''}
+                                                                onChange={(e) => updatePlayerResult(p.id, 'rake', parseFloat(e.target.value) || 0)}
+                                                                className="w-20 bg-black/50 text-center text-white rounded border border-white/10"
+                                                            />
+                                                            <input
+                                                                type="number"
+                                                                placeholder="+/-"
+                                                                value={p.profitLoss || ''}
+                                                                onChange={(e) => updatePlayerResult(p.id, 'profitLoss', parseFloat(e.target.value) || 0)}
+                                                                className="w-20 bg-black/50 text-center text-white rounded border border-white/10"
+                                                            />
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <input
+                                                                type="number"
+                                                                value={p.position}
+                                                                onChange={(e) => updatePlayerResult(p.id, 'position', parseInt(e.target.value))}
+                                                                className="w-12 bg-black/50 text-center text-white rounded border border-white/10"
+                                                            />
+                                                            <input
+                                                                type="number"
+                                                                placeholder="0"
+                                                                value={p.prize || ''}
+                                                                onChange={(e) => updatePlayerResult(p.id, 'prize', parseFloat(e.target.value) || 0)}
+                                                                className="w-20 bg-black/50 text-right text-green-400 font-bold rounded border border-white/10 px-2"
+                                                            />
+                                                        </>
+                                                    );
+                                                })()}
 
                                                 <button onClick={() => updatePlayerResult(p.id, 'isVip', !p.isVip)} className={`px-2 rounded text-[10px] h-6 flex items-center justify-center shrink-0 ${p.isVip ? 'bg-primary text-white' : 'bg-gray-700 text-gray-400'}`}>VIP</button>
 

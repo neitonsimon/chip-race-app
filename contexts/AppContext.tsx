@@ -207,7 +207,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     if (item.key === 'hero') setContentDB(prev => ({ ...prev, hero: item.value }));
                     else if (item.key === 'details') setContentDB(prev => ({ ...prev, details: item.value }));
                     else if (item.key === 'faq') setContentDB(prev => ({ ...prev, faq: item.value }));
-                    else if (item.key === 'timeline') setContentDB(prev => ({ ...prev, timeline: item.value }));
                     else if (item.key === 'months') setMonths(item.value);
                     else if (item.key === 'total_qualifiers') setCustomTotalQualifiers(item.value);
                 });
@@ -240,6 +239,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     gallery: p.gallery || undefined,
                     playStyles: p.play_styles || undefined,
                     isVerified: p.is_verified || false,
+                    totalPendingDebt: p.total_pending_debt || 0,
                     badges: allUserBadges?.filter(ub => ub.user_id === p.id) || []
                 })));
             }
@@ -321,9 +321,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const fetchMessages = async (userId: string) => {
         try {
+            const { data: profile } = await supabase.from('profiles').select('role').eq('id', userId).single();
+            const isAdminRole = profile?.role === 'admin' || profile?.role === 'staff';
+
             const { data } = await supabase.from('messages').select('*').or(`user_id.eq.${userId},user_id.is.null`).order('created_at', { ascending: false });
             if (data) {
-                const formatted: Message[] = data.map(m => ({
+                const filtered = data.filter(m => {
+                    if (m.category === 'support' && !m.user_id) return isAdminRole;
+                    return true;
+                });
+
+                const formatted: Message[] = filtered.map(m => ({
                     id: m.id,
                     from: m.sender || 'Chip Race',
                     senderId: m.sender_id,
@@ -398,7 +406,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (error) throw error;
             if (data && data.status === 'success') {
                 // Award happened, notify user
-                const msg = `Recompensa Diária Resgatada! Dia ${data.streak}: ${data.reward_label}. Seu sistema de níveis e limite de crédito foi atualizado!`;
+                const msg = `Recompensa Diária Resgatada! Dia ${data.streak}: ${data.reward_label}. Seu sistema de níveis e conquistas foi atualizado!`;
                 await supabase.from('messages').insert({
                     user_id: userId,
                     sender: 'Chip Race',
@@ -424,7 +432,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const msgChannel = supabase.channel('realtime-messages')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
                 const m = payload.new as any;
-                if (!m.user_id || m.user_id === currentUserId) {
+                const isSupportToAdmin = m.category === 'support' && !m.user_id;
+                const isTargetedToMe = m.user_id === currentUserId;
+                const isGlobalNonSupport = !m.user_id && m.category !== 'support';
+
+                if (isTargetedToMe || isGlobalNonSupport || (isSupportToAdmin && isAdmin)) {
                     const newMsg: Message = {
                         id: m.id, from: m.sender || 'Chip Race', senderId: m.sender_id, subject: m.subject || 'Notificação',
                         content: m.content || '', date: new Date(m.created_at || Date.now()).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }),
@@ -439,7 +451,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, () => fetchMessages(currentUserId))
             .subscribe();
 
-        return () => { supabase.removeChannel(msgChannel); if (notificationTimer.current) clearTimeout(notificationTimer.current); };
+
+        const profileChannel = supabase.channel('realtime-profile')
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${currentUserId}` }, (payload) => {
+                const p = payload.new as any;
+                setCurrentUser(prev => ({
+                    ...prev,
+                    balanceBrl: p.balance_brl ? Number(p.balance_brl) : prev.balanceBrl,
+                    balanceChipz: p.balance_chipz || prev.balanceChipz,
+                    totalPendingDebt: p.total_pending_debt || 0,
+                    level: p.level || prev.level,
+                    currentExp: p.current_exp || prev.currentExp
+                }));
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(msgChannel);
+            supabase.removeChannel(profileChannel);
+            if (notificationTimer.current) clearTimeout(notificationTimer.current);
+        };
     }, [isLoggedIn, currentUserId]);
 
     useEffect(() => {
@@ -492,7 +523,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setPrizeLabel(lastCompleted.prize);
             const numericPrize = parseInt(lastCompleted.prize.replace(/\D/g, ''));
             if (!isNaN(numericPrize)) currentPrizeVal = numericPrize * 1000;
-        } else { setPrizeLabel('30K+'); }
+        } else { setPrizeLabel('2026'); }
 
         const autoTotal = months.reduce((acc, month) => {
             if (month.status === 'completed' && typeof month.qualifiers === 'number') return acc + month.qualifiers;
@@ -534,30 +565,59 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         window.scrollTo(0, 0);
     };
 
-    const handleProfileUpdate = async (targetId: string, updatedData: PlayerStats) => {
-        if (targetId === currentUserId) setCurrentUser(prev => ({ ...prev, ...updatedData }));
-        setRankings(prev => prev.map(r => ({ ...r, players: r.players.map(p => p.id === targetId ? { ...p, ...updatedData } : p) })));
-        setAllProfiles(prev => prev.map(p => p.id === targetId ? { ...p, ...updatedData } : p));
-        if (selectedPlayer?.id === targetId) setSelectedPlayer(prev => prev ? { ...prev, ...updatedData } : null);
+    const handleProfileUpdate = async (targetId: string, updatedData: any) => {
+        try {
+            // Update local state for current user immediately
+            if (targetId === currentUserId) {
+                setCurrentUser(prev => ({ ...prev, ...updatedData }));
+            }
 
-        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetId);
-        if (currentUserId && targetId && isUUID) {
-            try {
-                if (targetId !== currentUserId && !isAdmin) { alert("Sem permissão"); return; }
-                const { error } = await supabase.from('profiles').update({
-                    name: updatedData.name, avatar_url: updatedData.avatar, city: updatedData.city, bio: updatedData.bio,
-                    social: updatedData.social || {}, play_styles: updatedData.playStyles || [], gallery: updatedData.gallery || [],
-                    level: updatedData.level || 1,
-                    current_exp: updatedData.currentExp || 0,
-                    next_level_exp: updatedData.nextLevelExp || 1000,
-                    last_daily_claim: updatedData.lastDailyClaim || null, daily_streak: updatedData.dailyStreak || 0,
-                    is_vip: updatedData.isVip || false,
-                    vip_status: updatedData.vipStatus || 'nao_vip',
-                    vip_expires_at: updatedData.vipExpiresAt || null,
-                    is_verified: updatedData.isVerified || false
-                }).eq('id', targetId);
-                if (error) throw error;
-            } catch (e) { console.error('Error saving profile:', e); }
+            // Sync with allProfiles list
+            setAllProfiles(prev => prev.map(p => p.id === targetId ? { ...p, ...updatedData } : p));
+
+            // Sync with selected player if applicable
+            if (selectedPlayer?.id === targetId) {
+                setSelectedPlayer(prev => prev ? ({ ...prev, ...updatedData } as any) : null);
+            }
+
+            // Persist to Supabase if it's a UUID and the user is an admin or it's their own profile
+            const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetId);
+            if (isUUID && (isAdmin || targetId === currentUserId)) {
+                // Prepare a clean update object with only defined fields
+                const dbUpdate: any = {};
+
+                // Mapeamento de campos UI/State para Colunas DB
+                if (updatedData.name !== undefined) dbUpdate.name = updatedData.name;
+                if (updatedData.avatar !== undefined) dbUpdate.avatar_url = updatedData.avatar;
+                if (updatedData.city !== undefined) dbUpdate.city = updatedData.city;
+                if (updatedData.bio !== undefined) dbUpdate.bio = updatedData.bio;
+                if (updatedData.social !== undefined) dbUpdate.social = updatedData.social;
+                if (updatedData.playStyles !== undefined) dbUpdate.play_styles = updatedData.playStyles;
+                if (updatedData.gallery !== undefined) dbUpdate.gallery = updatedData.gallery;
+                if (updatedData.level !== undefined) dbUpdate.level = updatedData.level;
+                if (updatedData.currentExp !== undefined) dbUpdate.current_exp = updatedData.currentExp;
+
+                // Campos Financeiros e de Status
+                if (updatedData.debtLimitBrl !== undefined) dbUpdate.debt_limit_brl = updatedData.debtLimitBrl;
+                if (updatedData.totalPendingDebt !== undefined) dbUpdate.total_pending_debt = updatedData.totalPendingDebt;
+                if (updatedData.balanceBrl !== undefined) dbUpdate.balance_brl = updatedData.balanceBrl;
+                if (updatedData.balanceChipz !== undefined) dbUpdate.balance_chipz = updatedData.balanceChipz;
+                if (updatedData.isVip !== undefined) dbUpdate.is_vip = updatedData.isVip;
+                if (updatedData.vipStatus !== undefined) dbUpdate.vip_status = updatedData.vipStatus;
+                if (updatedData.vipExpiresAt !== undefined) dbUpdate.vip_expires_at = updatedData.vipExpiresAt;
+                if (updatedData.isVerified !== undefined) dbUpdate.is_verified = updatedData.isVerified;
+                if (updatedData.lastDailyClaim !== undefined) dbUpdate.last_daily_claim = updatedData.lastDailyClaim;
+                if (updatedData.dailyStreak !== undefined) dbUpdate.daily_streak = updatedData.dailyStreak;
+
+                // Only execute update if there's something to update
+                if (Object.keys(dbUpdate).length > 0) {
+                    // Use upsert to handle new users who might not have a profile row yet
+                    const { error } = await supabase.from('profiles').upsert({ id: targetId, ...dbUpdate }, { onConflict: 'id' });
+                    if (error) console.error('Error persisting profile update:', error);
+                }
+            }
+        } catch (error) {
+            console.error('Error handling profile update:', error);
         }
     };
 
@@ -624,7 +684,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
         if (results) {
             results.forEach(r => {
-                if (r.userId) supabase.from('messages').insert({ user_id: r.userId, sender: 'Chip Race', subject: '🏆 Resultado de Torneio', content: `${eventToUpdate.title} encerrado, você terminou na posição ${r.position}! Você também ganhou +5 de EXP por participar!`, category: 'tournament', is_read: false });
+                if (r.userId) {
+                    let subject = '🏆 Resultado de Torneio';
+                    let content = `${eventToUpdate.title} encerrado, você terminou na posição ${r.position}! Você também ganhou +5 de EXP por participar!`;
+
+                    // Special messages for TOP 3
+                    if (r.position === 1) {
+                        subject = '🥇 CAMPEÃO CHIP RACE!';
+                        content = `PARABÉNS! Você venceu o torneio ${eventToUpdate.title}! Sua performance foi incrível. Além da premiação, você ganhou +5 de EXP. Continue assim!`;
+                    } else if (r.position === 2) {
+                        subject = '🥈 VICE-CAMPEÃO CHIP RACE!';
+                        content = `Excelente jogo! Você conquistou o 2º lugar no ${eventToUpdate.title}. Por pouco o título não veio! Você ganhou +5 de EXP. Parabéns pela jornada!`;
+                    } else if (r.position === 3) {
+                        subject = '🥉 PÓDIO CHIP RACE!';
+                        content = `Belo resultado! Você garantiu o Top 3 no ${eventToUpdate.title} e subiu ao pódio. Você ganhou +5 de EXP. Parabéns!`;
+                    }
+
+                    supabase.from('messages').insert({
+                        user_id: r.userId,
+                        sender: 'Chip Race',
+                        subject: subject,
+                        content: content,
+                        category: 'tournament',
+                        is_read: false
+                    });
+                }
             });
         }
     };

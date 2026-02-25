@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../src/lib/supabase';
-import { TheChosenQualifier, QualificationMode, PlayerStats } from '../types';
+import { TheChosenQualifier, QualificationMode } from '../types';
 
 interface TheChosenQualifiersProps {
     isAdmin?: boolean;
@@ -45,7 +45,12 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
     const [isSaving, setIsSaving] = useState(false);
     const [filteredSuggestions, setFilteredSuggestions] = useState<{ id?: string, name: string }[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
-    const [profileMap, setProfileMap] = useState<Record<string, { name: string, avatar?: string }>>({});
+    const [profileMap, setProfileMap] = useState<Record<string, { name: string, avatar?: string, numericId?: number }>>({});
+    const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+
+    const toggleRow = (id: string) => {
+        setExpandedRows(prev => ({ ...prev, [id]: !prev[id] }));
+    };
 
     useEffect(() => {
         fetchQualifiers();
@@ -74,6 +79,7 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
 
             if (error) throw error;
             const rows = data || [];
+            console.log(`TheChosenQualifiers: Fetched ${rows.length} qualifiers.`);
             setQualifiers(rows);
 
             // Fetch profiles by ID and Name for accurate mapping
@@ -84,7 +90,7 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
 
             if (uniqueUserIds.length > 0) {
                 const { data: profilesById } = await supabase
-                    .from('profiles')
+                    .from('profiles_public')
                     .select('id, name, avatar_url, numeric_id')
                     .in('id', uniqueUserIds);
 
@@ -95,18 +101,19 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
 
             if (uniqueNames.length > 0) {
                 const { data: profilesByName } = await supabase
-                    .from('profiles')
+                    .from('profiles_public')
                     .select('id, name, avatar_url, numeric_id')
                     .in('name', uniqueNames);
 
                 profilesByName?.forEach((p: any) => {
-                    fullProfileMap[p.name.toLowerCase().trim()] = { name: p.name, avatar: p.avatar_url, numericId: p.numeric_id };
+                    const mappedName = p.name || 'Usuário';
+                    fullProfileMap[mappedName.toLowerCase().trim()] = { name: mappedName, avatar: p.avatar_url, numericId: p.numeric_id };
                 });
             }
 
             setProfileMap(fullProfileMap);
 
-            // Legacy avatar map for backwards compatibility if needed elsewhere
+            // Legacy avatar map for backwards compatibility
             const legacyMap: Record<string, string> = {};
             Object.keys(fullProfileMap).forEach(key => {
                 if (fullProfileMap[key].avatar) legacyMap[key] = fullProfileMap[key].avatar!;
@@ -129,6 +136,19 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
 
             if (error) throw error;
 
+            // NEW: Send congratulatory message to the user's inbox
+            if (selectedUserId) {
+                const modeLabel = MODES.find(m => m.id === selectedMode)?.label || 'um de nossos modos';
+                await supabase.from('messages').insert([{
+                    user_id: selectedUserId,
+                    sender: 'Chip Race',
+                    subject: '✨ Vaga Garantida: The Chosen 2026',
+                    content: `Parabéns! Você acaba de conquistar sua classificação para o capítulo final do The Chosen 2026 via ${modeLabel}. Nos vemos na grande final!`,
+                    category: 'tournament',
+                    is_read: false
+                }]);
+            }
+
             setShowAddModal(false);
             setNewPlayerName('');
             setSelectedUserId(undefined);
@@ -142,7 +162,6 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
     };
 
     const handleDeleteQualifier = async (id: string) => {
-        if (!window.confirm('Excluir esta classificação?')) return;
         try {
             const { error } = await supabase
                 .from('the_chosen_qualifiers')
@@ -160,13 +179,14 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
     const playerSummariesMap: Record<string, PlayerSummary> = {};
 
     qualifiers.forEach(q => {
-        const key = q.user_id || q.player_name.toLowerCase().trim();
-        const profile = q.user_id ? profileMap[q.user_id] : (profileMap[q.player_name.toLowerCase().trim()] || null);
+        const playerNameRaw = q.player_name || 'Jogador';
+        const key = q.user_id || playerNameRaw.toLowerCase().trim();
+        const profile = q.user_id ? profileMap[q.user_id] : (profileMap[playerNameRaw.toLowerCase().trim()] || null);
 
         if (!playerSummariesMap[key]) {
             playerSummariesMap[key] = {
                 userId: q.user_id,
-                name: profile?.name || q.player_name,
+                name: profile?.name || playerNameRaw,
                 qualifications: {
                     rankings: 0, jackpot: 0, last_longer: 0, bet: 0, bet_up: 0, sng_sat: 0, quests: 0, vip: 0
                 },
@@ -193,6 +213,8 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
         return player;
     }).sort((a, b) => b.initialStack - a.initialStack || b.bonusStack - a.bonusStack);
 
+    const getPlayerUniqueId = (player: PlayerSummary) => player.userId || (player.name || 'Jogador').toLowerCase().trim();
+
     return (
         <div className="w-full bg-[#050214] rounded-[2rem] p-6 lg:p-10 border border-white/5 relative overflow-hidden">
             {/* Background Glow */}
@@ -210,7 +232,7 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
                 {isAdmin && (
                     <button
                         onClick={() => setShowAddModal(true)}
-                        className="bg-primary hover:bg-primary/80 text-white font-bold py-3 px-6 rounded-xl flex items-center gap-2 transition-all shadow-neon-pink"
+                        className="w-full md:w-auto bg-primary hover:bg-primary/80 text-white font-bold py-3 px-6 rounded-xl flex items-center justify-center gap-2 transition-all shadow-neon-pink"
                     >
                         <span className="material-icons-outlined">add_circle</span>
                         Adicionar Classificação
@@ -219,106 +241,185 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
             </div>
 
             {/* Main Table */}
-            <div className="overflow-x-auto -mx-6 px-6 lg:mx-0 lg:px-0">
-                <table className="w-full border-separate border-spacing-y-3">
-                    <thead>
-                        <tr className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em]">
-                            <th className="pb-4 text-left pl-6">Competidor</th>
-                            {MODES.map(mode => (
-                                <th key={mode.id} className="pb-4 text-center px-2">
-                                    <div className="flex flex-col items-center gap-1 group">
-                                        <span className={`material-icons-outlined text-lg ${mode.color}`}>{mode.icon}</span>
-                                        <span className="hidden lg:block text-[8px] opacity-0 group-hover:opacity-100 transition-opacity">{mode.label}</span>
-                                    </div>
-                                </th>
-                            ))}
-                            <th className="pb-4 text-center px-4 text-primary">Stack Inicial</th>
-                            <th className="pb-4 text-center px-4 text-secondary">Bônus Reb/Add</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {isLoading ? (
-                            <tr>
-                                <td colSpan={11} className="py-20 text-center text-gray-500 font-bold uppercase tracking-widest animate-pulse">
-                                    Carregando dados...
-                                </td>
-                            </tr>
-                        ) : summaries.length === 0 ? (
-                            <tr>
-                                <td colSpan={11} className="py-20 text-center text-gray-500 italic">
-                                    Nenhum jogador classificado ainda.
-                                </td>
-                            </tr>
-                        ) : summaries.map((player, idx) => (
-                            <tr key={idx} className="group hover:scale-[1.01] transition-transform duration-300">
-                                {/* Player Name */}
-                                <td className="bg-white/5 backdrop-blur-md rounded-l-2xl py-4 pl-6 border-y border-l border-white/5 transition-colors group-hover:border-primary/20">
-                                    <button
-                                        onClick={() => onNavigatePlayer?.(player.name)}
-                                        className="flex items-center gap-3 text-left hover:text-primary transition-colors"
-                                    >
-                                        {(player.userId ? profileMap[player.userId]?.avatar : profileMap[player.name.toLowerCase().trim()]?.avatar) ? (
-                                            <img
-                                                src={player.userId ? profileMap[player.userId]?.avatar : profileMap[player.name.toLowerCase().trim()]?.avatar}
-                                                alt={player.name}
-                                                className="w-10 h-10 rounded-full object-cover border-2 border-primary/30 shadow-lg shadow-primary/20 flex-shrink-0"
-                                            />
-                                        ) : (
-                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/40 to-accent/40 flex items-center justify-center text-xs font-bold text-white shadow-lg border border-white/10 flex-shrink-0">
-                                                {player.name.substring(0, 2).toUpperCase()}
-                                            </div>
-                                        )}
-                                        <div className="flex flex-col">
-                                            <span className="font-bold text-white transition-colors">{player.name}</span>
-                                            <span className="text-[10px] uppercase font-black tracking-widest text-primary/70">
-                                                {(() => {
-                                                    const pInfo = player.userId ? profileMap[player.userId] : profileMap[player.name.toLowerCase().trim()];
-                                                    return pInfo?.numericId ? `CR#${String(pInfo.numericId).padStart(3, '0')}` : 'CR#INV';
-                                                })()}
-                                            </span>
-                                        </div>
-                                    </button>
-                                </td>
-
-                                {/* Qualification Modes Icons */}
-                                {MODES.map(mode => {
-                                    const count = player.qualifications[mode.id];
-                                    return (
-                                        <td key={mode.id} className="bg-white/5 backdrop-blur-md py-4 text-center border-y border-white/5">
-                                            {count > 0 ? (
-                                                <div className="flex flex-col items-center gap-0.5">
-                                                    <div className="w-6 h-6 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center">
-                                                        <span className="material-icons-outlined text-[14px] text-green-400 font-bold">check</span>
-                                                    </div>
-                                                    {count > 1 && (
-                                                        <span className="text-[9px] font-black text-secondary uppercase animate-pulse">+{count - 1} Bônus</span>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <span className="text-gray-800 font-black">-</span>
-                                            )}
-                                        </td>
-                                    );
-                                })}
-
-                                {/* Initial Stack */}
-                                <td className="bg-white/5 backdrop-blur-md py-4 text-center border-y border-white/5">
-                                    <span className="text-lg sm:text-xl font-display font-black text-primary text-glow-pink">
-                                        {player.initialStack > 0 ? `${player.initialStack}k` : '-'}
-                                    </span>
-                                </td>
-
-                                {/* Bonus Stack */}
-                                <td className="bg-white/5 backdrop-blur-md py-4 text-center rounded-r-2xl border-y border-r border-white/5 pr-6 transition-colors group-hover:border-primary/20">
-                                    <span className="text-base sm:text-lg font-display font-black text-secondary">
-                                        {player.bonusStack > 0 ? `+${player.bonusStack}k` : '-'}
-                                    </span>
-                                </td>
-                            </tr>
+            <table className="w-full border-separate border-spacing-y-3">
+                <thead>
+                    <tr className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em]">
+                        <th className="pb-4 text-left pl-4 md:pl-6">Competidor</th>
+                        {MODES.map(mode => (
+                            <th key={mode.id} className="pb-4 text-center px-2 hidden lg:table-cell">
+                                <div className="flex flex-col items-center gap-1 group">
+                                    <span className={`material-icons-outlined text-lg ${mode.color}`}>{mode.icon}</span>
+                                    <span className="hidden lg:block text-[8px] opacity-0 group-hover:opacity-100 transition-opacity">{mode.label}</span>
+                                </div>
+                            </th>
                         ))}
-                    </tbody>
-                </table>
-            </div>
+                        <th className="pb-4 text-center px-2 md:px-4 text-primary whitespace-nowrap">Stack</th>
+                        <th className="pb-4 text-center px-2 md:px-4 text-secondary whitespace-nowrap">Bônus</th>
+                        <th className="pb-4 text-right pr-4 md:pr-6 text-gray-500">
+                            <span className="lg:hidden">Detalhes</span>
+                            <span className="hidden lg:inline">{isAdmin ? 'Ações' : ''}</span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {isLoading ? (
+                        <tr>
+                            <td colSpan={11} className="py-20 text-center text-gray-500 font-bold uppercase tracking-widest animate-pulse">
+                                Carregando dados...
+                            </td>
+                        </tr>
+                    ) : summaries.length === 0 ? (
+                        <tr>
+                            <td colSpan={11} className="py-20 text-center text-gray-500 italic">
+                                Nenhum jogador classificado ainda.
+                            </td>
+                        </tr>
+                    ) : (
+                        summaries.map((player, idx) => {
+                            const pId = getPlayerUniqueId(player);
+                            const isExpanded = expandedRows[pId];
+
+                            return (
+                                <React.Fragment key={idx}>
+                                    <tr className={`group transition-all duration-300 ${isExpanded ? 'scale-[1.01]' : 'hover:scale-[1.005]'}`}>
+                                        {/* Player Name */}
+                                        <td className={`bg-white/5 backdrop-blur-md ${isExpanded ? 'rounded-tl-2xl' : 'rounded-l-2xl'} py-4 pl-4 md:pl-6 border-y border-l border-white/5 transition-colors group-hover:border-primary/20`}>
+                                            <button
+                                                onClick={() => onNavigatePlayer?.(player.name)}
+                                                className="flex items-center gap-2 md:gap-3 text-left hover:text-primary transition-colors max-w-[120px] md:max-w-none"
+                                            >
+                                                {(player.userId ? profileMap[player.userId]?.avatar : profileMap[player.name.toLowerCase().trim()]?.avatar) ? (
+                                                    <img
+                                                        src={player.userId ? profileMap[player.userId]?.avatar : profileMap[player.name.toLowerCase().trim()]?.avatar}
+                                                        alt={player.name}
+                                                        className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover border-2 border-primary/30 shadow-lg flex-shrink-0"
+                                                    />
+                                                ) : (
+                                                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-primary/40 to-accent/40 flex items-center justify-center text-[10px] md:text-xs font-bold text-white shadow-lg border border-white/10 flex-shrink-0">
+                                                        {player.name.substring(0, 2).toUpperCase()}
+                                                    </div>
+                                                )}
+                                                <div className="flex flex-col min-w-0">
+                                                    <span className="font-bold text-white text-xs md:text-sm transition-colors truncate">{player.name}</span>
+                                                    <span className="text-[8px] md:text-[10px] uppercase font-black tracking-widest text-primary/70">
+                                                        {(() => {
+                                                            const pInfo = player.userId ? profileMap[player.userId] : profileMap[player.name.toLowerCase().trim()];
+                                                            return pInfo?.numericId ? `CR#${String(pInfo.numericId).padStart(3, '0')}` : 'CR#INV';
+                                                        })()}
+                                                    </span>
+                                                </div>
+                                            </button>
+                                        </td>
+
+                                        {/* Desktop-only qualification modes */}
+                                        {MODES.map(mode => {
+                                            const count = player.qualifications[mode.id];
+                                            return (
+                                                <td key={mode.id} className={`bg-white/5 backdrop-blur-md py-4 text-center border-y border-white/5 hidden lg:table-cell ${isAdmin && count > 0 ? 'cursor-pointer hover:bg-red-500/10 transition-colors' : ''}`}>
+                                                    {count > 0 ? (
+                                                        <div
+                                                            className="flex flex-col items-center gap-0.5"
+                                                            onClick={() => {
+                                                                if (!isAdmin) return;
+                                                                const playerQuals = qualifiers.filter(q => (q.user_id && q.user_id === player.userId) || (!q.user_id && q.player_name.toLowerCase().trim() === player.name.toLowerCase().trim()));
+                                                                const specificQuals = playerQuals.filter(q => q.mode === mode.id);
+                                                                if (specificQuals.length === 0) return;
+
+                                                                const latest = specificQuals[0];
+                                                                if (window.confirm(`Excluir o lançamento mais recente de "${mode.label}" para ${player.name}?`)) {
+                                                                    handleDeleteQualifier(latest.id);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <div className="w-6 h-6 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                                <span className="material-icons-outlined text-[14px] text-green-400 font-bold">check</span>
+                                                            </div>
+                                                            {count > 1 && (
+                                                                <span className="text-[9px] font-black text-secondary uppercase animate-pulse">+{count - 1} Bônus</span>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-gray-800 font-black">-</span>
+                                                    )}
+                                                </td>
+                                            );
+                                        })}
+
+                                        {/* Stack Info */}
+                                        <td className="bg-white/5 backdrop-blur-md py-4 text-center border-y border-white/5 px-2">
+                                            <span className="text-sm md:text-lg lg:text-xl font-display font-black text-primary text-glow-pink">
+                                                {player.initialStack > 0 ? `${player.initialStack}k` : '-'}
+                                            </span>
+                                        </td>
+
+                                        <td className="bg-white/5 backdrop-blur-md py-4 text-center border-y border-white/5 px-2">
+                                            <span className="text-sm md:text-base lg:text-lg font-display font-black text-secondary">
+                                                {player.bonusStack > 0 ? `+${player.bonusStack}k` : '-'}
+                                            </span>
+                                        </td>
+
+                                        {/* Mobile Expansion / Actions */}
+                                        <td className={`bg-white/5 backdrop-blur-md py-4 text-right ${isExpanded ? 'rounded-tr-2xl' : 'rounded-r-2xl'} border-y border-r border-white/5 pr-4 md:pr-6 transition-colors group-hover:border-primary/20`}>
+                                            <div className="flex justify-end items-center gap-2">
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); toggleRow(pId); }}
+                                                    className="lg:hidden w-8 h-8 rounded-lg bg-primary/10 border border-primary/30 text-primary flex items-center justify-center hover:bg-primary hover:text-white transition-all"
+                                                >
+                                                    <span className="material-icons-outlined text-sm">{isExpanded ? 'expand_less' : 'expand_more'}</span>
+                                                </button>
+
+                                                {isAdmin && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const playerQuals = qualifiers.filter(q => (q.user_id && q.user_id === player.userId) || (!q.user_id && q.player_name.toLowerCase().trim() === player.name.toLowerCase().trim()));
+                                                            if (window.confirm(`AVISO: Isso excluirá TODOS os ${playerQuals.length} lançamentos de ${player.name}. Deseja continuar?`)) {
+                                                                playerQuals.forEach(q => {
+                                                                    supabase.from('the_chosen_qualifiers').delete().eq('id', q.id).then(() => { });
+                                                                });
+                                                                setTimeout(fetchQualifiers, 500);
+                                                            }
+                                                        }}
+                                                        className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/30 text-red-500 flex items-center justify-center hover:bg-red-500 transition-all hover:text-white"
+                                                        title="Excluir Jogador"
+                                                    >
+                                                        <span className="material-icons-outlined text-sm">person_remove</span>
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                    {/* Expansion Detail Row */}
+                                    {isExpanded && (
+                                        <tr className="lg:hidden animate-in slide-in-from-top-2 duration-300">
+                                            <td colSpan={11} className="bg-white/2 backdrop-blur-md rounded-b-2xl border-x border-b border-white/5 p-4 relative z-0">
+                                                <div className="grid grid-cols-4 gap-4 py-2">
+                                                    {MODES.map(mode => {
+                                                        const count = player.qualifications[mode.id];
+                                                        return (
+                                                            <div key={mode.id} className="flex flex-col items-center gap-1">
+                                                                <span className={`material-icons-outlined text-xl ${count > 0 ? mode.color : 'text-gray-700 opacity-20'}`}>{mode.icon}</span>
+                                                                <span className="text-[8px] font-black uppercase text-gray-500 text-center">{mode.label}</span>
+                                                                {count > 0 ? (
+                                                                    <div className="w-5 h-5 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center">
+                                                                        <span className="material-icons-outlined text-[10px] text-green-400 font-bold">check</span>
+                                                                    </div>
+                                                                ) : <span className="text-[10px] text-gray-800">-</span>}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
+                                    {isExpanded && <tr className="h-2"></tr>}
+                                </React.Fragment>
+                            );
+                        })
+                    )}
+                </tbody>
+            </table>
 
             {/* Rules Section */}
             <div className="mt-12 p-8 bg-black/40 rounded-3xl border border-white/5">

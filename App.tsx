@@ -2,6 +2,7 @@ import React from 'react';
 import { useApp } from './contexts/AppContext';
 import { Navigation } from './components/Navigation';
 import { Footer } from './components/Footer';
+import { SupportModal } from './components/SupportModal';
 import { AppRouter } from './components/AppRouter';
 import { supabase } from './src/lib/supabase';
 
@@ -11,6 +12,8 @@ export default function App() {
         messages, unreadCount, handleMarkAsRead, handleReplyMessage,
         currentUser, newNotification, setNewNotification
     } = useApp();
+
+    const [isSupportOpen, setIsSupportOpen] = React.useState(false);
 
     const showFooter = ['home', 'the-chosen-details', 'calendar', 'ranking', 'vip', 'recharge', 'the-chosen-regulations', 'terms', 'privacy', 'rules', 'responsible-gaming'].includes(currentView);
 
@@ -41,8 +44,18 @@ export default function App() {
                 <Footer
                     onNavigate={handleNavigate}
                     isAdmin={isAdmin}
+                    onOpenSupport={() => {
+                        if (isLoggedIn) setIsSupportOpen(true);
+                        else handleNavigate('login');
+                    }}
                 />
             )}
+
+            <SupportModal
+                isOpen={isSupportOpen}
+                onClose={() => setIsSupportOpen(false)}
+                currentUser={currentUser}
+            />
 
             {/* Indicador de Usuário Logado - Fixo no canto inferior direito */}
             {isLoggedIn && currentUser.name && (

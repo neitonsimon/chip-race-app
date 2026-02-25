@@ -113,6 +113,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const [confirmingTopUp, setConfirmingTopUp] = useState(false);
     const [checkoutDebt, setCheckoutDebt] = useState('');
     const [checkoutChips, setCheckoutChips] = useState('');
+    const [checkoutCashOut, setCheckoutCashOut] = useState('');
+    const [checkoutProfitCash, setCheckoutProfitCash] = useState('');
     const [activeDebts, setActiveDebts] = useState<any[]>([]);
     const [totalActiveDebt, setTotalActiveDebt] = useState(0);
 
@@ -164,8 +166,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         }
     };
 
-    const todayStr = new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0') + '-' + String(new Date().getDate()).padStart(2, '0');
-    const upcomingEventsList = events.filter(ev => ev.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date));
+    const todayStr = new Date().toISOString().split('T')[0];
+    const upcomingEventsList = events.filter(ev => ev.date >= todayStr && ev.status !== 'closed').sort((a, b) => a.date.localeCompare(b.date));
+    const pastEventsList = events.filter(ev => ev.date < todayStr || ev.status === 'closed').sort((a, b) => b.date.localeCompare(a.date));
 
 
     const updatePlayerBalanceLocally = (userId: string, amount: number, type: 'brl' | 'chipz' = 'brl') => {
@@ -174,37 +177,68 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
 
         // Update selectedCommand if matches
         if (selectedCommand && selectedCommand.user_id === userId) {
-            setSelectedCommand((prev: any) => prev ? ({
-                ...prev,
-                profiles: {
-                    ...prev.profiles,
-                    [field]: (Number(prev.profiles?.[field]) || 0) + amount
+            setSelectedCommand((prev: any) => {
+                if (!prev) return null;
+                const profiles = prev.profiles;
+                if (Array.isArray(profiles)) {
+                    return {
+                        ...prev,
+                        profiles: [{
+                            ...profiles[0],
+                            [field]: (Number(profiles[0]?.[field]) || 0) + amount
+                        }]
+                    };
                 }
-            }) : null);
+                return {
+                    ...prev,
+                    profiles: {
+                        ...profiles,
+                        [field]: (Number(profiles?.[field]) || 0) + amount
+                    }
+                };
+            });
         }
 
-        // Update in openCommands
         setOpenCommands(prev => prev.map(cmd => {
             if (cmd.user_id === userId) {
+                const profiles = cmd.profiles;
+                if (Array.isArray(profiles)) {
+                    return {
+                        ...cmd,
+                        profiles: [{
+                            ...profiles[0],
+                            [field]: (Number(profiles[0]?.[field]) || 0) + amount
+                        }]
+                    };
+                }
                 return {
                     ...cmd,
                     profiles: {
-                        ...cmd.profiles,
-                        [field]: (Number(cmd.profiles?.[field]) || 0) + amount
+                        ...profiles,
+                        [field]: (Number(profiles?.[field]) || 0) + amount
                     }
                 };
             }
             return cmd;
         }));
 
-        // Update in closedCommands
         setClosedCommands(prev => prev.map(cmd => {
             if (cmd.user_id === userId) {
+                const profiles = cmd.profiles;
+                if (Array.isArray(profiles)) {
+                    return {
+                        ...cmd,
+                        profiles: [{
+                            ...profiles[0],
+                            [field]: (Number(profiles[0]?.[field]) || 0) + amount
+                        }]
+                    };
+                }
                 return {
                     ...cmd,
                     profiles: {
-                        ...cmd.profiles,
-                        [field]: (Number(cmd.profiles?.[field]) || 0) + amount
+                        ...profiles,
+                        [field]: (Number(profiles?.[field]) || 0) + amount
                     }
                 };
             }
@@ -224,11 +258,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
 
         // Also update the global currentUser if it's the admin themselves
         if (currentUser && currentUser.id === userId && onUpdateProfile) {
-            const updatedStats = {
-                ...currentUser,
-                [propField]: (Number(currentUser[propField]) || 0) + amount
-            };
-            onUpdateProfile(userId, updatedStats);
+            onUpdateProfile(userId, { [propField]: (Number(currentUser[propField]) || 0) + amount });
         }
     };
 
@@ -237,37 +267,68 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
 
         // Update selectedCommand if matches
         if (selectedCommand && selectedCommand.user_id === userId) {
-            setSelectedCommand((prev: any) => prev ? ({
-                ...prev,
-                profiles: {
-                    ...prev.profiles,
-                    [field]: (Number(prev.profiles?.[field]) || 0) + amount
+            setSelectedCommand((prev: any) => {
+                if (!prev) return null;
+                const profiles = prev.profiles;
+                if (Array.isArray(profiles)) {
+                    return {
+                        ...prev,
+                        profiles: [{
+                            ...profiles[0],
+                            [field]: (Number(profiles[0]?.[field]) || 0) + amount
+                        }]
+                    };
                 }
-            }) : null);
+                return {
+                    ...prev,
+                    profiles: {
+                        ...profiles,
+                        [field]: (Number(profiles?.[field]) || 0) + amount
+                    }
+                };
+            });
         }
 
-        // Update in openCommands
         setOpenCommands(prev => prev.map(cmd => {
             if (cmd.user_id === userId) {
+                const profiles = cmd.profiles;
+                if (Array.isArray(profiles)) {
+                    return {
+                        ...cmd,
+                        profiles: [{
+                            ...profiles[0],
+                            [field]: (Number(profiles[0]?.[field]) || 0) + amount
+                        }]
+                    };
+                }
                 return {
                     ...cmd,
                     profiles: {
-                        ...cmd.profiles,
-                        [field]: (Number(cmd.profiles?.[field]) || 0) + amount
+                        ...profiles,
+                        [field]: (Number(profiles?.[field]) || 0) + amount
                     }
                 };
             }
             return cmd;
         }));
 
-        // Update in closedCommands
         setClosedCommands(prev => prev.map(cmd => {
             if (cmd.user_id === userId) {
+                const profiles = cmd.profiles;
+                if (Array.isArray(profiles)) {
+                    return {
+                        ...cmd,
+                        profiles: [{
+                            ...profiles[0],
+                            [field]: (Number(profiles[0]?.[field]) || 0) + amount
+                        }]
+                    };
+                }
                 return {
                     ...cmd,
                     profiles: {
-                        ...cmd.profiles,
-                        [field]: (Number(cmd.profiles?.[field]) || 0) + amount
+                        ...profiles,
+                        [field]: (Number(profiles?.[field]) || 0) + amount
                     }
                 };
             }
@@ -308,11 +369,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
 
         // Also update the global currentUser if it's the admin themselves
         if (currentUser && currentUser.id === userId && onUpdateProfile) {
-            const updatedStats = {
-                ...currentUser,
-                totalPendingDebt: (Number(currentUser.totalPendingDebt) || 0) + amount
-            };
-            onUpdateProfile(userId, updatedStats);
+            onUpdateProfile(userId, { totalPendingDebt: (Number(currentUser.totalPendingDebt) || 0) + amount });
         }
     };
 
@@ -460,6 +517,29 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             alert('✅ Despesas do evento salvas com sucesso!');
         } catch (err: any) {
             alert('Erro ao salvar despesas: ' + err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleFinalizeEvent = async () => {
+        if (!selectedEvent) return;
+        if (openCommands.length > 0) {
+            if (!window.confirm(`⚠️ Existem ${openCommands.length} comandas ainda ABERTAS. Tem certeza que deseja finalizar o evento e fechar o dia mesmo assim?`)) return;
+        } else {
+            if (!window.confirm(`Confirmar o encerramento oficial do evento "${selectedEvent.title}"? Isso consolidará os dados para relatórios.`)) return;
+        }
+
+        setIsLoading(true);
+        try {
+            const { error } = await supabase.from('events').update({ status: 'closed' }).eq('id', selectedEvent.id);
+            if (error) throw error;
+
+            setEvents(prev => prev.map(e => e.id === selectedEvent.id ? { ...e, status: 'closed' } : e));
+            setSelectedEvent((prev: any) => prev ? ({ ...prev, status: 'closed' }) : null);
+            alert('✅ Evento FINALIZADO com sucesso! O dia foi encerrado.');
+        } catch (err: any) {
+            alert('Erro ao finalizar evento: ' + err.message);
         } finally {
             setIsLoading(false);
         }
@@ -668,22 +748,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         setIsLoading(true);
         try {
             const isOnline = newDebtData.eventId === 'online_credit';
+            const debtAmount = parseFloat(newDebtData.amount);
+
             const { error } = await supabase.from('debts').insert({
                 user_id: newDebtData.userId,
                 event_id: isOnline ? null : newDebtData.eventId,
-                amount_brl: parseFloat(newDebtData.amount),
+                amount_brl: debtAmount,
                 description: newDebtData.description || (isOnline ? 'Crédito Online' : ''),
                 status: 'pending'
             });
             if (error) throw error;
 
-            updatePlayerDebtLocally(newDebtData.userId, parseFloat(newDebtData.amount));
+            // Trigger will handle total_pending_debt update in database
+            updatePlayerDebtLocally(newDebtData.userId, debtAmount);
 
             await supabase.from('messages').insert({
                 user_id: newDebtData.userId,
                 sender: 'Sistema',
                 sender_id: currentUser.id,
-                content: `Um novo débito de R$ ${parseFloat(newDebtData.amount).toFixed(2)} foi registrado administrativamente.`,
+                content: `Um novo débito de R$ ${debtAmount.toFixed(2)} foi registrado administrativamente.`,
                 category: 'system',
                 is_read: false
             });
@@ -840,6 +923,43 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         }
     };
 
+    const handleAddManualOnline = async () => {
+        if (!selectedCommand) { alert('Selecione uma comanda primeiro.'); return; }
+        const amount = parseFloat(cashAmount);
+        if (isNaN(amount) || amount <= 0) { alert('Valor inválido.'); return; }
+
+        setIsLoading(true);
+        try {
+            const { error } = await supabase.from('command_items').insert({
+                command_id: selectedCommand.id,
+                product_id: null,
+                quantity: 1,
+                unit_price_brl: amount,
+                unit_price_chipz: 0,
+                total_price_brl: amount,
+                total_price_chipz: 0,
+                notes: `Fichas Online — Compra Manual`,
+                created_by: currentUser.id
+            });
+            if (error) throw error;
+
+            const newTotal = Number(selectedCommand.total_brl) + amount;
+            await supabase.from('commands').update({ total_brl: newTotal }).eq('id', selectedCommand.id);
+
+            const upd = openCommands.map(c => c.id === selectedCommand.id ? { ...c, total_brl: newTotal } : c);
+            setOpenCommands(upd);
+            setSelectedCommand({ ...selectedCommand, total_brl: newTotal });
+            fetchCommandItems(selectedCommand.id);
+
+            showToast('Fichas Online', amount);
+            setCashAmount('');
+        } catch (err: any) {
+            alert('Erro ao lançar fichas online: ' + err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
 
     const handleProductClick = (product: any) => {
         if (!selectedCommand) { alert('Selecione uma comanda primeiro.'); return; }
@@ -865,20 +985,32 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         const discount = parseFloat(checkoutDiscount) || 0;
         const debt = parseFloat(checkoutDebt) || 0;
         const chips = parseFloat(checkoutChips) || 0;
-        const finalToDeduct = Math.max(0, total - discount - debt - chips);
+        const cashOut = parseFloat(checkoutCashOut) || 0;
+        const profitCashRaw = parseFloat(checkoutProfitCash) || 0;
+
+        // Net cost = total - discount - debt - chips
+        const netCost = total - discount - debt - chips;
+        // Full profit if cashOut is provided
+        const profit = cashOut > 0 ? cashOut - Math.max(0, netCost) : 0;
+        const hasProfit = profit > 0;
+        // Cash paid in hands, credit goes to app balance
+        const profitCash = Math.min(profitCashRaw, profit);   // physically paid
+        const profitCredit = Math.max(0, profit - profitCash); // credited to balance
+        // Normal deduction when no profit
+        const finalToDeduct = cashOut > 0 ? Math.max(0, netCost - cashOut) : Math.max(0, netCost);
 
         if (!confirmingCheckout) {
-            // Validate debt limit before showing confirmation
-            const currentDebt = Number(selectedCommand.profiles?.total_pending_debt || 0);
-            const limit = Number(selectedCommand.profiles?.debt_limit_brl || 0);
+            const profile = Array.isArray(selectedCommand.profiles) ? selectedCommand.profiles[0] : selectedCommand.profiles;
+            const currentDebt = Number(profile?.total_pending_debt || profile?.totalPendingDebt || 0);
+            const limit = Number(profile?.debt_limit_brl || profile?.debtLimitBrl || 0);
 
-            if (debt > 0 && (currentDebt + debt) > limit) {
+            if (debt > 0 && limit > 0 && (currentDebt + debt) > limit) {
                 alert(`Limite de pendura excedido! \nLimite: R$ ${limit.toFixed(2)}\nPendência atual: R$ ${currentDebt.toFixed(2)}\nTentativa: R$ ${debt.toFixed(2)}`);
                 return;
             }
 
-            // Check if player has enough balance for the remainder
-            if (Number(selectedCommand.profiles?.balance_brl || 0) < finalToDeduct) {
+            // Only check balance if there's a net deduction needed
+            if (!hasProfit && finalToDeduct > 0 && Number(selectedCommand.profiles?.balance_brl || 0) < finalToDeduct) {
                 alert('Saldo insuficiente para cobrir o restante da comanda!');
                 return;
             }
@@ -889,7 +1021,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
 
         setIsLoading(true);
         try {
-            // 1. If there's debt, record it
+            // 1. Record debt if any
             if (debt > 0) {
                 const { error: debtErr } = await supabase.from('debts').insert({
                     user_id: selectedCommand.user_id,
@@ -899,19 +1031,42 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                     status: 'pending'
                 });
                 if (debtErr) throw debtErr;
+
+                // Trigger will handle total_pending_debt update in database
                 updatePlayerDebtLocally(selectedCommand.user_id, debt);
             }
 
-            // 2. Deduct the remainder from player balance
-            if (finalToDeduct > 0) {
+            // 2a. If player PROFITED: credit them (only the credit portion, not cash-in-hands)
+            if (hasProfit) {
+                if (profitCredit > 0) {
+                    const { error: creditErr } = await supabase.rpc('increment_balance_brl', {
+                        p_user_id: selectedCommand.user_id,
+                        p_amount: profitCredit
+                    });
+                    if (creditErr) throw creditErr;
+                    updatePlayerBalanceLocally(selectedCommand.user_id, profitCredit);
+                }
+
+                // Log the profit in transactions (full profit for transparency)
+                await supabase.from('transactions').insert({
+                    user_id: selectedCommand.user_id,
+                    amount_brl: profitCredit,
+                    amount_chipz: 0,
+                    description: `Lucro Cash Game — Comanda encerrada${profitCash > 0 ? ` (R$ ${profitCash.toFixed(2)} pago em mãos)` : ''}`,
+                    category: 'wallet_deposit'
+                });
+            }
+            // 2b. Normal deduction from balance
+            else if (finalToDeduct > 0) {
                 const { error: deductErr } = await supabase.rpc('deduct_balance_brl', {
                     p_user_id: selectedCommand.user_id,
                     p_amount: finalToDeduct
                 });
                 if (deductErr) throw deductErr;
+                updatePlayerBalanceLocally(selectedCommand.user_id, -finalToDeduct);
             }
 
-            // 3. Close the command
+            // 3. Close the command (store cashOut for records)
             await supabase.from('commands').update({
                 status: 'closed',
                 closed_at: new Date().toISOString(),
@@ -921,19 +1076,33 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             }).eq('id', selectedCommand.id);
 
             // 4. Notify user
+            const msgParts = [
+                `Sua comanda foi encerrada. Total consumido: R$ ${total.toFixed(2)}.`,
+                discount > 0 ? `Desconto: R$ ${discount.toFixed(2)}.` : '',
+                debt > 0 ? `Pendura: R$ ${debt.toFixed(2)}.` : '',
+                chips > 0 ? `Pago em fichas: R$ ${chips.toFixed(2)}.` : '',
+                cashOut > 0 ? `Cash Out: R$ ${cashOut.toFixed(2)}.` : '',
+                hasProfit
+                    ? [
+                        `🏆 Lucro de R$ ${profit.toFixed(2)}:`,
+                        profitCash > 0 ? `R$ ${profitCash.toFixed(2)} pago em mãos.` : '',
+                        profitCredit > 0 ? `R$ ${profitCredit.toFixed(2)} creditado no saldo do app.` : ''
+                    ].filter(Boolean).join(' ')
+                    : finalToDeduct > 0 ? `R$ ${finalToDeduct.toFixed(2)} descontado do saldo.` : ''
+            ].filter(Boolean).join(' ');
+
             await supabase.from('messages').insert({
                 user_id: selectedCommand.user_id,
                 sender_id: currentUser.id,
-                content: `Sua comanda foi encerrada. Total: R$ ${total.toFixed(2)}${discount > 0 ? ` (Desconto: R$ ${discount.toFixed(2)})` : ''}${debt > 0 ? ` (Pendura: R$ ${debt.toFixed(2)})` : ''}${chips > 0 ? ` (Pago em Fichas: R$ ${chips.toFixed(2)})` : ''}. R$ ${finalToDeduct.toFixed(2)} descontado do saldo.`,
+                content: msgParts,
                 category: 'system',
                 is_read: false
             });
 
             // 5. Update UI
-            updatePlayerBalanceLocally(selectedCommand.user_id, -finalToDeduct);
             setOpenCommands(openCommands.filter(c => c.id !== selectedCommand.id));
             if (selectedEvent) fetchClosedCommands(selectedEvent.id);
-            fetchDebts(); // Refresh debt list
+            fetchDebts();
 
             setSelectedCommand(null);
             setShowCheckout(false);
@@ -941,6 +1110,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             setCheckoutDiscount('');
             setCheckoutDebt('');
             setCheckoutChips('');
+            setCheckoutCashOut('');
+            setCheckoutProfitCash('');
             setConfirmingCheckout(false);
         } catch (err: any) {
             alert('Erro ao fechar comanda: ' + err.message);
@@ -949,40 +1120,64 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         }
     };
 
-    const handleSettleDebt = async (debt: any, type: 'balance' | 'manual') => {
+    const handleSettleDebt = async (debt: any, type: 'balance' | 'manual', amount?: number) => {
         if (!isAdmin) return;
-        const amount = Number(debt.amount_brl);
-        if (!window.confirm(`Confirmar baixa ${type === 'balance' ? 'via SALDO' : 'MANUAL'} de R$ ${amount.toFixed(2)} p/ ${debt.profiles?.name}?`)) return;
+        const fullAmount = Number(debt.amount_brl);
+        const payAmount = amount ?? fullAmount;
+        const isPartial = payAmount < fullAmount;
+
+        if (payAmount <= 0 || payAmount > fullAmount) {
+            alert('Valor inválido para pagamento.');
+            return;
+        }
+
+        if (!window.confirm(
+            `Confirmar baixa ${isPartial ? 'PARCIAL ' : ''}${type === 'balance' ? 'via SALDO' : 'MANUAL'} de R$ ${payAmount.toFixed(2)}${isPartial ? ` (R$ ${(fullAmount - payAmount).toFixed(2)} continua em aberto)` : ''} p/ ${debt.profiles?.name}?`
+        )) return;
 
         setIsLoading(true);
         try {
+            // Deduct from balance if paying via balance
             if (type === 'balance') {
                 const { error: deductErr } = await supabase.rpc('deduct_balance_brl', {
                     p_user_id: debt.user_id,
-                    p_amount: amount
+                    p_amount: payAmount
                 });
                 if (deductErr) throw deductErr;
-                updatePlayerBalanceLocally(debt.user_id, -amount);
+                updatePlayerBalanceLocally(debt.user_id, -payAmount);
             }
 
-            const { error: updateErr } = await supabase.from('debts').update({
-                status: 'paid',
-                paid_at: new Date().toISOString()
-            }).eq('id', debt.id);
-            if (updateErr) throw updateErr;
+            if (isPartial) {
+                // Partial: reduce the debt amount, keep pending
+                const remaining = fullAmount - payAmount;
+                const { error: updateErr } = await supabase.from('debts').update({
+                    amount_brl: remaining
+                }).eq('id', debt.id);
+                if (updateErr) throw updateErr;
+            } else {
+                // Full: mark as paid
+                const { error: updateErr } = await supabase.from('debts').update({
+                    status: 'paid',
+                    paid_at: new Date().toISOString()
+                }).eq('id', debt.id);
+                if (updateErr) throw updateErr;
+            }
 
-            updatePlayerDebtLocally(debt.user_id, -amount);
+            // Trigger will handle total_pending_debt update in database
+            updatePlayerDebtLocally(debt.user_id, -payAmount);
 
             await supabase.from('messages').insert({
                 user_id: debt.user_id,
                 sender_id: currentUser.id,
-                content: `Sua pendência de R$ ${amount.toFixed(2)} foi baixada (${type === 'balance' ? 'Saldo R$' : 'Baixa Manual'}).`,
+                content: isPartial
+                    ? `Pagamento parcial de R$ ${payAmount.toFixed(2)} registrado. Saldo devedor atualizado para R$ ${(fullAmount - payAmount).toFixed(2)}.`
+                    : `Sua pendência de R$ ${fullAmount.toFixed(2)} foi quitada (${type === 'balance' ? 'Saldo R$' : 'Baixa Manual'}).`,
                 category: 'system',
                 is_read: false
             });
 
             fetchDebts();
-            alert('Baixa realizada com sucesso!');
+            alert(isPartial ? `Pagamento parcial de R$ ${payAmount.toFixed(2)} registrado!` : 'Baixa total realizada com sucesso!');
         } catch (err: any) {
             alert('Erro ao dar baixa: ' + err.message);
         } finally {
@@ -1000,15 +1195,68 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         }
         setIsLoading(true);
         try {
-            // Atomic increment — no race condition
+            const userId = selectedCommand.user_id;
+
+            // 1. Credit BRL balance
             const { error: incrErr } = await supabase.rpc('increment_balance_brl', {
-                p_user_id: selectedCommand.user_id,
+                p_user_id: userId,
                 p_amount: amount
             });
             if (incrErr) { alert('Erro ao creditar: ' + incrErr.message); return; }
-            await supabase.from('messages').insert({ user_id: selectedCommand.user_id, sender_id: currentUser.id, content: `Pagamento de R$ ${amount.toFixed(2)} registrado pelo admin. Saldo atualizado.`, category: 'system', is_read: false });
-            updatePlayerBalanceLocally(selectedCommand.user_id, amount); // Update balance locally
-            alert(`✅ R$ ${amount.toFixed(2)} creditado com sucesso!`);
+
+            updatePlayerBalanceLocally(userId, amount);
+
+            // 2. Calculate bonuses: R$20 = 1 EXP, R$100 = 1 Chipz
+            const expBonus = Math.floor(amount / 20);
+            const chipzBonus = Math.floor(amount / 100);
+
+            // 3. Award EXP
+            if (expBonus > 0) {
+                const { data: profData } = await supabase.from('profiles').select('current_exp').eq('id', userId).single();
+                await supabase.from('profiles').update({ current_exp: (Number(profData?.current_exp) || 0) + expBonus }).eq('id', userId);
+            }
+
+            // 4. Award Chipz
+            if (chipzBonus > 0) {
+                await supabase.rpc('add_chipz_balance', { user_id: userId, amount: chipzBonus });
+                await supabase.from('transactions').insert({
+                    user_id: userId,
+                    amount_brl: 0,
+                    amount_chipz: chipzBonus,
+                    description: `Bônus Chipz por depósito de R$ ${amount.toFixed(2)}`,
+                    category: 'wallet_deposit'
+                });
+            }
+
+            // 5. Base system message
+            await supabase.from('messages').insert({
+                user_id: userId,
+                sender_id: currentUser.id,
+                content: `Pagamento de R$ ${amount.toFixed(2)} registrado pelo admin. Saldo atualizado.`,
+                category: 'system',
+                is_read: false
+            });
+
+            // 6. Gift bonus message
+            if (expBonus > 0 || chipzBonus > 0) {
+                const rewardLines = [
+                    expBonus > 0 ? `⭐ ${expBonus} EXP` : '',
+                    chipzBonus > 0 ? `🌟 ${chipzBonus} Chipz de Bônus` : ''
+                ].filter(Boolean).join('\n');
+
+                await supabase.from('messages').insert({
+                    user_id: userId,
+                    sender_id: currentUser.id,
+                    content: `Parabéns! Sua compra de R$ ${amount.toFixed(2)} em créditos gerou recompensas! Você recebeu:\n${rewardLines}\nAproveite seus bônus!`,
+                    category: 'gift',
+                    is_read: false
+                });
+            }
+
+            alert(`✅ R$ ${amount.toFixed(2)} creditado com sucesso!${expBonus > 0 || chipzBonus > 0
+                ? `\n🎁 Bônus: ${expBonus > 0 ? `${expBonus} EXP ` : ''}${chipzBonus > 0 ? `+ ${chipzBonus} Chipz` : ''}`
+                : ''
+                }`);
             setShowTopUp(false);
             setTopUpAmount('');
             setConfirmingTopUp(false);
@@ -1162,10 +1410,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                 <aside className="w-52 border-r border-white/10 bg-black/20 p-4 flex flex-col gap-2 flex-shrink-0">
                     {[
                         { id: 'operational', icon: 'point_of_sale', label: 'Operaç.' },
-                        { id: 'launch', icon: 'add_shopping_cart', label: 'Lançar' },
+                        { id: 'launch', icon: 'add_shopping_cart', label: 'Produtos' },
                         { id: 'reports', icon: 'bar_chart', label: 'Relat.' },
                         { id: 'send-gifts', icon: 'stars', label: 'Prêmios' },
-                        { id: 'debts', icon: 'receipt_long', label: 'Pendura' },
+                        { id: 'debts', icon: 'receipt_long', label: 'Crédito' },
                         { id: 'communications', icon: 'campaign', label: 'Comunic.' }
                     ].filter(t => currentUser?.role !== 'staff' || t.id === 'operational').map(t => (
                         <button key={t.id} onClick={() => { setActiveTab(t.id as any); if (t.id === 'reports' && selectedEvent) fetchReport(selectedEvent.id); }}
@@ -1221,18 +1469,21 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             cashAmount={cashAmount}
                             setCashAmount={setCashAmount}
                             handleAddManualCash={handleAddManualCash}
+                            handleAddManualOnline={handleAddManualOnline}
                             commandsTab={commandsTab === 'ativas' ? 'ativas' : 'encerradas'}
                             setCommandsTab={(t) => setCommandsTab(t === 'ativas' ? 'ativas' : 'historico')}
                             staffExpenses={staffExpenses}
                             setStaffExpenses={setStaffExpenses}
                             prizePayout={prizePayout}
                             setPrizePayout={setPrizePayout}
-                            updateStaffExpenses={handleSaveExpenses}
-                            updatePrizePayout={handleSaveExpenses}
-                            isProductDisabled={isProductDisabled}
                             isTourItemDisabled={isTourItemDisabled}
+                            isProductDisabled={isProductDisabled}
                             isAdmin={isAdmin}
                             productCategories={productCategories}
+                            pastEventsList={pastEventsList}
+                            handleFinalizeEvent={handleFinalizeEvent}
+                            updateStaffExpenses={handleSaveExpenses}
+                            updatePrizePayout={handleSaveExpenses}
                         />
                     )}
 
@@ -1328,6 +1579,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             debtFilter={debtFilter}
                             setDebtFilter={setDebtFilter}
                             fetchDebts={fetchDebts}
+                            currentUser={currentUser}
+                            products={products}
+                            productCategories={productCategories}
+                            onUpdateProfile={onUpdateProfile}
                         />
                     )}
 
@@ -1362,6 +1617,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                 setCheckoutDebt={setCheckoutDebt}
                 checkoutChips={checkoutChips}
                 setCheckoutChips={setCheckoutChips}
+                checkoutCashOut={checkoutCashOut}
+                setCheckoutCashOut={setCheckoutCashOut}
+                checkoutProfitCash={checkoutProfitCash}
+                setCheckoutProfitCash={setCheckoutProfitCash}
                 handleCloseCommand={handleCloseCommand}
                 handleDeleteCommandItem={handleDeleteCommandItem}
                 isLoading={isLoading}

@@ -78,12 +78,10 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                 }
 
                 if (onUpdateProfile) {
-                    const newPlayerData = {
-                        ...currentUser,
+                    onUpdateProfile(currentUser.id, {
                         balanceBrl: (currentUser.balanceBrl || 0) - cost,
                         balanceChipz: (currentUser.balanceChipz || 0) + totalChipz
-                    };
-                    onUpdateProfile(currentUser.id, newPlayerData);
+                    } as any);
                 }
 
                 alert(`Sucesso! Você adquiriu o pacote ${packageName} e recebeu ${totalChipz} Chipz.`);
@@ -110,16 +108,24 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                     return;
                 }
 
+                // Award EXP Bonus (1 EXP per R$ 20, same as Admin panel)
+                const expBonus = Math.floor(amountToAdd / 20);
+                if (expBonus > 0) {
+                    await supabase.rpc('bulk_add_event_exp', {
+                        p_user_ids: [currentUser.id],
+                        p_exp_amount: expBonus
+                    });
+                }
+
                 if (onUpdateProfile) {
-                    const newPlayerData = {
-                        ...currentUser,
+                    // Update only what changed to avoid overwriting other fields (like EXP) with stale local data
+                    onUpdateProfile(currentUser.id, {
                         balanceBrl: (currentUser.balanceBrl || 0) + amountToAdd
-                    };
-                    onUpdateProfile(currentUser.id, newPlayerData);
+                    } as any);
                 }
 
                 setCustomBrlAmount('');
-                alert(`Sucesso! R$ ${amountToAdd.toFixed(2)} foram adicionados à sua carteira.`);
+                alert(`Sucesso! R$ ${amountToAdd.toFixed(2)} foram adicionados à sua carteira.${expBonus > 0 ? ` Você ganhou +${expBonus} de EXP!` : ''}`);
             }
         } catch (err: any) {
             console.error('Erro na compra:', err);

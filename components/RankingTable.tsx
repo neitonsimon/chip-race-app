@@ -84,6 +84,9 @@ export const RankingTable: React.FC<RankingTableProps> = ({
         }
     }, [activeRankingId]);
 
+    const currentSimSchema = activeRanking?.scoringSchemas?.find(s => s.id === simType) || globalScoringSchemas?.find(s => s.id === simType);
+    const isCashSim = simType === 'cash_online' || (currentSimSchema?.criteria.some(c => c.type === 'rake' || c.type === 'profit_loss'));
+
     // --- SIMULATOR LOGIC ---
     useEffect(() => {
         let points = 0;
@@ -190,7 +193,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
     };
 
     return (
-        <div className="py-12 bg-background-light dark:bg-background-dark min-h-screen relative">
+        <div className="py-12 bg-background-light dark:bg-background-dark min-h-screen relative overflow-x-hidden">
             {/* Primary Glow Background */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/10 rounded-full blur-[120px] pointer-events-none"></div>
 
@@ -323,7 +326,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                     </select>
                                 </div>
 
-                                {simType === 'cash_online' ? (
+                                {isCashSim ? (
                                     <>
                                         <div>
                                             <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Rake Gerado (R$)</label>
@@ -392,7 +395,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                             {/* Checkboxes & Result */}
                             <div className="lg:col-span-1 flex flex-col justify-between h-full gap-4">
                                 <div className="flex gap-4">
-                                    {simType !== 'cash_online' && (
+                                    {!isCashSim && (
                                         <div className="flex flex-col gap-1 w-24 md:w-32">
                                             <label className="text-[10px] font-bold text-gray-400 uppercase">Posição Final</label>
                                             {simType.includes('legacy') || activeRanking?.label.toLowerCase().includes('legado') ? (
@@ -477,7 +480,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                 </div>
                                 <div className="text-left">
                                     <div className="text-white font-black text-xl uppercase italic">{activeRanking.prizeInfoTitle}</div>
-                                    <div className="text-primary font-bold">THE CHOSEN 30K+</div>
+                                    <div className="text-primary font-bold">THE CHOSEN 2026</div>
                                 </div>
                             </div>
                             <div className="h-px w-full md:w-px md:h-12 bg-white/10"></div>

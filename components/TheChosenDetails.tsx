@@ -131,56 +131,56 @@ const REGULATIONS_DATA: Record<string, { title: string; icon: string; color: str
 const getColors = (color: string) => {
     switch (color) {
         case 'primary': return {
-            border: 'hover:border-primary/50',
-            icon: 'text-primary',
-            shadow: 'group-hover:shadow-neon-pink',
-            glow: 'from-primary/10',
-            text: 'group-hover:text-primary',
-            btn: 'text-primary',
-            badge: 'bg-primary/20 text-primary border-primary/40'
+            border: 'hover:border-primary/40',
+            icon: 'text-gray-400 group-hover:text-primary',
+            shadow: 'group-hover:shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)]',
+            glow: 'from-primary/5',
+            text: 'group-hover:text-gray-200',
+            btn: 'text-gray-400 group-hover:text-white',
+            badge: 'bg-white/5 text-gray-400 border-white/10'
         };
         case 'secondary': return {
-            border: 'hover:border-secondary/50',
-            icon: 'text-secondary',
-            shadow: 'group-hover:shadow-neon-blue',
-            glow: 'from-secondary/10',
-            text: 'group-hover:text-secondary',
-            btn: 'text-secondary',
-            badge: 'bg-secondary/20 text-secondary border-secondary/40'
+            border: 'hover:border-secondary/40',
+            icon: 'text-gray-400 group-hover:text-secondary',
+            shadow: 'group-hover:shadow-[0_0_20px_rgba(var(--secondary-rgb),0.3)]',
+            glow: 'from-secondary/5',
+            text: 'group-hover:text-gray-200',
+            btn: 'text-gray-400 group-hover:text-white',
+            badge: 'bg-white/5 text-gray-400 border-white/10'
         };
         case 'cyan': return {
-            border: 'hover:border-cyan-500/50',
-            icon: 'text-cyan-500',
-            shadow: 'group-hover:shadow-[0_0_20px_rgba(168,85,247,0.5)]',
-            glow: 'from-cyan-500/10',
-            text: 'group-hover:text-cyan-500',
-            btn: 'text-cyan-500',
-            badge: 'bg-cyan-500/20 text-cyan-500 border-cyan-500/40'
+            border: 'hover:border-cyan-500/40',
+            icon: 'text-gray-400 group-hover:text-cyan-400',
+            shadow: 'group-hover:shadow-[0_0_20px_rgba(34,211,238,0.3)]',
+            glow: 'from-cyan-500/5',
+            text: 'group-hover:text-gray-200',
+            btn: 'text-gray-400 group-hover:text-white',
+            badge: 'bg-white/5 text-gray-400 border-white/10'
         };
         case 'pink': return {
-            border: 'hover:border-pink-500/50',
-            icon: 'text-pink-500',
-            shadow: 'group-hover:shadow-[0_0_20px_rgba(236,72,153,0.5)]',
-            glow: 'from-pink-500/10',
-            text: 'group-hover:text-pink-500',
-            btn: 'text-pink-500',
-            badge: 'bg-pink-500/20 text-pink-500 border-pink-500/40'
+            border: 'hover:border-pink-500/40',
+            icon: 'text-gray-400 group-hover:text-pink-400',
+            shadow: 'group-hover:shadow-[0_0_20px_rgba(244,114,182,0.3)]',
+            glow: 'from-pink-500/5',
+            text: 'group-hover:text-gray-200',
+            btn: 'text-gray-400 group-hover:text-white',
+            badge: 'bg-white/5 text-gray-400 border-white/10'
         };
         default: return {
-            border: 'hover:border-gray-500',
-            icon: 'text-gray-500',
+            border: 'hover:border-white/20',
+            icon: 'text-gray-400 group-hover:text-white',
             shadow: '',
-            glow: 'from-gray-500/10',
-            text: '',
-            btn: 'text-gray-500',
-            badge: 'bg-gray-500/20 text-gray-500 border-gray-500/40'
+            glow: 'from-white/5',
+            text: 'group-hover:text-gray-200',
+            btn: 'text-gray-400 group-hover:text-white',
+            badge: 'bg-white/5 text-gray-400 border-white/10'
         };
     }
 };
 
 export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
     isAdmin,
-    prizeLabel = "30K+",
+    prizeLabel = "2026",
     onNavigate,
     content = DEFAULT_CONTENT,
     onUpdateContent = (_f: string, _v: string) => { },
@@ -442,34 +442,117 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                         <div className="h-1 w-20 bg-gradient-to-r from-primary/50 to-secondary/50 mx-auto rounded-full"></div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {categories.map((cat, index) => {
-                            const styles = getColors(cat.color);
+                    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                        {Array.from({ length: 8 }).map((_, index) => {
+                            const cat = (categories || [])[index];
+
+                            if (!cat) {
+                                if (!isAdmin) return null;
+                                return (
+                                    <div key={`empty-${index}`} className="relative bg-[#0f0a20]/50 border border-dashed border-white/10 p-6 sm:p-8 rounded-2xl flex flex-col h-full text-center items-center justify-center min-h-[300px] group hover:border-primary/50 transition-colors">
+                                        <div className="w-16 h-16 rounded-full bg-white/5 border border-white/5 flex items-center justify-center mb-4">
+                                            <span className="material-icons-outlined text-gray-700 text-3xl">add</span>
+                                        </div>
+                                        <p className="text-[10px] font-black uppercase text-gray-600 tracking-widest mb-4">Slot {index + 1} Livre</p>
+
+                                        <div className="relative">
+                                            <button
+                                                onClick={() => setActiveTemplateSelect(activeTemplateSelect === `new-${index}` ? null : `new-${index}`)}
+                                                className="bg-primary/20 hover:bg-primary/40 text-primary text-[10px] font-black px-4 py-2 rounded-lg transition-all"
+                                            >
+                                                CONFIGURAR CATEGORIA
+                                            </button>
+
+                                            {(activeTemplateSelect === `new-${index}`) && (
+                                                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setActiveTemplateSelect(null)}>
+                                                    <div
+                                                        className="w-full max-w-[280px] bg-[#1a1438] border border-white/20 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] p-3 animate-in fade-in zoom-in duration-200"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest p-2 border-b border-white/5 mb-1 flex justify-between items-center">
+                                                            <span>Categorias do Sistema</span>
+                                                            <button onClick={() => setActiveTemplateSelect(null)}><span className="material-icons-outlined text-xs">close</span></button>
+                                                        </div>
+                                                        <div className="max-h-64 overflow-y-auto custom-scrollbar">
+                                                            {Object.entries(REGULATIONS_DATA).map(([key, data]) => (
+                                                                <button
+                                                                    key={key}
+                                                                    onClick={async () => {
+                                                                        const colorValue = (data.color.replace('text-', '').replace('-500', '') as any);
+                                                                        const firstRule = data.rules.trim().split('\n')[0].replace(/^\d+\.\s*/, '');
+                                                                        const { error } = await supabase.from('ecosystem_categories').insert({
+                                                                            id: key,
+                                                                            title: data.title,
+                                                                            icon: data.icon,
+                                                                            description: firstRule,
+                                                                            color: colorValue === 'primary' || colorValue === 'secondary' || colorValue === 'cyan' || colorValue === 'pink' ? colorValue : 'primary',
+                                                                            order: index,
+                                                                            slots: 1
+                                                                        });
+
+                                                                        if (error) {
+                                                                            alert('Erro ao criar categoria: ' + error.message);
+                                                                        } else {
+                                                                            window.location.reload();
+                                                                        }
+                                                                        setActiveTemplateSelect(null);
+                                                                    }}
+                                                                    className="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-white/5 transition-colors flex items-center gap-2 group/item"
+                                                                >
+                                                                    <span className={`material-icons-outlined text-sm ${data.color}`}>{data.icon}</span>
+                                                                    <span className="text-gray-300 group-hover/item:text-white truncate">{data.title}</span>
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            }
+
+                            const styles = getColors(cat.color || 'primary');
 
                             return (
-                                <div key={cat.id} className="relative bg-[#0f0a20] border border-white/5 p-6 sm:p-8 rounded-2xl hover:border-primary/30 transition-colors flex flex-col h-full text-center items-center shadow-lg group hover:-translate-y-2 duration-300">
+                                <div key={cat.id} className="relative bg-[#0f0a20] border border-white/5 p-4 sm:p-8 rounded-2xl hover:border-primary/30 transition-colors flex flex-col h-full text-center items-center shadow-lg group hover:-translate-y-2 duration-300">
+                                    {isAdmin && (
+                                        <button
+                                            onClick={async () => {
+                                                if (window.confirm('Excluir este slot?')) {
+                                                    await supabase.from('ecosystem_categories').delete().eq('id', cat.id);
+                                                    window.location.reload();
+                                                }
+                                            }}
+                                            className="absolute top-4 left-4 text-gray-600 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                            title="Excluir Slot"
+                                        >
+                                            <span className="material-icons-outlined text-sm">delete</span>
+                                        </button>
+                                    )}
 
-                                    {/* SLOT/QUALIFIER BADGE EDITABLE (Only relevant for some categories, but keeping it as a generic 'Stat' for now) */}
                                     <div className={`absolute top-4 right-4 text-[10px] font-black uppercase px-2 py-1 rounded-full border ${styles.badge} z-20 flex items-center gap-1`}>
                                         <EditableContent
                                             isAdmin={isAdmin}
                                             value={String(cat.slots || 0)}
                                             onSave={(val) => onUpdateCategory(index, { slots: parseInt(val) || 0 })}
+                                            showIcon={false}
                                         />
                                         <span>Vagas</span>
                                     </div>
 
                                     <div className="mb-6 relative mt-4">
-                                        <div className={`w-16 h-16 rounded-full bg-black border border-white/10 flex items-center justify-center relative z-10 group-hover:${styles.glow} transition-all duration-300`}>
-                                            <span className={`material-icons-outlined text-3xl ${styles.icon}`}>{cat.icon}</span>
+                                        <div className={`w-12 h-12 md:w-16 md:h-16 rounded-full bg-black border border-white/10 flex items-center justify-center relative z-10 transition-all duration-300`}>
+                                            <span className={`material-icons-outlined text-2xl md:text-3xl ${styles.icon}`}>{cat.icon}</span>
                                         </div>
                                     </div>
                                     <div className="flex-1 flex flex-col items-center">
-                                        <h3 className="text-xl font-display font-bold text-white mb-3 uppercase tracking-wide flex items-center justify-center gap-2">
+                                        <h3 className="text-sm md:text-xl font-display font-bold text-white mb-2 md:mb-3 uppercase tracking-wide flex items-center justify-center gap-2">
                                             <EditableContent
                                                 isAdmin={isAdmin}
                                                 value={cat.title}
                                                 onSave={(val) => onUpdateCategory(index, { title: val })}
+                                                showIcon={false}
                                             />
                                             {isAdmin && (
                                                 <div className="relative">
@@ -482,46 +565,57 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                                                     </button>
 
                                                     {activeTemplateSelect === index && (
-                                                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 bg-surface-dark border border-white/10 rounded-xl shadow-2xl z-[100] p-2 animate-in fade-in zoom-in duration-200">
-                                                            <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest p-2 border-b border-white/5 mb-1">Categorias do Sistema</div>
-                                                            <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                                                                {Object.entries(REGULATIONS_DATA).map(([key, data]) => (
-                                                                    <button
-                                                                        key={key}
-                                                                        onClick={() => {
-                                                                            const colorValue = (data.color.replace('text-', '').replace('-500', '') as any);
-                                                                            onUpdateCategory(index, {
-                                                                                id: key,
-                                                                                title: data.title,
-                                                                                icon: data.icon,
-                                                                                color: colorValue === 'primary' || colorValue === 'secondary' || colorValue === 'cyan' || colorValue === 'pink' ? colorValue : 'primary'
-                                                                            });
-                                                                            setActiveTemplateSelect(null);
-                                                                        }}
-                                                                        className="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-white/5 transition-colors flex items-center gap-2 group/item"
-                                                                    >
-                                                                        <span className={`material-icons-outlined text-sm ${data.color}`}>{data.icon}</span>
-                                                                        <span className="text-gray-300 group-hover/item:text-white truncate">{data.title}</span>
-                                                                    </button>
-                                                                ))}
+                                                        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setActiveTemplateSelect(null)}>
+                                                            <div
+                                                                className="w-full max-w-[280px] bg-[#1a1438] border border-white/20 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] p-3 animate-in fade-in zoom-in duration-200"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
+                                                                <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest p-2 border-b border-white/5 mb-1 flex justify-between items-center">
+                                                                    <span>Categorias do Sistema</span>
+                                                                    <button onClick={() => setActiveTemplateSelect(null)}><span className="material-icons-outlined text-xs">close</span></button>
+                                                                </div>
+                                                                <div className="max-h-64 overflow-y-auto custom-scrollbar">
+                                                                    {Object.entries(REGULATIONS_DATA).map(([key, data]) => (
+                                                                        <button
+                                                                            key={key}
+                                                                            onClick={() => {
+                                                                                const colorValue = (data.color.replace('text-', '').replace('-500', '') as any);
+                                                                                const firstRule = data.rules.trim().split('\n')[0].replace(/^\d+\.\s*/, '');
+                                                                                onUpdateCategory(index, {
+                                                                                    id: key,
+                                                                                    title: data.title,
+                                                                                    icon: data.icon,
+                                                                                    description: firstRule,
+                                                                                    color: colorValue === 'primary' || colorValue === 'secondary' || colorValue === 'cyan' || colorValue === 'pink' ? colorValue : 'primary'
+                                                                                });
+                                                                                setActiveTemplateSelect(null);
+                                                                            }}
+                                                                            className="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-white/5 transition-colors flex items-center gap-2 group/item"
+                                                                        >
+                                                                            <span className={`material-icons-outlined text-sm ${data.color}`}>{data.icon}</span>
+                                                                            <span className="text-gray-300 group-hover/item:text-white truncate">{data.title}</span>
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     )}
                                                 </div>
                                             )}
                                         </h3>
-                                        <p className="text-xs text-gray-500 mb-6 leading-relaxed max-w-[200px]">
+                                        <p className="text-[10px] md:text-xs text-gray-400 mb-4 md:mb-6 leading-relaxed max-w-[150px] md:max-w-[200px]">
                                             <EditableContent
                                                 isAdmin={isAdmin}
                                                 value={cat.description}
                                                 onSave={(val) => onUpdateCategory(index, { description: val })}
                                                 type="textarea"
+                                                showIcon={false}
                                             />
                                         </p>
                                     </div>
                                     <button
                                         onClick={() => setActiveRegulation(cat.id)}
-                                        className={`mt-auto text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-current hover:bg-white/10 transition-all ${styles.icon}`}
+                                        className={`mt-auto text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:border-white/30 transition-all ${styles.btn}`}
                                     >
                                         VER MAIS <span className="material-icons-outlined text-xs">add_circle</span>
                                     </button>
@@ -608,8 +702,8 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
 
             {/* MODAL PRODUTO / DETALHES ESPECÍFICOS */}
             {activeRegulation && (REGULATIONS_DATA[activeRegulation] || productDetails || categories.some(cat => cat.id === activeRegulation)) && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
-                    <div className="bg-[#0f0a28] border border-white/10 rounded-3xl w-full max-w-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] relative animate-float overflow-hidden flex flex-col max-h-[90vh]">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center sm:p-4 bg-black/95 backdrop-blur-xl animate-in fade-in duration-300">
+                    <div className="bg-[#0f0a28] border-white/10 sm:border rounded-none sm:rounded-[3rem] w-full h-full sm:h-auto sm:max-w-4xl shadow-[0_0_100px_rgba(0,0,0,0.8)] relative overflow-hidden flex flex-col">
 
                         {/* Header Background Glow */}
                         <div className={`absolute -top-20 -right-20 w-64 h-64 rounded-full blur-[100px] opacity-20 bg-gradient-to-br from-primary/20 to-secondary/20`}></div>

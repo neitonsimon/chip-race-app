@@ -126,40 +126,43 @@ export const Navigation: React.FC<NavigationProps> = ({
                             {isLoggedIn ? (
                                 <div className="flex items-center gap-2">
 
-                                    {/* Wallet Balances */}
-                                    <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-full px-3 py-1.5 shadow-inner whitespace-nowrap">
+                                    {/* Wallet Balances with Integrated Debt */}
+                                    <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-full px-1.5 py-1 shadow-inner whitespace-nowrap">
                                         <div
                                             onClick={() => onNavigate('recharge')}
-                                            className="flex items-center gap-1 cursor-pointer hover:text-green-400 text-gray-200 transition-colors group"
+                                            className="flex items-center gap-1.5 cursor-pointer hover:bg-white/5 rounded-full px-2 py-1 text-gray-200 transition-colors group"
                                         >
                                             <span className="material-icons-outlined text-green-500 text-sm">account_balance_wallet</span>
                                             <span className="font-bold text-xs text-white group-hover:text-green-400 transition-colors">R$ {balanceBrl.toFixed(2)}</span>
-                                            <span className="material-icons-outlined text-[9px] bg-white/10 rounded-full p-0.5 ml-0.5 group-hover:bg-green-500/20 group-hover:text-green-400">add</span>
+                                            <span className="material-icons-outlined text-[9px] bg-white/10 rounded-full p-0.5 ml-0.5 group-hover:bg-green-500 group-hover:text-black transition-all">add</span>
                                         </div>
-                                        <div className="w-px h-4 bg-white/20"></div>
+                                        <div className="w-px h-4 bg-white/10"></div>
                                         <div
                                             onClick={() => onNavigate('recharge')}
-                                            className="flex items-center gap-1 cursor-pointer group"
+                                            className="flex items-center gap-1.5 cursor-pointer hover:bg-white/5 rounded-full px-2 py-1 text-gray-200 transition-colors group"
                                         >
                                             <div className="w-4 h-4 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center shadow-neon-pink group-hover:scale-110 transition-transform">
                                                 <span className="material-icons-outlined text-[8px] text-white">token</span>
                                             </div>
                                             <span className="font-bold text-xs text-primary group-hover:text-white transition-colors">{balanceChipz}</span>
-                                            <span className="material-icons-outlined text-[9px] text-white/50 bg-white/10 rounded-full p-0.5 ml-0.5 group-hover:bg-primary/20 group-hover:text-primary transition-colors">add</span>
+                                            <span className="material-icons-outlined text-[9px] text-white/40 bg-white/5 rounded-full p-0.5 ml-0.5 group-hover:bg-primary group-hover:text-white transition-all">add</span>
                                         </div>
-                                    </div>
 
-                                    {/* Debt Indicator */}
-                                    {totalPendingDebt > 0 && (
-                                        <div
-                                            onClick={() => onNavigate('profile')}
-                                            className="flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 rounded-full px-3 py-1.5 cursor-pointer hover:bg-red-500/20 transition-all group animate-pulse-slow"
-                                            title="Pendências Pendentes"
-                                        >
-                                            <span className="material-icons-outlined text-red-500 text-sm">error_outline</span>
-                                            <span className="font-black text-[10px] text-red-500 uppercase tracking-tighter">Pendura: R$ {totalPendingDebt.toFixed(2)}</span>
-                                        </div>
-                                    )}
+                                        {/* Embedded Debt Indicator */}
+                                        {totalPendingDebt > 0 && (
+                                            <>
+                                                <div className="w-px h-4 bg-red-500/20"></div>
+                                                <div
+                                                    onClick={() => onNavigate('profile')}
+                                                    className="flex items-center gap-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-full px-3 py-1 cursor-pointer transition-all animate-pulse-slow group"
+                                                    title="Pendências Pendentes"
+                                                >
+                                                    <span className="material-icons-outlined text-red-500 text-sm">report_problem</span>
+                                                    <span className="font-black text-[10px] text-red-500 uppercase tracking-tighter">Débito: R$ {totalPendingDebt.toFixed(2)}</span>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
 
                                     {/* Notification Bell */}
                                     <div className="relative">

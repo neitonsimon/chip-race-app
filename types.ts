@@ -27,7 +27,7 @@ export interface Badge {
   title: string;
   description: string;
   icon: string;
-  image_url?: string;
+  image_url?: never;
   awarded_at: string;
 }
 
@@ -36,7 +36,7 @@ export interface BadgeTemplate {
   title: string;
   description: string;
   icon: string;
-  image_url?: string;
+  image_url?: never;
 }
 
 // Interface para resultados de fechamento de evento (Movida para cima para ser usada em Event)
@@ -246,7 +246,7 @@ export interface MonthData {
   status: 'active' | 'completed' | 'locked';
 }
 
-export type MessageCategory = 'system' | 'admin' | 'private' | 'tournament' | 'poll' | 'gift';
+export type MessageCategory = 'system' | 'admin' | 'private' | 'tournament' | 'poll' | 'gift' | 'support';
 
 export interface Message {
   id: string;
@@ -352,7 +352,6 @@ export interface ContentDB {
     title_line1: string;
     title_line2_prefix: string;
     subtitle: string;
-    timeline_title: string;
     btn_ranking: string;
     btn_details: string;
   };
@@ -368,5 +367,4 @@ export interface ContentDB {
   // Adicione mais seções conforme necessário
   categories: TournamentCategory[]; // Categories são dinâmicas agora
   faq?: { question: string; answer: string }[];
-  timeline?: { year: string; title: string; description: string; imageUrl?: string }[];
 }

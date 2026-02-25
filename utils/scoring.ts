@@ -28,7 +28,10 @@ export const calculatePoints = (
                 points += schema.positionPoints[position];
             }
 
-            // Criteria-based points
+            // Criteria-based points calculation with storage for capping
+            const critPoints: Record<string, number> = {};
+
+            // First pass: calculate non-capped criteria
             schema.criteria.forEach(crit => {
                 let multiplier = 0;
                 if (crit.type === 'participants') multiplier = players;
@@ -36,14 +39,27 @@ export const calculatePoints = (
                 else if (crit.type === 'itm' || crit.type === 'winnings') multiplier = prize;
                 else if (crit.type === 'isFt' && position <= 9 && position > 0) multiplier = 1;
                 else if (crit.type === 'isVip' && isVip) multiplier = 1;
-                else if (crit.type === 'spent') multiplier = buyin; // Defaulting spent to buyin
+                else if (crit.type === 'spent') multiplier = buyin;
                 else if (crit.type === 'rake') multiplier = rake;
-                else if (crit.type === 'profit_loss') multiplier = Math.min(Math.abs(profitLoss), rake);
+                else if (crit.type === 'profit_loss') multiplier = Math.abs(profitLoss);
 
-                if (crit.operation === 'multiply') points += multiplier * crit.value;
-                else if (crit.operation === 'divide' && crit.value !== 0) points += multiplier / crit.value;
-                else if (crit.operation === 'sum' && multiplier > 0) points += crit.value;
+                let currentPts = 0;
+                if (crit.operation === 'multiply') currentPts = multiplier * crit.value;
+                else if (crit.operation === 'divide' && crit.value !== 0) currentPts = multiplier / crit.value;
+                else if (crit.operation === 'sum' && multiplier > 0) currentPts = crit.value;
+
+                // Store points
+                if (critPoints[crit.type] === undefined) critPoints[crit.type] = 0;
+                critPoints[crit.type] += currentPts;
             });
+
+            // Second pass: apply capping for 'profit_loss' based on 'rake' points if both exist
+            if (critPoints['profit_loss'] !== undefined && critPoints['rake'] !== undefined) {
+                critPoints['profit_loss'] = Math.min(critPoints['profit_loss'], critPoints['rake']);
+            }
+
+            // Sum up criterion points
+            points += Object.values(critPoints).reduce((a, b) => a + b, 0);
 
             return Math.round(points);
         }

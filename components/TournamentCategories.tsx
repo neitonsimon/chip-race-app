@@ -113,7 +113,7 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
   isAdmin,
   categories,
   onUpdateCategory,
-  prizeLabel = "30K+"
+  prizeLabel = "2026"
 }) => {
   const [activeRegulation, setActiveRegulation] = useState<string | null>(null);
   const [activeTemplateSelect, setActiveTemplateSelect] = useState<number | null>(null);
@@ -121,6 +121,7 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
   const [isLoadingProduct, setIsLoadingProduct] = useState(false);
   const [isEditingProduct, setIsEditingProduct] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', description: '', price: 0, stock: 0, image_url: '' });
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     if (activeRegulation) {
@@ -197,49 +198,49 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
   const getColors = (color: string) => {
     switch (color) {
       case 'primary': return {
-        border: 'hover:border-primary/50',
-        icon: 'text-primary',
-        shadow: 'group-hover:shadow-neon-pink',
-        glow: 'from-primary/10',
-        text: 'group-hover:text-primary',
-        btn: 'text-primary',
-        badge: 'bg-primary/20 text-primary border-primary/40'
+        border: 'hover:border-primary/40',
+        icon: 'text-gray-400 group-hover:text-primary',
+        shadow: 'group-hover:shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)]',
+        glow: 'from-primary/5',
+        text: 'group-hover:text-gray-200',
+        btn: 'text-gray-400 group-hover:text-white',
+        badge: 'bg-white/5 text-gray-400 border-white/10'
       };
       case 'secondary': return {
-        border: 'hover:border-secondary/50',
-        icon: 'text-secondary',
-        shadow: 'group-hover:shadow-neon-blue',
-        glow: 'from-secondary/10',
-        text: 'group-hover:text-secondary',
-        btn: 'text-secondary',
-        badge: 'bg-secondary/20 text-secondary border-secondary/40'
+        border: 'hover:border-secondary/40',
+        icon: 'text-gray-400 group-hover:text-secondary',
+        shadow: 'group-hover:shadow-[0_0_20px_rgba(var(--secondary-rgb),0.3)]',
+        glow: 'from-secondary/5',
+        text: 'group-hover:text-gray-200',
+        btn: 'text-gray-400 group-hover:text-white',
+        badge: 'bg-white/5 text-gray-400 border-white/10'
       };
       case 'cyan': return {
-        border: 'hover:border-cyan-500/50',
-        icon: 'text-cyan-500',
-        shadow: 'group-hover:shadow-[0_0_20px_rgba(168,85,247,0.5)]',
-        glow: 'from-cyan-500/10',
-        text: 'group-hover:text-cyan-500',
-        btn: 'text-cyan-500',
-        badge: 'bg-cyan-500/20 text-cyan-500 border-cyan-500/40'
+        border: 'hover:border-cyan-500/40',
+        icon: 'text-gray-400 group-hover:text-cyan-400',
+        shadow: 'group-hover:shadow-[0_0_20px_rgba(34,211,238,0.3)]',
+        glow: 'from-cyan-500/5',
+        text: 'group-hover:text-gray-200',
+        btn: 'text-gray-400 group-hover:text-white',
+        badge: 'bg-white/5 text-gray-400 border-white/10'
       };
       case 'pink': return {
-        border: 'hover:border-pink-500/50',
-        icon: 'text-pink-500',
-        shadow: 'group-hover:shadow-[0_0_20px_rgba(236,72,153,0.5)]',
-        glow: 'from-pink-500/10',
-        text: 'group-hover:text-pink-500',
-        btn: 'text-pink-500',
-        badge: 'bg-pink-500/20 text-pink-500 border-pink-500/40'
+        border: 'hover:border-pink-500/40',
+        icon: 'text-gray-400 group-hover:text-pink-400',
+        shadow: 'group-hover:shadow-[0_0_20px_rgba(244,114,182,0.3)]',
+        glow: 'from-pink-500/5',
+        text: 'group-hover:text-gray-200',
+        btn: 'text-gray-400 group-hover:text-white',
+        badge: 'bg-white/5 text-gray-400 border-white/10'
       };
       default: return {
-        border: 'hover:border-gray-500',
-        icon: 'text-gray-500',
+        border: 'hover:border-white/20',
+        icon: 'text-gray-400 group-hover:text-white',
         shadow: '',
-        glow: 'from-gray-500/10',
-        text: '',
-        btn: 'text-gray-500',
-        badge: 'bg-gray-500/20 text-gray-500 border-gray-500/40'
+        glow: 'from-white/5',
+        text: 'group-hover:text-gray-200',
+        btn: 'text-gray-400 group-hover:text-white',
+        badge: 'bg-white/5 text-gray-400 border-white/10'
       };
     }
   };
@@ -265,29 +266,30 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {categories.map((cat, index) => {
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          {(showAll ? categories : categories.slice(0, 8)).map((cat, index) => {
             const styles = getColors(cat.color);
 
             return (
               <div
-                key={cat.id}
-                className={`group relative bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/5 rounded-2xl p-6 ${styles.border} transition-all duration-300 hover:-translate-y-2 overflow-hidden`}
+
+                className={`group relative bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/5 rounded-2xl p-4 sm:p-6 ${styles.border} transition-all duration-300 hover:-translate-y-2 overflow-hidden`}
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${styles.glow} to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
 
 
 
                 <div className="relative z-10 flex flex-col items-center text-center mt-4">
-                  <div className={`w-16 h-16 rounded-full bg-gradient-to-b from-gray-800 to-black flex items-center justify-center mb-4 shadow-lg ${styles.shadow} transition-shadow duration-300 border border-white/10`}>
-                    <span className={`material-icons-outlined text-3xl ${styles.icon}`}>{cat.icon}</span>
+                  <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-b from-gray-800 to-black flex items-center justify-center mb-3 sm:mb-4 shadow-lg ${styles.shadow} transition-shadow duration-300 border border-white/10`}>
+                    <span className={`material-icons-outlined text-2xl sm:text-3xl ${styles.icon}`}>{cat.icon}</span>
                   </div>
 
-                  <h3 className={`text-lg font-display font-bold text-gray-900 dark:text-white mb-2 ${styles.text} transition-colors w-full flex items-center justify-center gap-2`}>
+                  <h3 className={`text-sm sm:text-lg font-display font-bold text-gray-900 dark:text-white mb-1 sm:mb-2 ${styles.text} transition-colors w-full flex items-center justify-center gap-2`}>
                     <EditableContent
                       isAdmin={isAdmin}
                       value={cat.title}
                       onSave={(val) => onUpdateCategory(index, { title: val })}
+                      showIcon={false}
                     />
 
                     {isAdmin && (
@@ -301,28 +303,39 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
                         </button>
 
                         {activeTemplateSelect === index && (
-                          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 bg-surface-dark border border-white/10 rounded-xl shadow-2xl z-[100] p-2 animate-in fade-in zoom-in duration-200">
-                            <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest p-2 border-b border-white/5 mb-1">Categorias do Sistema</div>
-                            <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                              {Object.entries(REGULATIONS_DATA).map(([key, data]) => (
-                                <button
-                                  key={key}
-                                  onClick={() => {
-                                    const colorValue = (data.color.replace('text-', '').replace('-500', '') as any);
-                                    onUpdateCategory(index, {
-                                      id: key,
-                                      title: data.title,
-                                      icon: data.icon,
-                                      color: colorValue === 'primary' || colorValue === 'secondary' || colorValue === 'cyan' || colorValue === 'pink' ? colorValue : 'primary'
-                                    });
-                                    setActiveTemplateSelect(null);
-                                  }}
-                                  className="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-white/5 transition-colors flex items-center gap-2 group/item"
-                                >
-                                  <span className={`material-icons-outlined text-sm ${data.color}`}>{data.icon}</span>
-                                  <span className="text-gray-300 group-hover/item:text-white truncate">{data.title}</span>
-                                </button>
-                              ))}
+                          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setActiveTemplateSelect(null)}>
+                            <div
+                              className="w-full max-w-[280px] bg-[#1a1438] border border-white/20 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] p-3 animate-in fade-in zoom-in duration-200"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest p-2 border-b border-white/5 mb-1 flex justify-between items-center">
+                                <span>Categorias do Sistema</span>
+                                <button onClick={() => setActiveTemplateSelect(null)}><span className="material-icons-outlined text-xs">close</span></button>
+                              </div>
+                              <div className="max-h-64 overflow-y-auto custom-scrollbar">
+                                {Object.entries(REGULATIONS_DATA).map(([key, data]) => (
+                                  <button
+                                    key={key}
+                                    onClick={() => {
+                                      const colorValue = (data.color.replace('text-', '').replace('-500', '') as any);
+                                      // Pega a primeira linha das regras para usar como descrição curta se não houver uma
+                                      const firstRule = data.rules.trim().split('\n')[0].replace(/^\d+\.\s*/, '');
+                                      onUpdateCategory(index, {
+                                        id: key,
+                                        title: data.title,
+                                        icon: data.icon,
+                                        description: firstRule,
+                                        color: colorValue === 'primary' || colorValue === 'secondary' || colorValue === 'cyan' || colorValue === 'pink' ? colorValue : 'primary'
+                                      });
+                                      setActiveTemplateSelect(null);
+                                    }}
+                                    className="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-white/5 transition-colors flex items-center gap-2 group/item"
+                                  >
+                                    <span className={`material-icons-outlined text-sm ${data.color}`}>{data.icon}</span>
+                                    <span className="text-gray-300 group-hover/item:text-white truncate">{data.title}</span>
+                                  </button>
+                                ))}
+                              </div>
                             </div>
                           </div>
                         )}
@@ -330,33 +343,48 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
                     )}
                   </h3>
 
-                  <p className="text-base text-gray-500 dark:text-gray-400 mb-4 min-h-[60px] flex items-center justify-center w-full">
+                  <p className="hidden sm:flex text-base text-gray-500 dark:text-gray-400 mb-4 min-h-[60px] items-center justify-center w-full">
                     <EditableContent
                       isAdmin={isAdmin}
                       value={cat.description}
                       onSave={(val) => onUpdateCategory(index, { description: val })}
                       type="textarea"
                       className="w-full"
+                      showIcon={false}
                     />
                   </p>
 
                   <button
                     onClick={(e) => handleOpenRegulation(e, cat.id)}
-                    className={`text-sm font-bold uppercase tracking-wider ${styles.btn} hover:scale-105 transition-all flex items-center gap-2 cursor-pointer bg-white/5 px-4 py-2 rounded-full border border-current shadow-sm group-hover:bg-white/10`}
+                    className={`text-[10px] sm:text-sm font-bold uppercase tracking-wider ${styles.btn} hover:scale-105 transition-all flex items-center gap-1 sm:gap-2 cursor-pointer bg-white/5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/10 hover:border-white/30 shadow-sm group-hover:bg-white/10`}
                   >
-                    Ver Mais <span className="material-icons-outlined text-sm">add_circle</span>
+                    Ver <span className="hidden sm:inline">Mais</span> <span className="material-icons-outlined text-xs sm:text-sm">add_circle</span>
                   </button>
                 </div>
               </div>
             );
           })}
         </div>
+
+        {categories.length > 8 && (
+          <div className="mt-12 flex justify-center sm:hidden">
+            <button
+              onClick={() => setShowAll(!showAll)}
+              className="bg-surface-dark border border-white/10 px-8 py-3 rounded-full text-white font-black uppercase tracking-widest text-xs hover:bg-white/5 transition-all flex items-center gap-2"
+            >
+              {showAll ? 'Ver Menos' : 'Ver Todas Categorias'}
+              <span className="material-icons-outlined text-sm">
+                {showAll ? 'expand_less' : 'expand_more'}
+              </span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* MODAL DE PRODUTO / DETALHES (POP-UP) */}
       {activeRegulation && (REGULATIONS_DATA[activeRegulation] || productDetails) && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-[#0f0a28] border border-white/10 rounded-3xl w-full md:max-w-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] relative animate-float overflow-hidden flex flex-col max-h-[95vh]">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center sm:p-4 bg-black/95 backdrop-blur-xl animate-in fade-in duration-300">
+          <div className="bg-[#0f0a28] border-white/10 sm:border rounded-none sm:rounded-[3rem] w-full h-full sm:h-auto sm:max-w-4xl shadow-[0_0_100px_rgba(0,0,0,0.8)] relative overflow-hidden flex flex-col">
 
             {/* Header Background Glow */}
             <div className={`absolute -top-20 -right-20 w-64 h-64 rounded-full blur-[100px] opacity-20 bg-gradient-to-br ${getColors(categories.find(c => c.id === activeRegulation)?.color || '').glow}`}></div>
@@ -369,15 +397,6 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
                 <span className="material-icons-outlined text-2xl">close</span>
               </button>
 
-              {isAdmin && !isEditingProduct && (
-                <button
-                  onClick={handleEditClick}
-                  className="absolute top-6 right-20 text-secondary hover:text-white transition-colors p-2 bg-secondary/10 hover:bg-secondary/20 rounded-full shadow-lg"
-                  title="Editar Produto/Regulamento"
-                >
-                  <span className="material-icons-outlined text-2xl">edit</span>
-                </button>
-              )}
 
               {isEditingProduct ? (
                 <div className="pt-8 flex flex-col gap-4">

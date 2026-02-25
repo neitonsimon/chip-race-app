@@ -6,7 +6,7 @@
                 "view": "home"
             },
             {
-                "label": "The Chosen ${prizeLabel}",
+                "label": "THE CHOSEN ${prizeLabel}",
                 "view": "the-chosen-details"
             },
             {
@@ -42,7 +42,7 @@
         ],
         "menuPrincipal": [
             {
-                "label": "The Chosen 30K+",
+                "label": "THE CHOSEN 2026",
                 "view": "the-chosen-details"
             },
             {
@@ -91,8 +91,6 @@
                 "title_line1": "THE CHOSEN",
                 "title_line2_prefix": "",
                 "subtitle": "O palco principal da Chip Race. Uma jornada de 9 meses onde a comunidade define o tamanho da glória.",
-                "timeline_title": "Cronograma de Evolução",
-                "btn_ranking": "RANKING ATUALIZADO",
                 "btn_details": "ENTENDA O"
             },
             "details": {
@@ -101,18 +99,17 @@
                 "concept_title": "CONCEITO",
                 "concept_desc": "Diferente de torneios abertos, o The Chosen é um evento exclusivo para quem provou seu valor durante o ano. Não é possível comprar o buy-in diretamente para o Capítulo Final. Você deve conquistar sua vaga. Isso garante um field de altíssimo nível e uma atmosfera de verdadeira final de campeonato.",
                 "plus_title": "DINÂMICA PLUS",
-                "plus_desc": "O garantido inicial é de R$ 30.000,00, mas a Chip Race desafia a comunidade. A cada mês, se atingirmos metas de classificados, a Chip Race injeta mais dinheiro no garantido. O pote cresce junto com o engajamento dos jogadores.",
+                "plus_desc": "O garantido inicial é definido pela temporada, mas a Chip Race desafia a comunidade. A cada mês, se atingirmos metas de classificados, a Chip Race injeta mais dinheiro no garantido. O pote cresce junto com o engajamento dos jogadores.",
                 "ways_title": "8 Caminhos para a Glória"
             },
             "categories": [],
-            "faq": [],
-            "timeline": []
+            "faq": []
         },
         "months": [
             {
                 "name": "MAR",
                 "qualifiers": 5,
-                "prize": "30K+",
+                "prize": "2026",
                 "status": "active"
             },
             {
@@ -165,7 +162,7 @@
             }
         ],
         "applicationDefaults": {
-            "prizeLabel": "30K+",
+            "prizeLabel": "2026",
             "totalQualifiers": 0,
             "nextGoal": {
                 "prize": 35000,
@@ -208,7 +205,7 @@
             {
                 "id": "bet",
                 "title": "Bet",
-                "desc": "Desafios de apostas e repescagem. A última chance de entrar no 30K+.",
+                "desc": "Desafios de apostas e repescagem. A última chance de entrar no THE CHOSEN 2026.",
                 "icon": "casino",
                 "color": "text-cyan-500",
                 "badge": "bg-cyan-500/20 text-cyan-500 border-cyan-500/40",
@@ -411,7 +408,7 @@
                 "btnColor": "bg-gradient-to-r from-yellow-600 to-yellow-400 text-black font-black hover:scale-105 shadow-[0_0_30px_rgba(250,204,21,0.4)]",
                 "isMaster": true,
                 "features": [
-                    "Vaga The Chosen 30k+ (Destaque)",
+                    "Vaga THE CHOSEN 2026 (Destaque)",
                     "5k fichas adicionais no addon",
                     "Bet free R$ 5 por evento",
                     "Sorteio de 1 add on por evento",

@@ -151,7 +151,9 @@ export const Hero: React.FC<HeroProps> = ({
             >
               <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12"></div>
               <span className="material-icons-outlined text-xl sm:text-2xl animate-pulse">stars</span>
-              <span className="relative z-10">THE CHOSEN <span className="text-secondary-light">{prizeLabel}</span></span>
+              <span className="relative z-10">
+                CONFIRA <span className="text-secondary-light">{prizeLabel === '2026' ? '30K+' : prizeLabel} GTD</span>
+              </span>
               <span className="material-icons group-hover:translate-x-2 transition-transform relative z-10">arrow_forward</span>
             </button>
           </div>
@@ -162,12 +164,7 @@ export const Hero: React.FC<HeroProps> = ({
           <div className="max-w-6xl mx-auto mb-16 px-4">
             <div className="flex items-center justify-between mb-8">
               <h3 className="text-lg sm:text-xl font-display font-bold text-white uppercase tracking-widest flex items-center gap-2">
-                <EditableContent
-                  isAdmin={isAdmin}
-                  value={content.timeline_title}
-                  onSave={(val) => onUpdateContent('timeline_title', val)}
-                  className="text-secondary"
-                /> <span>{prizeLabel}</span>
+                Cronograma de Evolução <span>{prizeLabel}</span>
               </h3>
               <div className="flex flex-col items-end">
                 <span className="text-xs text-gray-500 uppercase">Temporada 2026</span>

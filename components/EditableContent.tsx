@@ -8,6 +8,7 @@ interface EditableContentProps {
   className?: string; // Classes para o texto de visualização
   inputClassName?: string; // Classes extras para o input
   tag?: 'h1' | 'h2' | 'h3' | 'p' | 'span' | 'div' | 'button'; // Qual tag HTML renderizar
+  showIcon?: boolean; // Se deve mostrar o ícone de lápis
 }
 
 export const EditableContent: React.FC<EditableContentProps> = ({
@@ -17,7 +18,8 @@ export const EditableContent: React.FC<EditableContentProps> = ({
   type = 'text',
   className = '',
   inputClassName = '',
-  tag: Tag = 'span'
+  tag: Tag = 'span',
+  showIcon = true
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [currentValue, setCurrentValue] = useState(value);
@@ -52,7 +54,7 @@ export const EditableContent: React.FC<EditableContentProps> = ({
 
   if (isEditing && isAdmin) {
     const commonClasses = `bg-black/50 border border-primary text-white p-1 rounded outline-none w-full ${inputClassName}`;
-    
+
     if (type === 'textarea') {
       return (
         <textarea
@@ -65,7 +67,7 @@ export const EditableContent: React.FC<EditableContentProps> = ({
         />
       );
     }
-    
+
     return (
       <input
         ref={inputRef as React.RefObject<HTMLInputElement>}
@@ -82,7 +84,7 @@ export const EditableContent: React.FC<EditableContentProps> = ({
   return (
     <Tag className={`relative group/edit ${className}`}>
       {value}
-      {isAdmin && (
+      {isAdmin && showIcon && (
         <button
           onClick={(e) => {
             e.stopPropagation();

@@ -4,14 +4,19 @@ import appConfig from '../src/config/appConfig.json';
 interface FooterProps {
   onNavigate: (view: string) => void;
   isAdmin: boolean;
+  onOpenSupport?: () => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onNavigate, isAdmin }) => {
+export const Footer: React.FC<FooterProps> = ({ onNavigate, isAdmin, onOpenSupport }) => {
   const currentYear = new Date().getFullYear();
 
-  const handleLinkClick = (e: React.MouseEvent, view: string) => {
+  const handleLinkClick = (e: React.MouseEvent, item: any) => {
     e.preventDefault();
-    onNavigate(view);
+    if (item.label === 'Suporte Online' && onOpenSupport) {
+      onOpenSupport();
+      return;
+    }
+    onNavigate(item.view);
   };
 
   return (
@@ -24,7 +29,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isAdmin }) => {
 
           {/* Brand Column */}
           <div className="space-y-6">
-            <a href="#" onClick={(e) => handleLinkClick(e, 'home')} className="flex items-center group">
+            <a href="#" onClick={(e) => handleLinkClick(e, { label: 'Home', view: 'home' })} className="flex items-center group">
               <img src="/cr-logo.png" alt="Chip Race" className="h-16 w-auto group-hover:scale-105 transition-transform duration-300" />
             </a>
             <p className="text-gray-400 text-sm leading-relaxed max-w-xs">
@@ -55,7 +60,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isAdmin }) => {
                 <li key={item.label}>
                   <a
                     href="#"
-                    onClick={(e) => handleLinkClick(e, item.view)}
+                    onClick={(e) => handleLinkClick(e, item)}
                     className="hover:text-primary transition-colors flex items-center gap-2 group"
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-primary/20 group-hover:bg-primary transition-colors"></span>
@@ -76,7 +81,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isAdmin }) => {
                 <li key={item.label}>
                   <a
                     href="#"
-                    onClick={(e) => handleLinkClick(e, item.view)}
+                    onClick={(e) => handleLinkClick(e, item)}
                     className="hover:text-white transition-colors"
                   >
                     {item.label}
@@ -101,7 +106,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isAdmin }) => {
                 <li>
                   <a
                     href="#"
-                    onClick={(e) => handleLinkClick(e, 'admin')}
+                    onClick={(e) => handleLinkClick(e, { label: 'Admin', view: 'admin' })}
                     className="text-white hover:text-red-400 font-bold flex items-center gap-2 transition-colors uppercase text-[10px] tracking-widest"
                   >
                     <span className="material-icons text-xs">dashboard</span>
@@ -111,7 +116,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isAdmin }) => {
                 <li>
                   <a
                     href="#"
-                    onClick={(e) => handleLinkClick(e, 'calendar')}
+                    onClick={(e) => handleLinkClick(e, { label: 'Calendar', view: 'calendar' })}
                     className="text-gray-400 hover:text-white flex items-center gap-2 transition-colors text-xs"
                   >
                     <span className="material-icons text-xs">event</span>
@@ -121,7 +126,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isAdmin }) => {
                 <li>
                   <a
                     href="#"
-                    onClick={(e) => handleLinkClick(e, 'ranking')}
+                    onClick={(e) => handleLinkClick(e, { label: 'Ranking', view: 'ranking' })}
                     className="text-gray-400 hover:text-white flex items-center gap-2 transition-colors text-xs"
                   >
                     <span className="material-icons text-xs">emoji_events</span>
@@ -138,7 +143,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, isAdmin }) => {
                   Acesso restrito para administradores e staff do Chip Race.
                 </p>
                 <button
-                  onClick={(e) => handleLinkClick(e, 'login')}
+                  onClick={(e) => handleLinkClick(e, { label: 'Login', view: 'login' })}
                   className="w-full py-2 bg-white/5 border border-white/10 rounded-lg text-[10px] font-bold text-gray-400 hover:bg-white/10 hover:text-white transition-all uppercase tracking-widest"
                 >
                   Fazer Login

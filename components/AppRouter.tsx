@@ -12,7 +12,7 @@ import { VipPage } from './VipPage';
 import { Newsletter } from './Newsletter';
 import { Auth } from './Auth';
 import { RechargePage } from './RechargePage';
-import { CompanyHistory } from './CompanyHistory';
+import { RoadmapSection } from './RoadmapSection';
 import { FAQSection } from './FAQSection';
 import { AdminPanel } from './AdminPanel';
 import { SponsorsSection } from './SponsorsSection';
@@ -173,11 +173,7 @@ export const AppRouter: React.FC = () => {
                             onUpdateCategory={updateCategory}
                             prizeLabel={prizeLabel}
                         />
-                        <CompanyHistory
-                            isAdmin={isAdmin}
-                            timeline={contentDB.timeline}
-                            onUpdateTimeline={(val) => updateContent('timeline', '', val)}
-                        />
+                        <RoadmapSection />
                         <SponsorsSection />
                         <Newsletter onNavigate={handleNavigate} />
                         <FAQSection
