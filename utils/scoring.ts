@@ -83,9 +83,12 @@ export const calculatePoints = (
         if (prize > 0) points += (prize / 25);
     } else if (type === 'legacy_weekly' || type === 'legacy_monthly' || type === 'legacy_special') {
         const table: Record<number, number> = { 1: 100, 2: 80, 3: 70, 4: 60, 5: 50, 6: 40, 7: 30, 8: 20, 9: 10 };
-        let basePoints = table[position] || (position <= 15 ? 5 : 0);
+        let basePoints = table[position] || (position > 0 && position <= 15 ? 5 : 0);
+
+        // Multipliers based on legacy type (fallback if schema not found)
         if (type === 'legacy_monthly') basePoints *= 1.5;
         if (type === 'legacy_special') basePoints *= 3;
+
         points = basePoints;
     } else if (type === 'cash_online') {
         points = rake + Math.min(Math.abs(profitLoss), rake);

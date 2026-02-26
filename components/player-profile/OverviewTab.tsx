@@ -102,56 +102,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                     </div>
                     <p className="text-gray-500 dark:text-gray-400 text-base mb-6">{player.city}</p>
 
-                    {/* Badges Section */}
-                    {player.badges && player.badges.length > 0 && (
-                        <div className="mb-8 flex flex-wrap justify-center gap-3">
-                            {player.badges.map((badge: any) => {
-                                const template = badge.badge_templates;
-                                const badgeColor = badge.color || template?.color || '#00E5FF';
-                                const originalDesc = template?.description;
-
-                                return (
-                                    <div key={badge.id}
-                                        className="group relative w-12 h-12 flex items-center justify-center transition-all cursor-help transform hover:scale-110 rounded-2xl border"
-                                        style={{
-                                            backgroundColor: 'rgba(255,255,255,0.05)',
-                                            borderColor: `${badgeColor}33`,
-                                            boxShadow: `0 4px 15px ${badgeColor}15`,
-                                            '--hover-color': badgeColor
-                                        } as any}
-                                    >
-                                        <style dangerouslySetInnerHTML={{
-                                            __html: `
-                                            .badge-hover-${badge.id}:hover {
-                                                border-color: ${badgeColor} !important;
-                                                background-color: ${badgeColor}20 !important;
-                                                box-shadow: 0 0 20px ${badgeColor}40 !important;
-                                            }
-                                        `}} />
-
-                                        <div className={`w-full h-full flex items-center justify-center rounded-2xl transition-all badge-hover-${badge.id}`}>
-                                            {badge.image_url ? (
-                                                <img src={badge.image_url} alt={badge.title} className="w-8 h-8 object-contain" />
-                                            ) : (
-                                                <span className="material-icons-outlined text-2xl" style={{ color: badgeColor }}>{badge.icon || 'stars'}</span>
-                                            )}
-                                        </div>
-
-                                        {/* Tooltip */}
-                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-48 bg-[#0c0920] text-white text-[10px] p-4 rounded-2xl border border-white/10 opacity-0 group-hover:opacity-100 pointer-events-none transition-all z-50 shadow-2xl scale-90 group-hover:scale-100">
-                                            <div className="flex items-center gap-2 mb-1.5">
-                                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: badgeColor, boxShadow: `0 0 8px ${badgeColor}` }}></div>
-                                                <p className="font-black uppercase tracking-widest leading-none" style={{ color: badgeColor }}>{badge.title}</p>
-                                            </div>
-                                            <p className="text-gray-400 leading-relaxed font-medium">{originalDesc || badge.description}</p>
-                                            {/* Arrow */}
-                                            <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#0c0920] border-b border-r border-white/10 transform rotate-45" />
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
 
 
 
@@ -322,11 +272,16 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             <div className="text-3xl font-display font-black text-white">
                                 {(() => {
                                     if (rankings) {
-                                        const legacy = rankings.find((r: any) => r.id === 'legacy');
+                                        // Buscar o ranking do tipo Legado (lifetime)
+                                        const legacy = rankings.find((r: any) =>
+                                            r.id === 'legacy' ||
+                                            r.id === 'legado' ||
+                                            r.label?.toLowerCase().includes('legado')
+                                        );
                                         if (legacy) {
                                             const match = legacy.players.find((p: any) =>
                                                 (p.id && player.id && p.id === player.id) ||
-                                                p.name.toLowerCase() === player.name.toLowerCase()
+                                                (p.name && player.name && p.name.toLowerCase().trim() === player.name.toLowerCase().trim())
                                             );
                                             if (match && match.rank > 0) return match.rank + 'º';
                                         }
@@ -335,6 +290,25 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                 })()}
                             </div>
                             <div className="text-sm text-gray-500 uppercase tracking-wider">Ranking Geral</div>
+                            <div className="text-[10px] text-primary font-black mt-1 uppercase tracking-tighter opacity-80">
+                                {(() => {
+                                    if (rankings) {
+                                        const legacy = rankings.find((r: any) =>
+                                            r.id === 'legacy' ||
+                                            r.id === 'legado' ||
+                                            r.label?.toLowerCase().includes('legado')
+                                        );
+                                        if (legacy) {
+                                            const match = legacy.players.find((p: any) =>
+                                                (p.id && player.id && p.id === player.id) ||
+                                                (p.name && player.name && p.name.toLowerCase().trim() === player.name.toLowerCase().trim())
+                                            );
+                                            if (match) return `${Math.floor(match.points)} PTS LIFE TIME`;
+                                        }
+                                    }
+                                    return `${player.points || 0} PTS`;
+                                })()}
+                            </div>
                         </div>
                         <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-secondary/50 transition-colors">
                             <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -387,6 +361,58 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             </div>
                         </div>
                         */}
+                    </div>
+                )}
+
+                {/* New Conquistas (Achievements) Section */}
+                {player.badges && player.badges.length > 0 && (
+                    <div className="bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/5 rounded-3xl p-6 shadow-xl">
+                        <div className="flex items-center gap-2 mb-6">
+                            <span className="material-icons text-primary">stars</span>
+                            <h3 className="font-bold text-gray-900 dark:text-white uppercase tracking-wider">Conquistas</h3>
+                        </div>
+
+                        <div className="flex flex-wrap gap-4">
+                            {player.badges.map((badge: any) => {
+                                const template = badge.badge_templates;
+                                const badgeColor = badge.color || template?.color || '#00E5FF';
+                                const originalDesc = template?.description;
+
+                                return (
+                                    <div key={badge.id}
+                                        className="group relative w-14 h-14 md:w-16 md:h-16 flex items-center justify-center transition-all cursor-help transform hover:scale-110 rounded-[1.25rem] border-2"
+                                        style={{
+                                            backgroundColor: 'rgba(255,255,255,0.03)',
+                                            borderColor: `${badgeColor}22`,
+                                            boxShadow: `0 8px 20px ${badgeColor}08`,
+                                            '--hover-glow': badgeColor
+                                        } as any}
+                                    >
+                                        <div className="w-full h-full flex items-center justify-center rounded-[1.25rem] transition-all group-hover:bg-white/[0.05] group-hover:border-white/20">
+                                            {badge.image_url ? (
+                                                <img src={badge.image_url} alt={badge.title} className="w-10 h-10 object-contain" />
+                                            ) : (
+                                                <span className="material-icons-outlined text-3xl" style={{ color: badgeColor }}>{badge.icon || 'stars'}</span>
+                                            )}
+                                        </div>
+
+                                        {/* Tooltip enhanced - Fixed visibility and clipping */}
+                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-56 bg-[#0c0920] text-white p-4 rounded-2xl border border-white/10 invisible opacity-0 group-hover:visible group-hover:opacity-100 pointer-events-none transition-all z-[100] shadow-[0_10px_40px_rgba(0,0,0,0.8)] scale-90 group-hover:scale-100">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: badgeColor, boxShadow: `0 0 10px ${badgeColor}` }}></div>
+                                                <p className="font-black text-xs uppercase tracking-widest leading-none" style={{ color: badgeColor }}>{badge.title}</p>
+                                            </div>
+                                            <p className="text-gray-400 text-[11px] leading-relaxed font-medium">{originalDesc || badge.description}</p>
+                                            <div className="mt-2 pt-2 border-t border-white/5 text-[9px] text-gray-600 font-bold uppercase tracking-wider">
+                                                Ganha em: {new Date(badge.awarded_at).toLocaleDateString()}
+                                            </div>
+                                            {/* Arrow */}
+                                            <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#0c0920] border-b border-r border-white/10 transform rotate-45" />
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 )}
 

@@ -782,13 +782,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const handleUpdateGlobalSchemas = async (schemas: ScoringSchema[]) => {
         setGlobalScoringSchemas(schemas);
-        if (!isAdmin) return;
+        if (!isAdmin || schemas.length === 0) return;
         try {
             const { data: dbSchemas } = await supabase.from('scoring_schemas').select('id');
-            if (dbSchemas) {
+            if (dbSchemas && dbSchemas.length > 0) {
                 const currentIds = schemas.map(s => s.id);
-                const idsToDelete = dbSchemas.map(d => d.id).filter(id => !currentIds.includes(id));
-                if (idsToDelete.length > 0) await supabase.from('scoring_schemas').delete().in('id', idsToDelete);
+                const idsToDelete = dbSchemas.map(d => d.id).filter(id => !currentIds.includes(id) && !id.startsWith('temp-'));
+                if (idsToDelete.length > 0) {
+                    await supabase.from('scoring_schemas').delete().in('id', idsToDelete);
+                }
             }
             for (const s of schemas) {
                 const isTemp = s.id.startsWith('schema-') || s.id === 'default';

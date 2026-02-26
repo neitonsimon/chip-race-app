@@ -23,7 +23,6 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                 const { data, error } = await supabase
                     .from('chipz_packages')
                     .select('*')
-                    .eq('active', true)
                     .order('amount', { ascending: true });
 
                 if (error) throw error;
@@ -44,6 +43,18 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
             if (type === 'chipz') {
                 const pack = chipzPackages.find(p => p.id === id);
                 if (!pack) return;
+
+                if (!pack.active) {
+                    alert('Este pacote está temporariamente bloqueado para venda.');
+                    setIsProcessing(false);
+                    return;
+                }
+
+                if (pack.stock <= 0) {
+                    alert('Este pacote está esgotado.');
+                    setIsProcessing(false);
+                    return;
+                }
 
                 const cost = pack.price;
                 const totalChipz = pack.amount;
@@ -257,38 +268,59 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                             </div>
                         ) : chipzPackages.map((pkg) => {
                             const isSoldOut = pkg.stock === 0;
-                            return (
-                                <div key={pkg.id} className={`bg-surface-dark border ${pkg.popular ? 'border-primary' : 'border-white/5'} rounded-2xl p-6 ${!isSoldOut ? 'hover:border-primary/50 hover:bg-white/5 cursor-pointer' : 'opacity-50 cursor-not-allowed'} transition-all duration-300 group flex flex-col h-full relative overflow-hidden`} onClick={() => !isSoldOut && handlePurchase(pkg.id, 'chipz')}>
+                            const isLocked = !pkg.active;
+                            const canPurchase = !isSoldOut && !isLocked;
 
-                                    {pkg.popular && !isSoldOut && (
+                            return (
+                                <div
+                                    key={pkg.id}
+                                    className={`bg-surface-dark border ${pkg.popular ? 'border-primary' : 'border-white/5'} rounded-2xl p-6 ${canPurchase ? 'hover:border-primary/50 hover:bg-white/5 cursor-pointer hover:-translate-y-1' : 'opacity-50 cursor-not-allowed'} transition-all duration-300 group flex flex-col h-full relative overflow-hidden`}
+                                    onClick={() => canPurchase && handlePurchase(pkg.id, 'chipz')}
+                                >
+
+                                    {pkg.popular && !isSoldOut && !isLocked && (
                                         <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-primary text-white text-[10px] font-black uppercase py-1 px-4 rounded-b-lg shadow-neon-pink">
                                             Mais Popular
                                         </div>
                                     )}
 
                                     {isSoldOut && (
-                                        <div className="absolute top-4 right-[-30px] bg-red-600 text-white text-[10px] font-black uppercase py-1 px-10 rotate-45 shadow-lg z-10">
+                                        <div className="absolute top-4 right-[-30px] bg-red-600/80 text-white text-[10px] font-black uppercase py-1 px-10 rotate-45 shadow-lg z-10">
                                             Esgotado
                                         </div>
                                     )}
 
-                                    <div className={`mt-6 w-16 h-16 rounded-full flex items-center justify-center mb-6 mx-auto ${pkg.popular && !isSoldOut ? 'bg-gradient-to-br from-primary to-accent shadow-neon-pink' : 'bg-white/5 group-hover:bg-primary/20'} transition-colors`}>
-                                        <span className={`material-icons-outlined text-3xl ${pkg.popular && !isSoldOut ? 'text-white' : 'text-gray-400 group-hover:text-primary'} ${isSoldOut && 'opacity-50'}`}>token</span>
+                                    {isLocked && (
+                                        <div className="absolute top-4 right-[-30px] bg-gray-600/80 text-white text-[10px] font-black uppercase py-1 px-10 rotate-45 shadow-lg z-10 font-black">
+                                            Bloqueado
+                                        </div>
+                                    )}
+
+                                    <div className={`mt-6 w-16 h-16 rounded-full flex items-center justify-center mb-6 mx-auto ${pkg.popular && canPurchase ? 'bg-gradient-to-br from-primary to-accent shadow-neon-pink' : 'bg-white/5 group-hover:bg-primary/20'} transition-colors`}>
+                                        <span className={`material-icons-outlined text-3xl ${pkg.popular && canPurchase ? 'text-white' : 'text-gray-400 group-hover:text-primary'} ${!canPurchase && 'opacity-50'}`}>token</span>
                                     </div>
 
                                     <div className="text-center mb-6">
                                         <div className="text-3xl font-black text-white mb-1"><span className="text-primary">{pkg.amount}</span> Chipz</div>
-                                        <div className="text-gray-400 text-sm">Moeda Virtual</div>
-                                        {pkg.stock > 0 && (
-                                            <div className="text-xs text-orange-400 font-bold mt-2 animate-pulse">
-                                                Restam: ???
+                                        <div className="text-gray-400 text-sm">R$ {pkg.price.toFixed(2).replace('.', ',')}</div>
+                                        {!isLocked && (
+                                            <div className={`text-xs font-bold mt-2 ${isSoldOut ? 'text-red-500' : 'text-orange-400 animate-pulse'}`}>
+                                                {isSoldOut ? 'Indisponível' : `Restam: ${pkg.stock} uni.`}
+                                            </div>
+                                        )}
+                                        {isLocked && (
+                                            <div className="text-xs text-gray-500 font-bold mt-2">
+                                                Aguarde a abertura
                                             </div>
                                         )}
                                     </div>
 
                                     <div className="mt-auto pt-6 border-t border-white/10">
-                                        <button disabled={isSoldOut} className={`w-full ${pkg.popular && !isSoldOut ? 'bg-primary' : 'bg-white/5 group-hover:bg-primary/20'} text-white font-bold py-3 rounded-xl transition-colors uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed`}>
-                                            Bloqueado
+                                        <button
+                                            disabled={!canPurchase}
+                                            className={`w-full ${pkg.popular && canPurchase ? 'bg-primary' : 'bg-white/5 group-hover:bg-primary/20'} text-white font-bold py-3 rounded-xl transition-colors uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed`}
+                                        >
+                                            {isLocked ? 'Bloqueado' : isSoldOut ? 'Esgotado' : 'Adquirir Pacote'}
                                         </button>
                                     </div>
                                 </div>

@@ -214,8 +214,8 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                             <span className="text-red-400">- R$ {(Number(staffExpenses) + Number(prizePayout)).toFixed(2)}</span>
                                         </div>
                                         <div className="flex justify-between text-[10px] font-black uppercase tracking-wider">
-                                            <span className="text-yellow-400">Pago em Fichas:</span>
-                                            <span className="text-yellow-400">- R$ {closedCommands.reduce((s, c) => s + Number(c.chips_payment_brl || 0), 0).toFixed(2)}</span>
+                                            <span className="text-yellow-400">Pago em Espécie:</span>
+                                            <span className="text-yellow-400">R$ {closedCommands.reduce((s, c) => s + Number(c.chips_payment_brl || 0), 0).toFixed(2)}</span>
                                         </div>
                                         <div className="h-px bg-white/5"></div>
                                         <div className="flex justify-between text-xs font-black uppercase tracking-wider">
@@ -223,10 +223,32 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                             <span className="text-primary shadow-neon-pink">R$ {(
                                                 openCommands.reduce((s, c) => s + Number(c.total_brl), 0) +
                                                 closedCommands.reduce((s, c) => s + Number(c.total_brl), 0) -
-                                                (Number(staffExpenses) + Number(prizePayout)) -
-                                                closedCommands.reduce((s, c) => s + Number(c.chips_payment_brl || 0), 0)
+                                                (Number(staffExpenses) + Number(prizePayout))
                                             ).toFixed(2)}</span>
                                         </div>
+
+                                        <div className="pt-2 space-y-1.5 opacity-80">
+                                            <div className="flex justify-between text-[9px] font-bold uppercase">
+                                                <span className="text-gray-500">Total em Desconto:</span>
+                                                <span className="text-gray-400">- R$ {closedCommands.reduce((s, c) => s + Number(c.discount_brl || 0), 0).toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-[9px] font-bold uppercase">
+                                                <span className="text-red-500/70">Total em Pendura:</span>
+                                                <span className="text-red-500/70">- R$ {closedCommands.reduce((s, c) => s + Number(c.unpaid_amount_brl || 0), 0).toFixed(2)}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex justify-between text-xs font-black uppercase tracking-wider pt-2 border-t border-white/10 mt-1">
+                                            <span className="text-green-400">Faturamento Real:</span>
+                                            <span className="text-green-400">R$ {(
+                                                openCommands.reduce((s, c) => s + Number(c.total_brl), 0) +
+                                                closedCommands.reduce((s, c) => s + Number(c.total_brl), 0) -
+                                                (Number(staffExpenses) + Number(prizePayout)) -
+                                                closedCommands.reduce((s, c) => s + Number(c.discount_brl || 0), 0) -
+                                                closedCommands.reduce((s, c) => s + Number(c.unpaid_amount_brl || 0), 0)
+                                            ).toFixed(2)}</span>
+                                        </div>
+
                                         <div className="flex justify-between text-[9px] font-bold text-gray-400 uppercase pt-2 border-t border-white/5 mt-1">
                                             <span>Comandas em Aberto:</span>
                                             <span className="text-white font-black">{openCommands.length}</span>

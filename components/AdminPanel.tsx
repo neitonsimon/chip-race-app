@@ -7,6 +7,7 @@ import { DebtsTab } from './admin-panel/DebtsTab';
 import { CommunicationsTab } from './admin-panel/CommunicationsTab';
 import { OperationalTab } from './admin-panel/OperationalTab';
 import { InventoryTab } from './admin-panel/InventoryTab';
+import { SettingsTab } from './admin-panel/SettingsTab';
 import { CheckoutModal } from './admin-panel/modals/CheckoutModal';
 import { TopUpModal } from './admin-panel/modals/TopUpModal';
 import { EditClosedCommandModal } from './admin-panel/modals/EditClosedCommandModal';
@@ -254,6 +255,30 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                 };
             }
             return p;
+        }));
+
+        // Update in activeDebts
+        setActiveDebts(prev => prev.map(d => {
+            if (d.user_id === userId) {
+                const profiles = d.profiles;
+                if (Array.isArray(profiles)) {
+                    return {
+                        ...d,
+                        profiles: [{
+                            ...profiles[0],
+                            [field]: (Number(profiles[0]?.[field]) || 0) + amount
+                        }]
+                    };
+                }
+                return {
+                    ...d,
+                    profiles: {
+                        ...profiles,
+                        [field]: (Number(profiles?.[field]) || 0) + amount
+                    }
+                };
+            }
+            return d;
         }));
 
         // Also update the global currentUser if it's the admin themselves
@@ -1006,9 +1031,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         const finalToDeduct = cashOut > 0 ? Math.max(0, netCost - cashOut) : Math.max(0, netCost);
 
         if (!confirmingCheckout) {
+            // Handle profile as object or array
             const profile = Array.isArray(selectedCommand.profiles) ? selectedCommand.profiles[0] : selectedCommand.profiles;
             const currentDebt = Number(profile?.total_pending_debt || profile?.totalPendingDebt || 0);
             const limit = Number(profile?.debt_limit_brl || profile?.debtLimitBrl || 0);
+            const userBalance = Number(profile?.balance_brl || profile?.balanceBrl || 0);
 
             if (debt > 0 && limit > 0 && (currentDebt + debt) > limit) {
                 alert(`Limite de pendura excedido! \nLimite: R$ ${limit.toFixed(2)}\nPendência atual: R$ ${currentDebt.toFixed(2)}\nTentativa: R$ ${debt.toFixed(2)}`);
@@ -1016,8 +1043,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             }
 
             // Only check balance if there's a net deduction needed
-            if (!hasProfit && finalToDeduct > 0 && Number(selectedCommand.profiles?.balance_brl || 0) < finalToDeduct) {
-                alert('Saldo insuficiente para cobrir o restante da comanda!');
+            if (!hasProfit && finalToDeduct > 0 && userBalance < finalToDeduct) {
+                alert(`Saldo insuficiente para cobrir o restante da comanda!\nO jogador possui R$ ${userBalance.toFixed(2)} e o valor a cobrar é R$ ${finalToDeduct.toFixed(2)}.`);
                 return;
             }
 
@@ -1043,9 +1070,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             }
 
             // 2a. If player PROFITED: credit them (only the credit portion, not cash-in-hands)
+            // 2a. If player PROFITED: credit them (only the credit portion, not cash-in-hands)
             if (hasProfit) {
                 if (profitCredit > 0) {
-                    const { error: creditErr } = await supabase.rpc('secure_balance_transaction', {
+                    const { data, error: creditErr } = await supabase.rpc('secure_balance_transaction', {
                         p_user_id: selectedCommand.user_id,
                         p_brl_amount: profitCredit,
                         p_chipz_amount: 0,
@@ -1054,12 +1082,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                         p_metadata: { command_id: selectedCommand.id, event_id: selectedCommand.event_id, profit_total: profit, cash_payment: profitCash }
                     });
                     if (creditErr) throw creditErr;
+                    if (data === false) throw new Error('Falha ao creditar lucro ao jogador. Verifique permissões ou saldo.');
                     updatePlayerBalanceLocally(selectedCommand.user_id, profitCredit);
                 }
             }
             // 2b. Normal deduction from balance
             else if (finalToDeduct > 0) {
-                const { error: deductErr } = await supabase.rpc('secure_balance_transaction', {
+                const { data, error: deductErr } = await supabase.rpc('secure_balance_transaction', {
                     p_user_id: selectedCommand.user_id,
                     p_brl_amount: -finalToDeduct,
                     p_chipz_amount: 0,
@@ -1068,6 +1097,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                     p_metadata: { command_id: selectedCommand.id, event_id: selectedCommand.event_id, total_consumo: total }
                 });
                 if (deductErr) throw deductErr;
+                if (data === false) throw new Error('Falha ao debitar saldo do aplicativo. Verifique se o jogador possui saldo suficiente.');
                 updatePlayerBalanceLocally(selectedCommand.user_id, -finalToDeduct);
             }
 
@@ -1085,7 +1115,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                 `Sua comanda foi encerrada. Total consumido: R$ ${total.toFixed(2)}.`,
                 discount > 0 ? `Desconto: R$ ${discount.toFixed(2)}.` : '',
                 debt > 0 ? `Pendura: R$ ${debt.toFixed(2)}.` : '',
-                chips > 0 ? `Pago em fichas: R$ ${chips.toFixed(2)}.` : '',
+                chips > 0 ? `Pago em Espécie: R$ ${chips.toFixed(2)}.` : '',
                 cashOut > 0 ? `Cash Out: R$ ${cashOut.toFixed(2)}.` : '',
                 hasProfit
                     ? [
@@ -1136,40 +1166,43 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             return;
         }
 
+        if (type === 'balance') {
+            const userBalance = Number(debt.profiles?.balance_brl || 0);
+            if (userBalance < payAmount) {
+                alert(`Saldo insuficiente no aplicativo!\nO jogador possui R$ ${userBalance.toFixed(2)} e você está tentando cobrar R$ ${payAmount.toFixed(2)}.`);
+                return;
+            }
+        }
+
         if (!window.confirm(
             `Confirmar baixa ${isPartial ? 'PARCIAL ' : ''}${type === 'balance' ? 'via SALDO' : 'MANUAL'} de R$ ${payAmount.toFixed(2)}${isPartial ? ` (R$ ${(fullAmount - payAmount).toFixed(2)} continua em aberto)` : ''} p/ ${debt.profiles?.name}?`
         )) return;
 
         setIsLoading(true);
         try {
-            // Deduct from balance if paying via balance
             if (type === 'balance') {
-                const { error: deductErr } = await supabase.rpc('secure_balance_transaction', {
+                const { data, error } = await supabase.rpc('settle_debt_with_balance', {
                     p_user_id: debt.user_id,
-                    p_brl_amount: -payAmount,
-                    p_chipz_amount: 0,
-                    p_description: `Baixa de pendura (Comanda ${debt.command_id?.slice(0, 8)})`,
-                    p_category: 'purchase',
-                    p_metadata: { debt_id: debt.id, command_id: debt.command_id }
+                    p_debt_id: debt.id,
+                    p_pay_amount: payAmount
                 });
-                if (deductErr) throw deductErr;
+                if (error) throw error;
+                if (!data.success) throw new Error(data.message);
                 updatePlayerBalanceLocally(debt.user_id, -payAmount);
-            }
-
-            if (isPartial) {
-                // Partial: reduce the debt amount, keep pending
-                const remaining = fullAmount - payAmount;
-                const { error: updateErr } = await supabase.from('debts').update({
-                    amount_brl: remaining
-                }).eq('id', debt.id);
-                if (updateErr) throw updateErr;
             } else {
-                // Full: mark as paid
-                const { error: updateErr } = await supabase.from('debts').update({
-                    status: 'paid',
-                    paid_at: new Date().toISOString()
-                }).eq('id', debt.id);
-                if (updateErr) throw updateErr;
+                // Manual settlement
+                if (isPartial) {
+                    const { error: updateErr } = await supabase.from('debts').update({
+                        amount_brl: fullAmount - payAmount
+                    }).eq('id', debt.id);
+                    if (updateErr) throw updateErr;
+                } else {
+                    const { error: updateErr } = await supabase.from('debts').update({
+                        status: 'paid',
+                        paid_at: new Date().toISOString()
+                    }).eq('id', debt.id);
+                    if (updateErr) throw updateErr;
+                }
             }
 
             // Trigger will handle total_pending_debt update in database
@@ -1416,7 +1449,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                         { id: 'reports', icon: 'bar_chart', label: 'Relat.' },
                         { id: 'send-gifts', icon: 'stars', label: 'Prêmios' },
                         { id: 'debts', icon: 'receipt_long', label: 'Crédito' },
-                        { id: 'communications', icon: 'campaign', label: 'Comunic.' }
+                        { id: 'communications', icon: 'campaign', label: 'Comunic.' },
+                        { id: 'settings', icon: 'settings', label: 'Site' }
                     ].filter(t => currentUser?.role !== 'staff' || t.id === 'operational').map(t => (
                         <button key={t.id} onClick={() => { setActiveTab(t.id as any); if (t.id === 'reports' && selectedEvent) fetchReport(selectedEvent.id); }}
                             className={`flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all text-[10px] font-bold uppercase tracking-widest ${activeTab === t.id ? 'bg-primary text-white shadow-neon-pink' : 'text-gray-400 hover:bg-white/5'}`}>
@@ -1603,6 +1637,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             handleSendAdminMessage={handleSendBroadcast}
                             handleCreatePollSubmit={handleCreatePollSubmit}
                         />
+                    )}
+
+                    {activeTab === 'settings' && (
+                        <SettingsTab />
                     )}
                 </main>
             </div>

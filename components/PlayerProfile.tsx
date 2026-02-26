@@ -542,32 +542,15 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
         setIsSavingExp(true);
         try {
-            // 1. Deduct from balance
-            const { error: deductErr } = await supabase.rpc('secure_balance_transaction', {
+            // Use the atomic RPC for settling debt
+            const { data, error } = await supabase.rpc('settle_debt_with_balance', {
                 p_user_id: player.id,
-                p_brl_amount: -payAmount,
-                p_chipz_amount: 0,
-                p_description: `Pagamento ${isPartial ? 'parcial' : 'total'} de pendura (Comanda ${debt.command_id?.slice(0, 8)})`,
-                p_category: 'purchase',
-                p_metadata: { debt_id: debt.id, command_id: debt.command_id }
+                p_debt_id: debt.id,
+                p_pay_amount: payAmount
             });
-            if (deductErr) throw deductErr;
 
-            // 2. Update debt record
-            if (isPartial) {
-                // Reduce amount, keep pending
-                const { error: updateErr } = await supabase.from('debts').update({
-                    amount_brl: fullAmount - payAmount
-                }).eq('id', debt.id);
-                if (updateErr) throw updateErr;
-            } else {
-                // Mark fully paid
-                const { error: updateErr } = await supabase.from('debts').update({
-                    status: 'paid',
-                    paid_at: new Date().toISOString()
-                }).eq('id', debt.id);
-                if (updateErr) throw updateErr;
-            }
+            if (error) throw error;
+            if (!data.success) throw new Error(data.message);
 
             // 3. Update local player state
             const newBalance = player.balanceBrl - payAmount;
@@ -577,9 +560,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
             // 4. Refresh debts
             fetchUserDebts();
-            alert(isPartial
-                ? `Pagamento parcial de R$ ${payAmount.toFixed(2)} realizado! Saldo restante da pendência: R$ ${(fullAmount - payAmount).toFixed(2)}.`
-                : 'Pendência quitada com sucesso!');
+            alert(data.message);
         } catch (err: any) {
             alert('Erro ao pagar: ' + err.message);
         } finally {
@@ -671,30 +652,79 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
     const activeDailyRewards = dailyRewards.length > 0 ? dailyRewards : FALLBACK_DAILY_REWARDS;
 
-    const handleClaimToday = async () => {
+    const handleClaimToday = async (dayIndex?: number) => {
         setIsSavingExp(true);
         try {
-            const { data, error } = await supabase.rpc('process_daily_login', { u_id: targetIdRef.current });
-            if (error) throw error;
+            const currentStreak = player.dailyStreak || 0;
+            const targetDay = dayIndex !== undefined ? dayIndex : currentStreak;
+            const reward = activeDailyRewards[targetDay % activeDailyRewards.length];
 
-            if (data && data.status === 'success') {
-                setClaimAnimation(true);
-                // The reward is applied in backend via RPC. 
-                // Rely on realtime subscription for update.
+            if (!reward) throw new Error("Recompensa não encontrada.");
 
-                // Show animation then close
-                setTimeout(() => {
-                    setClaimAnimation(false);
-                    setShowClaimModal(false);
-                    setCanClaimDaily(false);
-                }, 3000);
-            } else if (data && data.status === 'already_claimed') {
-                alert('Você já resgatou sua recompensa de hoje!');
-                setCanClaimDaily(false);
-                setShowClaimModal(false);
+            let updatedPlayer = { ...player };
+
+            // 1. Processar Recompensa
+            if (reward.reward_type === 'xp') {
+                const xpGain = Number(reward.reward_value) || 0;
+                let newExp = (updatedPlayer.currentExp || 0) + xpGain;
+                let newLevel = updatedPlayer.level || 1;
+                let newDebtLimit = updatedPlayer.debtLimitBrl || 0;
+
+                if (experienceLevels && experienceLevels.length > 0) {
+                    const sortedLevels = [...experienceLevels].sort((a, b) => a.level - b.level);
+
+                    // Lógica de Level Up: verificar se atingiu o próximo patamar
+                    let nextLvlObj = sortedLevels.find(l => l.level === newLevel + 1);
+                    while (nextLvlObj && newExp >= nextLvlObj.required_exp) {
+                        newLevel++;
+                        // Ao subir de nível, o novo limite de crédito é atualizado se definido no banco
+                        if (nextLvlObj.credit_limit !== undefined) {
+                            newDebtLimit = nextLvlObj.credit_limit;
+                        }
+                        nextLvlObj = sortedLevels.find(l => l.level === newLevel + 1);
+                    }
+                }
+
+                updatedPlayer.currentExp = newExp;
+                updatedPlayer.level = newLevel;
+                updatedPlayer.debtLimitBrl = newDebtLimit;
+            } else if (reward.reward_type === 'brl') {
+                updatedPlayer.balanceBrl = (updatedPlayer.balanceBrl || 0) + (Number(reward.reward_value) || 0);
+            } else if (reward.reward_type === 'chipz') {
+                updatedPlayer.balanceChipz = (updatedPlayer.balanceChipz || 0) + (Number(reward.reward_value) || 0);
             }
+
+            // 2. Atualizar Streak (Reset ao coletar) e Data
+            updatedPlayer.lastDailyClaim = new Date().toISOString();
+            updatedPlayer.dailyStreak = 0;
+
+            // 3. Persistir no Supabase através do handler global
+            if (onUpdateProfile && targetIdRef.current) {
+                await onUpdateProfile(targetIdRef.current, {
+                    currentExp: updatedPlayer.currentExp,
+                    level: updatedPlayer.level,
+                    debtLimitBrl: updatedPlayer.debtLimitBrl,
+                    balanceBrl: updatedPlayer.balanceBrl,
+                    balanceChipz: updatedPlayer.balanceChipz,
+                    lastDailyClaim: updatedPlayer.lastDailyClaim,
+                    dailyStreak: updatedPlayer.dailyStreak
+                } as any);
+            }
+
+            // 4. Atualizar estado local e rodar animação
+            setPlayer(updatedPlayer);
+            claimedRewardRef.current = reward;
+            setClaimAnimation(true);
+
+            setTimeout(() => {
+                setClaimAnimation(false);
+                setShowClaimModal(false);
+                setCanClaimDaily(false);
+            }, 3000);
+
         } catch (err: any) {
-            alert('Erro ao resgatar: ' + err.message);
+            console.error('Erro ao resgatar recompensa:', err);
+            alert('Falha ao resgatar: ' + err.message);
         } finally {
             setIsSavingExp(false);
         }
@@ -827,7 +857,16 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     };
 
     const handleSaveCrop = () => {
-        if (!editorImage || !imageRef.current) return;
+        if (!editorImage) return;
+
+        // Se for galeria, a gente pula o crop e salva direto
+        if (cropTarget === 'gallery') {
+            setPlayer(prev => ({ ...prev, gallery: [...prev.gallery, editorImage] }));
+            setEditorImage(null);
+            return;
+        }
+
+        if (!imageRef.current) return;
 
         const canvas = document.createElement('canvas');
         const size = 600; // Resolution enhanced for gallery
@@ -856,14 +895,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             );
 
             const croppedBase64 = canvas.toDataURL('image/jpeg', 0.9);
-
-            if (cropTarget === 'avatar') {
-                handleUpdate('avatar', croppedBase64);
-            } else {
-                // Envia para o estado da galeria
-                setPlayer(prev => ({ ...prev, gallery: [...prev.gallery, croppedBase64] }));
-            }
-
+            handleUpdate('avatar', croppedBase64);
             setEditorImage(null);
         }
     };
@@ -1476,17 +1508,22 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                                 {activeDailyRewards.map((reward, i) => {
                                                     const isCurrentDay = i === Math.min(player.dailyStreak, activeDailyRewards.length - 1);
                                                     const isPast = i < player.dailyStreak;
+                                                    const isFuture = i > player.dailyStreak;
+                                                    const canClaimThis = !isFuture && canClaimDaily;
+
                                                     return (
                                                         <div
                                                             key={i}
+                                                            onClick={canClaimThis ? () => handleClaimToday(i) : undefined}
                                                             className={`flex items-center justify-between px-4 py-2.5 transition-colors ${isCurrentDay ? 'bg-primary/10 border-l-2 border-primary' :
-                                                                isPast ? 'opacity-40' : ''
-                                                                }`}
+                                                                isPast ? 'bg-white/5 cursor-pointer hover:bg-white/10' :
+                                                                    isFuture ? 'opacity-30 cursor-not-allowed' : ''
+                                                                } ${canClaimThis && !isCurrentDay ? 'cursor-pointer hover:bg-white/10' : ''}`}
                                                         >
                                                             <div className="flex items-center gap-3">
-                                                                <span className={`text-xs font-black w-12 ${isCurrentDay ? 'text-primary' : isPast ? 'text-gray-600' : 'text-gray-500'
+                                                                <span className={`text-[10px] font-black w-10 ${isCurrentDay ? 'text-primary' : isPast ? 'text-gray-400' : 'text-gray-600'
                                                                     }`}>
-                                                                    Dia {reward.day ?? i + 1}
+                                                                    DIA {reward.day ?? i + 1}
                                                                 </span>
                                                                 <span className={`material-icons-outlined text-sm ${reward.reward_type === 'brl' ? 'text-green-400' :
                                                                     reward.reward_type === 'chipz' ? 'text-secondary' : 'text-blue-400'
@@ -1496,13 +1533,14 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                                                 </span>
                                                             </div>
                                                             <div className="flex items-center gap-2">
-                                                                <span className={`text-sm font-black ${isCurrentDay ? 'text-primary' :
-                                                                    isPast ? 'text-gray-600' : 'text-white'
+                                                                <span className={`text-xs font-bold ${isCurrentDay ? 'text-primary' :
+                                                                    isPast ? 'text-gray-300' : 'text-gray-600'
                                                                     }`}>
                                                                     {reward.reward_label}
                                                                 </span>
-                                                                {isPast && <span className="material-icons-outlined text-xs text-green-500">check_circle</span>}
-                                                                {isCurrentDay && <span className="text-[9px] font-black text-primary bg-primary/10 border border-primary/30 px-1.5 py-0.5 rounded-full uppercase">Hoje</span>}
+                                                                {isPast && <span className="material-icons-outlined text-[10px] text-primary/50">history</span>}
+                                                                {isCurrentDay && <span className="text-[8px] font-black text-primary bg-primary/10 border border-primary/30 px-1.5 py-0.5 rounded-full uppercase">Hoje</span>}
+                                                                {canClaimThis && !isCurrentDay && <span className="material-icons-outlined text-xs text-primary animate-pulse">ads_click</span>}
                                                             </div>
                                                         </div>
                                                     );
@@ -1545,48 +1583,55 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             }
 
             {/* ... (Restante dos modais: CROP, UPLOAD, MESSAGE permanecem iguais) ... */}
-            {/* CROP IMAGE MODAL */}
+            {/* CROP IMAGE MODAL / GALLERY CONFIRM */}
             {
                 editorImage && (
                     <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex items-center justify-center p-4">
                         <div className="bg-surface-dark border border-white/10 rounded-2xl w-full max-w-md p-6 animate-float shadow-2xl flex flex-col items-center">
-                            <h3 className="text-xl font-bold text-white mb-4">Ajustar Foto do Perfil</h3>
+                            <h3 className="text-xl font-bold text-white mb-4">
+                                {cropTarget === 'avatar' ? 'Ajustar Foto do Perfil' : 'Inserir Foto na Galeria'}
+                            </h3>
                             <div
-                                className="relative w-[280px] h-[280px] rounded-full overflow-hidden border-4 border-white/20 cursor-move bg-black mb-6 select-none touch-none"
-                                onMouseDown={onMouseDown}
-                                onMouseMove={onMouseMove}
+                                className={`relative w-[280px] h-[280px] ${cropTarget === 'avatar' ? 'rounded-full' : 'rounded-2xl'} overflow-hidden border-4 border-white/20 ${cropTarget === 'avatar' ? 'cursor-move' : ''} bg-black mb-6 select-none touch-none`}
+                                onMouseDown={cropTarget === 'avatar' ? onMouseDown : undefined}
+                                onMouseMove={cropTarget === 'avatar' ? onMouseMove : undefined}
                                 onMouseUp={onMouseUp}
                                 onMouseLeave={onMouseUp}
-                                onTouchStart={onMouseDown}
-                                onTouchMove={onMouseMove}
+                                onTouchStart={cropTarget === 'avatar' ? onMouseDown : undefined}
+                                onTouchMove={cropTarget === 'avatar' ? onMouseMove : undefined}
                                 onTouchEnd={onMouseUp}
                             >
                                 <img
                                     ref={imageRef}
                                     src={editorImage}
                                     alt="Edit"
-                                    className="absolute max-w-none origin-center select-none pointer-events-none"
-                                    style={{
+                                    className={`absolute max-w-none origin-center select-none pointer-events-none ${cropTarget === 'gallery' ? 'w-full h-full object-contain' : ''}`}
+                                    style={cropTarget === 'avatar' ? {
                                         transform: `translate(-50%, -50%) translate(${cropOffset.x}px, ${cropOffset.y}px) scale(${zoom})`,
                                         left: '50%',
                                         top: '50%'
+                                    } : {
+                                        left: '0',
+                                        top: '0'
                                     }}
                                 />
                             </div>
-                            <div className="w-full px-4 mb-6">
-                                <label className="flex items-center gap-3 text-sm text-gray-400 mb-2">
-                                    <span className="material-icons-outlined text-sm">zoom_in</span> Zoom
-                                </label>
-                                <input
-                                    type="range"
-                                    min="0.1"
-                                    max="3"
-                                    step="0.05"
-                                    value={zoom}
-                                    onChange={(e) => setZoom(parseFloat(e.target.value))}
-                                    className="w-full accent-primary h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-                                />
-                            </div>
+                            {cropTarget === 'avatar' && (
+                                <div className="w-full px-4 mb-6">
+                                    <label className="flex items-center gap-3 text-sm text-gray-400 mb-2">
+                                        <span className="material-icons-outlined text-sm">zoom_in</span> Zoom
+                                    </label>
+                                    <input
+                                        type="range"
+                                        min="0.1"
+                                        max="3"
+                                        step="0.05"
+                                        value={zoom}
+                                        onChange={(e) => setZoom(parseFloat(e.target.value))}
+                                        className="w-full accent-primary h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                                    />
+                                </div>
+                            )}
                             <div className="flex gap-4 w-full">
                                 <button
                                     onClick={() => setEditorImage(null)}
@@ -1598,7 +1643,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                     onClick={handleSaveCrop}
                                     className="flex-1 py-3 rounded-lg bg-primary hover:bg-primary/90 text-white font-bold shadow-lg transition-colors"
                                 >
-                                    Salvar Foto
+                                    {cropTarget === 'avatar' ? 'Salvar Foto' : 'Confirmar'}
                                 </button>
                             </div>
                         </div>
@@ -1950,7 +1995,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                         )}
                                         {Number(viewingReceipt.chips_payment_brl) > 0 && (
                                             <div className="flex justify-between text-xs">
-                                                <span className="text-gray-500 uppercase font-bold">Fichas Cash</span>
+                                                <span className="text-gray-500 uppercase font-bold">Pago em Espécie</span>
                                                 <span className="text-cyan-400">R$ {Number(viewingReceipt.chips_payment_brl).toFixed(2)}</span>
                                             </div>
                                         )}

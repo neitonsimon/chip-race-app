@@ -65,7 +65,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         <p>Total consumido: <span className="text-white font-bold">R$ {total.toFixed(2)}</span></p>
                         {discount > 0 && <p className="text-green-300">Desconto: - R$ {discount.toFixed(2)}</p>}
                         {debt > 0 && <p className="text-red-400 font-bold">Pendura: R$ {debt.toFixed(2)}</p>}
-                        {chips > 0 && <p className="text-yellow-400 font-bold">Pago em Fichas: R$ {chips.toFixed(2)}</p>}
+                        {chips > 0 && <p className="text-yellow-400 font-bold">Pago em Espécie: R$ {chips.toFixed(2)}</p>}
                         {cashOut > 0 && <p className="text-blue-300 font-bold">Cash Out: R$ {cashOut.toFixed(2)}</p>}
 
                         {hasProfit ? (
@@ -207,7 +207,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                                 className="w-24 bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-right text-white text-sm font-bold outline-none focus:border-red-500" />
                         </div>
                         <div className="flex items-center justify-between gap-4">
-                            <span className="text-[10px] text-yellow-500 uppercase font-black">Pago em Fichas (R$)</span>
+                            <span className="text-[10px] text-yellow-500 uppercase font-black">Pago em Espécie (R$)</span>
                             <input type="number" min="0" value={checkoutChips} onChange={e => setCheckoutChips(e.target.value)} placeholder="0.00"
                                 className="w-24 bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-right text-white text-sm font-bold outline-none focus:border-yellow-500" />
                         </div>

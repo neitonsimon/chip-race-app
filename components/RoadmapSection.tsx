@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../src/lib/supabase';
 
 interface RoadmapMilestone {
+    id?: string;
     version: string;
     title: string;
     date?: string;
@@ -9,7 +11,10 @@ interface RoadmapMilestone {
 }
 
 export const RoadmapSection: React.FC = () => {
-    const milestones: RoadmapMilestone[] = [
+    const [milestones, setMilestones] = useState<RoadmapMilestone[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const initialMilestones: RoadmapMilestone[] = [
         {
             version: 'V 1.0',
             title: 'Lançamento Oficial',
@@ -61,6 +66,39 @@ export const RoadmapSection: React.FC = () => {
         }
     ];
 
+    useEffect(() => {
+        const fetchRoadmap = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('roadmap_milestones')
+                    .select('*')
+                    .order('display_order', { ascending: true });
+
+                if (error) throw error;
+                if (data && data.length > 0) {
+                    setMilestones(data);
+                } else {
+                    setMilestones(initialMilestones);
+                }
+            } catch (err) {
+                console.error('Error fetching roadmap:', err);
+                setMilestones(initialMilestones);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchRoadmap();
+    }, []);
+
+    if (isLoading && milestones.length === 0) {
+        return (
+            <section className="py-24 bg-background-dark flex items-center justify-center">
+                <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            </section>
+        );
+    }
+
     return (
         <section className="py-24 relative overflow-hidden bg-background-dark">
             {/* Background Effects */}
@@ -86,7 +124,7 @@ export const RoadmapSection: React.FC = () => {
                     <div className="hidden lg:block absolute top-12 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent z-0"></div>
 
                     {milestones.map((m, idx) => (
-                        <div key={m.version} className="relative group">
+                        <div key={m.id || m.version} className="relative group">
                             {/* Version Tag */}
                             <div className="mb-8 flex flex-col items-center lg:items-start relative z-10">
                                 <div className={`w-24 h-24 rounded-3xl flex items-center justify-center transition-all duration-500 border-2 ${m.status === 'current'
@@ -119,7 +157,7 @@ export const RoadmapSection: React.FC = () => {
                                 </div>
 
                                 <ul className="space-y-4">
-                                    {m.topics.map((item, i) => (
+                                    {m.topics?.map((item, i) => (
                                         <li key={i} className="flex items-start gap-3 text-sm text-gray-400">
                                             <span className={`material-icons-outlined text-[14px] mt-0.5 ${m.status === 'current' ? 'text-primary' : 'text-gray-600'
                                                 }`}>
@@ -139,18 +177,6 @@ export const RoadmapSection: React.FC = () => {
                     ))}
                 </div>
 
-                {/* Bottom CTA */}
-                <div className="mt-20 text-center">
-                    <div className="inline-flex items-center gap-6 px-8 py-4 bg-white/5 border border-white/10 rounded-full text-gray-400 text-sm">
-                        <div className="flex -space-x-3">
-                            <div className="w-8 h-8 rounded-full border-2 border-background-dark bg-primary flex items-center justify-center text-[10px] text-white font-bold">V1</div>
-                            <div className="w-8 h-8 rounded-full border-2 border-background-dark bg-secondary flex items-center justify-center text-[10px] text-white font-bold">V2</div>
-                            <div className="w-8 h-8 rounded-full border-2 border-background-dark bg-gray-700 flex items-center justify-center text-[10px] text-white font-bold">...</div>
-                        </div>
-                        <span>Participar da evolução no <strong className="text-white">Discord Oficial</strong></span>
-                        <span className="material-icons-outlined text-sm">arrow_forward</span>
-                    </div>
-                </div>
             </div>
         </section>
     );

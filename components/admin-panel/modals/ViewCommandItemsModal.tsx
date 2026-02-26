@@ -82,9 +82,60 @@ export const ViewCommandItemsModal: React.FC<ViewCommandItemsModalProps> = ({
                     )}
                 </div>
 
-                <div className="px-5 py-4 border-t border-white/10 flex-shrink-0 flex items-center justify-between">
-                    <span className="text-sm font-black text-gray-500 uppercase">Total Plano</span>
-                    <span className="text-xl font-display font-black text-primary">R$ {Number(viewingClosedCommand.total_brl).toFixed(2)}</span>
+                <div className="px-5 py-4 border-t border-white/10 flex-shrink-0 bg-black/20 space-y-3">
+                    {viewingClosedCommand.status === 'closed' && (
+                        <div className="space-y-2 border-b border-white/5 pb-3">
+                            {Number(viewingClosedCommand.discount_brl) > 0 && (
+                                <div className="flex justify-between text-xs">
+                                    <span className="text-gray-500 uppercase font-bold">Desconto</span>
+                                    <span className="text-pink-500">- R$ {Number(viewingClosedCommand.discount_brl).toFixed(2)}</span>
+                                </div>
+                            )}
+                            {Number(viewingClosedCommand.unpaid_amount_brl) > 0 && (
+                                <div className="flex justify-between text-xs">
+                                    <span className="text-gray-500 uppercase font-bold">Pendura (Fiado)</span>
+                                    <span className="text-orange-400">R$ {Number(viewingClosedCommand.unpaid_amount_brl).toFixed(2)}</span>
+                                </div>
+                            )}
+                            {Number(viewingClosedCommand.chips_payment_brl) > 0 && (
+                                <div className="flex justify-between text-xs">
+                                    <span className="text-gray-500 uppercase font-bold">Pago em Espécie</span>
+                                    <span className="text-cyan-400">R$ {Number(viewingClosedCommand.chips_payment_brl).toFixed(2)}</span>
+                                </div>
+                            )}
+
+                            {/* Payment/Profit breakdown logic */}
+                            {(() => {
+                                const total = Number(viewingClosedCommand.total_brl || 0);
+                                const disc = Number(viewingClosedCommand.discount_brl || 0);
+                                const debt = Number(viewingClosedCommand.unpaid_amount_brl || 0);
+                                const chips = Number(viewingClosedCommand.chips_payment_brl || 0);
+                                const netCost = total - disc - debt - chips;
+
+                                // Note: We don't have fields for cashOut or profit stored in the command object yet.
+                                // However, we can infer credit usage if netCost > 0.
+                                // If netCost <= 0, it means it was a cash game command with a cash out.
+                                // But since we don't store the exact profit/cashOut in 'commands' table, 
+                                // we'll just show 'Créditos App' for the paid portion for now.
+
+                                return netCost > 0 ? (
+                                    <div className="flex justify-between text-xs">
+                                        <span className="text-gray-500 uppercase font-bold">Créditos App</span>
+                                        <span className="text-green-400">R$ {netCost.toFixed(2)}</span>
+                                    </div>
+                                ) : null;
+                            })()}
+                        </div>
+                    )}
+
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm font-black text-gray-500 uppercase tracking-widest">
+                            {viewingClosedCommand.status === 'open' ? 'Total Parcial' : 'Total Consumido'}
+                        </span>
+                        <span className={`text-xl font-display font-black ${viewingClosedCommand.status === 'open' ? 'text-red-400' : 'text-primary'}`}>
+                            R$ {Number(viewingClosedCommand.total_brl).toFixed(2)}
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>

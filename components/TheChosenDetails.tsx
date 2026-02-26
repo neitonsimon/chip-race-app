@@ -443,20 +443,21 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                        {Array.from({ length: 8 }).map((_, index) => {
-                            const cat = (categories || [])[index];
+                        {Object.keys(REGULATIONS_DATA).map((validId) => {
+                            const originalIndex = (categories || []).findIndex(c => c.id === validId);
+                            const cat = originalIndex !== -1 ? categories[originalIndex] : null;
 
                             if (!cat) {
                                 if (!isAdmin) return null;
                                 return (
-                                    <div key={`empty-${index}`} className="relative bg-[#0f0a20]/50 border border-dashed border-white/10 p-6 sm:p-8 rounded-2xl flex flex-col h-full text-center items-center justify-center min-h-[300px] group hover:border-primary/50 transition-colors">
+                                    <div key={`empty-${validId}`} className="relative bg-[#0f0a20]/50 border border-dashed border-white/10 p-6 sm:p-8 rounded-2xl flex flex-col h-full text-center items-center justify-center min-h-[300px] group hover:border-primary/50 transition-colors">
                                         <div className="w-16 h-16 rounded-full bg-white/5 border border-white/5 flex items-center justify-center mb-4">
                                             <span className="material-icons-outlined text-gray-700 text-3xl">add</span>
                                         </div>
-                                        <p className="text-[10px] font-black uppercase text-gray-600 tracking-widest mb-4">Slot {index + 1} Livre</p>
+                                        <p className="text-[10px] font-black uppercase text-gray-600 tracking-widest mb-4">Slot {validId} Livre</p>
 
                                         <button
-                                            onClick={() => setActiveTemplateSelect(`new-${index}`)}
+                                            onClick={() => setActiveTemplateSelect(`new-${validId}`)}
                                             className="bg-primary/20 hover:bg-primary/40 text-primary text-[10px] font-black px-4 py-2 rounded-lg transition-all"
                                         >
                                             CONFIGURAR CATEGORIA
@@ -466,9 +467,28 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                             }
 
                             const styles = getColors(cat.color || 'primary');
+                            const isMystery = cat.is_mystery;
 
                             return (
-                                <div key={cat.id} className="relative bg-[#0f0a20] border border-white/5 p-4 sm:p-8 rounded-2xl hover:border-primary/30 transition-colors flex flex-col h-full text-center items-center shadow-lg group hover:-translate-y-2 duration-300">
+                                <div key={cat.id} className={`relative bg-[#0f0a20] border border-white/5 p-4 sm:p-8 rounded-2xl ${styles.border} transition-all duration-300 hover:-translate-y-2 overflow-hidden flex flex-col h-full text-center items-center shadow-lg group duration-300`}>
+                                    <div className={`absolute inset-0 bg-gradient-to-br ${styles.glow} to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
+
+                                    {/* Padlock Icon for Admin to toggle Mystery/Lock */}
+                                    {isAdmin && (
+                                        <button
+                                            onClick={() => onUpdateCategory(originalIndex, { is_mystery: !cat.is_mystery })}
+                                            className={`absolute top-3 right-3 z-30 p-1.5 rounded-lg border transition-all ${cat.is_mystery
+                                                ? 'bg-primary/20 border-primary/50 text-primary shadow-neon-pink'
+                                                : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'
+                                                }`}
+                                            title={cat.is_mystery ? 'Desbloquear Categoria' : 'Tornar Mistério'}
+                                        >
+                                            <span className="material-icons-outlined text-sm">
+                                                {cat.is_mystery ? 'lock' : 'lock_open'}
+                                            </span>
+                                        </button>
+                                    )}
+
                                     {isAdmin && (
                                         <button
                                             onClick={async () => {
@@ -488,51 +508,66 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                                         <EditableContent
                                             isAdmin={isAdmin}
                                             value={String(cat.slots || 0)}
-                                            onSave={(val) => onUpdateCategory(index, { slots: parseInt(val) || 0 })}
+                                            onSave={(val) => onUpdateCategory(originalIndex, { slots: parseInt(val) || 0 })}
                                             showIcon={false}
                                         />
                                         <span>Vagas</span>
                                     </div>
 
-                                    <div className="mb-6 relative mt-4">
-                                        <div className={`w-12 h-12 md:w-16 md:h-16 rounded-full bg-black border border-white/10 flex items-center justify-center relative z-10 transition-all duration-300`}>
-                                            <span className={`material-icons-outlined text-2xl md:text-3xl ${styles.icon}`}>{cat.icon}</span>
-                                        </div>
-                                    </div>
-                                    <div className="flex-1 flex flex-col items-center">
-                                        <h3 className="text-sm md:text-xl font-display font-bold text-white mb-2 md:mb-3 uppercase tracking-wide flex items-center justify-center gap-2">
-                                            <EditableContent
-                                                isAdmin={isAdmin}
-                                                value={cat.title}
-                                                onSave={(val) => onUpdateCategory(index, { title: val })}
-                                                showIcon={false}
-                                            />
-                                            {isAdmin && (
+                                    <div className="relative z-10 flex flex-col items-center w-full h-full">
+                                        {isMystery && !isAdmin ? (
+                                            // Mystery Card Content for regular users
+                                            <div className="flex flex-col items-center justify-center py-12 flex-1 w-full">
+                                                <div className="w-16 h-16 rounded-full bg-white/5 border border-white/5 flex items-center justify-center mb-4">
+                                                    <span className="material-icons-outlined text-gray-700 text-3xl">lock</span>
+                                                </div>
+                                                <p className="text-[10px] font-black uppercase text-gray-600 tracking-widest">CATEGORIA BLOQUEADA</p>
+                                                <p className="text-[9px] text-gray-700 mt-2">REVELAÇÃO EM BREVE</p>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="mb-6 relative mt-4">
+                                                    <div className={`w-12 h-12 md:w-16 md:h-16 rounded-full bg-black border border-white/10 flex items-center justify-center relative z-10 transition-all duration-300`}>
+                                                        <span className={`material-icons-outlined text-2xl md:text-3xl ${styles.icon}`}>{cat.icon}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex-1 flex flex-col items-center">
+                                                    <h3 className="text-sm md:text-xl font-display font-bold text-white mb-2 md:mb-3 uppercase tracking-wide flex items-center justify-center gap-2">
+                                                        <EditableContent
+                                                            isAdmin={isAdmin}
+                                                            value={cat.title}
+                                                            onSave={(val) => onUpdateCategory(originalIndex, { title: val })}
+                                                            showIcon={false}
+                                                        />
+                                                        {isAdmin && (
+                                                            <button
+                                                                onClick={() => setActiveTemplateSelect(originalIndex)}
+                                                                className="p-1 hover:bg-white/10 rounded transition-colors text-gray-500 hover:text-primary"
+                                                                title="Escolher Categoria do Sistema"
+                                                            >
+                                                                <span className="material-icons-outlined text-sm">settings</span>
+                                                            </button>
+                                                        )}
+                                                    </h3>
+                                                    <p className="text-[10px] md:text-xs text-gray-400 mb-4 md:mb-6 leading-relaxed max-w-[150px] md:max-w-[200px]">
+                                                        <EditableContent
+                                                            isAdmin={isAdmin}
+                                                            value={cat.description}
+                                                            onSave={(val) => onUpdateCategory(originalIndex, { description: val })}
+                                                            type="textarea"
+                                                            showIcon={false}
+                                                        />
+                                                    </p>
+                                                </div>
                                                 <button
-                                                    onClick={() => setActiveTemplateSelect(index)}
-                                                    className="p-1 hover:bg-white/10 rounded transition-colors text-gray-500 hover:text-primary"
-                                                    title="Escolher Categoria do Sistema"
+                                                    onClick={() => setActiveRegulation(cat.id)}
+                                                    className={`mt-auto text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:border-white/30 transition-all ${styles.btn}`}
                                                 >
-                                                    <span className="material-icons-outlined text-sm">settings</span>
+                                                    VER MAIS <span className="material-icons-outlined text-xs">add_circle</span>
                                                 </button>
-                                            )}
-                                        </h3>
-                                        <p className="text-[10px] md:text-xs text-gray-400 mb-4 md:mb-6 leading-relaxed max-w-[150px] md:max-w-[200px]">
-                                            <EditableContent
-                                                isAdmin={isAdmin}
-                                                value={cat.description}
-                                                onSave={(val) => onUpdateCategory(index, { description: val })}
-                                                type="textarea"
-                                                showIcon={false}
-                                            />
-                                        </p>
+                                            </>
+                                        )}
                                     </div>
-                                    <button
-                                        onClick={() => setActiveRegulation(cat.id)}
-                                        className={`mt-auto text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:border-white/30 transition-all ${styles.btn}`}
-                                    >
-                                        VER MAIS <span className="material-icons-outlined text-xs">add_circle</span>
-                                    </button>
                                 </div>
                             );
                         })}
@@ -655,6 +690,16 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                                         </div>
 
                                         <div className="space-y-6">
+                                            {/* Botão de Ação - Movido para o topo para melhor visibilidade */}
+                                            <div className="px-2">
+                                                <button
+                                                    onClick={() => setActiveRegulation(null)}
+                                                    className="w-full py-4 bg-gradient-to-r from-primary to-accent text-white rounded-xl font-black uppercase tracking-widest shadow-lg hover:shadow-primary/50 transition-all hover:scale-[1.01] mb-2"
+                                                >
+                                                    {productDetails ? 'Adquirir via App' : 'Entendido'}
+                                                </button>
+                                            </div>
+
                                             <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
                                                 <h4 className="text-xs font-black text-primary uppercase tracking-[0.2em] mb-4">
                                                     {productDetails ? 'DESCRIÇÃO DO PRODUTO' : 'INFORMAÇÕES GERAIS'}
@@ -687,15 +732,6 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                             })()}
                         </div>
 
-                        {/* Footer Action Area */}
-                        <div className="p-6 sm:p-8 bg-[#0f0a28]/80 backdrop-blur-md border-t border-white/5 relative z-20">
-                            <button
-                                onClick={() => setActiveRegulation(null)}
-                                className="w-full py-4 bg-gradient-to-r from-primary to-accent text-white rounded-xl font-black uppercase tracking-widest shadow-lg hover:shadow-primary/50 transition-all hover:scale-[1.01]"
-                            >
-                                {productDetails ? 'Adquirir via App' : 'Entendido'}
-                            </button>
-                        </div>
                     </div>
                 </div>
             )}

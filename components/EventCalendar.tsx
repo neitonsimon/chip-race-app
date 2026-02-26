@@ -689,10 +689,12 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                     )}
                                                 </>
                                             )}
-                                            <div className="flex items-center gap-1" title="Tipo de Ranking">
-                                                <span className="material-icons-outlined text-[12px] text-primary">leaderboard</span>
-                                                <span className="text-gray-400 capitalize">{event.rankingType === 'special' ? 'Especial' : event.rankingType === 'monthly' ? 'Mensal' : 'Semanal'}</span>
-                                            </div>
+                                            {event.includedRankings && event.includedRankings.length > 0 && (
+                                                <div className="flex items-center gap-1" title="Tipo de Ranking">
+                                                    <span className="material-icons-outlined text-[12px] text-primary">leaderboard</span>
+                                                    <span className="text-gray-400 capitalize">{event.rankingType === 'special' ? 'Especial' : event.rankingType === 'monthly' ? 'Mensal' : 'Semanal'}</span>
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* Produtos Paralelos */}
@@ -914,8 +916,8 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                             </div>
                         </div>
 
-                        {/* Badges/Rankings - Shown for all layouts */}
-                        {viewEvent.gameMode !== 'cash_game' && (
+                        {/* Badges/Rankings - Shown if rankings are selected or it's a tournament with potential rankings */}
+                        {(viewEvent.includedRankings && viewEvent.includedRankings.length > 0) && (
                             <div className="flex flex-col items-center shrink-0 pt-2 px-6 mb-3 relative z-10">
                                 <div className="flex flex-wrap gap-2 justify-center">
                                     {viewEvent.includedRankings?.filter(id => ['annual', 'quarterly', 'legacy'].includes(id)).map(rankId => {
@@ -1003,10 +1005,12 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                         R$ {winner.prize.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                     </div>
                                                 )}
-                                                {/* POINTS ADDED HERE */}
-                                                <div className="text-lg font-display font-bold text-secondary mt-1 bg-secondary/10 px-3 py-0.5 rounded-full inline-block border border-secondary/30">
-                                                    {winner.calculatedPoints} PTS
-                                                </div>
+                                                {/* POINTS ADDED HERE - Conditional */}
+                                                {viewClosedEvent.includedRankings && viewClosedEvent.includedRankings.length > 0 && (
+                                                    <div className="text-lg font-display font-bold text-secondary mt-1 bg-secondary/10 px-3 py-0.5 rounded-full inline-block border border-secondary/30">
+                                                        {winner.calculatedPoints} PTS
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     ) : (
@@ -1048,7 +1052,9 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                 <th className="px-4 py-3 text-center w-10">#</th>
                                                 <th className="px-4 py-3">Jogador</th>
                                                 <th className="px-4 py-3 text-right">Prêmio</th>
-                                                <th className="px-4 py-3 text-center">Pts</th>
+                                                {viewClosedEvent.includedRankings && viewClosedEvent.includedRankings.length > 0 && (
+                                                    <th className="px-4 py-3 text-center">Pts</th>
+                                                )}
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-white/5">
@@ -1071,9 +1077,11 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                         <td className="px-4 py-3 text-right text-green-500 font-bold">
                                                             {result.prize > 0 ? `R$ ${result.prize.toLocaleString('pt-BR')}` : '-'}
                                                         </td>
-                                                        <td className="px-4 py-3 text-center font-display font-black text-secondary">
-                                                            {result.calculatedPoints}
-                                                        </td>
+                                                        {viewClosedEvent.includedRankings && viewClosedEvent.includedRankings.length > 0 && (
+                                                            <td className="px-4 py-3 text-center font-display font-black text-secondary">
+                                                                {result.calculatedPoints}
+                                                            </td>
+                                                        )}
                                                     </tr>
                                                 ))}
                                         </tbody>

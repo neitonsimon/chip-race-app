@@ -445,11 +445,19 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                                                     <img src={debt.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${debt.profiles?.name}&background=random`} className="w-10 h-10 rounded-xl flex-shrink-0" alt="" />
                                                     <div>
                                                         <p className="text-white font-bold text-sm">{debt.profiles?.name}</p>
-                                                        <p className="text-[9px] text-gray-500 uppercase">
-                                                            CR#{String(debt.profiles?.numeric_id).padStart(3, '0')} &nbsp;·&nbsp;
-                                                            {new Date(debt.created_at).toLocaleDateString('pt-BR')}
-                                                        </p>
-                                                        <span className="mt-0.5 inline-block px-2 py-0.5 bg-white/5 border border-white/10 rounded text-[8px] font-black uppercase text-gray-500">
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="text-[9px] text-gray-500 uppercase">
+                                                                CR#{String(debt.profiles?.numeric_id).padStart(3, '0')} &nbsp;·&nbsp;
+                                                                {new Date(debt.created_at).toLocaleDateString('pt-BR')}
+                                                            </p>
+                                                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${Number(debt.profiles?.balance_brl || 0) < payAmt
+                                                                ? 'bg-red-500/20 text-red-500 border border-red-500/30'
+                                                                : 'bg-green-500/20 text-green-400 border border-green-500/30'
+                                                                }`}>
+                                                                Saldo: R$ {Number(debt.profiles?.balance_brl || 0).toFixed(2)}
+                                                            </span>
+                                                        </div>
+                                                        <span className="mt-1 inline-block px-2 py-0.5 bg-white/5 border border-white/10 rounded text-[8px] font-black uppercase text-gray-500">
                                                             {debt.events?.title || debt.description || 'Crédito Manual'}
                                                         </span>
                                                     </div>
@@ -489,10 +497,15 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                                                 <div className="flex gap-2 ml-auto">
                                                     <button
                                                         onClick={() => handleSettleDebt(debt, 'balance', payAmt)}
-                                                        disabled={isLoading || payAmt <= 0}
-                                                        className="px-3 py-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl text-[9px] font-black uppercase transition-all border border-primary/20 disabled:opacity-40"
+                                                        disabled={isLoading || payAmt <= 0 || (Number(debt.profiles?.balance_brl || 0) < payAmt)}
+                                                        className="px-3 py-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl text-[9px] font-black uppercase transition-all border border-primary/20 disabled:opacity-40 disabled:cursor-not-allowed group relative"
                                                     >
                                                         {isPartial ? '💳 Parcial Saldo' : 'SALDO R$'}
+                                                        {(Number(debt.profiles?.balance_brl || 0) < payAmt) && (
+                                                            <span className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-black text-white text-[8px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity">
+                                                                Saldo Insuficiente
+                                                            </span>
+                                                        )}
                                                     </button>
                                                     <button
                                                         onClick={() => handleSettleDebt(debt, 'manual', payAmt)}

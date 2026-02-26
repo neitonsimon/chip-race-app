@@ -435,6 +435,16 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
                   </div>
 
                   <div className="space-y-6">
+                    {/* Botão de Ação - Movido para o topo para melhor visibilidade */}
+                    <div className="px-2">
+                      <button
+                        onClick={() => setActiveRegulation(null)}
+                        className="w-full py-4 bg-gradient-to-r from-primary to-accent text-white rounded-xl font-black uppercase tracking-widest shadow-lg hover:shadow-primary/50 transition-all hover:scale-[1.01] mb-2"
+                      >
+                        {productDetails ? 'Adquirir via App' : 'Entendido'}
+                      </button>
+                    </div>
+
                     <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
                       <h4 className="text-xs font-black text-primary uppercase tracking-[0.2em] mb-4">
                         {productDetails ? 'DESCRIÇÃO DO PRODUTO' : 'INFORMAÇÕES GERAIS'}
@@ -448,17 +458,6 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
               )}
             </div>
 
-            {/* Footer Action Area */}
-            {!isEditingProduct && (
-              <div className="p-6 sm:p-8 bg-[#0f0a28]/80 backdrop-blur-md border-t border-white/5 relative z-20">
-                <button
-                  onClick={() => setActiveRegulation(null)}
-                  className="w-full py-4 bg-gradient-to-r from-primary to-accent text-white rounded-xl font-black uppercase tracking-widest shadow-lg hover:shadow-primary/50 transition-all hover:scale-[1.01]"
-                >
-                  {productDetails ? 'Adquirir via App' : 'Entendido'}
-                </button>
-              </div>
-            )}
           </div>
         </div>
       )}
