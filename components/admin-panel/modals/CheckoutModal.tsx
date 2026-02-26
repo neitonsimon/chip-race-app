@@ -34,18 +34,19 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 }) => {
     if (!showCheckout || !selectedCommand) return null;
 
-    const total = Number(selectedCommand.total_brl);
-    const discount = parseFloat(checkoutDiscount) || 0;
-    const debt = parseFloat(checkoutDebt) || 0;
-    const chips = parseFloat(checkoutChips) || 0;
-    const cashOut = parseFloat(checkoutCashOut) || 0;
-    const profitCash = Math.min(parseFloat(checkoutProfitCash) || 0, Math.max(0, cashOut - Math.max(0, total - discount - debt - chips)));
+    const total = Number(selectedCommand.total_brl || 0);
+    const discount = Number(parseFloat(checkoutDiscount).toFixed(2)) || 0;
+    const debt = Number(parseFloat(checkoutDebt).toFixed(2)) || 0;
+    const chips = Number(parseFloat(checkoutChips).toFixed(2)) || 0;
+    const cashOut = Number(parseFloat(checkoutCashOut).toFixed(2)) || 0;
+    const profitCashRaw = Number(parseFloat(checkoutProfitCash).toFixed(2)) || 0;
 
-    const netCost = total - discount - debt - chips;
-    const profit = cashOut > 0 ? cashOut - Math.max(0, netCost) : 0;
-    const hasProfit = profit > 0;
-    const profitCredit = Math.max(0, profit - profitCash);   // goes to balance
-    const finalToDeduct = cashOut > 0 ? Math.max(0, netCost - cashOut) : Math.max(0, netCost);
+    const netCost = Number((total - discount - debt - chips).toFixed(2));
+    const profit = cashOut > 0 ? Number((cashOut - Math.max(0, netCost)).toFixed(2)) : 0;
+    const hasProfit = profit > 0.01;
+    const profitCash = Number(Math.min(profitCashRaw, profit).toFixed(2));
+    const profitCredit = Number(Math.max(0, profit - profitCash).toFixed(2));
+    const finalToDeduct = cashOut > 0 ? Number(Math.max(0, netCost - cashOut).toFixed(2)) : Number(Math.max(0, netCost).toFixed(2));
 
     /* ──── CONFIRMATION SCREEN ──── */
     if (confirmingCheckout) {

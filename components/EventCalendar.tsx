@@ -916,24 +916,26 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                             </div>
                         </div>
 
-                        {/* Badges/Rankings - Shown if rankings are selected or it's a tournament with potential rankings */}
-                        {(viewEvent.includedRankings && viewEvent.includedRankings.length > 0) && (
-                            <div className="flex flex-col items-center shrink-0 pt-2 px-6 mb-3 relative z-10">
-                                <div className="flex flex-wrap gap-2 justify-center">
-                                    {viewEvent.includedRankings?.filter(id => ['annual', 'quarterly', 'legacy'].includes(id)).map(rankId => {
-                                        const rank = rankings.find(r => r.id === rankId);
-                                        // Se não encontrar label e for um ID longo (UUID), mostrar um nome genérico ou ignorar
-                                        const label = rank?.label || (rankId.length > 20 ? null : rankId);
-                                        if (!label) return null;
-                                        return (
-                                            <span key={rankId} className="px-3 py-1 bg-white/5 border border-white/10 text-gray-400 text-[10px] font-bold uppercase rounded-full tracking-wider backdrop-blur-sm">
-                                                {label}
+                        {/* Badges/Rankings - Shown based on includedRankings mapped to actual rankings data */}
+                        {(() => {
+                            const validRankings = (viewEvent.includedRankings || [])
+                                .map(id => rankings.find(r => r.id === id))
+                                .filter((r): r is RankingInstance => !!r);
+
+                            if (validRankings.length === 0) return null;
+
+                            return (
+                                <div className="flex flex-col items-center shrink-0 pt-2 px-6 mb-3 relative z-10">
+                                    <div className="flex flex-wrap gap-2 justify-center">
+                                        {validRankings.map(rank => (
+                                            <span key={rank.id} className="px-3 py-1 bg-white/5 border border-white/10 text-gray-400 text-[10px] font-bold uppercase rounded-full tracking-wider backdrop-blur-sm">
+                                                {rank.label}
                                             </span>
-                                        );
-                                    })}
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            );
+                        })()}
 
 
                         {/* 3. Footer */}
@@ -1271,13 +1273,11 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                                 return pointsEntries.map(([rId, pts], i) => {
                                                                     const ranking = rankings.find(r => r.id === rId);
                                                                     const label = ranking?.label || ranking?.id || '---';
-                                                                    const displayLabel = label.split(' ')[0] || label;
-
                                                                     return (
                                                                         <div key={rId} className="flex flex-col leading-tight">
                                                                             <span className="text-primary font-black">{pts}</span>
                                                                             {pointsEntries.length > 1 && (
-                                                                                <span className="text-[8px] text-gray-500 font-bold uppercase">{displayLabel}</span>
+                                                                                <span className="text-[8px] text-gray-500 font-bold uppercase">{label}</span>
                                                                             )}
                                                                         </div>
                                                                     );

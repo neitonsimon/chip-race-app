@@ -38,108 +38,56 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
     }, []);
 
     const handlePurchase = async (id: string, type: 'brl' | 'chipz') => {
+        if (type === 'chipz') {
+            alert('A venda de Chipz ainda não está disponível.');
+            return;
+        }
+
         setIsProcessing(true);
         try {
-            if (type === 'chipz') {
-                const pack = chipzPackages.find(p => p.id === id);
-                if (!pack) return;
+            // Type BRL (Recharge Wallet)
+            await new Promise(resolve => setTimeout(resolve, 1000));
 
-                if (!pack.active) {
-                    alert('Este pacote está temporariamente bloqueado para venda.');
-                    setIsProcessing(false);
-                    return;
-                }
-
-                if (pack.stock <= 0) {
-                    alert('Este pacote está esgotado.');
-                    setIsProcessing(false);
-                    return;
-                }
-
-                const cost = pack.price;
-                const totalChipz = pack.amount;
-                const packageName = `${pack.amount} Chipz`;
-                const currentBalance = currentUser.balanceBrl || 0;
-
-                if (currentBalance < cost) {
-                    alert(`Saldo insuficiente! Seu saldo atual é R$ ${currentBalance.toFixed(2).replace('.', ',')}. Você precisa de R$ ${cost.toFixed(2).replace('.', ',')} para este pacote.`);
-                    setIsProcessing(false);
-                    return;
-                }
-
-                if (!window.confirm(`Confirma a compra de ${totalChipz} Chipz por R$ ${cost.toFixed(2).replace('.', ',')}? Isso será descontado do seu saldo de reais.`)) {
-                    setIsProcessing(false);
-                    return;
-                }
-
-                // Chamar RPC para atualizar ambos os saldos de forma segura
-                const { error: txError } = await supabase.rpc('secure_balance_transaction', {
-                    p_user_id: currentUser.id,
-                    p_brl_amount: -cost,
-                    p_chipz_amount: totalChipz,
-                    p_description: `Compra: Pacote Chipz - ${packageName}`,
-                    p_category: 'chipz',
-                    p_metadata: { package_id: id, package_name: packageName }
-                });
-
-                if (txError) {
-                    console.error('Erro na transação de compra:', txError);
-                    alert('Falha na transação. Tente novamente em alguns instantes.');
-                    setIsProcessing(false);
-                    return;
-                }
-
-                if (onUpdateProfile) {
-                    onUpdateProfile(currentUser.id, {
-                        balanceBrl: (currentUser.balanceBrl || 0) - cost,
-                        balanceChipz: (currentUser.balanceChipz || 0) + totalChipz
-                    } as any);
-                }
-
-                alert(`Sucesso! Você adquiriu o pacote ${packageName} e recebeu ${totalChipz} Chipz.`);
-            } else {
-                // Type BRL (Recharge Wallet)
-                await new Promise(resolve => setTimeout(resolve, 1000));
-
-                const amountToAdd = parseFloat(id);
-                if (isNaN(amountToAdd) || amountToAdd <= 0) return;
-
-                // Usar RPC para adicionar saldo de forma segura
-                const { error: txError } = await supabase.rpc('secure_balance_transaction', {
-                    p_user_id: currentUser.id,
-                    p_brl_amount: amountToAdd,
-                    p_chipz_amount: 0,
-                    p_description: `Depósito: Adicionar Reais`,
-                    p_category: 'wallet_deposit',
-                    p_metadata: { method: 'automatic' }
-                });
-
-                if (txError) {
-                    console.error('Erro no depósito:', txError);
-                    alert('Falha ao processar depósito. Tente novamente.');
-                    setIsProcessing(false);
-                    return;
-                }
-
-                // Award EXP Bonus (1 EXP per R$ 20, same as Admin panel)
-                const expBonus = Math.floor(amountToAdd / 20);
-                if (expBonus > 0) {
-                    await supabase.rpc('bulk_add_event_exp', {
-                        p_user_ids: [currentUser.id],
-                        p_exp_amount: expBonus
-                    });
-                }
-
-                if (onUpdateProfile) {
-                    // Update only what changed to avoid overwriting other fields (like EXP) with stale local data
-                    onUpdateProfile(currentUser.id, {
-                        balanceBrl: (currentUser.balanceBrl || 0) + amountToAdd
-                    } as any);
-                }
-
-                setCustomBrlAmount('');
-                alert(`Sucesso! R$ ${amountToAdd.toFixed(2)} foram adicionados à sua carteira.${expBonus > 0 ? ` Você ganhou +${expBonus} de EXP!` : ''}`);
+            const amountToAdd = parseFloat(id);
+            if (isNaN(amountToAdd) || amountToAdd <= 0) {
+                setIsProcessing(false);
+                return;
             }
+
+            // Usar RPC para adicionar saldo de forma segura
+            const { error: txError } = await supabase.rpc('secure_balance_transaction', {
+                p_user_id: currentUser.id,
+                p_brl_amount: amountToAdd,
+                p_chipz_amount: 0,
+                p_description: `Depósito: Adicionar Reais`,
+                p_category: 'wallet_deposit',
+                p_metadata: { method: 'automatic' }
+            });
+
+            if (txError) {
+                console.error('Erro no depósito:', txError);
+                alert('Falha ao processar depósito. Tente novamente.');
+                setIsProcessing(false);
+                return;
+            }
+
+            // Award EXP Bonus (1 EXP per R$ 20, same as Admin panel)
+            const expBonus = Math.floor(amountToAdd / 20);
+            if (expBonus > 0) {
+                await supabase.rpc('bulk_add_event_exp', {
+                    p_user_ids: [currentUser.id],
+                    p_exp_amount: expBonus
+                });
+            }
+
+            if (onUpdateProfile) {
+                onUpdateProfile(currentUser.id, {
+                    balanceBrl: (currentUser.balanceBrl || 0) + amountToAdd
+                } as any);
+            }
+
+            setCustomBrlAmount('');
+            alert(`Sucesso! R$ ${amountToAdd.toFixed(2)} foram adicionados à sua carteira.${expBonus > 0 ? ` Você ganhou +${expBonus} de EXP!` : ''}`);
         } catch (err: any) {
             console.error('Erro na compra:', err);
             alert('Falha ao processar solicitação.');
@@ -204,6 +152,7 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                 >
                     <span className="flex items-center gap-2">
                         <span className="material-icons-outlined">token</span> Pacotes de Chipz
+                        <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded-full text-gray-400">EM BREVE</span>
                     </span>
                     {activeTab === 'chipz' && (
                         <span className="absolute bottom-0 left-0 w-full h-1 bg-primary rounded-t-full shadow-neon-pink"></span>
@@ -260,72 +209,23 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                         </div>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {isLoadingPackages ? (
-                            <div className="col-span-full py-12 text-center text-gray-500">
-                                <span className="material-icons-outlined animate-spin text-4xl mb-2">refresh</span>
-                                <p>Carregando pacotes disponíveis...</p>
+                    <>
+                        <div className="py-20 flex flex-col items-center justify-center text-center bg-surface-dark/50 border border-white/5 rounded-3xl backdrop-blur-sm">
+                            <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-6">
+                                <span className="material-icons-outlined text-4xl text-gray-600">block</span>
                             </div>
-                        ) : chipzPackages.map((pkg) => {
-                            const isSoldOut = pkg.stock === 0;
-                            const isLocked = !pkg.active;
-                            const canPurchase = !isSoldOut && !isLocked;
-
-                            return (
-                                <div
-                                    key={pkg.id}
-                                    className={`bg-surface-dark border ${pkg.popular ? 'border-primary' : 'border-white/5'} rounded-2xl p-6 ${canPurchase ? 'hover:border-primary/50 hover:bg-white/5 cursor-pointer hover:-translate-y-1' : 'opacity-50 cursor-not-allowed'} transition-all duration-300 group flex flex-col h-full relative overflow-hidden`}
-                                    onClick={() => canPurchase && handlePurchase(pkg.id, 'chipz')}
-                                >
-
-                                    {pkg.popular && !isSoldOut && !isLocked && (
-                                        <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-primary text-white text-[10px] font-black uppercase py-1 px-4 rounded-b-lg shadow-neon-pink">
-                                            Mais Popular
-                                        </div>
-                                    )}
-
-                                    {isSoldOut && (
-                                        <div className="absolute top-4 right-[-30px] bg-red-600/80 text-white text-[10px] font-black uppercase py-1 px-10 rotate-45 shadow-lg z-10">
-                                            Esgotado
-                                        </div>
-                                    )}
-
-                                    {isLocked && (
-                                        <div className="absolute top-4 right-[-30px] bg-gray-600/80 text-white text-[10px] font-black uppercase py-1 px-10 rotate-45 shadow-lg z-10 font-black">
-                                            Bloqueado
-                                        </div>
-                                    )}
-
-                                    <div className={`mt-6 w-16 h-16 rounded-full flex items-center justify-center mb-6 mx-auto ${pkg.popular && canPurchase ? 'bg-gradient-to-br from-primary to-accent shadow-neon-pink' : 'bg-white/5 group-hover:bg-primary/20'} transition-colors`}>
-                                        <span className={`material-icons-outlined text-3xl ${pkg.popular && canPurchase ? 'text-white' : 'text-gray-400 group-hover:text-primary'} ${!canPurchase && 'opacity-50'}`}>token</span>
-                                    </div>
-
-                                    <div className="text-center mb-6">
-                                        <div className="text-3xl font-black text-white mb-1"><span className="text-primary">{pkg.amount}</span> Chipz</div>
-                                        <div className="text-gray-400 text-sm">R$ {pkg.price.toFixed(2).replace('.', ',')}</div>
-                                        {!isLocked && (
-                                            <div className={`text-xs font-bold mt-2 ${isSoldOut ? 'text-red-500' : 'text-orange-400 animate-pulse'}`}>
-                                                {isSoldOut ? 'Indisponível' : `Restam: ${pkg.stock} uni.`}
-                                            </div>
-                                        )}
-                                        {isLocked && (
-                                            <div className="text-xs text-gray-500 font-bold mt-2">
-                                                Aguarde a abertura
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="mt-auto pt-6 border-t border-white/10">
-                                        <button
-                                            disabled={!canPurchase}
-                                            className={`w-full ${pkg.popular && canPurchase ? 'bg-primary' : 'bg-white/5 group-hover:bg-primary/20'} text-white font-bold py-3 rounded-xl transition-colors uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed`}
-                                        >
-                                            {isLocked ? 'Bloqueado' : isSoldOut ? 'Esgotado' : 'Adquirir Pacote'}
-                                        </button>
-                                    </div>
-                                </div>
-                            );
-                        })}
+                            <h3 className="text-2xl font-black text-white uppercase tracking-tight mb-2">Vendas Indisponíveis</h3>
+                            <p className="text-gray-400 max-w-sm mx-auto">
+                                Os pacotes de Chipz ainda não estão liberados para aquisição.
+                                Fique atento às nossas atualizações!
+                            </p>
+                            <button
+                                onClick={() => setActiveTab('brl')}
+                                className="mt-8 px-8 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold transition-all"
+                            >
+                                ADICIONAR REAIS
+                            </button>
+                        </div>
 
                         {/* Info Card Market */}
                         <div className="col-span-full mt-6 bg-accent/10 border border-accent/30 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-6">
@@ -339,10 +239,10 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                                 </p>
                             </div>
                         </div>
-                    </div>
+                    </>
                 )}
             </div>
 
-        </div>
+        </div >
     );
 };

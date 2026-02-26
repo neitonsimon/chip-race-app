@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useApp } from '../../contexts/AppContext';
 import appConfig from '../../src/config/appConfig.json';
 import { ProfileStatsSkeleton } from '../Skeleton';
 
@@ -47,6 +48,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     setSelectedImage,
     setPlayer
 }) => {
+    const { badgeTemplates } = useApp();
+    const [showAllBadges, setShowAllBadges] = useState(false);
+
     if (!player) return null;
 
     return (
@@ -367,9 +371,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 {/* New Conquistas (Achievements) Section */}
                 {player.badges && player.badges.length > 0 && (
                     <div className="bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/5 rounded-3xl p-6 shadow-xl">
-                        <div className="flex items-center gap-2 mb-6">
-                            <span className="material-icons text-primary">stars</span>
-                            <h3 className="font-bold text-gray-900 dark:text-white uppercase tracking-wider">Conquistas</h3>
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-2">
+                                <span className="material-icons text-primary">stars</span>
+                                <h3 className="font-bold text-gray-900 dark:text-white uppercase tracking-wider">Conquistas</h3>
+                            </div>
+                            <button
+                                onClick={() => setShowAllBadges(true)}
+                                className="text-[10px] font-black text-primary uppercase tracking-widest hover:text-white transition-colors border border-primary/20 px-3 py-1 rounded-full hover:bg-primary/10"
+                            >
+                                Ver Todas
+                            </button>
                         </div>
 
                         <div className="flex flex-wrap gap-4">
@@ -537,6 +549,63 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                     </div>
                 </div>
             </div>
+            {/* All Badges Modal */}
+            {showAllBadges && (
+                <div className="fixed inset-0 z-[300] flex items-center justify-center px-4">
+                    <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={() => setShowAllBadges(false)}></div>
+                    <div className="relative w-full max-w-4xl max-h-[85vh] bg-surface-dark border border-white/10 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+                        <div className="flex justify-between items-center mb-8">
+                            <div>
+                                <h3 className="text-2xl font-display font-black text-white uppercase tracking-widest flex items-center gap-3">
+                                    <span className="material-icons text-primary text-3xl">emoji_events</span>
+                                    Todas as Insígnias
+                                </h3>
+                                <p className="text-gray-500 text-xs mt-1 uppercase font-black tracking-widest italic">Coleção completa de conquistas Chip Race</p>
+                            </div>
+                            <button onClick={() => setShowAllBadges(false)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/10 transition-all">
+                                <span className="material-icons-outlined">close</span>
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto custom-scrollbar pr-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {badgeTemplates.map((template) => {
+                                const isUnlocked = player.badges?.some((b: any) => b.badge_template_id === template.id);
+                                const badgeColor = template.color || '#00E5FF';
+
+                                return (
+                                    <div
+                                        key={template.id}
+                                        className={`p-6 rounded-3xl border transition-all flex items-center gap-5 relative overflow-hidden group ${isUnlocked ? 'bg-white/5 border-white/10' : 'bg-black/40 border-white/5 opacity-40 grayscale'}`}
+                                    >
+                                        {isUnlocked && (
+                                            <div className="absolute top-2 right-2">
+                                                <span className="material-icons text-primary text-sm">verified</span>
+                                            </div>
+                                        )}
+
+                                        <div className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 border-2" style={{ backgroundColor: `${badgeColor}11`, borderColor: `${badgeColor}33` }}>
+                                            <span className="material-icons-outlined text-3xl" style={{ color: badgeColor }}>{template.icon || 'stars'}</span>
+                                        </div>
+
+                                        <div className="min-w-0">
+                                            <h4 className="text-sm font-black text-white uppercase tracking-wider mb-1 truncate" style={{ color: isUnlocked ? badgeColor : '#999' }}>
+                                                {template.title}
+                                            </h4>
+                                            <p className="text-[10px] text-gray-500 leading-relaxed font-bold uppercase tracking-tighter italic">
+                                                {template.description}
+                                            </p>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        <div className="mt-8 pt-6 border-t border-white/5 text-center">
+                            <p className="text-[10px] text-gray-600 font-black uppercase tracking-[0.3em]">Total de Insígnias: {badgeTemplates.length}</p>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

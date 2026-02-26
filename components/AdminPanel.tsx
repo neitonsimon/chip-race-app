@@ -708,9 +708,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     };
 
     const openClosedCommandView = async (cmd: any) => {
-        const { data } = await supabase.from('command_items').select('*, products(name, category)').eq('command_id', cmd.id).order('created_at', { ascending: true });
-        setViewingItems(data || []);
         setViewingClosedCommand(cmd);
+        setViewingItems([]); // Clear previous items while loading
+
+        try {
+            const { data, error } = await supabase
+                .from('command_items')
+                .select('*, products(name, category)')
+                .eq('command_id', cmd.id)
+                .order('created_at', { ascending: true });
+
+            if (error) throw error;
+            setViewingItems(data || []);
+        } catch (err: any) {
+            console.error('Error fetching command items:', err);
+            alert('Erro ao carregar itens da comanda. Verifique sua conexão.');
+        }
     };
 
     // Compute which one-time keys are already used in this command
@@ -723,10 +736,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     });
 
     const isProductDisabled = (product: any): boolean => {
+        if (selectedCommand?.status === 'closed') return true;
         const key = getOneTimeKey(product);
         return key ? usedOneTimeKeys.has(key) : false;
     };
     const isTourItemDisabled = (item: any): boolean => {
+        if (selectedCommand?.status === 'closed') return true;
         const key = getOneTimeKeyFromNote(item.name);
         return key ? usedOneTimeKeys.has(key) : false;
     };
@@ -994,41 +1009,44 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
 
     const handleProductClick = (product: any) => {
         if (!selectedCommand) { alert('Selecione uma comanda primeiro.'); return; }
+        if (selectedCommand.status === 'closed') return;
         if (isProductDisabled(product)) return;
         if (pendingProduct?.id === product.id) { addProductToCommand(product); setPendingProduct(null); }
         else setPendingProduct(product);
     };
     const handleTourItemClick = (item: any) => {
         if (!selectedCommand) { alert('Selecione uma comanda primeiro.'); return; }
+        if (selectedCommand.status === 'closed') return;
         if (isTourItemDisabled(item)) return;
         if (pendingProduct?.id === item.id) { addTournamentItemToCommand(item); setPendingProduct(null); }
         else setPendingProduct(item);
     };
     const handleCashItemClick = (item: any) => {
         if (!selectedCommand) { alert('Selecione uma comanda primeiro.'); return; }
+        if (selectedCommand.status === 'closed') return;
         if (pendingProduct?.id === item.id) { addCashItemToCommand(item); setPendingProduct(null); }
         else setPendingProduct(item);
     };
 
     const handleCloseCommand = async () => {
         if (!selectedCommand) return;
-        const total = Number(selectedCommand.total_brl);
-        const discount = parseFloat(checkoutDiscount) || 0;
-        const debt = parseFloat(checkoutDebt) || 0;
-        const chips = parseFloat(checkoutChips) || 0;
-        const cashOut = parseFloat(checkoutCashOut) || 0;
-        const profitCashRaw = parseFloat(checkoutProfitCash) || 0;
+        const total = Number(selectedCommand.total_brl || 0);
+        const discount = Number(parseFloat(checkoutDiscount).toFixed(2)) || 0;
+        const debt = Number(parseFloat(checkoutDebt).toFixed(2)) || 0;
+        const chips = Number(parseFloat(checkoutChips).toFixed(2)) || 0;
+        const cashOut = Number(parseFloat(checkoutCashOut).toFixed(2)) || 0;
+        const profitCashRaw = Number(parseFloat(checkoutProfitCash).toFixed(2)) || 0;
 
         // Net cost = total - discount - debt - chips
-        const netCost = total - discount - debt - chips;
+        const netCost = Number((total - discount - debt - chips).toFixed(2));
         // Full profit if cashOut is provided
-        const profit = cashOut > 0 ? cashOut - Math.max(0, netCost) : 0;
-        const hasProfit = profit > 0;
+        const profit = cashOut > 0 ? Number((cashOut - Math.max(0, netCost)).toFixed(2)) : 0;
+        const hasProfit = profit > 0.01; // Avoid floating point near zero
         // Cash paid in hands, credit goes to app balance
-        const profitCash = Math.min(profitCashRaw, profit);   // physically paid
-        const profitCredit = Math.max(0, profit - profitCash); // credited to balance
+        const profitCash = Number(Math.min(profitCashRaw, profit).toFixed(2));   // physically paid
+        const profitCredit = Number(Math.max(0, profit - profitCash).toFixed(2)); // credited to balance
         // Normal deduction when no profit
-        const finalToDeduct = cashOut > 0 ? Math.max(0, netCost - cashOut) : Math.max(0, netCost);
+        const finalToDeduct = cashOut > 0 ? Number(Math.max(0, netCost - cashOut).toFixed(2)) : Number(Math.max(0, netCost).toFixed(2));
 
         if (!confirmingCheckout) {
             // Handle profile as object or array
@@ -1079,25 +1097,42 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                         p_chipz_amount: 0,
                         p_description: `Lucro Cash Game — Comanda encerrada${profitCash > 0 ? ` (R$ ${profitCash.toFixed(2)} pago em mãos)` : ''}`,
                         p_category: 'wallet_deposit',
-                        p_metadata: { command_id: selectedCommand.id, event_id: selectedCommand.event_id, profit_total: profit, cash_payment: profitCash }
+                        p_metadata: {
+                            command_id: selectedCommand.id,
+                            event_id: selectedCommand.event_id,
+                            profit_total: profit,
+                            cash_payment: profitCash,
+                            app_credit: profitCredit
+                        }
                     });
                     if (creditErr) throw creditErr;
-                    if (data === false) throw new Error('Falha ao creditar lucro ao jogador. Verifique permissões ou saldo.');
+                    if (data === false) {
+                        console.error('RPC Returned false for credit:', { userId: selectedCommand.user_id, amount: profitCredit });
+                        throw new Error('Falha ao creditar lucro ao jogador. O banco de dados recusou a operação (verifique se o usuário existe e as permissões).');
+                    }
                     updatePlayerBalanceLocally(selectedCommand.user_id, profitCredit);
                 }
             }
             // 2b. Normal deduction from balance
-            else if (finalToDeduct > 0) {
+            else if (finalToDeduct > 0.01) {
                 const { data, error: deductErr } = await supabase.rpc('secure_balance_transaction', {
                     p_user_id: selectedCommand.user_id,
                     p_brl_amount: -finalToDeduct,
                     p_chipz_amount: 0,
                     p_description: `Pagamento de comanda ${selectedCommand.id.slice(0, 8)}`,
                     p_category: 'purchase',
-                    p_metadata: { command_id: selectedCommand.id, event_id: selectedCommand.event_id, total_consumo: total }
+                    p_metadata: {
+                        command_id: selectedCommand.id,
+                        event_id: selectedCommand.event_id,
+                        total_consumo: total,
+                        deducted_from_balance: finalToDeduct
+                    }
                 });
                 if (deductErr) throw deductErr;
-                if (data === false) throw new Error('Falha ao debitar saldo do aplicativo. Verifique se o jogador possui saldo suficiente.');
+                if (data === false) {
+                    console.error('RPC Returned false for deduction:', { userId: selectedCommand.user_id, amount: -finalToDeduct });
+                    throw new Error('Falha ao debitar saldo do aplicativo. Verifique se o jogador possui saldo suficiente ou se o perfil está vinculado corretamente.');
+                }
                 updatePlayerBalanceLocally(selectedCommand.user_id, -finalToDeduct);
             }
 
@@ -1107,35 +1142,35 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                 closed_at: new Date().toISOString(),
                 discount_brl: discount,
                 unpaid_amount_brl: debt,
-                chips_payment_brl: chips
+                chips_payment_brl: chips,
+                cash_out_brl: cashOut,
+                profit_brl: profit,
+                profit_cash_payment_brl: profitCash
             }).eq('id', selectedCommand.id);
 
             // 4. Notify user
-            const msgParts = [
+            const msgContent = [
                 `Sua comanda foi encerrada. Total consumido: R$ ${total.toFixed(2)}.`,
                 discount > 0 ? `Desconto: R$ ${discount.toFixed(2)}.` : '',
                 debt > 0 ? `Pendura: R$ ${debt.toFixed(2)}.` : '',
                 chips > 0 ? `Pago em Espécie: R$ ${chips.toFixed(2)}.` : '',
                 cashOut > 0 ? `Cash Out: R$ ${cashOut.toFixed(2)}.` : '',
-                hasProfit
-                    ? [
-                        `🏆 Lucro de R$ ${profit.toFixed(2)}:`,
-                        profitCash > 0 ? `R$ ${profitCash.toFixed(2)} pago em mãos.` : '',
-                        profitCredit > 0 ? `R$ ${profitCredit.toFixed(2)} creditado no saldo do app.` : ''
-                    ].filter(Boolean).join(' ')
-                    : finalToDeduct > 0 ? `R$ ${finalToDeduct.toFixed(2)} descontado do saldo.` : ''
+                profit > 0 ? `Lucro: R$ ${profit.toFixed(2)} (R$ ${profitCash.toFixed(2)} em mãos, R$ ${profitCredit.toFixed(2)} no App).` : '',
+                !hasProfit && finalToDeduct > 0 ? `Débito App: R$ ${finalToDeduct.toFixed(2)}.` : ''
             ].filter(Boolean).join(' ');
 
             await supabase.from('messages').insert({
                 user_id: selectedCommand.user_id,
+                sender: 'Sistema',
                 sender_id: currentUser.id,
-                content: msgParts,
+                subject: 'Comanda Encerrada 🧾',
+                content: msgContent,
                 category: 'system',
                 is_read: false
             });
 
             // 5. Update UI
-            setOpenCommands(openCommands.filter(c => c.id !== selectedCommand.id));
+            setOpenCommands(prev => prev.filter(c => c.id !== selectedCommand.id));
             if (selectedEvent) fetchClosedCommands(selectedEvent.id);
             fetchDebts();
 
@@ -1497,7 +1532,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             productSection={productSection}
                             setProductSection={setProductSection}
                             reopenCommand={reopenCommand}
-                            handleDownloadCommandReceipt={() => { }}
+                            handleDownloadCommandReceipt={openClosedCommandView}
                             isLoading={isLoading}
                             allProducts={products}
                             tournamentItems={getTournamentItems()}

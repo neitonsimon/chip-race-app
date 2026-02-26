@@ -312,7 +312,10 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                             {(commandsTab === 'ativas' ? openCommands : closedCommands).map(cmd => (
                                 <div
                                     key={cmd.id}
-                                    onClick={() => setSelectedCommand(cmd)}
+                                    onClick={() => {
+                                        setSelectedCommand(cmd);
+                                        if (cmd.status === 'closed') setRightMode('itens');
+                                    }}
                                     className={`bg-surface-dark border rounded-2xl p-3 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden flex flex-col items-center text-center ${selectedCommand?.id === cmd.id ? 'border-primary shadow-neon-pink ring-1 ring-primary' : 'border-white/5'}`}
                                 >
                                     <div className="relative mb-2 shrink-0">
@@ -576,8 +579,83 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                         </div>
 
                         <div className="p-6 bg-black/40 border-t border-white/10 space-y-4">
+                            {selectedCommand.status === 'closed' && (
+                                <div className="space-y-2 border-b border-white/5 pb-4">
+                                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Detalhamento do Pagamento</p>
+
+                                    {Number(selectedCommand.discount_brl) > 0 && (
+                                        <div className="flex justify-between text-xs">
+                                            <span className="text-gray-400 font-bold">Desconto</span>
+                                            <span className="text-pink-500 font-black">- R$ {Number(selectedCommand.discount_brl).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {Number(selectedCommand.unpaid_amount_brl) > 0 && (
+                                        <div className="flex justify-between text-xs">
+                                            <span className="text-gray-400 font-bold">Pendura (Dívida)</span>
+                                            <span className="text-orange-400 font-black">R$ {Number(selectedCommand.unpaid_amount_brl).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {Number(selectedCommand.chips_payment_brl) > 0 && (
+                                        <div className="flex justify-between text-xs">
+                                            <span className="text-gray-400 font-bold">Pago em Espécie</span>
+                                            <span className="text-yellow-400 font-black">R$ {Number(selectedCommand.chips_payment_brl).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {Number(selectedCommand.cash_out_brl) > 0 && (
+                                        <div className="flex justify-between text-xs">
+                                            <span className="text-gray-400 font-bold">Cash Out (Puxado)</span>
+                                            <span className="text-blue-400 font-black">R$ {Number(selectedCommand.cash_out_brl).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {Number(selectedCommand.profit_brl) > 0 && (
+                                        <div className="flex justify-between text-xs">
+                                            <span className="text-green-400 font-black uppercase text-[10px]">Lucro Total</span>
+                                            <span className="text-green-400 font-black">R$ {Number(selectedCommand.profit_brl).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {Number(selectedCommand.profit_cash_payment_brl) > 0 && (
+                                        <div className="flex justify-between text-[10px] pl-4 italic">
+                                            <span className="text-gray-500 font-bold">↳ Parte paga em mãos</span>
+                                            <span className="text-gray-400">R$ {Number(selectedCommand.profit_cash_payment_brl).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {(() => {
+                                        const total = Number(selectedCommand.total_brl || 0);
+                                        const disc = Number(selectedCommand.discount_brl || 0);
+                                        const debt = Number(selectedCommand.unpaid_amount_brl || 0);
+                                        const chips = Number(selectedCommand.chips_payment_brl || 0);
+                                        const cashOut = Number(selectedCommand.cash_out_brl || 0);
+                                        const profit = Number(selectedCommand.profit_brl || 0);
+                                        const profitCash = Number(selectedCommand.profit_cash_payment_brl || 0);
+
+                                        // Balance used = net cost after cashOut (if any)
+                                        const balanceUsed = cashOut > 0 ? Math.max(0, (total - disc - debt - chips) - cashOut) : Math.max(0, total - disc - debt - chips);
+                                        const balanceEarned = Math.max(0, profit - profitCash);
+
+                                        return (
+                                            <>
+                                                {balanceUsed > 0 && (
+                                                    <div className="flex justify-between text-xs">
+                                                        <span className="text-gray-400 font-bold">Débito App</span>
+                                                        <span className="text-primary font-black">R$ {balanceUsed.toFixed(2)}</span>
+                                                    </div>
+                                                )}
+                                                {balanceEarned > 0 && (
+                                                    <div className="flex justify-between text-xs">
+                                                        <span className="text-gray-400 font-bold">Crédito App (Lucro)</span>
+                                                        <span className="text-green-400 font-black">R$ {balanceEarned.toFixed(2)}</span>
+                                                    </div>
+                                                )}
+                                            </>
+                                        );
+                                    })()}
+                                </div>
+                            )}
+
                             <div className="flex items-center justify-between">
-                                <span className="text-sm font-black text-white uppercase tracking-widest">Total Geral</span>
+                                <span className="text-sm font-black text-white uppercase tracking-widest">
+                                    {selectedCommand.status === 'closed' ? 'Total Final' : 'Total Geral'}
+                                </span>
                                 <span className="text-2xl font-display font-black text-primary shadow-neon-pink">R$ {Number(selectedCommand.total_brl).toFixed(2)}</span>
                             </div>
                             {selectedCommand.status === 'open' && (
