@@ -36,22 +36,6 @@ export const TheChosenStats: React.FC<TheChosenStatsProps> = ({
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
 
-                {isAdmin && (
-                    <div className="absolute top-4 right-4 z-20">
-                        <div className="bg-white/10 text-white text-[10px] px-2 py-1 rounded border border-white/10 flex items-center gap-2">
-                            <span>Sincronizado: {isManualTotal ? 'Manual' : 'Automático'}</span>
-                            {isManualTotal && onUpdateTotal && (
-                                <button
-                                    onClick={() => onUpdateTotal(null)}
-                                    className="text-red-400 hover:text-white underline"
-                                    title="Resetar para cálculo automático"
-                                >
-                                    Resetar
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                )}
 
                 <div className="text-center mb-16">
                     <h2 className="text-secondary font-display font-semibold tracking-widest text-sm uppercase mb-2">
@@ -101,18 +85,9 @@ export const TheChosenStats: React.FC<TheChosenStatsProps> = ({
 
                         <p className="text-gray-400 font-display text-sm uppercase tracking-wider mb-2">Vagas Distribuídas</p>
                         <div className="flex items-end gap-4">
-                            {isAdmin && onUpdateTotal ? (
-                                <input
-                                    type="number"
-                                    value={totalQualifiers}
-                                    onChange={(e) => onUpdateTotal(parseInt(e.target.value) || 0)}
-                                    className="text-4xl sm:text-6xl lg:text-7xl font-display font-black text-white text-glow-blue bg-transparent w-40 sm:w-48 border-b-2 border-white/10 focus:border-secondary outline-none transition-colors leading-none"
-                                />
-                            ) : (
-                                <span className="text-4xl sm:text-6xl lg:text-7xl font-display font-black text-white text-glow-blue leading-none">
-                                    {totalQualifiers}
-                                </span>
-                            )}
+                            <span className="text-4xl sm:text-6xl lg:text-7xl font-display font-black text-white text-glow-blue leading-none">
+                                {totalQualifiers}
+                            </span>
 
                             <div className="flex flex-col pb-1">
                                 <span className="text-sm text-gray-400 uppercase font-bold">VAGAS DISTRIBUÍDAS</span>

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { EditableContent } from './EditableContent';
 
 interface FAQItem {
     question: string;
@@ -64,24 +63,9 @@ export const FAQSection: React.FC<FAQSectionProps> = ({ isAdmin, faqs = [], onUp
                                 onClick={() => toggleOpen(index)}
                             >
                                 <div className="font-bold text-lg text-white w-full pr-4">
-                                    <div onClick={(e) => isAdmin && e.stopPropagation()}>
-                                        <EditableContent
-                                            isAdmin={isAdmin}
-                                            value={faq.question}
-                                            onSave={(val) => handleUpdate(index, 'question', val)}
-                                        />
-                                    </div>
+                                    {faq.question}
                                 </div>
                                 <div className="flex items-center gap-4">
-                                    {isAdmin && (
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); handleDeleteFaq(index); }}
-                                            className="text-red-500 hover:text-red-400 p-2"
-                                            title="Remover"
-                                        >
-                                            <span className="material-icons-outlined">delete</span>
-                                        </button>
-                                    )}
                                     <span className={`material-icons-outlined text-primary transition-transform duration-300 ${openIndex === index ? 'rotate-180' : ''}`}>
                                         expand_more
                                     </span>
@@ -90,29 +74,12 @@ export const FAQSection: React.FC<FAQSectionProps> = ({ isAdmin, faqs = [], onUp
 
                             <div className={`transition-all duration-300 ease-in-out ${openIndex === index ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
                                 <div className="p-6 pt-0 text-gray-400 leading-relaxed border-t border-white/5 bg-black/20 mt-2">
-                                    <EditableContent
-                                        isAdmin={isAdmin}
-                                        value={faq.answer}
-                                        onSave={(val) => handleUpdate(index, 'answer', val)}
-                                        type="textarea"
-                                    />
+                                    {faq.answer}
                                 </div>
                             </div>
                         </div>
                     ))}
                 </div>
-
-                {isAdmin && (
-                    <div className="mt-8 text-center">
-                        <button
-                            onClick={handleAddFaq}
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold rounded-lg transition-colors"
-                        >
-                            <span className="material-icons-outlined">add</span>
-                            Adicionar Pergunta
-                        </button>
-                    </div>
-                )}
             </div>
         </div>
     );

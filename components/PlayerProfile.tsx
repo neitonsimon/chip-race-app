@@ -477,7 +477,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         setIsSavingExp(true);
         try {
             // 1. Deduct balance using backend RPC
-            const { error: deductErr } = await supabase.rpc('secure_balance_transaction', {
+            const { data, error: deductErr } = await supabase.rpc('secure_balance_transaction', {
                 p_user_id: player.id,
                 p_brl_amount: -amount,
                 p_chipz_amount: 0,
@@ -485,7 +485,10 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                 p_category: 'purchase',
                 p_metadata: { command_id: cmd.id, event_id: cmd.event_id }
             });
-            if (deductErr) throw deductErr;
+
+            if (deductErr || data === false) {
+                throw new Error(deductErr?.message || 'Saldo insuficiente no aplicativo ou falha na transação.');
+            }
 
             // 2. Close command
             const { error: updateErr } = await supabase.from('commands').update({

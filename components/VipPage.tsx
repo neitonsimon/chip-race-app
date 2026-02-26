@@ -67,7 +67,7 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate, currentUser, onUpd
     };
 
     try {
-      const { error } = await supabase.rpc('secure_balance_transaction', {
+      const { data, error } = await supabase.rpc('secure_balance_transaction', {
         p_user_id: currentUser.id,
         p_brl_amount: -costToCharge,
         p_chipz_amount: 0,
@@ -76,8 +76,8 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate, currentUser, onUpd
         p_metadata: { plan_id: plan.id, discount_applied: discount, upgrade: discount > 0 }
       });
 
-      if (error) {
-        console.error(error);
+      if (error || data === false) {
+        console.error(error || 'Transaction failed: RPC returned false');
         alert('Falha na transação. Verifique seu saldo ou tente novamente em instantes.');
         setIsProcessing(false);
         return;

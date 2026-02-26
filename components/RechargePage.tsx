@@ -55,7 +55,7 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
             }
 
             // Usar RPC para adicionar saldo de forma segura
-            const { error: txError } = await supabase.rpc('secure_balance_transaction', {
+            const { data: txData, error: txError } = await supabase.rpc('secure_balance_transaction', {
                 p_user_id: currentUser.id,
                 p_brl_amount: amountToAdd,
                 p_chipz_amount: 0,
@@ -64,8 +64,8 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                 p_metadata: { method: 'automatic' }
             });
 
-            if (txError) {
-                console.error('Erro no depósito:', txError);
+            if (txError || txData === false) {
+                console.error('Erro no depósito:', txError || 'RPC returned false');
                 alert('Falha ao processar depósito. Tente novamente.');
                 setIsProcessing(false);
                 return;

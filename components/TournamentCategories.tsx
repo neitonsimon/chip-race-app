@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { TournamentCategory } from '../types';
-import { EditableContent } from './EditableContent';
 import { supabase } from '../src/lib/supabase';
 
 interface TournamentCategoriesProps {
@@ -279,20 +278,6 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
                 <div className={`absolute inset-0 bg-gradient-to-br ${styles.glow} to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
 
                 {/* Padlock Icon for Admin to toggle Mystery/Lock */}
-                {isAdmin && (
-                  <button
-                    onClick={() => onUpdateCategory(index, { is_mystery: !cat.is_mystery })}
-                    className={`absolute top-3 right-3 z-30 p-1.5 rounded-lg border transition-all ${cat.is_mystery
-                      ? 'bg-primary/20 border-primary/50 text-primary shadow-neon-pink'
-                      : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'
-                      }`}
-                    title={cat.is_mystery ? 'Desbloquear Categoria' : 'Tornar Mistério'}
-                  >
-                    <span className="material-icons-outlined text-sm">
-                      {cat.is_mystery ? 'lock' : 'lock_open'}
-                    </span>
-                  </button>
-                )}
 
                 <div className="relative z-10 flex flex-col items-center text-center mt-2">
                   {isMystery && !isAdmin ? (
@@ -314,35 +299,12 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
                       </div>
 
                       <h3 className={`text-xs sm:text-base font-display font-bold text-gray-900 dark:text-white mb-1 ${styles.text} transition-colors w-full flex items-center justify-center gap-2`}>
-                        <EditableContent
-                          isAdmin={isAdmin}
-                          value={cat.title}
-                          onSave={(val) => onUpdateCategory(index, { title: val })}
-                          showIcon={false}
-                        />
+                        {cat.title}
 
-                        {isAdmin && (
-                          <div className="relative">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setActiveTemplateSelect(index); }}
-                              className="p-1 hover:bg-white/10 rounded transition-colors text-gray-500 hover:text-primary"
-                              title="Configurações"
-                            >
-                              <span className="material-icons-outlined text-[10px]">settings</span>
-                            </button>
-                          </div>
-                        )}
                       </h3>
 
                       <p className="hidden md:flex text-xs text-gray-500 dark:text-gray-400 mb-4 min-h-[40px] items-center justify-center w-full px-2">
-                        <EditableContent
-                          isAdmin={isAdmin}
-                          value={cat.description}
-                          onSave={(val) => onUpdateCategory(index, { description: val })}
-                          type="textarea"
-                          className="w-full"
-                          showIcon={false}
-                        />
+                        {cat.description}
                       </p>
 
                       <button
@@ -395,67 +357,44 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
             {/* Content Area - Scrollable */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-6 sm:p-8 relative z-10 pt-16 sm:pt-10">
 
-              {isEditingProduct ? (
-                <div className="pt-8 flex flex-col gap-4">
-                  <h3 className="text-xl font-bold text-white mb-4">Editar Conteúdo do Box</h3>
+              <div className="flex flex-col items-center text-center mb-8 pt-4">
+                <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-black border border-white/10 flex items-center justify-center mb-6 shadow-2xl relative overflow-hidden group`}>
+                  <div className={`absolute inset-0 opacity-20 bg-gradient-to-br ${getColors(categories.find(c => c.id === activeRegulation)?.color || '').glow}`}></div>
+                  {productDetails?.image_url ? (
+                    <img src={productDetails.image_url} alt={productDetails.name} className="w-full h-full object-cover relative z-10" />
+                  ) : (
+                    <span className={`material-icons-outlined text-4xl sm:text-5xl relative z-10 ${REGULATIONS_DATA[activeRegulation]?.color || 'text-primary'}`}>
+                      {REGULATIONS_DATA[activeRegulation]?.icon || 'star'}
+                    </span>
+                  )}
+                </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nome do Produto/Regulamento</label>
-                    <input type="text" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} className="w-full bg-black/50 border border-white/10 rounded p-3 text-white focus:border-primary outline-none" />
-                  </div>
+                <h3 className="text-2xl sm:text-3xl font-display font-black text-white uppercase tracking-wider mb-2">
+                  {productDetails?.name || REGULATIONS_DATA[activeRegulation]?.title}
+                </h3>
+                <div className="h-1 w-16 bg-gradient-to-r from-primary to-secondary rounded-full"></div>
+              </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Descrição / Regras</label>
-                    <textarea value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })} className="w-full bg-black/50 border border-white/10 rounded p-3 text-white focus:border-primary outline-none min-h-[150px]" />
-                  </div>
+              <div className="space-y-6">
+                {/* Botão de Ação - Movido para o topo para melhor visibilidade */}
+                <div className="px-2">
+                  <button
+                    onClick={() => setActiveRegulation(null)}
+                    className="w-full py-4 bg-gradient-to-r from-primary to-accent text-white rounded-xl font-black uppercase tracking-widest shadow-lg hover:shadow-primary/50 transition-all hover:scale-[1.01] mb-2"
+                  >
+                    {productDetails ? 'Adquirir via App' : 'Entendido'}
+                  </button>
+                </div>
 
-                  <div className="flex gap-4 mt-6">
-                    <button onClick={() => setIsEditingProduct(false)} className="flex-1 py-3 bg-gray-800 text-white rounded-xl font-bold uppercase hover:bg-gray-700 transition-colors">Cancelar</button>
-                    <button onClick={handleSaveProduct} className="flex-1 py-3 bg-secondary text-black rounded-xl font-black uppercase hover:scale-105 transition-all shadow-[0_0_15px_rgba(45,212,191,0.4)]">Salvar no Banco</button>
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+                  <h4 className="text-xs font-black text-primary uppercase tracking-[0.2em] mb-4">
+                    {productDetails ? 'DESCRIÇÃO DO PRODUTO' : 'INFORMAÇÕES GERAIS'}
+                  </h4>
+                  <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap font-light max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
+                    {productDetails?.description || REGULATIONS_DATA[activeRegulation]?.rules}
                   </div>
                 </div>
-              ) : (
-                <>
-                  <div className="flex flex-col items-center text-center mb-8 pt-4">
-                    <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-black border border-white/10 flex items-center justify-center mb-6 shadow-2xl relative overflow-hidden group`}>
-                      <div className={`absolute inset-0 opacity-20 bg-gradient-to-br ${getColors(categories.find(c => c.id === activeRegulation)?.color || '').glow}`}></div>
-                      {productDetails?.image_url ? (
-                        <img src={productDetails.image_url} alt={productDetails.name} className="w-full h-full object-cover relative z-10" />
-                      ) : (
-                        <span className={`material-icons-outlined text-4xl sm:text-5xl relative z-10 ${REGULATIONS_DATA[activeRegulation]?.color || 'text-primary'}`}>
-                          {REGULATIONS_DATA[activeRegulation]?.icon || 'star'}
-                        </span>
-                      )}
-                    </div>
-
-                    <h3 className="text-2xl sm:text-3xl font-display font-black text-white uppercase tracking-wider mb-2">
-                      {productDetails?.name || REGULATIONS_DATA[activeRegulation]?.title}
-                    </h3>
-                    <div className="h-1 w-16 bg-gradient-to-r from-primary to-secondary rounded-full"></div>
-                  </div>
-
-                  <div className="space-y-6">
-                    {/* Botão de Ação - Movido para o topo para melhor visibilidade */}
-                    <div className="px-2">
-                      <button
-                        onClick={() => setActiveRegulation(null)}
-                        className="w-full py-4 bg-gradient-to-r from-primary to-accent text-white rounded-xl font-black uppercase tracking-widest shadow-lg hover:shadow-primary/50 transition-all hover:scale-[1.01] mb-2"
-                      >
-                        {productDetails ? 'Adquirir via App' : 'Entendido'}
-                      </button>
-                    </div>
-
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-                      <h4 className="text-xs font-black text-primary uppercase tracking-[0.2em] mb-4">
-                        {productDetails ? 'DESCRIÇÃO DO PRODUTO' : 'INFORMAÇÕES GERAIS'}
-                      </h4>
-                      <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap font-light max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
-                        {productDetails?.description || REGULATIONS_DATA[activeRegulation]?.rules}
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
+              </div>
             </div>
 
           </div>

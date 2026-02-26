@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { ContentDB, TournamentCategory } from '../types';
-import { EditableContent } from './EditableContent';
 import { TheChosenQualifiers } from './TheChosenQualifiers';
 import { supabase } from '../src/lib/supabase';
 import appConfig from '../src/config/appConfig.json';
@@ -242,7 +241,7 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                     ? 'bg-secondary/10 border-secondary/50 opacity-100'
                     : 'bg-white/5 border-white/5 opacity-60 grayscale'
                 }`}>
-                <div className={`absolute top-0 left-0 w-full text-[9px] uppercase font-black py-1 tracking-widest rounded-t-lg ${isActive ? 'bg-primary text-white' :
+                <div className={`absolute top-0 left-0 w-full text-[9px] uppercase font-black py-1 pl-5 tracking-widest rounded-t-lg ${isActive ? 'bg-primary text-white' :
                     isCompleted ? 'bg-secondary text-black' :
                         'bg-gray-800 text-gray-500'
                     }`}>
@@ -253,51 +252,20 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                     <span className="material-icons-outlined text-2xl text-gray-600 my-2">lock</span>
                 ) : (
                     <div className="flex flex-col items-center w-full">
-                        {isAdmin ? (
-                            <input
-                                type="text"
-                                value={month.prize}
-                                onChange={(e) => onUpdateMonth(index, 'prize', e.target.value)}
-                                className="w-16 text-center bg-black/50 border border-white/20 rounded text-sm text-white font-bold mb-1"
-                            />
-                        ) : (
-                            <div className={`text-lg font-display font-black ${isActive ? 'text-white' : isCompleted ? 'text-secondary' : 'text-gray-500'}`}>
-                                {month.prize}
-                            </div>
-                        )}
+                        <div className={`text-lg font-display font-black ${isActive ? 'text-white' : isCompleted ? 'text-secondary' : 'text-gray-500'}`}>
+                            {month.prize}
+                        </div>
                         <div className="text-[10px] uppercase text-gray-400">GTD</div>
                     </div>
                 )}
                 <div className="mt-3 w-full flex justify-center">
-                    {isAdmin ? (
-                        <div className="flex items-center gap-1 justify-center">
-                            <input
-                                type="text"
-                                value={month.qualifiers}
-                                onChange={(e) => onUpdateMonth(index, 'qualifiers', e.target.value)}
-                                className="w-10 text-center bg-black/50 border border-white/20 rounded text-xs text-white"
-                            />
-                            <span className="text-[10px] text-gray-400">Vagas</span>
-                        </div>
-                    ) : (
-                        <div className={`text-[10px] py-1 px-2 rounded-full font-bold ${isActive ? 'bg-primary text-white' :
-                            isCompleted ? 'bg-secondary/20 text-secondary' :
-                                'bg-black/30 text-gray-500'
-                            }`}>
-                            {month.qualifiers} {typeof month.qualifiers === 'number' || !isNaN(Number(month.qualifiers)) ? 'Vagas' : ''}
-                        </div>
-                    )}
+                    <div className={`text-[10px] py-1 px-2 rounded-full font-bold ${isActive ? 'bg-primary text-white' :
+                        isCompleted ? 'bg-secondary/20 text-secondary' :
+                            'bg-black/30 text-gray-500'
+                        }`}>
+                        {month.qualifiers} {typeof month.qualifiers === 'number' || !isNaN(Number(month.qualifiers)) ? 'Vagas' : ''}
+                    </div>
                 </div>
-                {isAdmin && (
-                    <button
-                        onClick={() => onToggleMonthStatus(index)}
-                        className={`absolute bottom-1 right-1 w-6 h-6 rounded-full flex items-center justify-center border z-20 ${isActive ? 'bg-green-500 border-green-300' :
-                            isCompleted ? 'bg-blue-500 border-blue-300' : 'bg-red-500 border-red-300'
-                            }`}
-                    >
-                        <span className="material-icons-outlined text-[10px] text-white">change_circle</span>
-                    </button>
-                )}
             </div>
         );
     };
@@ -326,19 +294,10 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
 
                 <div className="relative z-10 max-w-4xl mx-auto px-4 text-center mt-8">
                     <h1 className="text-4xl sm:text-5xl md:text-7xl font-display font-black text-white mb-4 drop-shadow-lg">
-                        <EditableContent
-                            isAdmin={isAdmin}
-                            value={content.header_title}
-                            onSave={(val) => onUpdateContent('header_title', val)}
-                        /> <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">{prizeLabel}</span>
+                        {content.header_title} <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">{prizeLabel}</span>
                     </h1>
                     <p className="text-lg md:text-2xl text-gray-400 font-light max-w-2xl mx-auto">
-                        <EditableContent
-                            isAdmin={isAdmin}
-                            value={content.header_subtitle}
-                            onSave={(val) => onUpdateContent('header_subtitle', val)}
-                            type="textarea"
-                        />
+                        {content.header_subtitle}
                     </p>
                 </div>
             </div>
@@ -350,38 +309,20 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                     <div className="bg-white/[0.03] backdrop-blur-md border border-white/5 border-l-4 border-l-primary p-6 sm:p-8 rounded-2xl relative overflow-hidden group hover:bg-white/[0.05] transition-all hover:shadow-[0_0_30px_rgba(217,0,255,0.1)]">
                         <h2 className="text-xl sm:text-2xl font-display font-bold text-primary mb-4 flex items-center gap-2 text-glow">
                             <span className="material-icons-outlined text-primary text-xl sm:text-2xl">lightbulb</span>
-                            <EditableContent
-                                isAdmin={isAdmin}
-                                value={content.concept_title}
-                                onSave={(val) => onUpdateContent('concept_title', val)}
-                            />
+                            {content.concept_title}
                         </h2>
                         <p className="text-gray-400 leading-relaxed font-light text-base">
-                            <EditableContent
-                                isAdmin={isAdmin}
-                                value={content.concept_desc}
-                                onSave={(val) => onUpdateContent('concept_desc', val)}
-                                type="textarea"
-                            />
+                            {content.concept_desc}
                         </p>
                     </div>
 
                     <div className="bg-white/[0.03] backdrop-blur-md border border-white/5 border-l-4 border-l-secondary p-6 sm:p-8 rounded-2xl relative overflow-hidden group hover:bg-white/[0.05] transition-all hover:shadow-[0_0_30px_rgba(0,224,255,0.1)]">
                         <h2 className="text-xl sm:text-2xl font-display font-bold text-secondary mb-4 flex items-center gap-2 text-glow-blue">
                             <span className="material-icons-outlined text-secondary text-xl sm:text-2xl">add_circle</span>
-                            <EditableContent
-                                isAdmin={isAdmin}
-                                value={content.plus_title}
-                                onSave={(val) => onUpdateContent('plus_title', val)}
-                            />
+                            {content.plus_title}
                         </h2>
                         <p className="text-gray-400 leading-relaxed font-light text-base">
-                            <EditableContent
-                                isAdmin={isAdmin}
-                                value={content.plus_desc}
-                                onSave={(val) => onUpdateContent('plus_desc', val)}
-                                type="textarea"
-                            />
+                            {content.plus_desc}
                         </p>
                     </div>
                 </div>
@@ -390,11 +331,7 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                 <div className="mb-20">
                     <div className="text-center mb-10">
                         <h2 className="text-3xl font-display font-bold text-white mb-2 uppercase tracking-wide">
-                            <EditableContent
-                                isAdmin={isAdmin}
-                                value={heroContent?.timeline_title || "Cronograma de Evolução"}
-                                onSave={(val) => onUpdateHeroContent('timeline_title', val)}
-                            />
+                            {heroContent?.timeline_title || "Cronograma de Evolução"}
                         </h2>
                         <div className="h-1 w-20 bg-primary/30 mx-auto rounded-full"></div>
                     </div>
@@ -433,11 +370,7 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                 <div className="mb-20">
                     <div className="text-center mb-12">
                         <h2 className="text-3xl font-display font-bold text-white mb-4">
-                            <EditableContent
-                                isAdmin={isAdmin}
-                                value={content.ways_title || "Ecossistema Chip Race"}
-                                onSave={(val) => onUpdateContent('ways_title', val)}
-                            />
+                            {content.ways_title || "Ecossistema Chip Race"}
                         </h2>
                         <div className="h-1 w-20 bg-gradient-to-r from-primary/50 to-secondary/50 mx-auto rounded-full"></div>
                     </div>
@@ -474,43 +407,9 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                                     <div className={`absolute inset-0 bg-gradient-to-br ${styles.glow} to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
 
                                     {/* Padlock Icon for Admin to toggle Mystery/Lock */}
-                                    {isAdmin && (
-                                        <button
-                                            onClick={() => onUpdateCategory(originalIndex, { is_mystery: !cat.is_mystery })}
-                                            className={`absolute top-3 right-3 z-30 p-1.5 rounded-lg border transition-all ${cat.is_mystery
-                                                ? 'bg-primary/20 border-primary/50 text-primary shadow-neon-pink'
-                                                : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'
-                                                }`}
-                                            title={cat.is_mystery ? 'Desbloquear Categoria' : 'Tornar Mistério'}
-                                        >
-                                            <span className="material-icons-outlined text-sm">
-                                                {cat.is_mystery ? 'lock' : 'lock_open'}
-                                            </span>
-                                        </button>
-                                    )}
-
-                                    {isAdmin && (
-                                        <button
-                                            onClick={async () => {
-                                                if (window.confirm('Excluir este slot?')) {
-                                                    await supabase.from('ecosystem_categories').delete().eq('id', cat.id);
-                                                    window.location.reload();
-                                                }
-                                            }}
-                                            className="absolute top-4 left-4 text-gray-600 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                                            title="Excluir Slot"
-                                        >
-                                            <span className="material-icons-outlined text-sm">delete</span>
-                                        </button>
-                                    )}
 
                                     <div className={`absolute top-4 right-4 text-[10px] font-black uppercase px-2 py-1 rounded-full border ${styles.badge} z-20 flex items-center gap-1`}>
-                                        <EditableContent
-                                            isAdmin={isAdmin}
-                                            value={String(cat.slots || 0)}
-                                            onSave={(val) => onUpdateCategory(originalIndex, { slots: parseInt(val) || 0 })}
-                                            showIcon={false}
-                                        />
+                                        {String(cat.slots || 0)}
                                         <span>Vagas</span>
                                     </div>
 
@@ -533,30 +432,10 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                                                 </div>
                                                 <div className="flex-1 flex flex-col items-center">
                                                     <h3 className="text-sm md:text-xl font-display font-bold text-white mb-2 md:mb-3 uppercase tracking-wide flex items-center justify-center gap-2">
-                                                        <EditableContent
-                                                            isAdmin={isAdmin}
-                                                            value={cat.title}
-                                                            onSave={(val) => onUpdateCategory(originalIndex, { title: val })}
-                                                            showIcon={false}
-                                                        />
-                                                        {isAdmin && (
-                                                            <button
-                                                                onClick={() => setActiveTemplateSelect(originalIndex)}
-                                                                className="p-1 hover:bg-white/10 rounded transition-colors text-gray-500 hover:text-primary"
-                                                                title="Escolher Categoria do Sistema"
-                                                            >
-                                                                <span className="material-icons-outlined text-sm">settings</span>
-                                                            </button>
-                                                        )}
+                                                        {cat.title}
                                                     </h3>
                                                     <p className="text-[10px] md:text-xs text-gray-400 mb-4 md:mb-6 leading-relaxed max-w-[150px] md:max-w-[200px]">
-                                                        <EditableContent
-                                                            isAdmin={isAdmin}
-                                                            value={cat.description}
-                                                            onSave={(val) => onUpdateCategory(originalIndex, { description: val })}
-                                                            type="textarea"
-                                                            showIcon={false}
-                                                        />
+                                                        {cat.description}
                                                     </p>
                                                 </div>
                                                 <button

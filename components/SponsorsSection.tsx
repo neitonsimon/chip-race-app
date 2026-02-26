@@ -117,8 +117,7 @@ export function SponsorsSection() {
                                     rel="noopener noreferrer"
                                     className="w-full bg-[#25D366] hover:bg-[#20ba5a] text-white font-black py-5 rounded-2xl shadow-[0_10px_30px_rgba(37,211,102,0.3)] hover:shadow-[0_15px_40px_rgba(37,211,102,0.5)] transition-all flex items-center justify-center gap-4 uppercase tracking-widest text-lg group active:scale-95"
                                 >
-                                    <span className="material-icons text-2xl group-hover:scale-110 transition-transform">whatsapp</span>
-                                    Falar no WhatsApp
+                                    FALAR NO WHATSAPP
                                 </a>
 
                                 <div className="p-6 bg-black/30 rounded-2xl border border-white/5 text-center">

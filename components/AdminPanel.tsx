@@ -509,7 +509,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         if (data) setOpenCommands(data);
     };
     const fetchClosedCommands = async (eventId: string) => {
-        const { data } = await supabase.from('commands').select('*, profiles!user_id(name, numeric_id, avatar_url, vip_status, balance_brl, debt_limit_brl, total_pending_debt)').eq('event_id', eventId).eq('status', 'closed').order('closed_at', { ascending: false });
+        const { data, error } = await supabase.from('commands')
+            .select('*, profiles!user_id(name, numeric_id, avatar_url, vip_status, role, balance_brl, debt_limit_brl, total_pending_debt)')
+            .eq('event_id', eventId)
+            .eq('status', 'closed')
+            .order('closed_at', { ascending: false });
+
+        if (error) {
+            console.error('Error fetching closed commands:', error);
+            return;
+        }
         if (data) setClosedCommands(data);
     };
 
@@ -1061,7 +1070,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             }
 
             // Only check balance if there's a net deduction needed
-            if (!hasProfit && finalToDeduct > 0 && userBalance < finalToDeduct) {
+            if (!hasProfit && finalToDeduct > 0.01 && (Number(userBalance.toFixed(2)) < Number(finalToDeduct.toFixed(2)))) {
                 alert(`Saldo insuficiente para cobrir o restante da comanda!\nO jogador possui R$ ${userBalance.toFixed(2)} e o valor a cobrar é R$ ${finalToDeduct.toFixed(2)}.`);
                 return;
             }
@@ -1542,7 +1551,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             handleAddManualCash={handleAddManualCash}
                             handleAddManualOnline={handleAddManualOnline}
                             commandsTab={commandsTab === 'ativas' ? 'ativas' : 'encerradas'}
-                            setCommandsTab={(t) => setCommandsTab(t === 'ativas' ? 'ativas' : 'historico')}
+                            setCommandsTab={(t) => {
+                                const newTab = t === 'ativas' ? 'ativas' : 'historico';
+                                setCommandsTab(newTab);
+                                if (newTab === 'historico' && selectedEvent) {
+                                    fetchClosedCommands(selectedEvent.id);
+                                }
+                            }}
                             staffExpenses={staffExpenses}
                             setStaffExpenses={setStaffExpenses}
                             prizePayout={prizePayout}

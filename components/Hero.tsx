@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { MonthData, ContentDB } from '../types';
-import { EditableContent } from './EditableContent';
 
 interface HeroProps {
   isAdmin?: boolean;
@@ -42,7 +41,7 @@ export const Hero: React.FC<HeroProps> = ({
         }`}>
 
         {/* Status Badge */}
-        <div className={`absolute top-0 left-0 w-full text-[9px] uppercase font-black py-1 tracking-widest rounded-t-lg ${isActive ? 'bg-primary text-white' :
+        <div className={`absolute top-0 left-0 w-full text-[9px] uppercase font-black py-1 pl-5 tracking-widest rounded-t-lg ${isActive ? 'bg-primary text-white' :
           isCompleted ? 'bg-secondary text-black' :
             'bg-gray-800 text-gray-500'
           }`}>
@@ -55,56 +54,21 @@ export const Hero: React.FC<HeroProps> = ({
           <span className="material-icons-outlined text-2xl text-gray-600 my-2">lock</span>
         ) : (
           <div className="flex flex-col items-center w-full">
-            {isAdmin ? (
-              <input
-                type="text"
-                value={month.prize}
-                onChange={(e) => onUpdateMonth(index, 'prize', e.target.value)}
-                className="w-16 text-center bg-black/50 border border-white/20 rounded text-sm text-white font-bold mb-1"
-              />
-            ) : (
-              <div className={`text-xl font-display font-black ${isActive ? 'text-white' : isCompleted ? 'text-secondary' : 'text-gray-500'}`}>
-                {month.prize}
-              </div>
-            )}
+            <div className={`text-xl font-display font-black ${isActive ? 'text-white' : isCompleted ? 'text-secondary' : 'text-gray-500'}`}>
+              {month.prize}
+            </div>
             <div className="text-[10px] uppercase text-gray-400">GTD</div>
           </div>
         )}
 
         <div className={`mt-3 w-full flex justify-center`}>
-          {isAdmin ? (
-            <div className="flex items-center gap-1 justify-center">
-              <input
-                type="text"
-                value={month.qualifiers}
-                onChange={(e) => onUpdateMonth(index, 'qualifiers', e.target.value)}
-                className="w-10 text-center bg-black/50 border border-white/20 rounded text-xs text-white"
-              />
-              <span className="text-[10px] text-gray-400">Vagas</span>
-            </div>
-          ) : (
-            <div className={`text-xs py-1 px-2 rounded-full font-bold ${isActive ? 'bg-primary text-white' :
-              isCompleted ? 'bg-secondary/20 text-secondary' :
-                'bg-black/30 text-gray-500'
-              }`}>
-              {month.qualifiers} {typeof month.qualifiers === 'number' || !isNaN(Number(month.qualifiers)) ? 'Vagas' : ''}
-            </div>
-          )}
+          <div className={`text-xs py-1 px-2 rounded-full font-bold ${isActive ? 'bg-primary text-white' :
+            isCompleted ? 'bg-secondary/20 text-secondary' :
+              'bg-black/30 text-gray-500'
+            }`}>
+            {month.qualifiers} {typeof month.qualifiers === 'number' || !isNaN(Number(month.qualifiers)) ? 'Vagas' : ''}
+          </div>
         </div>
-
-        {isAdmin && (
-          <button
-            onClick={() => onToggleStatus(index)}
-            className={`absolute bottom-1 right-1 w-6 h-6 rounded-full flex items-center justify-center border z-20 ${isActive ? 'bg-green-500 border-green-300' :
-              isCompleted ? 'bg-blue-500 border-blue-300' : 'bg-red-500 border-red-300'
-              }`}
-            title="Mudar Status"
-          >
-            <span className="material-icons-outlined text-xs text-white">
-              change_circle
-            </span>
-          </button>
-        )}
       </div>
     );
   };
@@ -126,22 +90,13 @@ export const Hero: React.FC<HeroProps> = ({
         {/* Main Text */}
         <div className="mb-16">
           <h1 className="text-4xl sm:text-6xl lg:text-8xl font-display font-black text-gray-900 dark:text-white mb-6 leading-tight">
-            <EditableContent
-              isAdmin={isAdmin}
-              value={content.title_line1}
-              onSave={(val) => onUpdateContent('title_line1', val)}
-            /> <br />
+            {content.title_line1} <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-cyan-500 to-secondary text-glow">
               {prizeLabel}
             </span>
           </h1>
           <p className="mt-4 text-lg sm:text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto font-light leading-relaxed">
-            <EditableContent
-              isAdmin={isAdmin}
-              value={content.subtitle}
-              onSave={(val) => onUpdateContent('subtitle', val)}
-              type="textarea"
-            />
+            {content.subtitle}
           </p>
 
           <div className="flex justify-center mt-12 mb-4">
@@ -168,7 +123,6 @@ export const Hero: React.FC<HeroProps> = ({
               </h3>
               <div className="flex flex-col items-end">
                 <span className="text-xs text-gray-500 uppercase">Temporada 2026</span>
-                {isAdmin && <span className="text-xs text-green-500 font-bold uppercase animate-pulse">Modo Edição Ativo</span>}
               </div>
             </div>
 
