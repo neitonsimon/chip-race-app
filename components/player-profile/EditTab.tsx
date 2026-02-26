@@ -205,9 +205,20 @@ export const EditTab: React.FC<EditTabProps> = ({
                 </div>
             </div>
 
-
-
-
+            {/* Verification Info Section */}
+            <div className="mt-8 pt-8 border-t border-white/5 bg-white/[0.02] rounded-2xl p-6">
+                <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center shrink-0 border border-cyan-500/20">
+                        <span className="material-icons text-cyan-400 text-xl">verified</span>
+                    </div>
+                    <div>
+                        <h4 className="text-white font-bold mb-1 uppercase tracking-tight text-xs">Como verificar seu usuário</h4>
+                        <p className="text-gray-400 text-xs leading-relaxed max-w-2xl">
+                            A verificação de usuário é feita de forma manual. Preencha todos os seus dados com informações verdadeiras e atualize sua foto de perfil que o processo de verificação será realizado e o selo de verificado concedido ao usuário.
+                        </p>
+                    </div>
+                </div>
+            </div>
             <div className="border-t border-white/10 pt-8 mt-8 flex justify-end gap-4">
                 <button onClick={() => setActiveTab('overview')} className="px-6 py-3 rounded-lg text-gray-400 font-bold hover:bg-white/5 transition-colors">Cancelar</button>
                 <button onClick={handleSaveProfile} className="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-emerald-600 hover:to-green-500 text-white font-bold rounded-lg shadow-lg transform hover:scale-105 transition-all flex items-center gap-2">

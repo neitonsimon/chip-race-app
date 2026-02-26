@@ -30,7 +30,7 @@ export const AppRouter: React.FC = () => {
         handleNavigate, handleLogin, handlePlayerSelect, handleProfileUpdate,
         handleSaveEvent, handleDeleteEventAcrossApp, handleEventClosure,
         handleUpdateRankingMeta, handleUpdateGlobalSchemas, handleAddRanking,
-        handleDeleteRanking, handleAwardBadge, handleFinalizeRanking,
+        handleDeleteRanking, handleAwardBadge,
         handleUpdateRankingPrize, handleUpdateTotalQualifiers, handleUpdateMonth,
         handleToggleMonthStatus, handleNavigateToPlayerByName, handleCreatePoll,
         handleVoteOnPoll, handleSendAdminMessage, handleSendMessage,
@@ -68,7 +68,6 @@ export const AppRouter: React.FC = () => {
                     currentUser={currentUser}
                     events={events}
                     globalScoringSchemas={globalScoringSchemas}
-                    onFinalizeRanking={handleFinalizeRanking}
                     badgeTemplates={badgeTemplates}
                     isLoading={isLoading}
                 />;

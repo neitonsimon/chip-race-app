@@ -1474,19 +1474,43 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                 </div>
             )}
 
-            <header className="h-16 border-b border-white/10 flex items-center justify-between px-6 bg-black/40 backdrop-blur-md flex-shrink-0">
-                <div className="flex items-center gap-3">
-                    <img src="/cr-logo.png" alt="Chip Race" className="h-8 w-auto" />
-                    <div className="h-5 w-px bg-white/10"></div>
-                    <h2 className="text-base font-display font-black text-white uppercase tracking-wider">Painel Administrativo</h2>
+            <header className="h-16 border-b border-white/10 flex items-center justify-between px-4 sm:px-6 bg-black/40 backdrop-blur-md flex-shrink-0">
+                <div className="flex items-center gap-2 sm:gap-3">
+                    <img src="/cr-logo.png" alt="Chip Race" className="h-6 sm:h-8 w-auto" />
+                    <div className="h-4 sm:h-5 w-px bg-white/10"></div>
+                    <h2 className="text-[10px] sm:text-base font-display font-black text-white uppercase tracking-wider truncate max-w-[120px] sm:max-w-none">Painel Administrativo</h2>
                 </div>
-                <button onClick={onClose} className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-red-500/20 hover:border-red-500/50 transition-all group">
-                    <span className="material-icons-outlined text-gray-400 group-hover:text-red-500 text-base">close</span>
-                </button>
+                <div className="flex items-center gap-3">
+                    <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/5">
+                        <img src={currentUser.avatar} className="w-5 h-5 rounded-full border border-primary/50" alt="" />
+                        <span className="text-[10px] font-bold text-white truncate max-w-[80px]">{currentUser.name}</span>
+                    </div>
+                    <button onClick={onClose} className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-red-500/20 hover:border-red-500/50 transition-all group">
+                        <span className="material-icons-outlined text-gray-400 group-hover:text-red-500 text-sm sm:text-base">close</span>
+                    </button>
+                </div>
             </header>
 
-            <div className="flex-1 flex overflow-hidden">
-                <aside className="w-52 border-r border-white/10 bg-black/20 p-4 flex flex-col gap-2 flex-shrink-0">
+            {/* Mobile Tab Navigation (Horizontal Scroll) */}
+            <div className="lg:hidden flex overflow-x-auto custom-scrollbar bg-black/20 border-b border-white/10 p-2 gap-2 flex-shrink-0 no-scrollbar">
+                {[
+                    { id: 'operational', icon: 'point_of_sale', label: 'Operaç.' },
+                    { id: 'launch', icon: 'add_shopping_cart', label: 'Produtos' },
+                    { id: 'reports', icon: 'bar_chart', label: 'Relat.' },
+                    { id: 'send-gifts', icon: 'stars', label: 'Prêmios' },
+                    { id: 'debts', icon: 'receipt_long', label: 'Crédito' },
+                    { id: 'communications', icon: 'campaign', label: 'Comunic.' },
+                    { id: 'settings', icon: 'settings', label: 'Site' }
+                ].filter(t => currentUser?.role !== 'staff' || t.id === 'operational').map(t => (
+                    <button key={t.id} onClick={() => { setActiveTab(t.id as any); if (t.id === 'reports' && selectedEvent) fetchReport(selectedEvent.id); }}
+                        className={`flex items-center gap-1.5 px-4 py-2 rounded-xl transition-all text-[9px] font-bold uppercase tracking-widest whitespace-nowrap ${activeTab === t.id ? 'bg-primary text-white shadow-neon-pink' : 'text-gray-400 bg-white/5 border border-white/5'}`}>
+                        <span className="material-icons-outlined text-sm">{t.icon}</span>{t.label}
+                    </button>
+                ))}
+            </div>
+
+            <div className="flex-1 flex overflow-hidden flex-col lg:flex-row">
+                <aside className="hidden lg:flex w-52 border-r border-white/10 bg-black/20 p-4 flex flex-col gap-2 flex-shrink-0">
                     {[
                         { id: 'operational', icon: 'point_of_sale', label: 'Operaç.' },
                         { id: 'launch', icon: 'add_shopping_cart', label: 'Produtos' },

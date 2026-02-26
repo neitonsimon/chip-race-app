@@ -149,11 +149,11 @@ export const WalletMonitorTab: React.FC = () => {
     };
 
     return (
-        <div className="p-6 space-y-4">
+        <div className="p-4 sm:p-6 space-y-4">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h3 className="text-xl font-display font-black text-white uppercase flex items-center gap-2">
+                    <h3 className="text-lg sm:text-xl font-display font-black text-white uppercase flex items-center gap-2">
                         <span className="material-icons-outlined text-primary">monitoring</span>
                         Monitor de Carteiras
                     </h3>
@@ -162,33 +162,33 @@ export const WalletMonitorTab: React.FC = () => {
                         {subView === 'transactions' && (
                             <span className="ml-3 inline-flex items-center gap-1">
                                 <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse inline-block"></span>
-                                TEMPO REAL
+                                <span className="hidden xs:inline">TEMPO REAL</span>
                             </span>
                         )}
                     </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between sm:justify-end gap-2">
                     {/* Sub-view tabs */}
-                    <div className="flex bg-black/30 border border-white/10 rounded-xl p-1 gap-1">
+                    <div className="flex bg-black/30 border border-white/10 rounded-xl p-1 gap-1 flex-1 sm:flex-none">
                         <button
                             onClick={() => setSubView('transactions')}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${subView === 'transactions' ? 'bg-primary text-white shadow-neon-pink' : 'text-gray-500 hover:text-white'}`}
+                            className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all ${subView === 'transactions' ? 'bg-primary text-white shadow-neon-pink' : 'text-gray-500 hover:text-white'}`}
                         >
-                            <span className="material-icons-outlined text-sm">swap_horiz</span>
-                            Transações
+                            <span className="material-icons-outlined text-xs sm:text-sm">swap_horiz</span>
+                            <span>Transações</span>
                         </button>
                         <button
                             onClick={() => setSubView('balances')}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${subView === 'balances' ? 'bg-primary text-white shadow-neon-pink' : 'text-gray-500 hover:text-white'}`}
+                            className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all ${subView === 'balances' ? 'bg-primary text-white shadow-neon-pink' : 'text-gray-500 hover:text-white'}`}
                         >
-                            <span className="material-icons-outlined text-sm">account_balance_wallet</span>
-                            Saldos
+                            <span className="material-icons-outlined text-xs sm:text-sm">account_balance_wallet</span>
+                            <span>Saldos</span>
                         </button>
                     </div>
                     <button
                         onClick={() => subView === 'transactions' ? fetchTransactions() : fetchUserBalances()}
                         disabled={isLoading}
-                        className="w-9 h-9 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center hover:bg-primary/20 hover:border-primary/50 transition-all"
+                        className="w-9 h-9 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center hover:bg-primary/20 hover:border-primary/50 transition-all shrink-0"
                     >
                         <span className={`material-icons-outlined text-sm text-gray-400 ${isLoading ? 'animate-spin' : ''}`}>refresh</span>
                     </button>
@@ -199,8 +199,8 @@ export const WalletMonitorTab: React.FC = () => {
             {subView === 'transactions' && (
                 <div className="space-y-4">
                     {/* Filters */}
-                    <div className="flex flex-wrap items-center gap-2">
-                        <div className="flex-1 min-w-[180px] flex items-center gap-2 bg-black/30 border border-white/10 rounded-xl px-3 py-2">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                        <div className="flex-1 flex items-center gap-2 bg-black/30 border border-white/10 rounded-xl px-3 py-2">
                             <span className="material-icons-outlined text-gray-500 text-sm">search</span>
                             <input
                                 type="text"
@@ -210,44 +210,46 @@ export const WalletMonitorTab: React.FC = () => {
                                 className="bg-transparent text-sm text-white outline-none flex-1 placeholder-gray-600"
                             />
                         </div>
-                        <select
-                            value={txCategoryFilter}
-                            onChange={e => setTxCategoryFilter(e.target.value)}
-                            className="bg-[#0a0720] border border-white/10 rounded-xl px-3 py-2 text-[10px] font-black uppercase text-white outline-none"
-                        >
-                            <option value="all">Todas Categorias</option>
-                            {availableCategories.map(c => (
-                                <option key={c} value={c}>{String(c).toUpperCase().replace('_', ' ')}</option>
-                            ))}
-                        </select>
-                        <select
-                            value={txLimit}
-                            onChange={e => { setTxLimit(Number(e.target.value)); }}
-                            className="bg-[#0a0720] border border-white/10 rounded-xl px-3 py-2 text-[10px] font-black uppercase text-white outline-none"
-                        >
-                            <option value={50}>Últimas 50</option>
-                            <option value={100}>Últimas 100</option>
-                            <option value={200}>Últimas 200</option>
-                            <option value={500}>Últimas 500</option>
-                        </select>
+                        <div className="flex items-center gap-2">
+                            <select
+                                value={txCategoryFilter}
+                                onChange={e => setTxCategoryFilter(e.target.value)}
+                                className="flex-1 sm:flex-none bg-[#0a0720] border border-white/10 rounded-xl px-3 py-2 text-[10px] font-black uppercase text-white outline-none min-w-[120px]"
+                            >
+                                <option value="all">Categorias</option>
+                                {availableCategories.map(c => (
+                                    <option key={c} value={c}>{String(c).toUpperCase().replace('_', ' ')}</option>
+                                ))}
+                            </select>
+                            <select
+                                value={txLimit}
+                                onChange={e => { setTxLimit(Number(e.target.value)); }}
+                                className="flex-1 sm:flex-none bg-[#0a0720] border border-white/10 rounded-xl px-3 py-2 text-[10px] font-black uppercase text-white outline-none"
+                            >
+                                <option value={50}>50 un</option>
+                                <option value={100}>100 un</option>
+                                <option value={200}>200 un</option>
+                                <option value={500}>500 un</option>
+                            </select>
+                        </div>
                     </div>
 
                     {/* Summary Pills */}
                     {filteredTx.length > 0 && (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-4 gap-3">
                             {[
                                 {
-                                    icon: 'add_circle', label: 'Total Créditos BRL',
+                                    icon: 'add_circle', label: 'Créditos BRL',
                                     val: `R$ ${filteredTx.filter(t => Number(t.amount_brl) > 0).reduce((s, t) => s + Number(t.amount_brl), 0).toFixed(2)}`,
                                     color: 'text-green-400', bg: 'border-green-500/20 bg-green-500/5'
                                 },
                                 {
-                                    icon: 'remove_circle', label: 'Total Débitos BRL',
+                                    icon: 'remove_circle', label: 'Débitos BRL',
                                     val: `R$ ${Math.abs(filteredTx.filter(t => Number(t.amount_brl) < 0).reduce((s, t) => s + Number(t.amount_brl), 0)).toFixed(2)}`,
                                     color: 'text-red-400', bg: 'border-red-500/20 bg-red-500/5'
                                 },
                                 {
-                                    icon: 'token', label: 'Total Chipz Creditados',
+                                    icon: 'token', label: 'Chipz Creditados',
                                     val: `${filteredTx.filter(t => Number(t.amount_chipz) > 0).reduce((s, t) => s + Number(t.amount_chipz), 0).toLocaleString('pt-BR')}`,
                                     color: 'text-primary', bg: 'border-primary/20 bg-primary/5'
                                 },
@@ -262,7 +264,7 @@ export const WalletMonitorTab: React.FC = () => {
                                         <span className={`material-icons-outlined text-sm ${c.color}`}>{c.icon}</span>
                                         <p className="text-[9px] text-gray-500 uppercase font-black">{c.label}</p>
                                     </div>
-                                    <p className={`text-lg font-display font-black ${c.color}`}>{c.val}</p>
+                                    <p className={`text-base sm:text-lg font-display font-black ${c.color}`}>{c.val}</p>
                                 </div>
                             ))}
                         </div>
@@ -271,17 +273,17 @@ export const WalletMonitorTab: React.FC = () => {
                     {/* Transaction Table */}
                     <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
                         <div className="px-4 py-3 border-b border-white/10 bg-black/20 flex items-center justify-between">
-                            <span className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                            <span className="text-[10px] sm:text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
                                 <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                                Feed de Transações — Tempo Real
+                                Feed de Transações
                             </span>
-                            <span className="text-[10px] text-gray-500 font-black">{filteredTx.length} registros</span>
+                            <span className="text-[9px] sm:text-[10px] text-gray-500 font-black">{filteredTx.length} registros</span>
                         </div>
                         {isLoading ? (
                             <div className="flex items-center justify-center py-16">
                                 <div className="flex flex-col items-center gap-3">
                                     <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                                    <p className="text-gray-500 text-xs">Carregando transações...</p>
+                                    <p className="text-gray-500 text-xs">Carregando...</p>
                                 </div>
                             </div>
                         ) : filteredTx.length === 0 ? (
@@ -290,8 +292,8 @@ export const WalletMonitorTab: React.FC = () => {
                                 <p className="text-sm italic">Nenhuma transação encontrada.</p>
                             </div>
                         ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-xs">
+                            <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                                <table className="w-full text-xs min-w-[700px]">
                                     <thead>
                                         <tr className="border-b border-white/5 bg-black/40">
                                             <th className="text-left px-4 py-3 text-gray-500 font-bold uppercase">Data/Hora</th>
@@ -367,8 +369,8 @@ export const WalletMonitorTab: React.FC = () => {
             {subView === 'balances' && (
                 <div className="space-y-4">
                     {/* Search & Sort */}
-                    <div className="flex flex-wrap items-center gap-2">
-                        <div className="flex-1 min-w-[180px] flex items-center gap-2 bg-black/30 border border-white/10 rounded-xl px-3 py-2">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                        <div className="flex-1 flex items-center gap-2 bg-black/30 border border-white/10 rounded-xl px-3 py-2">
                             <span className="material-icons-outlined text-gray-500 text-sm">search</span>
                             <input
                                 type="text"
@@ -378,7 +380,7 @@ export const WalletMonitorTab: React.FC = () => {
                                 className="bg-transparent text-sm text-white outline-none flex-1 placeholder-gray-600"
                             />
                         </div>
-                        <div className="flex items-center gap-1 bg-black/30 border border-white/10 rounded-xl p-1">
+                        <div className="flex overflow-x-auto pb-1 sm:pb-0 scrollbar-none items-center gap-1 bg-black/30 border border-white/10 rounded-xl p-1">
                             {[
                                 { key: 'brl', label: 'R$', icon: 'account_balance_wallet' },
                                 { key: 'chipz', label: 'Chipz', icon: 'token' },
@@ -388,7 +390,7 @@ export const WalletMonitorTab: React.FC = () => {
                                 <button
                                     key={s.key}
                                     onClick={() => setBalanceSortBy(s.key as any)}
-                                    className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${balanceSortBy === s.key ? 'bg-primary text-white' : 'text-gray-500 hover:text-white'}`}
+                                    className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all whitespace-nowrap ${balanceSortBy === s.key ? 'bg-primary text-white' : 'text-gray-500 hover:text-white'}`}
                                 >
                                     <span className="material-icons-outlined text-[10px]">{s.icon}</span>
                                     {s.label}
@@ -398,21 +400,23 @@ export const WalletMonitorTab: React.FC = () => {
                     </div>
 
                     {/* Grand Total Summary */}
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
                         {[
-                            { icon: 'account_balance_wallet', label: 'Total R$ em Circulação', val: `R$ ${totalBrl.toFixed(2)}`, color: 'text-green-400', bg: 'border-green-500/30 bg-green-500/5', glow: 'shadow-[0_0_20px_rgba(34,197,94,0.15)]' },
-                            { icon: 'token', label: 'Total Chipz em Circulação', val: totalChipz.toLocaleString('pt-BR'), color: 'text-primary', bg: 'border-primary/30 bg-primary/5', glow: 'shadow-[0_0_20px_rgba(217,0,255,0.15)]' },
-                            { icon: 'receipt_long', label: 'Total em Débitos Pendentes', val: `R$ ${totalDebt.toFixed(2)}`, color: 'text-red-400', bg: 'border-red-500/30 bg-red-500/5', glow: 'shadow-[0_0_20px_rgba(239,68,68,0.15)]' },
+                            { icon: 'account_balance_wallet', label: 'R$ em Circulação', val: `R$ ${totalBrl.toFixed(2)}`, color: 'text-green-400', bg: 'border-green-500/30 bg-green-500/5', glow: 'shadow-[0_0_20px_rgba(34,197,94,0.15)]' },
+                            { icon: 'token', label: 'Chipz em Circulação', val: totalChipz.toLocaleString('pt-BR'), color: 'text-primary', bg: 'border-primary/30 bg-primary/5', glow: 'shadow-[0_0_20px_rgba(217,0,255,0.15)]' },
+                            { icon: 'receipt_long', label: 'Débitos Pendentes', val: `R$ ${totalDebt.toFixed(2)}`, color: 'text-red-400', bg: 'border-red-500/30 bg-red-500/5', glow: 'shadow-[0_0_20px_rgba(239,68,68,0.15)]' },
                         ].map(c => (
-                            <div key={c.label} className={`border rounded-2xl p-5 ${c.bg} ${c.glow}`}>
+                            <div key={c.label} className={`border rounded-2xl p-4 sm:p-5 ${c.bg} ${c.glow}`}>
                                 <div className="flex items-center gap-2 mb-2">
-                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center bg-current/10`}>
-                                        <span className={`material-icons-outlined ${c.color}`}>{c.icon}</span>
+                                    <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center bg-current/10`}>
+                                        <span className={`material-icons-outlined text-sm sm:text-base ${c.color}`}>{c.icon}</span>
                                     </div>
                                     <p className="text-[9px] text-gray-500 uppercase font-black leading-tight">{c.label}</p>
                                 </div>
-                                <p className={`text-2xl font-display font-black ${c.color}`}>{c.val}</p>
-                                <p className="text-[9px] text-gray-600 mt-1">{filteredBalances.length} usuários</p>
+                                <p className="text-xl sm:text-2xl font-display font-black break-words" style={{ color: 'inherit' }}>
+                                    <span className={c.color}>{c.val}</span>
+                                </p>
+                                <p className="text-[8px] sm:text-[9px] text-gray-600 mt-1">{filteredBalances.length} usuários</p>
                             </div>
                         ))}
                     </div>
@@ -420,8 +424,8 @@ export const WalletMonitorTab: React.FC = () => {
                     {/* Balances Table */}
                     <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
                         <div className="px-4 py-3 border-b border-white/10 bg-black/20 flex items-center justify-between">
-                            <span className="text-xs font-black text-white uppercase tracking-widest">Saldo Individual por Usuário</span>
-                            <span className="text-[10px] text-gray-500 font-black">{filteredBalances.length} jogadores</span>
+                            <span className="text-[10px] sm:text-xs font-black text-white uppercase tracking-widest">Saldo Individual</span>
+                            <span className="text-[9px] sm:text-[10px] text-gray-500 font-black">{filteredBalances.length} jogadores</span>
                         </div>
                         {isLoading ? (
                             <div className="flex items-center justify-center py-16">
@@ -433,15 +437,15 @@ export const WalletMonitorTab: React.FC = () => {
                                 <p className="text-sm italic">Nenhum usuário encontrado.</p>
                             </div>
                         ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-xs">
+                            <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                                <table className="w-full text-xs min-w-[600px]">
                                     <thead>
                                         <tr className="border-b border-white/5 bg-black/40">
-                                            <th className="text-left px-4 py-3 text-gray-500 font-bold uppercase">#</th>
+                                            <th className="text-left px-4 py-3 text-gray-500 font-bold uppercase w-10">#</th>
                                             <th className="text-left px-4 py-3 text-gray-500 font-bold uppercase">Jogador</th>
                                             <th className="text-right px-4 py-3 text-green-500/70 font-bold uppercase">Saldo R$</th>
                                             <th className="text-right px-4 py-3 text-primary/70 font-bold uppercase">Chipz</th>
-                                            <th className="text-right px-4 py-3 text-red-500/70 font-bold uppercase">Débito Pendente</th>
+                                            <th className="text-right px-4 py-3 text-red-500/70 font-bold uppercase">Débito</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -451,7 +455,7 @@ export const WalletMonitorTab: React.FC = () => {
                                             const debt = Number(u.total_pending_debt || 0);
                                             return (
                                                 <tr key={u.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                                                    <td className="px-4 py-3 text-gray-600 font-mono">{idx + 1}</td>
+                                                    <td className="px-4 py-3 text-gray-600 font-mono text-[10px]">{idx + 1}</td>
                                                     <td className="px-4 py-3">
                                                         <div className="flex items-center gap-2">
                                                             {u.avatar_url ? (
@@ -481,8 +485,8 @@ export const WalletMonitorTab: React.FC = () => {
                                                     </td>
                                                     <td className="px-4 py-3 text-right">
                                                         {debt > 0 ? (
-                                                            <span className="inline-flex items-center gap-1 font-display font-black text-sm text-red-400">
-                                                                <span className="material-icons-outlined text-[10px]">warning</span>
+                                                            <span className="inline-flex items-center justify-end gap-1 font-display font-black text-sm text-red-400">
+                                                                <span className="material-icons-outlined text-[10px] hidden xs:inline">warning</span>
                                                                 R$ {debt.toFixed(2)}
                                                             </span>
                                                         ) : (
@@ -497,19 +501,19 @@ export const WalletMonitorTab: React.FC = () => {
                                     <tfoot>
                                         <tr className="border-t-2 border-white/20 bg-black/40">
                                             <td colSpan={2} className="px-4 py-4">
-                                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                                <span className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                                                     <span className="material-icons-outlined text-sm text-primary">calculate</span>
-                                                    SOMA TOTAL ({filteredBalances.length} jogadores)
+                                                    TOTAL ({filteredBalances.length})
                                                 </span>
                                             </td>
                                             <td className="px-4 py-4 text-right">
-                                                <span className="text-green-400 font-display font-black text-base">R$ {totalBrl.toFixed(2)}</span>
+                                                <span className="text-green-400 font-display font-black text-sm sm:text-base">R$ {totalBrl.toFixed(2)}</span>
                                             </td>
                                             <td className="px-4 py-4 text-right">
-                                                <span className="text-primary font-display font-black text-base">{totalChipz.toLocaleString('pt-BR')}</span>
+                                                <span className="text-primary font-display font-black text-sm sm:text-base">{totalChipz.toLocaleString('pt-BR')}</span>
                                             </td>
                                             <td className="px-4 py-4 text-right">
-                                                <span className="text-red-400 font-display font-black text-base">R$ {totalDebt.toFixed(2)}</span>
+                                                <span className="text-red-400 font-display font-black text-sm sm:text-base">R$ {totalDebt.toFixed(2)}</span>
                                             </td>
                                         </tr>
                                     </tfoot>

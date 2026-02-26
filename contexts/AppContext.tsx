@@ -51,7 +51,6 @@ interface AppContextType {
     handleAddRanking: () => Promise<void>;
     handleDeleteRanking: (id: string) => Promise<void>;
     handleAwardBadge: (badge: { user_id: string; title: string; description: string; icon: string; ranking_id: string }) => Promise<void>;
-    handleFinalizeRanking: (rankingId: string, targetUserId?: string, customJustification?: string) => Promise<void>;
     handleUpdateRankingPrize: (rankingId: string, rank: number, newPrize: string) => void;
     handleUpdateTotalQualifiers: (value: number | null) => Promise<void>;
     handleUpdateMonth: (index: number, field: keyof MonthData, value: any) => Promise<void>;
@@ -837,56 +836,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return { error };
     };
 
-    const handleFinalizeRanking = async (rankingId: string, targetUserId?: string, customJustification?: string) => {
-        if (!isAdmin) return;
-        const ranking = rankings.find(r => r.id === rankingId);
-        if (!ranking || !ranking.isActive) return;
-        const winner = targetUserId ? allProfiles.find(p => p.id === targetUserId) : ranking.players.find(p => p.rank === 1);
-        if (!winner || !winner.id) return;
-        if (!window.confirm(`Encerrar ${ranking.label}?`)) return;
-
-        try {
-            await supabase.from('rankings').update({ is_active: false }).eq('id', ranking.id);
-            setRankings(prev => prev.map(r => r.id === rankingId ? { ...r, isActive: false } : r));
-
-            // Send system message
-            await supabase.from('messages').insert({
-                user_id: winner.id,
-                sender: 'Sistema',
-                subject: '🏆 Ranking Vencido!',
-                content: `Parabéns por vencer o ${ranking.label}! ${customJustification}`,
-                category: 'gift'
-            });
-
-            // Award badge if configured
-            if (ranking.badgeTemplateId) {
-                const template = badgeTemplates.find(b => b.id === ranking.badgeTemplateId);
-                if (template) {
-                    await handleAwardBadge({
-                        user_id: winner.id,
-                        badge_template_id: template.id,
-                        title: template.title,
-                        description: customJustification || template.description,
-                        icon: template.icon || 'emoji_events',
-                        color: template.color || '#00E5FF'
-                    });
-                }
-            }
-
-            // Award cash/chipz if configured
-            if (ranking.brlReward || ranking.chipzReward) {
-                await supabase.rpc('secure_balance_transaction', {
-                    user_id: winner.id,
-                    brl_amount: Number(ranking.brlReward) || 0,
-                    chipz_amount: Number(ranking.chipzReward) || 0,
-                    description: `Prêmio de 1º lugar no ranking ${ranking.label}`,
-                    category: 'gift'
-                });
-            }
-
-        } catch (e) { console.error('Error finalizing ranking:', e); }
-    };
-
     const handleUpdateRankingPrize = (rankingId: string, rank: number, newPrize: string) => {
         setRankings(prev => {
             const updated = prev.map(r => {
@@ -1006,7 +955,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             messages, unreadCount, polls, pollVotesByCurrentUser, newNotification, selectedPlayer, setSelectedPlayer, months,
             handleNavigate, handleLogin, handleLogout, handlePlayerSelect, handleProfileUpdate, handleSaveEvent, handleDeleteEventAcrossApp,
             handleEventClosure, handleUpdateRankingMeta, handleUpdateGlobalSchemas, handleAddRanking, handleDeleteRanking, handleAwardBadge,
-            handleFinalizeRanking, handleUpdateRankingPrize, handleUpdateTotalQualifiers, handleUpdateMonth, handleToggleMonthStatus,
+            handleUpdateRankingPrize, handleUpdateTotalQualifiers, handleUpdateMonth, handleToggleMonthStatus,
             handleNavigateToPlayerByName, handleCreatePoll, handleVoteOnPoll, handleSendAdminMessage, handleSendMessage, handleReplyMessage,
             handleMarkAsRead, handleCreateBadgeTemplate, updateContent, updateCategory, setNewNotification, getAllUniquePlayers,
             setEvents, setExperienceLevels, setDailyRewards

@@ -98,9 +98,9 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
         return commandItems.filter(item => item.product_id === p.id).reduce((sum, item) => sum + (item.quantity || 1), 0);
     };
     return (
-        <div className="flex h-full overflow-hidden">
+        <div className="flex flex-col lg:flex-row h-full overflow-hidden">
             {/* Sidebar: Event Selection & Player Search */}
-            <div className="w-80 border-r border-white/5 bg-black/40 flex flex-col">
+            <div className={`w-full lg:w-80 border-b lg:border-r border-white/5 bg-black/40 flex flex-col ${selectedEvent ? 'hidden lg:flex' : 'flex'}`}>
                 <div className="p-4 space-y-4">
                     <div>
                         <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Evento Ativo</label>
@@ -293,11 +293,16 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
             </div>
 
             {/* Main Content: Command Lists & Actions */}
-            <div className="flex-1 flex flex-col bg-background-dark/50">
-                <div className="p-6 border-b border-white/5 bg-black/20 flex items-center justify-between">
-                    <div className="flex gap-4">
-                        <button onClick={() => setCommandsTab('ativas')} className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${commandsTab === 'ativas' ? 'bg-primary text-white shadow-neon-pink' : 'text-gray-500 hover:text-gray-300'}`}>Comandas Ativas ({openCommands.length})</button>
-                        <button onClick={() => setCommandsTab('encerradas')} className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${commandsTab === 'encerradas' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'}`}>Encerradas ({closedCommands.length})</button>
+            <div className={`flex-1 flex flex-col bg-background-dark/50 ${(selectedEvent && !selectedCommand) ? 'flex' : 'hidden lg:flex'}`}>
+                <div className="p-4 sm:p-6 border-b border-white/5 bg-black/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                        <button onClick={() => setSelectedEvent(null)} className="lg:hidden w-8 h-8 rounded-full bg-white/5 flex items-center justify-center">
+                            <span className="material-icons-outlined text-sm">arrow_back</span>
+                        </button>
+                        <div className="flex gap-2 sm:gap-4 flex-1">
+                            <button onClick={() => setCommandsTab('ativas')} className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${commandsTab === 'ativas' ? 'bg-primary text-white shadow-neon-pink' : 'text-gray-400 hover:text-gray-300'}`}>Ativas ({openCommands.length})</button>
+                            <button onClick={() => setCommandsTab('encerradas')} className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${commandsTab === 'encerradas' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-gray-300'}`}>Encerradas ({closedCommands.length})</button>
+                        </div>
                     </div>
                 </div>
 
@@ -308,7 +313,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                             <p className="text-sm font-bold uppercase tracking-widest">Selecione um evento para gerenciar comandas</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                             {(commandsTab === 'ativas' ? openCommands : closedCommands).map(cmd => (
                                 <div
                                     key={cmd.id}
@@ -316,7 +321,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                         setSelectedCommand(cmd);
                                         if (cmd.status === 'closed') setRightMode('itens');
                                     }}
-                                    className={`bg-surface-dark border rounded-2xl p-3 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden flex flex-col items-center text-center ${selectedCommand?.id === cmd.id ? 'border-primary shadow-neon-pink ring-1 ring-primary' : 'border-white/5'}`}
+                                    className={`bg-surface-dark border rounded-2xl p-2.5 sm:p-3 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden flex flex-col items-center text-center ${selectedCommand?.id === cmd.id ? 'border-primary shadow-neon-pink ring-1 ring-primary' : 'border-white/5'}`}
                                 >
                                     <div className="relative mb-2 shrink-0">
                                         <img src={cmd.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${cmd.profiles?.name}&background=random`} className="w-10 h-10 rounded-xl border border-white/10" />
@@ -370,15 +375,18 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
             </div>
 
             {/* Right Panel: Selected Command Details */}
-            <div className="w-96 border-l border-white/5 bg-black/40 flex flex-col">
+            <div className={`w-full lg:w-96 border-t lg:border-l border-white/5 bg-black/40 flex flex-col ${selectedCommand ? 'flex' : 'hidden lg:flex'}`}>
                 {selectedCommand ? (
                     <>
-                        <div className="p-6 border-b border-white/10">
-                            <div className="flex items-center gap-4 mb-6">
-                                <img src={selectedCommand.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${selectedCommand.profiles?.name}&background=random`} className="w-14 h-14 rounded-2xl" />
+                        <div className="p-4 sm:p-6 border-b border-white/10">
+                            <div className="flex items-center gap-4 mb-4 sm:mb-6">
+                                <button onClick={() => setSelectedCommand(null)} className="lg:hidden w-8 h-8 rounded-full bg-white/5 flex items-center justify-center">
+                                    <span className="material-icons-outlined text-sm">arrow_back</span>
+                                </button>
+                                <img src={selectedCommand.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${selectedCommand.profiles?.name}&background=random`} className="w-10 h-10 sm:w-14 sm:h-14 rounded-2xl" />
                                 <div>
-                                    <h4 className="text-lg font-display font-black text-white uppercase">{selectedCommand.profiles?.name}</h4>
-                                    <p className="text-xs text-primary font-black">CR#{String(selectedCommand.profiles?.numeric_id).padStart(3, '0')}</p>
+                                    <h4 className="text-sm sm:text-lg font-display font-black text-white uppercase truncate max-w-[150px]">{selectedCommand.profiles?.name}</h4>
+                                    <p className="text-[10px] sm:text-xs text-primary font-black">CR#{String(selectedCommand.profiles?.numeric_id).padStart(3, '0')}</p>
                                 </div>
                             </div>
 

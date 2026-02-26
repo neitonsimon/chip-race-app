@@ -21,20 +21,20 @@ export const CommunicationsTab: React.FC<CommunicationsTabProps> = ({
     pollOptions, setPollOptions, handleSendAdminMessage, handleCreatePollSubmit
 }) => {
     return (
-        <div className="p-8 max-w-4xl mx-auto space-y-12">
+        <div className="p-4 sm:p-8 max-w-4xl mx-auto space-y-8 sm:space-y-12">
             {/* System Notification */}
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
                 <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary shadow-neon-pink">
-                        <span className="material-icons-outlined text-2xl">campaign</span>
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary shadow-neon-pink shrink-0">
+                        <span className="material-icons-outlined text-xl sm:text-2xl">campaign</span>
                     </div>
                     <div>
-                        <h3 className="text-xl font-display font-black text-white uppercase tracking-widest">Comunicado Geral</h3>
-                        <p className="text-gray-500 text-xs">Enviar mensagem direta para TODOS os usuários do app.</p>
+                        <h3 className="text-lg sm:text-xl font-display font-black text-white uppercase tracking-widest leading-tight">Comunicado Geral</h3>
+                        <p className="text-gray-500 text-[10px] sm:text-xs">Enviar mensagem direta para TODOS os usuários do app.</p>
                     </div>
                 </div>
 
-                <div className="bg-black/40 border border-white/10 rounded-3xl p-6 space-y-4">
+                <div className="bg-black/40 border border-white/10 rounded-[2rem] p-4 sm:p-6 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Assunto / Título</label>
@@ -43,7 +43,7 @@ export const CommunicationsTab: React.FC<CommunicationsTabProps> = ({
                                 value={adminSubject}
                                 onChange={e => setAdminSubject(e.target.value)}
                                 placeholder="Ex: Novo Calendário Disponível"
-                                className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-bold focus:border-primary outline-none"
+                                className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-bold focus:border-primary outline-none shadow-sm"
                             />
                         </div>
                         <div>
@@ -53,7 +53,7 @@ export const CommunicationsTab: React.FC<CommunicationsTabProps> = ({
                                     <button
                                         key={cat}
                                         onClick={() => setAdminMsgCategory(cat)}
-                                        className={`flex-1 py-3 rounded-xl border text-[10px] font-black uppercase transition-all ${adminMsgCategory === cat ? 'bg-primary border-primary text-white shadow-neon-pink' : 'bg-white/5 border-white/10 text-gray-500'}`}
+                                        className={`flex-1 py-3 rounded-xl border text-[9px] sm:text-[10px] font-black uppercase transition-all ${adminMsgCategory === cat ? 'bg-primary border-primary text-white shadow-neon-pink' : 'bg-white/5 border-white/10 text-gray-500'}`}
                                     >
                                         {cat === 'admin' ? 'Admin' : cat === 'system' ? 'Sistema' : 'Torneio'}
                                     </button>
@@ -81,18 +81,18 @@ export const CommunicationsTab: React.FC<CommunicationsTabProps> = ({
             </div>
 
             {/* Poll Creation */}
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
                 <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 flex items-center justify-center text-cyan-500 shadow-neon-cyan">
-                        <span className="material-icons-outlined text-2xl">poll</span>
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-cyan-500/20 flex items-center justify-center text-cyan-500 shadow-neon-cyan shrink-0">
+                        <span className="material-icons-outlined text-xl sm:text-2xl">poll</span>
                     </div>
                     <div>
-                        <h3 className="text-xl font-display font-black text-white uppercase tracking-widest">Nova Enquete</h3>
-                        <p className="text-gray-500 text-xs">Engaje a comunidade com perguntas e votações em tempo real.</p>
+                        <h3 className="text-lg sm:text-xl font-display font-black text-white uppercase tracking-widest leading-tight">Nova Enquete</h3>
+                        <p className="text-gray-500 text-[10px] sm:text-xs">Engaje a comunidade com perguntas em tempo real.</p>
                     </div>
                 </div>
 
-                <div className="bg-black/40 border border-white/10 rounded-3xl p-6 space-y-4">
+                <div className="bg-black/40 border border-white/10 rounded-[2rem] p-4 sm:p-6 space-y-4">
                     <div>
                         <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Pergunta da Enquete</label>
                         <input
@@ -119,7 +119,7 @@ export const CommunicationsTab: React.FC<CommunicationsTabProps> = ({
                                     className="flex-1 bg-[#050214] border border-white/5 rounded-xl px-4 py-2.5 text-white text-xs outline-none focus:border-cyan-500"
                                 />
                                 {pollOptions.length > 2 && (
-                                    <button onClick={() => setPollOptions(pollOptions.filter((_, i) => i !== idx))} className="p-2 text-gray-600 hover:text-red-500"><span className="material-icons-outlined text-sm">remove_circle_outline</span></button>
+                                    <button onClick={() => setPollOptions(pollOptions.filter((_, i) => i !== idx))} className="p-2 text-gray-600 hover:text-red-500 transition-colors"><span className="material-icons-outlined text-sm">remove_circle_outline</span></button>
                                 )}
                             </div>
                         ))}

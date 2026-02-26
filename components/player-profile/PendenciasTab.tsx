@@ -52,7 +52,7 @@ export const PendenciasTab: React.FC<PendenciasTabProps> = ({
                                 debt={debt}
                                 fullAmt={fullAmt}
                                 playerBalance={playerBalance}
-                                isSaving={isSavingExp}
+                                isSavingExp={isSavingExp}
                                 onPay={(amount) => handlePayDebt(debt, amount)}
                             />
                         );

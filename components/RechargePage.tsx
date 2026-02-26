@@ -55,20 +55,26 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
             }
 
             // Usar RPC para adicionar saldo de forma segura
+            console.log('Iniciando transação segura para:', currentUser.id, 'Valor:', amountToAdd);
             const { data: txData, error: txError } = await supabase.rpc('secure_balance_transaction', {
                 p_user_id: currentUser.id,
                 p_brl_amount: amountToAdd,
                 p_chipz_amount: 0,
-                p_description: `Depósito: Adicionar Reais`,
+                p_description: `Depósito: Adicionar Reais (R$ ${amountToAdd.toFixed(2)})`,
                 p_category: 'wallet_deposit',
-                p_metadata: { method: 'automatic' }
+                p_metadata: { method: 'automatic', source: 'RechargePage' }
             });
 
-            if (txError || txData === false) {
-                console.error('Erro no depósito:', txError || 'RPC returned false');
-                alert('Falha ao processar depósito. Tente novamente.');
-                setIsProcessing(false);
-                return;
+            console.log('Resultado RPC:', { txData, txError });
+
+            if (txError) {
+                console.error('Erro técnico no RPC:', txError);
+                throw new Error(`Erro no servidor: ${txError.message}`);
+            }
+
+            if (txData === false) {
+                console.error('RPC retornou FALSE (Provável falha de validação no banco)');
+                throw new Error('A transação foi recusada pelo sistema. Verifique seu saldo ou tente um valor diferente.');
             }
 
             // Award EXP Bonus (1 EXP per R$ 20, same as Admin panel)

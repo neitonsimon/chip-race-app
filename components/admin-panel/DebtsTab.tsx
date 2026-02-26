@@ -315,14 +315,14 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
     ];
 
     return (
-        <div className="p-6 max-w-5xl mx-auto">
+        <div className="p-4 sm:p-6 max-w-5xl mx-auto">
             {/* Sub-tab switcher */}
-            <div className="flex items-center gap-2 mb-8">
+            <div className="flex flex-wrap items-center gap-2 mb-6 sm:mb-8">
                 {subTabs.map(t => (
                     <button
                         key={t.id}
                         onClick={() => setSubTab(t.id)}
-                        className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${subTab === t.id
+                        className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-5 py-3 rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all border ${subTab === t.id
                             ? 'bg-white/10 border-white/20 text-white shadow-lg'
                             : 'bg-transparent border-white/5 text-gray-500 hover:text-white hover:bg-white/5'
                             }`}
@@ -338,25 +338,25 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                 ╚══════════════════════════════╝ */}
             {subTab === 'pendura' && (
                 <div>
-                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+                    <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-8">
                         <div className="flex items-center gap-4">
-                            <div className="w-14 h-14 rounded-2xl bg-red-500/20 border border-red-500/40 flex items-center justify-center shadow-2xl">
-                                <span className="material-icons-outlined text-red-500 text-3xl">receipt_long</span>
+                            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-red-500/20 border border-red-500/40 flex items-center justify-center shadow-2xl flex-shrink-0">
+                                <span className="material-icons-outlined text-red-500 text-2xl sm:text-3xl">receipt_long</span>
                             </div>
                             <div>
-                                <h3 className="text-2xl font-display font-black text-white uppercase tracking-widest">Controle de Penduras</h3>
-                                <p className="text-gray-400 text-sm">Gerencie débitos ativos e baixas manuais dos jogadores.</p>
+                                <h3 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-widest">Controle de Penduras</h3>
+                                <p className="text-gray-400 text-xs sm:text-sm">Gerencie débitos ativos e baixas manuais.</p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-4">
-                            <div className="bg-red-500/10 border border-red-500/20 rounded-2xl px-6 py-3 text-center">
-                                <p className="text-[10px] text-red-400 font-black uppercase mb-1">Total a Receber</p>
-                                <p className="text-2xl font-display font-black text-white">R$ {totalActiveDebt.toFixed(2)}</p>
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                            <div className="bg-red-500/10 border border-red-500/20 rounded-2xl px-4 sm:px-6 py-2 sm:py-3 text-center flex-1">
+                                <p className="text-[8px] sm:text-[10px] text-red-400 font-black uppercase mb-0.5 sm:mb-1">Total a Receber</p>
+                                <p className="text-xl sm:text-2xl font-display font-black text-white">R$ {totalActiveDebt.toFixed(2)}</p>
                             </div>
                             {isAdmin && (
                                 <button
                                     onClick={() => setShowNewDebtForm(!showNewDebtForm)}
-                                    className="bg-white hover:bg-red-500 hover:text-white text-black font-black px-6 py-4 rounded-2xl transition-all shadow-xl uppercase tracking-widest text-[10px] flex items-center gap-2"
+                                    className="bg-white hover:bg-red-500 hover:text-white text-black font-black px-4 sm:px-6 py-3 sm:py-4 rounded-2xl transition-all shadow-xl uppercase tracking-widest text-[9px] sm:text-[10px] flex items-center justify-center gap-2"
                                 >
                                     <span className="material-icons text-sm">add_circle</span> Novo Débito
                                 </button>
@@ -365,16 +365,16 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                     </div>
 
                     {showNewDebtForm && (
-                        <div className="bg-red-500/5 border border-red-500/20 rounded-3xl p-6 mb-8 animate-in slide-in-from-top-4 duration-300">
-                            <div className="flex items-center justify-between mb-6">
-                                <h4 className="text-sm font-black text-white uppercase flex items-center gap-2">
+                        <div className="bg-red-500/5 border border-red-500/20 rounded-3xl p-4 sm:p-6 mb-8 animate-in slide-in-from-top-4 duration-300">
+                            <div className="flex items-center justify-between mb-4 sm:mb-6">
+                                <h4 className="text-xs sm:text-sm font-black text-white uppercase flex items-center gap-2">
                                     <span className="material-icons-outlined text-red-400 text-sm">edit_note</span> Registrar Débito Manual
                                 </h4>
                                 <button onClick={() => setShowNewDebtForm(false)} className="text-gray-500 hover:text-white transition-colors">
                                     <span className="material-icons-outlined text-sm">close</span>
                                 </button>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                 <div className="relative">
                                     <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Jogador</label>
                                     <input
@@ -415,7 +415,7 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                                 </div>
                                 <div className="flex items-end">
                                     <button onClick={handleRegisterDebt} disabled={isLoading || !newDebtData.userId || !newDebtData.amount}
-                                        className="w-full bg-red-500 hover:bg-white hover:text-red-500 text-white font-black py-3 rounded-xl transition-all shadow-lg uppercase text-[10px] tracking-widest disabled:opacity-50">
+                                        className="w-full bg-red-500 hover:bg-white hover:text-red-500 text-white font-black py-3 rounded-xl transition-all shadow-lg uppercase text-[10px] tracking-widest disabled:opacity-50 h-[46px]">
                                         {isLoading ? 'SALVANDO...' : 'LANÇAR DÉBITO'}
                                     </button>
                                 </div>
@@ -440,12 +440,12 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                                     return (
                                         <div key={debt.id} className="p-4 sm:p-5 hover:bg-white/5 transition-colors">
                                             {/* Row: player + date + amount */}
-                                            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                                                 <div className="flex items-center gap-3">
                                                     <img src={debt.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${debt.profiles?.name}&background=random`} className="w-10 h-10 rounded-xl flex-shrink-0" alt="" />
                                                     <div>
                                                         <p className="text-white font-bold text-sm">{debt.profiles?.name}</p>
-                                                        <div className="flex items-center gap-2">
+                                                        <div className="flex flex-wrap items-center gap-2">
                                                             <p className="text-[9px] text-gray-500 uppercase">
                                                                 CR#{String(debt.profiles?.numeric_id).padStart(3, '0')} &nbsp;·&nbsp;
                                                                 {new Date(debt.created_at).toLocaleDateString('pt-BR')}
@@ -462,16 +462,16 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                                                         </span>
                                                     </div>
                                                 </div>
-                                                <div className="text-right">
-                                                    <p className="text-[9px] text-gray-500 uppercase font-black mb-0.5">Total Devedor</p>
-                                                    <span className="text-red-400 font-display font-black text-xl">R$ {fullAmt.toFixed(2)}</span>
+                                                <div className="sm:text-right flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2">
+                                                    <p className="text-[9px] text-gray-500 uppercase font-black">Total Devedor</p>
+                                                    <span className="text-red-400 font-display font-black text-xl sm:text-2xl">R$ {fullAmt.toFixed(2)}</span>
                                                 </div>
                                             </div>
 
                                             {/* Payment row */}
-                                            <div className="bg-black/30 border border-white/5 rounded-2xl p-3 flex flex-wrap items-center gap-3">
-                                                <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-                                                    <span className="text-[9px] text-gray-500 uppercase font-black whitespace-nowrap">Pagar (R$)</span>
+                                            <div className="bg-black/30 border border-white/5 rounded-2xl p-3 flex flex-col lg:flex-row lg:items-center gap-4">
+                                                <div className="flex items-center gap-2 flex-1 w-full lg:w-auto">
+                                                    <span className="text-[9px] text-gray-500 uppercase font-black whitespace-nowrap">Pagar R$</span>
                                                     <input
                                                         type="number"
                                                         min="0.01"
@@ -479,41 +479,43 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                                                         step="0.01"
                                                         value={inputVal}
                                                         onChange={e => setSettleAmounts(prev => ({ ...prev, [debt.id]: e.target.value }))}
-                                                        className="flex-1 min-w-0 bg-black/50 border border-white/10 rounded-lg px-2 py-1.5 text-right text-white text-sm font-bold outline-none focus:border-primary/50"
+                                                        className="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-right text-white text-sm font-bold outline-none focus:border-primary/50"
                                                     />
                                                     <button
                                                         onClick={() => setSettleAmounts(prev => ({ ...prev, [debt.id]: fullAmt.toFixed(2) }))}
-                                                        className="px-2 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[9px] font-black uppercase text-gray-400 hover:text-white whitespace-nowrap transition-all"
+                                                        className="px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[9px] font-black uppercase text-gray-400 hover:text-white whitespace-nowrap transition-all"
                                                     >Tudo</button>
                                                 </div>
 
-                                                {isPartial && (
-                                                    <span className="text-[9px] text-yellow-500 font-black flex items-center gap-1">
-                                                        <span className="material-icons-outlined text-xs">info</span>
-                                                        Restará R$ {(fullAmt - payAmt).toFixed(2)}
-                                                    </span>
-                                                )}
+                                                <div className="flex flex-wrap items-center justify-between lg:justify-end gap-3 w-full lg:w-auto">
+                                                    {isPartial && (
+                                                        <span className="text-[9px] text-yellow-500 font-black flex items-center gap-1">
+                                                            <span className="material-icons-outlined text-xs">info</span>
+                                                            Restará R$ {(fullAmt - payAmt).toFixed(2)}
+                                                        </span>
+                                                    )}
 
-                                                <div className="flex gap-2 ml-auto">
-                                                    <button
-                                                        onClick={() => handleSettleDebt(debt, 'balance', payAmt)}
-                                                        disabled={isLoading || payAmt <= 0 || (Number(debt.profiles?.balance_brl || 0) < payAmt)}
-                                                        className="px-3 py-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl text-[9px] font-black uppercase transition-all border border-primary/20 disabled:opacity-40 disabled:cursor-not-allowed group relative"
-                                                    >
-                                                        {isPartial ? '💳 Parcial Saldo' : 'SALDO R$'}
-                                                        {(Number(debt.profiles?.balance_brl || 0) < payAmt) && (
-                                                            <span className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-black text-white text-[8px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity">
-                                                                Saldo Insuficiente
-                                                            </span>
-                                                        )}
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleSettleDebt(debt, 'manual', payAmt)}
-                                                        disabled={isLoading || payAmt <= 0}
-                                                        className="px-3 py-2 bg-green-500/10 hover:bg-green-500 text-green-500 hover:text-white rounded-xl text-[9px] font-black uppercase transition-all border border-green-500/20 disabled:opacity-40"
-                                                    >
-                                                        {isPartial ? '💵 Parcial PIX' : 'BAIXA PIX'}
-                                                    </button>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => handleSettleDebt(debt, 'balance', payAmt)}
+                                                            disabled={isLoading || payAmt <= 0 || (Number(debt.profiles?.balance_brl || 0) < payAmt)}
+                                                            className="flex-1 sm:flex-none px-4 py-2.5 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl text-[9px] font-black uppercase transition-all border border-primary/20 disabled:opacity-40 disabled:cursor-not-allowed group relative"
+                                                        >
+                                                            {isPartial ? 'Parcial Saldo' : 'SALDO R$'}
+                                                            {(Number(debt.profiles?.balance_brl || 0) < payAmt) && (
+                                                                <span className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-black text-white text-[8px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity">
+                                                                    Saldo Insuficiente
+                                                                </span>
+                                                            )}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleSettleDebt(debt, 'manual', payAmt)}
+                                                            disabled={isLoading || payAmt <= 0}
+                                                            className="flex-1 sm:flex-none px-4 py-2.5 bg-green-500/10 hover:bg-green-500 text-green-500 hover:text-white rounded-xl text-[9px] font-black uppercase transition-all border border-green-500/20 disabled:opacity-40"
+                                                        >
+                                                            {isPartial ? 'Parcial PIX' : 'BAIXA PIX'}
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -530,17 +532,17 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                 ╚══════════════════════════════╝ */}
             {subTab === 'credito' && (
                 <div className="max-w-2xl mx-auto">
-                    <div className="flex items-center gap-4 mb-8">
-                        <div className="w-14 h-14 rounded-2xl bg-green-500/20 border border-green-500/40 flex items-center justify-center shadow-2xl">
-                            <span className="material-icons-outlined text-green-400 text-3xl">account_balance_wallet</span>
+                    <div className="flex items-center gap-4 mb-6 sm:mb-8">
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-green-500/20 border border-green-500/40 flex items-center justify-center shadow-2xl flex-shrink-0">
+                            <span className="material-icons-outlined text-green-400 text-2xl sm:text-3xl">account_balance_wallet</span>
                         </div>
                         <div>
-                            <h3 className="text-2xl font-display font-black text-white uppercase tracking-widest">Enviar Crédito</h3>
-                            <p className="text-gray-400 text-sm">Deposite saldo BRL diretamente na conta de um jogador.</p>
+                            <h3 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-widest">Enviar Crédito</h3>
+                            <p className="text-gray-400 text-xs sm:text-sm">Deposite saldo na conta de um jogador.</p>
                         </div>
                     </div>
 
-                    <div className="bg-green-500/5 border border-green-500/20 rounded-3xl p-8 space-y-6">
+                    <div className="bg-green-500/5 border border-green-500/20 rounded-3xl p-4 sm:p-8 space-y-6">
                         {/* Player search */}
                         <PlayerSearchDropdown
                             query={creditSearch}
@@ -557,7 +559,7 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                         <div>
                             <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Valor a Depositar (R$)</label>
                             <div className="relative">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-green-400 font-black text-sm">R$</span>
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-green-400 font-black text-lg">R$</span>
                                 <input
                                     type="number"
                                     min="0"
@@ -565,14 +567,14 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                                     value={creditAmount}
                                     onChange={e => setCreditAmount(e.target.value)}
                                     placeholder="0.00"
-                                    className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-4 text-white text-2xl font-display font-black focus:border-green-500/50 outline-none transition-colors"
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl pl-12 pr-4 py-4 text-white text-xl sm:text-2xl font-display font-black focus:border-green-500/50 outline-none transition-colors"
                                 />
                             </div>
                             {/* Quick amounts */}
                             <div className="flex gap-2 mt-3 flex-wrap">
                                 {[20, 50, 100, 150, 200, 500].map(v => (
                                     <button key={v} onClick={() => setCreditAmount(String(v))}
-                                        className={`px-3 py-1.5 rounded-xl text-[10px] font-black transition-all border ${creditAmount === String(v) ? 'bg-green-500 text-white border-green-500' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10 hover:text-white'}`}>
+                                        className={`flex-1 sm:flex-none px-3 py-2 rounded-xl text-[10px] font-black transition-all border ${creditAmount === String(v) ? 'bg-green-500 text-white border-green-500' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10 hover:text-white'}`}>
                                         R$ {v}
                                     </button>
                                 ))}
@@ -593,18 +595,20 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
 
                         {/* Summary card */}
                         {creditUser && creditAmount && Number(creditAmount) > 0 && (
-                            <div className="bg-black/30 border border-green-500/30 rounded-2xl p-5 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <img src={creditUser.avatar_url || `https://ui-avatars.com/api/?name=${creditUser.name}&background=random`} className="w-12 h-12 rounded-xl border border-green-500/30" alt="" />
+                            <div className="bg-black/30 border border-green-500/30 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                                <div className="flex items-center gap-3 w-full sm:w-auto">
+                                    <img src={creditUser.avatar_url || `https://ui-avatars.com/api/?name=${creditUser.name}&background=random`} className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-green-500/30" alt="" />
                                     <div>
-                                        <p className="text-white font-bold">{creditUser.name}</p>
-                                        <p className="text-gray-400 text-xs">Saldo atual: <span className="text-green-400 font-bold">R$ {Number(creditUser.balance_brl || 0).toFixed(2)}</span></p>
-                                        <p className="text-gray-400 text-xs">Novo saldo: <span className="text-green-300 font-black">R$ {(Number(creditUser.balance_brl || 0) + Number(creditAmount)).toFixed(2)}</span></p>
+                                        <p className="text-white font-bold text-sm sm:text-base">{creditUser.name}</p>
+                                        <div className="flex flex-wrap gap-x-2">
+                                            <p className="text-gray-400 text-[10px]">Saldo: <span className="text-green-400 font-bold">R$ {Number(creditUser.balance_brl || 0).toFixed(2)}</span></p>
+                                            <p className="text-gray-400 text-[10px]">Novo: <span className="text-green-300 font-black">R$ {(Number(creditUser.balance_brl || 0) + Number(creditAmount)).toFixed(2)}</span></p>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="text-right">
-                                    <p className="text-[10px] text-gray-500 uppercase">Depósito</p>
-                                    <p className="text-3xl font-display font-black text-green-400">+R$ {Number(creditAmount).toFixed(2)}</p>
+                                <div className="text-center sm:text-right w-full sm:w-auto border-t sm:border-t-0 border-white/5 pt-3 sm:pt-0">
+                                    <p className="text-[8px] sm:text-[10px] text-gray-500 uppercase">Depósito</p>
+                                    <p className="text-2xl sm:text-3xl font-display font-black text-green-400">+R$ {Number(creditAmount).toFixed(2)}</p>
                                 </div>
                             </div>
                         )}
@@ -629,13 +633,13 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                 ╚══════════════════════════════╝ */}
             {subTab === 'venda' && (
                 <div className="max-w-3xl mx-auto">
-                    <div className="flex items-center gap-4 mb-8">
-                        <div className="w-14 h-14 rounded-2xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center shadow-2xl">
-                            <span className="material-icons-outlined text-blue-400 text-3xl">sell</span>
+                    <div className="flex items-center gap-4 mb-6 sm:mb-8">
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center shadow-2xl flex-shrink-0">
+                            <span className="material-icons-outlined text-blue-400 text-2xl sm:text-3xl">sell</span>
                         </div>
                         <div>
-                            <h3 className="text-2xl font-display font-black text-white uppercase tracking-widest">Venda Direta</h3>
-                            <p className="text-gray-400 text-sm">Registre uma venda sem abrir comanda — ideal para compras via WhatsApp ou presencial.</p>
+                            <h3 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-widest">Venda Direta</h3>
+                            <p className="text-gray-400 text-xs sm:text-sm">Venda sem abrir comanda.</p>
                         </div>
                     </div>
 
@@ -646,7 +650,7 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                         </div>
                     )}
 
-                    <div className="bg-blue-500/5 border border-blue-500/20 rounded-3xl p-8 space-y-6">
+                    <div className="bg-blue-500/5 border border-blue-500/20 rounded-3xl p-4 sm:p-8 space-y-6">
                         {/* Player */}
                         <PlayerSearchDropdown
                             query={saleSearch}
@@ -660,8 +664,8 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                         />
 
                         {/* Category + Product */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="w-full">
                                 <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Categoria</label>
                                 <select
                                     value={saleCategory}
@@ -674,7 +678,7 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                                     ))}
                                 </select>
                             </div>
-                            <div>
+                            <div className="w-full">
                                 <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Quantidade</label>
                                 <input
                                     type="number"
@@ -689,15 +693,15 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                         {/* Product grid */}
                         <div>
                             <label className="block text-[10px] font-bold text-gray-500 uppercase mb-3 ml-1">
-                                Produto {filteredProductsByCategory.length > 0 && <span className="text-gray-700">({filteredProductsByCategory.length} disponíveis)</span>}
+                                Produto {filteredProductsByCategory.length > 0 && <span className="text-gray-700">({filteredProductsByCategory.length})</span>}
                             </label>
                             {filteredProductsByCategory.length === 0 ? (
                                 <div className="text-center py-10 text-gray-600 border border-dashed border-white/10 rounded-2xl">
                                     <span className="material-icons-outlined text-3xl opacity-20 block mb-1">inventory_2</span>
-                                    <p className="text-xs">Nenhum produto nesta categoria.</p>
+                                    <p className="text-xs">Nenhum produto disponível.</p>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-64 overflow-y-auto custom-scrollbar pr-1">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-64 overflow-y-auto custom-scrollbar pr-1">
                                     {filteredProductsByCategory.map((p: any) => (
                                         <button
                                             key={p.id}
@@ -721,15 +725,15 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                         {/* Payment method */}
                         <div>
                             <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Forma de Pagamento</label>
-                            <div className="flex gap-3">
+                            <div className="flex flex-col sm:flex-row gap-3">
                                 {[
-                                    { value: 'balance', icon: 'account_balance_wallet', label: 'Débitar do Saldo', color: 'blue' },
-                                    { value: 'cash', icon: 'payments', label: 'Dinheiro / Manual', color: 'yellow' },
+                                    { value: 'balance', icon: 'account_balance_wallet', label: 'Débito Saldo', color: 'blue' },
+                                    { value: 'cash', icon: 'payments', label: 'Dinheiro', color: 'yellow' },
                                 ].map(m => (
                                     <button
                                         key={m.value}
                                         onClick={() => setSalePayMethod(m.value as any)}
-                                        className={`flex-1 flex items-center gap-2 px-4 py-3 rounded-xl border font-black text-xs uppercase transition-all ${salePayMethod === m.value
+                                        className={`flex-1 flex items-center justify-center sm:justify-start gap-2 px-4 py-3 rounded-xl border font-black text-xs uppercase transition-all ${salePayMethod === m.value
                                             ? `bg-${m.color}-500/20 border-${m.color}-500/50 text-${m.color}-400`
                                             : 'bg-white/5 border-white/10 text-gray-500 hover:bg-white/10'
                                             }`}
@@ -743,24 +747,24 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
 
                         {/* Summary */}
                         {saleUser && saleProduct && (
-                            <div className="bg-black/30 border border-blue-500/30 rounded-2xl p-5">
-                                <p className="text-[10px] text-gray-500 uppercase font-black mb-3">Resumo da Venda</p>
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
+                            <div className="bg-black/30 border border-blue-500/30 rounded-2xl p-4 sm:p-5">
+                                <p className="text-[10px] text-gray-500 uppercase font-black mb-3 text-center sm:text-left">Resumo da Venda</p>
+                                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                                    <div className="flex items-center gap-3 w-full sm:w-auto">
                                         <img src={saleUser.avatar_url || `https://ui-avatars.com/api/?name=${saleUser.name}&background=random`} className="w-10 h-10 rounded-xl" alt="" />
                                         <div>
-                                            <p className="text-white font-bold">{saleUser.name}</p>
+                                            <p className="text-white font-bold text-sm">{saleUser.name}</p>
                                             <p className="text-xs text-gray-500">{parseInt(saleQuantity) || 1}x {saleProduct.name}</p>
                                         </div>
                                     </div>
-                                    <div className="text-right">
+                                    <div className="text-center sm:text-right w-full sm:w-auto border-t sm:border-t-0 border-white/5 pt-3 sm:pt-0">
                                         <p className="text-[9px] text-gray-500 uppercase">Total</p>
                                         <p className="text-2xl font-display font-black text-blue-400">
                                             R$ {(Number(saleProduct.price) * (parseInt(saleQuantity) || 1)).toFixed(2)}
                                         </p>
                                         {salePayMethod === 'balance' && (
                                             <p className="text-[9px] text-gray-500">
-                                                Saldo pós-venda: <span className={Number(saleUser.balance_brl || 0) >= Number(saleProduct.price) * (parseInt(saleQuantity) || 1) ? 'text-green-400' : 'text-red-400'}>
+                                                Saldo pós: <span className={Number(saleUser.balance_brl || 0) >= Number(saleProduct.price) * (parseInt(saleQuantity) || 1) ? 'text-green-400' : 'text-red-400'}>
                                                     R$ {(Number(saleUser.balance_brl || 0) - Number(saleProduct.price) * (parseInt(saleQuantity) || 1)).toFixed(2)}
                                                 </span>
                                             </p>

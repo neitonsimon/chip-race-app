@@ -16,7 +16,6 @@ interface RankingTableProps {
     currentUser?: { name?: string };
     globalScoringSchemas?: ScoringSchema[];
     onUpdateGlobalSchemas?: (schemas: ScoringSchema[]) => void;
-    onFinalizeRanking?: (rankingId: string) => Promise<void>;
     isLoading?: boolean;
     badgeTemplates?: BadgeTemplate[];
 }
@@ -36,7 +35,6 @@ export const RankingTable: React.FC<RankingTableProps> = ({
     events,
     globalScoringSchemas,
     onUpdateGlobalSchemas,
-    onFinalizeRanking,
     isLoading,
     badgeTemplates = []
 }) => {
@@ -230,19 +228,6 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                             >
                                 <span className="material-icons-outlined">functions</span>
                             </button>
-                            {activeRanking.isActive !== false && (
-                                <button
-                                    onClick={() => {
-                                        if (window.confirm(`Deseja realmente ENCERRAR o ${activeRanking.label} e atribuir as recompensas ao vencedor?`)) {
-                                            onFinalizeRanking && onFinalizeRanking(activeRanking.id);
-                                        }
-                                    }}
-                                    className="bg-white/5 p-2 rounded-full hover:bg-yellow-500 hover:text-black text-gray-400 transition-colors"
-                                    title="Encerrar e Premiar Vencedor"
-                                >
-                                    <span className="material-icons-outlined">workspace_premium</span>
-                                </button>
-                            )}
                         </div>
                     )}
                 </div>

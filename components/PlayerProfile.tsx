@@ -656,6 +656,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     const activeDailyRewards = dailyRewards.length > 0 ? dailyRewards : FALLBACK_DAILY_REWARDS;
 
     const handleClaimToday = async (dayIndex?: number) => {
+        if (isSavingExp) return;
         setIsSavingExp(true);
         try {
             const currentStreak = player.dailyStreak || 0;
@@ -666,21 +667,21 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
             let updatedPlayer = { ...player };
 
-            // 1. Processar Recompensa
-            if (reward.reward_type === 'xp') {
-                const xpGain = Number(reward.reward_value) || 0;
+            // 1. Processar Recompensa - Suporte para novo e antigo schema
+            const rType = reward.reward_type || ((reward as any).xp > 0 ? 'xp' : ((reward as any).item ? 'item' : 'unknown'));
+            const rValue = reward.reward_value || (reward as any).xp || (reward as any).value || 0;
+
+            if (rType === 'xp') {
+                const xpGain = Number(rValue) || 0;
                 let newExp = (updatedPlayer.currentExp || 0) + xpGain;
                 let newLevel = updatedPlayer.level || 1;
                 let newDebtLimit = updatedPlayer.debtLimitBrl || 0;
 
                 if (experienceLevels && experienceLevels.length > 0) {
                     const sortedLevels = [...experienceLevels].sort((a, b) => a.level - b.level);
-
-                    // Lógica de Level Up: verificar se atingiu o próximo patamar
                     let nextLvlObj = sortedLevels.find(l => l.level === newLevel + 1);
                     while (nextLvlObj && newExp >= nextLvlObj.required_exp) {
                         newLevel++;
-                        // Ao subir de nível, o novo limite de crédito é atualizado se definido no banco
                         if (nextLvlObj.credit_limit !== undefined) {
                             newDebtLimit = nextLvlObj.credit_limit;
                         }
@@ -691,15 +692,15 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                 updatedPlayer.currentExp = newExp;
                 updatedPlayer.level = newLevel;
                 updatedPlayer.debtLimitBrl = newDebtLimit;
-            } else if (reward.reward_type === 'brl') {
-                updatedPlayer.balanceBrl = (updatedPlayer.balanceBrl || 0) + (Number(reward.reward_value) || 0);
-            } else if (reward.reward_type === 'chipz') {
-                updatedPlayer.balanceChipz = (updatedPlayer.balanceChipz || 0) + (Number(reward.reward_value) || 0);
+            } else if (rType === 'brl' || rType === 'BRL') {
+                updatedPlayer.balanceBrl = (updatedPlayer.balanceBrl || 0) + (Number(rValue) || 0);
+            } else if (rType === 'chipz' || rType === 'CHIPZ') {
+                updatedPlayer.balanceChipz = (updatedPlayer.balanceChipz || 0) + (Number(rValue) || 0);
             }
 
-            // 2. Atualizar Streak (Reset ao coletar) e Data
+            // 2. Atualizar Streak (Incrementar ao coletar) e Data
             updatedPlayer.lastDailyClaim = new Date().toISOString();
-            updatedPlayer.dailyStreak = 0;
+            updatedPlayer.dailyStreak = (player.dailyStreak || 0) + 1;
 
             // 3. Persistir no Supabase através do handler global
             if (onUpdateProfile && targetIdRef.current) {
@@ -1152,7 +1153,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                         userDebts={userDebts}
                         totalUserDebt={totalUserDebt}
                         playerBalance={player.balanceBrl}
-                        isSavingExp={setIsSavingExp as any === true}
+                        isSavingExp={isSavingExp}
                         handlePayDebt={handlePayDebt}
                     />
                 )}
@@ -1563,7 +1564,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                             onClick={handleClaimToday}
                                             className="w-full py-5 bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_auto] hover:bg-right text-white font-black text-lg rounded-2xl shadow-[0_10px_30px_rgba(250,204,21,0.3)] transition-all duration-500 active:scale-95 uppercase tracking-wider"
                                         >
-                                            RESGATAR HOJE E ZERAR
+                                            RESGATAR RECOMPENSA DE HOJE
                                         </button>
                                         <button
                                             onClick={handleSkipToday}
@@ -2032,7 +2033,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                 {viewingReceipt.status === 'open' && Number(viewingReceipt.total_brl) > 0 && (
                                     <button
                                         onClick={() => handlePayOpenCommand(viewingReceipt)}
-                                        disabled={setIsSavingExp as any === true}
+                                        disabled={isSavingExp}
                                         className="w-full bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-black py-4 rounded-2xl transition-all shadow-neon-green uppercase tracking-widest flex items-center justify-center gap-2 group mt-2"
                                     >
                                         <span className="material-icons-outlined text-xl group-hover:scale-110 transition-transform">payments</span>

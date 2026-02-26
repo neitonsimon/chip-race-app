@@ -405,42 +405,42 @@ const IconPickerModal: React.FC<{
     const hasMore = filtered.length > initialIcons;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-[#0c0920] border border-white/10 rounded-[2.5rem] w-full max-w-xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-[#0c0920] border border-white/10 rounded-[2rem] sm:rounded-[2.5rem] w-full max-w-xl max-h-[90vh] sm:max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
                 {/* Header */}
-                <div className="flex items-center justify-between p-8 pb-4">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-center">
-                            <span className="material-icons-outlined text-primary text-2xl">grid_view</span>
+                <div className="flex items-center justify-between p-6 sm:p-8 pb-4">
+                    <div className="flex items-center gap-3 sm:gap-4 text-left">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-center shrink-0">
+                            <span className="material-icons-outlined text-primary text-xl sm:text-2xl">grid_view</span>
                         </div>
                         <div>
-                            <h3 className="text-lg font-black text-white uppercase tracking-widest leading-none mb-1">Escolher ícone</h3>
-                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{filtered.length} ícones disponíveis</p>
+                            <h3 className="text-base sm:text-lg font-black text-white uppercase tracking-widest leading-none mb-1">Escolher ícone</h3>
+                            <p className="text-[9px] sm:text-[10px] text-gray-500 font-bold uppercase tracking-wider">{filtered.length} ícones</p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="w-10 h-10 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl flex items-center justify-center transition-all group">
-                        <span className="material-icons-outlined text-gray-500 group-hover:text-white text-xl">close</span>
+                    <button onClick={onClose} className="w-9 h-9 sm:w-10 sm:h-10 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all group shrink-0">
+                        <span className="material-icons-outlined text-gray-500 group-hover:text-white text-lg sm:text-xl">close</span>
                     </button>
                 </div>
 
                 {/* Search */}
-                <div className="px-8 py-4">
-                    <div className="relative group">
+                <div className="px-6 sm:px-8 py-2 sm:py-4">
+                    <div className="relative group text-left">
                         <span className="material-icons-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg group-focus-within:text-primary transition-colors">search</span>
                         <input
                             autoFocus
                             type="text"
                             value={search}
                             onChange={e => { setSearch(e.target.value); setRows(3); }}
-                            placeholder="Buscar ícone... (ex: troféu, estrela, fogo)"
-                            className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-white text-sm outline-none focus:border-primary/50 focus:bg-primary/5 transition-all font-bold"
+                            placeholder="Buscar ícone... (ex: troféu, fogo)"
+                            className="w-full bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl pl-12 pr-4 py-3 sm:py-4 text-white text-sm outline-none focus:border-primary/50 focus:bg-primary/5 transition-all font-bold"
                         />
                     </div>
                 </div>
 
                 {/* Grid */}
-                <div className="overflow-y-auto flex-1 px-8 pb-4 pt-2 custom-scrollbar">
-                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-4">
+                <div className="overflow-y-auto flex-1 px-6 sm:px-8 pb-4 pt-2 custom-scrollbar">
+                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-3 sm:gap-4">
                         {displayedIcons.map(icon => (
                             <button
                                 key={icon.id}
@@ -448,33 +448,33 @@ const IconPickerModal: React.FC<{
                                 className="group flex flex-col items-center gap-2"
                             >
                                 <BadgePreview icon={icon.id} size="sm" active={currentIcon === icon.id} color={currentColor} />
-                                <span className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter truncate w-full text-center group-hover:text-white transition-colors">{icon.label}</span>
+                                <span className="text-[8px] sm:text-[9px] text-gray-500 font-bold uppercase tracking-tighter truncate w-full text-center group-hover:text-white transition-colors">{icon.label}</span>
                             </button>
                         ))}
                     </div>
 
                     {hasMore && (
-                        <div className="mt-8 mb-4 flex justify-center">
+                        <div className="mt-6 sm:mt-8 mb-4 flex justify-center">
                             <button
                                 onClick={() => setRows(prev => prev + 3)}
-                                className="px-8 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black text-gray-400 hover:text-white uppercase tracking-[0.2em] transition-all flex items-center gap-2"
+                                className="px-6 sm:px-8 py-2.5 sm:py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[9px] sm:text-[10px] font-black text-gray-400 hover:text-white uppercase tracking-[0.2em] transition-all flex items-center gap-2"
                             >
-                                <span className="material-icons-outlined text-sm">expand_more</span>
+                                <span className="material-icons-outlined text-xs sm:text-sm">expand_more</span>
                                 Ver mais ícones
                             </button>
                         </div>
                     )}
 
                     {filtered.length === 0 && (
-                        <div className="text-center py-20">
-                            <span className="material-icons-outlined text-gray-700 text-5xl mb-4">search_off</span>
-                            <p className="text-gray-500 text-sm italic font-light">Nenhum ícone encontrado para "{search}"</p>
+                        <div className="text-center py-16 sm:py-20">
+                            <span className="material-icons-outlined text-gray-700 text-4xl sm:text-5xl mb-3 sm:mb-4 block">search_off</span>
+                            <p className="text-gray-500 text-xs sm:text-sm italic font-light">Nenhum ícone encontrado para "{search}"</p>
                         </div>
                     )}
                 </div>
 
-                <div className="p-6 bg-black/20 border-t border-white/5 text-center">
-                    <p className="text-[9px] text-gray-600 uppercase font-black tracking-widest">Estilo Minimalista • Chip Race Design System</p>
+                <div className="p-4 sm:p-6 bg-black/20 border-t border-white/5 text-center shrink-0">
+                    <p className="text-[8px] sm:text-[9px] text-gray-600 uppercase font-black tracking-widest">Estilo Minimalista • Chip Race Design System</p>
                 </div>
             </div>
         </div>
@@ -518,56 +518,59 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
         : badgeTemplates;
 
     return (
-        <div className="p-8 max-w-4xl mx-auto">
+        <div className="p-4 sm:p-8 max-w-4xl mx-auto space-y-8">
             {/* Header */}
-            <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shadow-neon-pink/20">
-                        <span className="material-icons-outlined text-primary text-3xl">stars</span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                <div className="flex items-center gap-4 text-left">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shadow-neon-pink/20 shrink-0">
+                        <span className="material-icons-outlined text-primary text-2xl sm:text-3xl">stars</span>
                     </div>
                     <div>
-                        <h3 className="text-2xl font-display font-black text-white uppercase tracking-widest">Prêmios &amp; Honrarias</h3>
-                        <p className="text-gray-400 text-sm">Distribua créditos, fichas ou insígnias por mérito ou glória.</p>
+                        <h3 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-widest leading-tight">Prêmios &amp; Honrarias</h3>
+                        <p className="text-gray-400 text-xs sm:text-sm">Distribua créditos, fichas ou insígnias.</p>
                     </div>
                 </div>
                 <button
                     onClick={() => setShowNewBadgeForm(!showNewBadgeForm)}
-                    className="px-4 py-2 rounded-xl bg-primary/10 border border-primary/30 text-primary text-[10px] font-black uppercase hover:bg-primary/20 transition-all flex items-center gap-2 shadow-neon-pink/10"
+                    className={`w-full sm:w-auto px-4 py-3 sm:py-2 rounded-xl border transition-all flex items-center justify-center gap-2 text-[10px] font-black uppercase shadow-neon-pink/10 ${showNewBadgeForm ? 'bg-white/5 border-white/20 text-white' : 'bg-primary/10 border-primary/30 text-primary hover:bg-primary/20'
+                        }`}
                 >
                     <span className="material-icons-outlined text-sm">{showNewBadgeForm ? 'close' : 'add_circle'}</span>
-                    {showNewBadgeForm ? 'Cancelar' : 'Criar Nova Insígnia'}
+                    {showNewBadgeForm ? 'Cancelar' : 'Nova Insígnia'}
                 </button>
             </div>
 
             {/* CREATE BADGE FORM */}
             {showNewBadgeForm && (
-                <div className="mb-8 bg-black/40 border border-primary/20 rounded-3xl p-6 animate-in slide-in-from-top-4">
-                    <h4 className="text-sm font-black text-primary uppercase mb-6 flex items-center gap-2">
+                <div className="bg-black/40 border border-primary/20 rounded-[2rem] sm:rounded-3xl p-4 sm:p-6 animate-in slide-in-from-top-4">
+                    <h4 className="text-[11px] sm:text-sm font-black text-primary uppercase mb-6 flex items-center gap-2 px-1">
                         <span className="material-icons-outlined text-sm">new_label</span>
                         Lançar Nova Insígnia no Banco
                     </h4>
 
                     {/* Preview */}
-                    <div className="flex items-center gap-6 mb-8 p-6 bg-black/30 border border-white/5 rounded-3xl">
-                        <BadgePreview icon={newBadge.icon} color={newBadge.color} size="lg" active />
-                        <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className="text-[10px] font-black px-2 py-0.5 rounded bg-white/10 text-gray-400 uppercase tracking-widest">Preview</span>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 mb-8 p-4 sm:p-6 bg-black/30 border border-white/5 rounded-[1.5rem] sm:rounded-3xl">
+                        <div className="flex justify-center sm:block">
+                            <BadgePreview icon={newBadge.icon} color={newBadge.color} size="lg" active />
+                        </div>
+                        <div className="flex-1 min-w-0 text-center sm:text-left">
+                            <div className="flex items-center justify-center sm:justify-start gap-2 mb-1.5 sm:mb-1">
+                                <span className="text-[9px] font-black px-2 py-0.5 rounded bg-white/10 text-gray-400 uppercase tracking-widest">Preview</span>
                                 <span
-                                    className="text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest"
+                                    className="text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-widest"
                                     style={{ backgroundColor: `${newBadge.color}20`, color: newBadge.color, border: `1px solid ${newBadge.color}40` }}
                                 >
                                     {RARITY_COLORS.find(r => r.color === newBadge.color)?.label}
                                 </span>
                             </div>
-                            <p className="text-white font-black text-xl leading-tight truncate">{newBadge.title || 'Nome da Insígnia'}</p>
-                            <p className="text-gray-500 text-xs mt-1 line-clamp-2">{newBadge.description || 'Explique como o jogador conquista esta honraria...'}</p>
+                            <p className="text-white font-black text-lg sm:text-xl leading-tight truncate">{newBadge.title || 'Nome da Insígnia'}</p>
+                            <p className="text-gray-500 text-[10px] sm:text-xs mt-1 line-clamp-2 max-w-sm mx-auto sm:mx-0">{newBadge.description || 'Explique como o jogador conquista esta honraria...'}</p>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-4">
-                            <div>
+                            <div className="text-left">
                                 <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Nome da Insígnia</label>
                                 <input
                                     type="text"
@@ -578,7 +581,7 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                                 />
                             </div>
 
-                            <div>
+                            <div className="text-left">
                                 <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Raridade & Cor</label>
                                 <div className="grid grid-cols-5 gap-2">
                                     {RARITY_COLORS.map((rarity) => (
@@ -591,10 +594,10 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                                             title={rarity.label}
                                         >
                                             <div
-                                                className="w-6 h-6 rounded-full shadow-lg"
+                                                className="w-5 h-5 sm:w-6 sm:h-6 rounded-full shadow-lg"
                                                 style={{ backgroundColor: rarity.color, boxShadow: `0 0 10px ${rarity.color}60` }}
                                             />
-                                            <span className="text-[8px] font-black uppercase tracking-tighter text-gray-400">{rarity.label}</span>
+                                            <span className="text-[7px] sm:text-[8px] font-black uppercase tracking-tighter text-gray-400 whitespace-nowrap">{rarity.label}</span>
                                         </button>
                                     ))}
                                 </div>
@@ -602,28 +605,28 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                         </div>
 
                         {/* Icon picker button */}
-                        <div>
+                        <div className="text-left">
                             <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Ícone da Insígnia</label>
                             <button
                                 onClick={() => setShowIconPicker(true)}
-                                className="w-full bg-[#050214] border border-white/10 hover:border-primary/50 rounded-xl px-4 py-3 flex items-center gap-3 transition-all group h-[74px]"
+                                className="w-full bg-[#050214] border border-white/10 hover:border-primary/50 rounded-xl px-4 py-3 flex items-center gap-3 transition-all group h-auto sm:h-[74px]"
                             >
                                 <BadgePreview icon={newBadge.icon} color={newBadge.color} size="sm" active />
-                                <div className="flex-1 text-left">
-                                    <p className="text-white text-sm font-bold">{BADGE_ICONS.find(i => i.id === newBadge.icon)?.label || newBadge.icon}</p>
-                                    <p className="text-gray-600 text-[9px] uppercase font-black">Alterar Ícone · {BADGE_ICONS.length}+ opções</p>
+                                <div className="flex-1 text-left min-w-0">
+                                    <p className="text-white text-sm font-bold truncate">{BADGE_ICONS.find(i => i.id === newBadge.icon)?.label || newBadge.icon}</p>
+                                    <p className="text-gray-600 text-[8px] uppercase font-black">Alterar Ícone</p>
                                 </div>
-                                <span className="material-icons-outlined text-gray-500 group-hover:text-primary transition-colors text-sm">open_in_new</span>
+                                <span className="material-icons-outlined text-gray-500 group-hover:text-primary transition-colors text-sm shrink-0">open_in_new</span>
                             </button>
                         </div>
 
-                        <div className="md:col-span-2">
+                        <div className="sm:col-span-2 text-left">
                             <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Descrição</label>
                             <input
                                 type="text"
                                 value={newBadge.description}
                                 onChange={e => setNewBadge({ ...newBadge, description: e.target.value })}
-                                placeholder="Explique como o jogador conquista esta honraria..."
+                                placeholder="Explique como o jogador conquista..."
                                 className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-yellow-500 outline-none"
                             />
                         </div>
@@ -643,24 +646,24 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
             )}
 
             {/* SEND GIFTS GRID */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:items-start">
                 {/* Configuration */}
                 <div className="space-y-6">
-                    <div className="bg-black/40 border border-white/10 rounded-3xl p-6">
-                        <h4 className="text-sm font-black text-white uppercase mb-6 flex items-center gap-2">
+                    <div className="bg-black/40 border border-white/10 rounded-3xl p-5 sm:p-6">
+                        <h4 className="text-xs sm:text-sm font-black text-white uppercase mb-6 flex items-center gap-2 px-1">
                             <span className="material-icons-outlined text-primary text-sm">settings</span>
                             Configuração do Prêmio
                         </h4>
 
-                        <div className="space-y-4">
+                        <div className="space-y-5 text-left">
                             {/* Target */}
                             <div>
                                 <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Para quem?</label>
                                 <div className="flex gap-2">
-                                    <button onClick={() => setGiftTarget('single')} className={`flex-1 py-3 rounded-xl border text-[10px] font-black uppercase transition-all ${giftTarget === 'single' ? 'bg-primary border-primary text-white shadow-neon-pink' : 'bg-white/5 border-white/10 text-gray-500 hover:text-gray-300'}`}>
-                                        Usuários Específicos
+                                    <button onClick={() => setGiftTarget('single')} className={`flex-1 py-3 rounded-xl border text-[9px] sm:text-[10px] font-black uppercase transition-all ${giftTarget === 'single' ? 'bg-primary border-primary text-white shadow-neon-pink' : 'bg-white/5 border-white/10 text-gray-500 hover:text-gray-300'}`}>
+                                        Específicos
                                     </button>
-                                    <button onClick={() => setGiftTarget('all')} className={`flex-1 py-3 rounded-xl border text-[10px] font-black uppercase transition-all ${giftTarget === 'all' ? 'bg-red-500/20 border-red-500/50 text-red-500' : 'bg-white/5 border-white/10 text-gray-500 hover:text-gray-300'}`}>
+                                    <button onClick={() => setGiftTarget('all')} className={`flex-1 py-3 rounded-xl border text-[9px] sm:text-[10px] font-black uppercase transition-all ${giftTarget === 'all' ? 'bg-red-500/20 border-red-500/50 text-red-500' : 'bg-white/5 border-white/10 text-gray-500 hover:text-gray-300'}`}>
                                         TODOS
                                     </button>
                                 </div>
@@ -668,36 +671,39 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
 
                             {/* Type */}
                             <div>
-                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Tipo de Recompensa</label>
+                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Tipo Recompensa</label>
                                 <div className="flex gap-2">
-                                    <button onClick={() => setGiftType('brl')} className={`flex-1 py-3 rounded-xl border text-[10px] font-black uppercase transition-all ${giftType === 'brl' ? 'bg-primary border-primary text-white shadow-neon-pink' : 'bg-white/5 border-white/10 text-gray-400'}`}>R$</button>
-                                    <button onClick={() => setGiftType('chipz')} className={`flex-1 py-3 rounded-xl border text-[10px] font-black uppercase transition-all ${giftType === 'chipz' ? 'bg-cyan-500 border-cyan-500 text-white' : 'bg-white/5 border-white/10 text-gray-400'}`}>Chipz</button>
-                                    <button onClick={() => setGiftType('badge')} className={`flex-1 py-3 rounded-xl border text-[10px] font-black uppercase transition-all ${giftType === 'badge' ? 'bg-primary border-primary text-white shadow-neon-pink' : 'bg-white/5 border-white/10 text-gray-400'}`}>Insígnia</button>
+                                    <button onClick={() => setGiftType('brl')} className={`flex-1 py-3 rounded-xl border text-[9px] sm:text-[10px] font-black uppercase transition-all ${giftType === 'brl' ? 'bg-primary border-primary text-white shadow-neon-pink' : 'bg-white/5 border-white/10 text-gray-400'}`}>R$</button>
+                                    <button onClick={() => setGiftType('chipz')} className={`flex-1 py-3 rounded-xl border text-[9px] sm:text-[10px] font-black uppercase transition-all ${giftType === 'chipz' ? 'bg-cyan-500 border-cyan-500 text-white shadow-neon-cyan' : 'bg-white/5 border-white/10 text-gray-400'}`}>Chipz</button>
+                                    <button onClick={() => setGiftType('badge')} className={`flex-1 py-3 rounded-xl border text-[9px] sm:text-[10px] font-black uppercase transition-all ${giftType === 'badge' ? 'bg-primary border-primary text-white shadow-neon-pink' : 'bg-white/5 border-white/10 text-gray-400'}`}>Insígnia</button>
                                 </div>
                             </div>
 
                             {/* Badge selector OR amount */}
                             {giftType === 'badge' ? (
-                                <div>
-                                    <div className="flex items-center justify-between mb-2">
-                                        <label className="text-[10px] font-bold text-gray-500 uppercase ml-1">Selecionar Insígnia</label>
-                                        <span className="text-[9px] text-gray-600">{badgeTemplates.length} insígnias</span>
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between px-1">
+                                        <label className="text-[10px] font-bold text-gray-500 uppercase">Selecionar Insígnia</label>
+                                        <span className="text-[9px] text-gray-600 font-bold">{badgeTemplates.length} disponíveis</span>
                                     </div>
-                                    {badgeTemplates.length > 4 && (
-                                        <input
-                                            type="text"
-                                            value={badgeSearchFilter}
-                                            onChange={e => setBadgeSearchFilter(e.target.value)}
-                                            placeholder="Filtrar insígnias..."
-                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white text-xs outline-none focus:border-primary/40 mb-2 transition-colors"
-                                        />
+                                    {badgeTemplates.length > 3 && (
+                                        <div className="relative">
+                                            <span className="material-icons-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">search</span>
+                                            <input
+                                                type="text"
+                                                value={badgeSearchFilter}
+                                                onChange={e => setBadgeSearchFilter(e.target.value)}
+                                                placeholder="Filtrar..."
+                                                className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-white text-[11px] outline-none focus:border-primary/40 transition-colors"
+                                            />
+                                        </div>
                                     )}
                                     <div className="grid grid-cols-2 gap-2 max-h-52 overflow-y-auto pr-1 custom-scrollbar">
                                         {filteredBadgeTemplates.map(b => (
                                             <button
                                                 key={b.id}
                                                 onClick={() => setSelectedBadgeId(b.id)}
-                                                className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all hover:scale-105 ${selectedBadgeId === b.id
+                                                className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all group ${selectedBadgeId === b.id
                                                     ? 'bg-white/5'
                                                     : 'bg-black/20 border-white/5 hover:border-primary/20'
                                                     }`}
@@ -705,7 +711,7 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                                             >
                                                 <BadgePreview icon={b.icon || 'stars'} color={b.color} size="sm" active={selectedBadgeId === b.id} />
                                                 <span
-                                                    className="text-[10px] font-black uppercase truncate w-full text-center"
+                                                    className="text-[9px] font-black uppercase truncate w-full text-center"
                                                     style={selectedBadgeId === b.id ? { color: b.color || '#00E5FF' } : { color: 'white' }}
                                                 >
                                                     {b.title}
@@ -714,7 +720,7 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                                         ))}
                                         {filteredBadgeTemplates.length === 0 && (
                                             <div className="col-span-2 text-center py-6 text-gray-600 text-xs italic">
-                                                Nenhuma insígnia encontrada. Crie uma acima!
+                                                Nenhuma insígnia encontrada.
                                             </div>
                                         )}
                                     </div>
@@ -723,7 +729,7 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                                 <div>
                                     <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Quantidade</label>
                                     <div className="relative">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm">{giftType === 'brl' ? 'R$' : 'C'}</span>
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm tracking-tighter">{giftType === 'brl' ? 'R$' : 'C'}</span>
                                         <input type="number" value={giftAmount} onChange={e => setGiftAmount(e.target.value)} placeholder="0.00"
                                             className="w-full bg-[#050214] border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white text-sm font-black focus:border-primary outline-none transition-all" />
                                     </div>
@@ -734,18 +740,18 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                             <div>
                                 <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Justificativa / Motivo</label>
                                 <input type="text" value={giftDescription} onChange={e => setGiftDescription(e.target.value)}
-                                    placeholder={giftType === 'badge' ? 'Ex: Membro Honorário por serviços prestados...' : 'Ex: Presente de Natal, Bônus VIP...'}
+                                    placeholder={giftType === 'badge' ? 'Ex: Membro Honorário...' : 'Ex: Presente de Natal...'}
                                     className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none" />
                             </div>
 
                             <button
                                 onClick={handleSendGifts}
                                 disabled={isLoading || (giftType !== 'badge' && !giftAmount) || (giftType === 'badge' && !selectedBadgeId)}
-                                className="w-full bg-primary hover:bg-white hover:text-black text-white font-black py-4 rounded-2xl transition-all shadow-neon-pink uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-50 mt-4"
+                                className="w-full bg-primary hover:bg-white hover:text-black text-white font-black py-4 rounded-2xl transition-all shadow-neon-pink uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
                             >
                                 {isLoading
                                     ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                    : <><span className="material-icons-outlined text-sm">verified</span> Confirmar Recompensas</>
+                                    : <><span className="material-icons-outlined text-sm">verified</span> Confirmar Premiação</>
                                 }
                             </button>
                         </div>
@@ -753,18 +759,18 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                 </div>
 
                 {/* User Selection */}
-                <div className={`space-y-6 transition-all ${giftTarget === 'all' ? 'opacity-20 pointer-events-none' : 'opacity-100'}`}>
-                    <div className="bg-black/40 border border-white/10 rounded-3xl p-6">
-                        <h4 className="text-sm font-black text-white uppercase mb-6 flex items-center gap-2">
+                <div className={`space-y-6 transition-all ${giftTarget === 'all' ? 'opacity-20 pointer-events-none grayscale' : 'opacity-100'}`}>
+                    <div className="bg-black/40 border border-white/10 rounded-3xl p-5 sm:p-6 h-full flex flex-col">
+                        <h4 className="text-xs sm:text-sm font-black text-white uppercase mb-6 flex items-center gap-2 px-1">
                             <span className="material-icons-outlined text-primary text-sm">person_search</span>
-                            Selecionar Destinatários ({selectedGiftUsers.length})
+                            Destinatários ({selectedGiftUsers.length})
                         </h4>
 
-                        <div className="relative mb-6">
+                        <div className="relative mb-6 text-left">
                             <input type="text" value={giftSearchQuery} onChange={e => handleGiftSearch(e.target.value)} placeholder="Buscar por Nome ou CR#"
                                 className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary transition-all" />
                             {giftSearchResults.length > 0 && (
-                                <div className="absolute top-full left-0 right-0 mt-1 bg-[#0a0720] border border-white/10 rounded-xl overflow-hidden shadow-2xl z-20">
+                                <div className="absolute top-full left-0 right-0 mt-1 bg-[#0a0720] border border-white/10 rounded-xl overflow-hidden shadow-2xl z-20 max-h-[250px] overflow-y-auto custom-scrollbar">
                                     {giftSearchResults.map(u => {
                                         const alreadyHasBadge = giftType === 'badge' && usersWithSelectedBadge.has(u.id);
                                         return (
@@ -777,16 +783,16 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                                                 className={`w-full flex items-center justify-between p-3 hover:bg-primary/20 text-left border-b border-white/5 last:border-0 ${alreadyHasBadge ? 'opacity-60 grayscale-[0.5]' : ''}`}
                                             >
                                                 <div className="flex items-center gap-3">
-                                                    <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${u.name}&background=random`} className="w-8 h-8 rounded-full" alt="" />
-                                                    <div>
-                                                        <p className="text-xs font-bold text-white">{u.name}</p>
-                                                        <p className="text-[10px] text-primary font-black uppercase">CR#{String(u.numeric_id).padStart(3, '0')}</p>
+                                                    <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${u.name}&background=random`} className="w-8 h-8 rounded-full object-cover shrink-0" alt="" />
+                                                    <div className="min-w-0">
+                                                        <p className="text-xs font-bold text-white truncate">{u.name}</p>
+                                                        <p className="text-[9px] text-primary font-black uppercase">CR#{String(u.numeric_id).padStart(3, '0')}</p>
                                                     </div>
                                                 </div>
                                                 {alreadyHasBadge && (
-                                                    <div className="flex items-center gap-1.5 text-amber-500/80 bg-amber-500/5 px-2 py-1 rounded-lg border border-amber-500/10">
-                                                        <span className="material-icons text-xs">info</span>
-                                                        <span className="text-[9px] font-black uppercase tracking-wider">Já possui</span>
+                                                    <div className="flex items-center gap-1 text-amber-500/80 bg-amber-500/5 px-1.5 py-0.5 rounded border border-amber-500/10 shrink-0">
+                                                        <span className="material-icons text-[10px]">info</span>
+                                                        <span className="text-[8px] font-black uppercase tracking-wider">Já tem</span>
                                                     </div>
                                                 )}
                                             </button>
@@ -796,37 +802,38 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                             )}
                         </div>
 
-                        <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                        <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-1 text-left">
                             {selectedGiftUsers.length === 0 ? (
-                                <div className="text-center py-8 text-gray-600 border border-dashed border-white/5 rounded-2xl">
-                                    <p className="text-xs italic">Nenhum usuário selecionado.</p>
+                                <div className="py-12 text-center text-gray-600">
+                                    <span className="material-icons-outlined text-4xl block mb-2 opacity-20">group_add</span>
+                                    <p className="text-[10px] font-bold uppercase tracking-widest italic">Nenhum jogador selecionado</p>
                                 </div>
-                            ) : selectedGiftUsers.map(u => {
-                                const alreadyHasBadge = giftType === 'badge' && usersWithSelectedBadge.has(u.id);
-                                return (
-                                    <div key={u.id} className={`bg-white/5 border rounded-xl p-3 flex items-center justify-between transition-all ${alreadyHasBadge ? 'border-amber-500/20 bg-amber-500/5' : 'border-white/10'}`}>
+                            ) : (
+                                selectedGiftUsers.map(u => (
+                                    <div key={u.id} className="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-2xl animate-in fade-in duration-300">
                                         <div className="flex items-center gap-3">
-                                            <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${u.name}&background=random`} className="w-8 h-8 rounded-full" alt="" />
+                                            <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${u.name}&background=random`} className="w-8 h-8 rounded-full border border-white/10 object-cover" alt="" />
                                             <div>
-                                                <div className="flex items-center gap-2">
-                                                    <p className="text-xs font-bold text-white">{u.name}</p>
-                                                    {alreadyHasBadge && (
-                                                        <span className="text-[7px] bg-amber-500/20 text-amber-500 border border-amber-500/30 px-1.5 py-0.5 rounded font-black uppercase">Atenção</span>
-                                                    )}
-                                                </div>
-                                                {alreadyHasBadge
-                                                    ? <p className="text-[9px] text-amber-500/60 font-bold italic mt-0.5">Jogador já possui esta honraria.</p>
-                                                    : <p className="text-[10px] text-gray-500">Saldo: R$ {Number(u.balance_brl || 0).toFixed(2)} · {u.balance_chipz || 0} Chipz</p>
-                                                }
+                                                <p className="text-xs font-bold text-white leading-tight">{u.name}</p>
+                                                <p className="text-[9px] text-gray-500 font-bold uppercase">CR#{String(u.numeric_id).padStart(3, '0')}</p>
                                             </div>
                                         </div>
-                                        <button onClick={() => setSelectedGiftUsers(selectedGiftUsers.filter(x => x.id !== u.id))} className="text-gray-500 hover:text-red-500 transition-colors">
-                                            <span className="material-icons-outlined text-base">remove_circle_outline</span>
+                                        <button onClick={() => setSelectedGiftUsers(selectedGiftUsers.filter(x => x.id !== u.id))} className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-white transition-all">
+                                            <span className="material-icons-outlined text-sm">close</span>
                                         </button>
                                     </div>
-                                );
-                            })}
+                                ))
+                            )}
                         </div>
+
+                        {selectedGiftUsers.length > 0 && (
+                            <button
+                                onClick={() => setSelectedGiftUsers([])}
+                                className="text-[9px] font-black text-gray-500 hover:text-red-500 uppercase flex items-center justify-center gap-1 mt-6 h-8 transition-colors"
+                            >
+                                <span className="material-icons-outlined text-xs">delete_sweep</span> Limpar Seleção
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>

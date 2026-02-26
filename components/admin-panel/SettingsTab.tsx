@@ -262,10 +262,10 @@ export const SettingsTab: React.FC = () => {
     };
 
     return (
-        <div className="flex min-h-[600px] bg-black/20 rounded-[2.5rem] overflow-hidden border border-white/5">
-            {/* Sub-Sidebar */}
-            <aside className="w-64 bg-white/5 border-r border-white/10 p-6 flex flex-col gap-2 shrink-0">
-                <div className="mb-4">
+        <div className="flex flex-col lg:flex-row min-h-[600px] bg-black/20 rounded-[1.5rem] sm:rounded-[2.5rem] overflow-hidden border border-white/5">
+            {/* Sub-Sidebar / Mobile Menu */}
+            <aside className="lg:w-64 bg-white/5 border-b lg:border-b-0 lg:border-r border-white/10 p-4 sm:p-6 flex flex-row lg:flex-col gap-2 shrink-0 overflow-x-auto lg:overflow-x-visible no-scrollbar">
+                <div className="hidden lg:block mb-4">
                     <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 mb-4">Gestão de Conteúdo</h4>
                 </div>
 
@@ -279,25 +279,25 @@ export const SettingsTab: React.FC = () => {
                     active={activeSection === 'hero'}
                     onClick={() => setActiveSection('hero')}
                     icon="home"
-                    label="Hero Principal"
+                    label="Hero"
                 />
                 <SidebarButton
                     active={activeSection === 'details'}
                     onClick={() => setActiveSection('details')}
                     icon="info"
-                    label="Conceito The Chosen"
+                    label="The Chosen"
                 />
                 <SidebarButton
                     active={activeSection === 'faq'}
                     onClick={() => setActiveSection('faq')}
                     icon="quiz"
-                    label="FAQ / Dúvidas"
+                    label="FAQ"
                 />
                 <SidebarButton
                     active={activeSection === 'months'}
                     onClick={() => setActiveSection('months')}
                     icon="calendar_month"
-                    label="Cronograma Mensal"
+                    label="Cronograma"
                 />
                 <SidebarButton
                     active={activeSection === 'ecosystem'}
@@ -309,15 +309,15 @@ export const SettingsTab: React.FC = () => {
                     active={activeSection === 'defaults'}
                     onClick={() => setActiveSection('defaults')}
                     icon="settings"
-                    label="Padrões do App"
+                    label="Padrões"
                 />
             </aside>
 
             {/* Content Area */}
-            <main className="flex-1 p-8 overflow-y-auto max-h-[800px] custom-scrollbar">
+            <main className="flex-1 p-4 sm:p-8 overflow-y-auto max-h-[1000px] custom-scrollbar">
                 {activeSection === 'roadmap' && (
-                    <div className="animate-in fade-in slide-in-from-right duration-500">
-                        <SectionHeader title="Timeline do Roadmap" subtitle="Gerencie a evolução pública do ecossistema" />
+                    <div className="animate-in fade-in slide-in-from-bottom-4 lg:slide-in-from-right duration-500">
+                        <SectionHeader title="Timeline do Roadmap" subtitle="Evolução pública do ecossistema" />
                         <div className="flex justify-end mb-6">
                             {!editingRoadmapId && (
                                 <button
@@ -331,13 +331,13 @@ export const SettingsTab: React.FC = () => {
                         </div>
 
                         {editingRoadmapId && (
-                            <div className="bg-white/5 border border-white/10 rounded-3xl p-6 mb-8 border-l-4 border-l-primary">
-                                <h4 className="text-sm font-black text-primary uppercase mb-6 flex items-center gap-2">
+                            <div className="bg-white/5 border border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 mb-8 border-l-4 border-l-primary">
+                                <h4 className="text-xs sm:text-sm font-black text-primary uppercase mb-6 flex items-center gap-2">
                                     <span className="material-icons-outlined text-sm">{editingRoadmapId === 'new' ? 'add_circle' : 'edit'}</span>
                                     {editingRoadmapId === 'new' ? 'Novo Marco' : 'Editar Marco'}
                                 </h4>
 
-                                <div className="grid grid-cols-2 gap-4 mb-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                                     <FormGroup label="Versão (ex: V 1.1)">
                                         <input type="text" value={roadmapFormData.version} onChange={e => setRoadmapFormData({ ...roadmapFormData, version: e.target.value })} className="form-input" />
                                     </FormGroup>
@@ -356,11 +356,11 @@ export const SettingsTab: React.FC = () => {
                                     </FormGroup>
                                 </div>
 
-                                <div className="mb-6 px-2">
+                                <div className="mb-6 px-1 sm:px-2">
                                     <label className="text-[10px] text-gray-500 uppercase font-black block mb-2 tracking-widest">Tópicos / Novidades</label>
                                     <div className="flex gap-2 mb-3">
                                         <input type="text" value={topicInput} onChange={e => setTopicInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && addTopic()} className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-white text-xs outline-none focus:border-primary" placeholder="Adicione um ponto..." />
-                                        <button onClick={addTopic} className="px-4 bg-primary/20 text-primary border border-primary/20 rounded-xl hover:bg-primary/30 transition-colors"><span className="material-icons-outlined">add</span></button>
+                                        <button onClick={addTopic} className="px-3 sm:px-4 bg-primary/20 text-primary border border-primary/20 rounded-xl hover:bg-primary/30 transition-colors"><span className="material-icons-outlined">add</span></button>
                                     </div>
                                     <div className="flex flex-wrap gap-2">
                                         {roadmapFormData.topics.map((t, i) => (
@@ -371,9 +371,9 @@ export const SettingsTab: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
-                                    <button onClick={() => setEditingRoadmapId(null)} className="px-6 py-2.5 text-gray-400 font-black uppercase text-[10px] tracking-widest hover:text-white transition-colors">Cancelar</button>
-                                    <button onClick={handleSaveRoadmap} disabled={isLoadingRoadmap} className="px-8 py-2.5 bg-primary text-white font-black uppercase text-[10px] tracking-widest rounded-xl shadow-neon-pink hover:bg-primary/80 disabled:opacity-50 transition-all font-display italic">
+                                <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-white/5">
+                                    <button onClick={() => setEditingRoadmapId(null)} className="px-6 py-2.5 text-gray-400 font-black uppercase text-[10px] tracking-widest hover:text-white transition-colors order-2 sm:order-1">Cancelar</button>
+                                    <button onClick={handleSaveRoadmap} disabled={isLoadingRoadmap} className="px-8 py-2.5 bg-primary text-white font-black uppercase text-[10px] tracking-widest rounded-xl shadow-neon-pink hover:bg-primary/80 disabled:opacity-50 transition-all font-display italic order-1 sm:order-2">
                                         {isLoadingRoadmap ? 'Salvando...' : 'Confirmar Milestone'}
                                     </button>
                                 </div>
@@ -391,10 +391,10 @@ export const SettingsTab: React.FC = () => {
                 )}
 
                 {activeSection === 'hero' && content && (
-                    <div className="animate-in fade-in slide-in-from-right duration-500">
-                        <SectionHeader title="Hero Principal" subtitle="Primeira impressão dos usuários na Homepage" />
-                        <div className="space-y-6 bg-white/5 border border-white/10 rounded-[2.5rem] p-8">
-                            <div className="grid grid-cols-2 gap-6">
+                    <div className="animate-in fade-in slide-in-from-bottom-4 lg:slide-in-from-right duration-500">
+                        <SectionHeader title="Hero Principal" subtitle="Primeira impressão na Homepage" />
+                        <div className="space-y-6 bg-white/5 border border-white/10 rounded-2xl sm:rounded-[2.5rem] p-5 sm:p-8">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <FormGroup label="Título Linha 1">
                                     <input type="text" value={content.hero.title_line1} onChange={e => setContent({ ...content, hero: { ...content.hero, title_line1: e.target.value } })} className="form-input font-bold" />
                                 </FormGroup>
@@ -404,14 +404,14 @@ export const SettingsTab: React.FC = () => {
                                 <FormGroup label="Subtítulo / Chamada" fullWidth>
                                     <textarea rows={3} value={content.hero.subtitle} onChange={e => setContent({ ...content, hero: { ...content.hero, subtitle: e.target.value } })} className="form-input resize-none" />
                                 </FormGroup>
-                                <FormGroup label="Texto Botão Ação">
+                                <FormGroup label="Botão Ação">
                                     <input type="text" value={content.hero.btn_details} onChange={e => setContent({ ...content, hero: { ...content.hero, btn_details: e.target.value } })} className="form-input font-bold" />
                                 </FormGroup>
                             </div>
                             <div className="pt-6 border-t border-white/5 flex justify-end">
-                                <button onClick={() => handleSaveContent('hero', content.hero)} disabled={isSavingContent} className="btn-save shadow-neon-pink">
+                                <button onClick={() => handleSaveContent('hero', content.hero)} disabled={isSavingContent} className="btn-save shadow-neon-pink w-full sm:w-auto">
                                     <span className="material-icons-outlined text-sm">cloud_upload</span>
-                                    {isSavingContent ? 'Publicando...' : 'Publicar Alterações'}
+                                    {isSavingContent ? 'Publicando...' : 'Publicar'}
                                 </button>
                             </div>
                         </div>
@@ -419,15 +419,15 @@ export const SettingsTab: React.FC = () => {
                 )}
 
                 {activeSection === 'details' && content && (
-                    <div className="animate-in fade-in slide-in-from-right duration-500">
-                        <SectionHeader title="Seção: The Chosen" subtitle="Conteúdo explicativo e dinâmica do evento final" />
-                        <div className="space-y-8">
-                            <ContentBlock title="Cabeçalho (Header)" color="bg-primary">
-                                <div className="grid grid-cols-2 gap-6">
+                    <div className="animate-in fade-in slide-in-from-bottom-4 lg:slide-in-from-right duration-500">
+                        <SectionHeader title="Seção: The Chosen" subtitle="Dinâmica do evento final" />
+                        <div className="space-y-6 sm:space-y-8">
+                            <ContentBlock title="Cabeçalho" color="bg-primary">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                                     <FormGroup label="Título Grande">
                                         <input type="text" value={content.details.header_title} onChange={e => setContent({ ...content, details: { ...content.details, header_title: e.target.value } })} className="form-input font-bold" />
                                     </FormGroup>
-                                    <FormGroup label="Subtítulo de Apoio">
+                                    <FormGroup label="Subtítulo">
                                         <input type="text" value={content.details.header_subtitle} onChange={e => setContent({ ...content, details: { ...content.details, header_subtitle: e.target.value } })} className="form-input" />
                                     </FormGroup>
                                 </div>
@@ -448,9 +448,9 @@ export const SettingsTab: React.FC = () => {
                             </ContentBlock>
 
                             <div className="flex justify-center pb-10 pt-4">
-                                <button onClick={() => handleSaveContent('details', content.details)} disabled={isSavingContent} className="btn-save-gradient">
+                                <button onClick={() => handleSaveContent('details', content.details)} disabled={isSavingContent} className="btn-save-gradient w-full sm:w-auto">
                                     <span className="material-icons-outlined text-sm">save_alt</span>
-                                    {isSavingContent ? 'Salvando...' : 'Salvar Alterações de Texto'}
+                                    {isSavingContent ? 'Salvando...' : 'Salvar Alterações'}
                                 </button>
                             </div>
                         </div>
@@ -458,24 +458,24 @@ export const SettingsTab: React.FC = () => {
                 )}
 
                 {activeSection === 'faq' && content && (
-                    <div className="animate-in fade-in slide-in-from-right duration-500">
-                        <SectionHeader title="FAQ - Perguntas Frequentes" subtitle="Gerencie as dúvidas mais comuns dos jogadores" />
-                        <div className="space-y-4 mb-8">
+                    <div className="animate-in fade-in slide-in-from-bottom-4 lg:slide-in-from-right duration-500">
+                        <SectionHeader title="FAQ - Dúvidas" subtitle="Questões comuns dos jogadores" />
+                        <div className="space-y-3 sm:space-y-4 mb-8">
                             {content.faq.map((item, idx) => (
-                                <div key={idx} className="bg-white/5 border border-white/10 rounded-2xl p-6 relative group border-l-4 border-l-gray-600 focus-within:border-l-primary transition-all">
-                                    <button onClick={() => handleRemoveFAQ(idx)} className="absolute top-4 right-4 text-gray-600 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div key={idx} className="bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6 relative group border-l-4 border-l-gray-600 focus-within:border-l-primary transition-all">
+                                    <button onClick={() => handleRemoveFAQ(idx)} className="absolute top-4 right-4 text-gray-600 hover:text-red-500 p-1 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                                         <span className="material-icons-outlined text-sm">delete</span>
                                     </button>
                                     <div className="space-y-3">
-                                        <input type="text" placeholder="Pergunta" value={item.question} onChange={e => handleUpdateFAQ(idx, 'question', e.target.value)} className="w-full bg-transparent border-none text-white font-bold outline-none placeholder:text-gray-700" />
-                                        <textarea rows={2} placeholder="Resposta" value={item.answer} onChange={e => handleUpdateFAQ(idx, 'answer', e.target.value)} className="w-full bg-transparent border-none text-gray-400 text-sm outline-none resize-none placeholder:text-gray-800" />
+                                        <input type="text" placeholder="Pergunta" value={item.question} onChange={e => handleUpdateFAQ(idx, 'question', e.target.value)} className="w-full bg-transparent border-none text-white font-bold outline-none placeholder:text-gray-700 text-sm sm:text-base pr-8" />
+                                        <textarea rows={2} placeholder="Resposta" value={item.answer} onChange={e => handleUpdateFAQ(idx, 'answer', e.target.value)} className="w-full bg-transparent border-none text-gray-400 text-xs sm:text-sm outline-none resize-none placeholder:text-gray-800" />
                                     </div>
                                 </div>
                             ))}
                         </div>
-                        <div className="flex flex-col items-center gap-6">
-                            <button onClick={handleAddFAQ} className="px-6 py-3 border border-dashed border-white/10 rounded-2xl text-gray-500 hover:text-white hover:border-white/20 transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                                <span className="material-icons-outlined text-sm">add_circle</span> Adicionar Nova Pergunta
+                        <div className="flex flex-col items-center gap-4 sm:gap-6">
+                            <button onClick={handleAddFAQ} className="w-full sm:w-auto px-6 py-3 border border-dashed border-white/10 rounded-2xl text-gray-500 hover:text-white hover:border-white/20 transition-all text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
+                                <span className="material-icons-outlined text-sm">add_circle</span> Adicionar Pergunta
                             </button>
                             <button onClick={() => handleSaveContent('faq', content.faq)} disabled={isSavingContent} className="btn-save shadow-neon-blue w-full max-w-md">
                                 <span className="material-icons-outlined text-sm">sync</span> {isSavingContent ? 'Atualizando...' : 'Atualizar FAQ'}
@@ -485,13 +485,13 @@ export const SettingsTab: React.FC = () => {
                 )}
 
                 {activeSection === 'months' && (
-                    <div className="animate-in fade-in slide-in-from-right duration-500">
-                        <SectionHeader title="Cronograma THE CHOSEN" subtitle="Controle as metas e garantidos mensais" />
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
+                    <div className="animate-in fade-in slide-in-from-bottom-4 lg:slide-in-from-right duration-500">
+                        <SectionHeader title="Cronograma" subtitle="Metas e garantidos mensais" />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
                             {months.map((month, idx) => (
-                                <div key={idx} className={`p-5 rounded-3xl border transition-all ${month.status === 'active' ? 'bg-primary/20 border-primary' : month.status === 'completed' ? 'bg-secondary/10 border-secondary/40' : 'bg-white/5 border-white/10 opacity-70'}`}>
+                                <div key={idx} className={`p-4 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all ${month.status === 'active' ? 'bg-primary/20 border-primary' : month.status === 'completed' ? 'bg-secondary/10 border-secondary/40' : 'bg-white/5 border-white/10 opacity-70'}`}>
                                     <div className="flex justify-between items-center mb-4">
-                                        <span className="text-xs font-black text-white">{month.name}</span>
+                                        <span className="text-[10px] sm:text-xs font-black text-white">{month.name}</span>
                                         <select value={month.status} onChange={e => handleUpdateMonth(idx, 'status', e.target.value as any)} className="bg-black/50 border-none text-[8px] font-black uppercase px-2 py-1 rounded-full outline-none cursor-pointer">
                                             <option value="locked">Bloqueado</option>
                                             <option value="active">Ativo</option>
@@ -504,7 +504,7 @@ export const SettingsTab: React.FC = () => {
                                             <input type="text" value={month.prize} onChange={e => handleUpdateMonth(idx, 'prize', e.target.value)} className="w-full bg-transparent border-none text-white font-bold text-xs outline-none" />
                                         </div>
                                         <div className="bg-black/20 p-2 rounded-xl">
-                                            <label className="text-[7px] text-gray-500 uppercase font-black block mb-1">Qtd Classificados</label>
+                                            <label className="text-[7px] text-gray-500 uppercase font-black block mb-1">Qtd</label>
                                             <input type="text" value={month.qualifiers} onChange={e => handleUpdateMonth(idx, 'qualifiers', e.target.value)} className="w-full bg-transparent border-none text-white font-bold text-xs outline-none" />
                                         </div>
                                     </div>
@@ -520,39 +520,39 @@ export const SettingsTab: React.FC = () => {
                 )}
 
                 {activeSection === 'ecosystem' && (
-                    <div className="animate-in fade-in slide-in-from-right duration-500">
-                        <SectionHeader title="Gestão do Ecossistema" subtitle="Adicione ou remova categorias e configure slots" />
+                    <div className="animate-in fade-in slide-in-from-bottom-4 lg:slide-in-from-right duration-500">
+                        <SectionHeader title="Ecossistema" subtitle="Categorias e slots" />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                             {categories.map((cat, idx) => (
-                                <div key={cat.id || idx} className="bg-white/5 border border-white/10 rounded-[2rem] p-6 relative group">
-                                    <button onClick={() => handleDeleteCategory(cat.id || '')} className="absolute top-4 right-4 text-gray-600 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+                                <div key={cat.id || idx} className="bg-white/5 border border-white/10 rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-6 relative group">
+                                    <button onClick={() => handleDeleteCategory(cat.id || '')} className="absolute top-4 right-4 text-gray-600 hover:text-red-500 transition-colors lg:opacity-0 lg:group-hover:opacity-100">
                                         <span className="material-icons-outlined text-sm">delete</span>
                                     </button>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="col-span-2 flex items-center gap-4 mb-2">
-                                            <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+                                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                                        <div className="col-span-2 flex items-center gap-3 sm:gap-4 mb-2">
+                                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary flex-shrink-0">
                                                 <span className="material-icons-outlined text-lg">{cat.icon}</span>
                                             </div>
-                                            <input type="text" value={cat.title} onChange={e => handleUpdateCategory(idx, 'title', e.target.value)} className="flex-1 bg-transparent border-none text-white font-black uppercase text-sm outline-none" placeholder="Nome da Categoria" />
+                                            <input type="text" value={cat.title} onChange={e => handleUpdateCategory(idx, 'title', e.target.value)} className="flex-1 bg-transparent border-none text-white font-black uppercase text-xs sm:text-sm outline-none" placeholder="Nome" />
                                         </div>
-                                        <FormGroup label="Ícone (Material Icon)">
+                                        <FormGroup label="Ícone">
                                             <input type="text" value={cat.icon} onChange={e => handleUpdateCategory(idx, 'icon', e.target.value)} className="form-input text-xs" />
                                         </FormGroup>
-                                        <FormGroup label="Slots / Vagas">
+                                        <FormGroup label="Slots">
                                             <input type="number" value={cat.slots} onChange={e => handleUpdateCategory(idx, 'slots', parseInt(e.target.value))} className="form-input text-xs" />
                                         </FormGroup>
                                         <FormGroup label="Cor">
-                                            <select value={cat.color} onChange={e => handleUpdateCategory(idx, 'color', e.target.value)} className="form-input text-xs appearance-none">
-                                                <option value="primary">Primário (Pink)</option>
-                                                <option value="secondary">Secundário (Blue)</option>
+                                            <select value={cat.color} onChange={e => handleUpdateCategory(idx, 'color', e.target.value)} className="form-input text-[10px] appearance-none">
+                                                <option value="primary">Pink</option>
+                                                <option value="secondary">Blue</option>
                                                 <option value="cyan">Ciano</option>
                                                 <option value="pink">Rosa</option>
                                             </select>
                                         </FormGroup>
-                                        <FormGroup label="Status Mystery">
+                                        <FormGroup label="Mstry">
                                             <div className="flex items-center gap-2 mt-2">
                                                 <input type="checkbox" checked={cat.is_mystery} onChange={e => handleUpdateCategory(idx, 'is_mystery', e.target.checked)} className="w-4 h-4 rounded bg-white/5 border-white/10" />
-                                                <span className="text-[9px] font-bold text-gray-500 uppercase">Habilitar Mistério</span>
+                                                <span className="text-[9px] font-bold text-gray-500 uppercase">Habilitar</span>
                                             </div>
                                         </FormGroup>
                                         <div className="col-span-2">
@@ -563,41 +563,41 @@ export const SettingsTab: React.FC = () => {
                                     </div>
                                     <div className="mt-4 pt-4 border-t border-white/5 flex justify-end">
                                         <button onClick={() => handleSaveCategory(idx)} className="text-[9px] font-black uppercase text-primary hover:text-white transition-colors flex items-center gap-1">
-                                            <span className="material-icons-outlined text-xs">check_circle</span> Salvar Categoria
+                                            <span className="material-icons-outlined text-xs">check_circle</span> Salvar
                                         </button>
                                     </div>
                                 </div>
                             ))}
-                            <button onClick={handleAddCategory} className="border-2 border-dashed border-white/5 rounded-[2rem] p-10 flex flex-col items-center justify-center text-gray-600 hover:text-white hover:bg-white/5 transition-all group">
-                                <span className="material-icons-outlined text-4xl mb-4 group-hover:scale-110 transition-transform">add_box</span>
-                                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Adicionar Categoria</span>
+                            <button onClick={handleAddCategory} className="border-2 border-dashed border-white/5 rounded-[1.5rem] sm:rounded-[2rem] p-6 sm:p-10 flex flex-col items-center justify-center text-gray-600 hover:text-white hover:bg-white/5 transition-all group">
+                                <span className="material-icons-outlined text-3xl sm:text-4xl mb-4 group-hover:scale-110 transition-transform">add_box</span>
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-center">Adicionar Categoria</span>
                             </button>
                         </div>
                     </div>
                 )}
 
                 {activeSection === 'defaults' && (
-                    <div className="animate-in fade-in slide-in-from-right duration-500">
-                        <SectionHeader title="Application Defaults" subtitle="Variáveis globais do sistema e contadores" />
-                        <div className="max-w-md mx-auto space-y-8 mt-10">
-                            <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8">
-                                <FormGroup label="Contador Logado (Total de Classificados)" fullWidth>
+                    <div className="animate-in fade-in slide-in-from-bottom-4 lg:slide-in-from-right duration-500">
+                        <SectionHeader title="Application Defaults" subtitle="Variáveis globais do sistema" />
+                        <div className="max-w-md mx-auto space-y-8 mt-6 sm:mt-10">
+                            <div className="bg-white/5 border border-white/10 rounded-2xl sm:rounded-[2.5rem] p-5 sm:p-8">
+                                <FormGroup label="Total de Classificados" fullWidth>
                                     <div className="flex gap-4 items-center">
                                         <input
                                             type="number"
                                             value={totalQualifiers === null ? '' : totalQualifiers}
                                             onChange={e => setTotalQualifiers(e.target.value === '' ? null : parseInt(e.target.value))}
-                                            placeholder="Automático (Calculado)"
-                                            className="flex-1 form-input text-center text-xl font-display italic text-primary"
+                                            placeholder="Auto"
+                                            className="flex-1 form-input text-center text-lg sm:text-xl font-display italic text-primary"
                                         />
-                                        <button onClick={() => setTotalQualifiers(null)} className="text-gray-500 hover:text-white" title="Resetar para automático"><span className="material-icons-outlined">restart_alt</span></button>
+                                        <button onClick={() => setTotalQualifiers(null)} className="text-gray-500 hover:text-white" title="Resetar"><span className="material-icons-outlined">restart_alt</span></button>
                                     </div>
-                                    <p className="text-[8px] text-gray-600 mt-2 px-2 uppercase font-black tracking-widest italic">* Deixe em branco (null) para o sistema calcular automaticamente a partir do cronograma.</p>
+                                    <p className="text-[8px] text-gray-600 mt-2 px-2 uppercase font-black tracking-widest italic leading-normal">* Deixe em branco para o sistema calcular automaticamente.</p>
                                 </FormGroup>
 
                                 <div className="pt-8 flex justify-center">
                                     <button onClick={() => handleSaveContent('total_qualifiers', totalQualifiers)} disabled={isSavingContent} className="btn-save shadow-neon-pink w-full">
-                                        <span className="material-icons-outlined text-sm">webhook</span> {isSavingContent ? 'Sincronizando...' : 'Publicar Variável Global'}
+                                        <span className="material-icons-outlined text-sm">webhook</span> {isSavingContent ? 'Sincronizando...' : 'Publicar Variável'}
                                     </button>
                                 </div>
                             </div>
@@ -611,59 +611,59 @@ export const SettingsTab: React.FC = () => {
 
 // Helper Components
 const SidebarButton = ({ active, onClick, icon, label }: { active: boolean, onClick: () => void, icon: string, label: string }) => (
-    <button onClick={onClick} className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${active ? 'bg-primary text-white shadow-neon-pink scale-105' : 'text-gray-500 hover:bg-white/5 hover:text-white'}`}>
-        <span className="material-icons-outlined text-lg">{icon}</span> {label}
+    <button onClick={onClick} className={`flex items-center gap-3 px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl text-[10px] sm:text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap lg:whitespace-normal shrink-0 ${active ? 'bg-primary text-white shadow-neon-pink scale-105' : 'text-gray-500 hover:bg-white/5 hover:text-white'}`}>
+        <span className="material-icons-outlined text-base sm:text-lg">{icon}</span> {label}
     </button>
 );
 
 const SectionHeader = ({ title, subtitle }: { title: string, subtitle: string }) => (
-    <div className="mb-10">
-        <h3 className="text-2xl font-display font-black text-white uppercase tracking-tighter italic lg:text-3xl">{title}</h3>
-        <p className="text-[10px] text-gray-500 uppercase font-black mt-1 tracking-[0.2em]">{subtitle}</p>
+    <div className="mb-6 sm:mb-10">
+        <h3 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-tighter italic lg:text-3xl">{title}</h3>
+        <p className="text-[9px] sm:text-[10px] text-gray-500 uppercase font-black mt-1 tracking-[0.2em]">{subtitle}</p>
     </div>
 );
 
 const FormGroup = ({ label, children, fullWidth }: { label: string, children: React.ReactNode, fullWidth?: boolean }) => (
-    <div className={fullWidth ? 'col-span-2' : 'col-span-1'}>
-        <label className="text-[10px] text-primary uppercase font-black block mb-2 ml-4 tracking-[0.15em] opacity-80">{label}</label>
+    <div className={fullWidth ? 'col-span-1 sm:col-span-2' : 'col-span-1'}>
+        <label className="text-[9px] sm:text-[10px] text-primary uppercase font-black block mb-2 ml-2 sm:ml-4 tracking-[0.15em] opacity-80">{label}</label>
         {children}
     </div>
 );
 
 const ContentBlock = ({ title, color, children }: { title: string, color: string, children: React.ReactNode }) => (
-    <div className="bg-white/5 border border-white/10 rounded-[3rem] p-8 relative overflow-hidden">
-        <div className="mb-8 flex items-center gap-4">
-            <div className={`w-2.5 h-10 ${color} rounded-full shadow-[0_0_15px_rgba(0,0,0,0.5)]`}></div>
-            <h4 className="text-xs font-black text-white uppercase tracking-[0.25em]">{title}</h4>
+    <div className="bg-white/5 border border-white/10 rounded-2xl sm:rounded-[3rem] p-5 sm:p-8 relative overflow-hidden">
+        <div className="mb-6 sm:mb-8 flex items-center gap-4">
+            <div className={`w-2 h-8 sm:w-2.5 sm:h-10 ${color} rounded-full shadow-[0_0_15px_rgba(0,0,0,0.5)] flex-shrink-0`}></div>
+            <h4 className="text-[10px] sm:text-xs font-black text-white uppercase tracking-[0.25em]">{title}</h4>
         </div>
         {children}
     </div>
 );
 
 const RoadmapCard: React.FC<{ m: RoadmapMilestone, onEdit: () => void, onDelete: () => any }> = ({ m, onEdit, onDelete }) => (
-    <div className="group flex items-center gap-5 p-5 bg-white/5 border border-white/10 rounded-[2rem] hover:bg-white/10 hover:border-white/20 transition-all duration-300">
-        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 ${m.status === 'current' ? 'bg-primary/20 border border-primary/40 shadow-neon-pink/20' : 'bg-black/40 border border-white/5'}`}>
-            <span className={`text-lg font-display font-black ${m.status === 'current' ? 'text-primary' : 'text-gray-500'}`}>{m.version}</span>
+    <div className="group flex items-center gap-3 sm:gap-5 p-3 sm:p-5 bg-white/5 border border-white/10 rounded-2xl sm:rounded-[2rem] hover:bg-white/10 hover:border-white/20 transition-all duration-300">
+        <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0 ${m.status === 'current' ? 'bg-primary/20 border border-primary/40 shadow-neon-pink/20' : 'bg-black/40 border border-white/5'}`}>
+            <span className={`text-base sm:text-lg font-display font-black ${m.status === 'current' ? 'text-primary' : 'text-gray-500'}`}>{m.version}</span>
         </div>
-        <div className="flex-1">
-            <div className="flex items-center gap-3 mb-0.5">
-                <h4 className="text-white font-bold text-sm tracking-tight">{m.title}</h4>
-                <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter ${m.status === 'completed' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : m.status === 'current' ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-white/5 text-gray-500 border border-white/10'}`}>
-                    {m.status === 'completed' ? 'Concluído' : m.status === 'current' ? 'Atual' : 'Próximo'}
+        <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                <h4 className="text-white font-bold text-xs sm:text-sm tracking-tight truncate max-w-[150px] sm:max-w-none">{m.title}</h4>
+                <span className={`px-1.5 py-0.5 rounded-full text-[7px] sm:text-[8px] font-black uppercase tracking-tighter ${m.status === 'completed' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : m.status === 'current' ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-white/5 text-gray-500 border border-white/10'}`}>
+                    {m.status === 'completed' ? 'Fim' : m.status === 'current' ? 'On' : 'Off'}
                 </span>
             </div>
-            <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest">{m.date}</p>
+            <p className="text-[8px] sm:text-[9px] text-gray-500 font-black uppercase tracking-widest">{m.date}</p>
         </div>
-        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button onClick={onEdit} className="w-9 h-9 bg-white/5 rounded-xl flex items-center justify-center text-gray-400 hover:text-white hover:bg-primary/20 transition-all border border-white/10"><span className="material-icons-outlined text-sm">edit</span></button>
-            <button onClick={onDelete} className="w-9 h-9 bg-white/5 rounded-xl flex items-center justify-center text-gray-600 hover:text-red-500 hover:bg-red-500/10 transition-all border border-white/10"><span className="material-icons-outlined text-sm">delete</span></button>
+        <div className="flex gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+            <button onClick={onEdit} className="w-8 h-8 sm:w-9 sm:h-9 bg-white/5 rounded-lg sm:rounded-xl flex items-center justify-center text-gray-400 hover:text-white hover:bg-primary/20 transition-all border border-white/10 flex-shrink-0"><span className="material-icons-outlined text-xs sm:text-sm">edit</span></button>
+            <button onClick={onDelete} className="w-8 h-8 sm:w-9 sm:h-9 bg-white/5 rounded-lg sm:rounded-xl flex items-center justify-center text-gray-600 hover:text-red-500 hover:bg-red-500/10 transition-all border border-white/10 flex-shrink-0"><span className="material-icons-outlined text-xs sm:text-sm">delete</span></button>
         </div>
     </div>
 );
 
 const EmptyState = ({ icon, text }: { icon: string, text: string }) => (
-    <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-[2.5rem] bg-white/[0.02]">
-        <span className="material-icons-outlined text-4xl text-gray-800 block mb-4">{icon}</span>
-        <p className="text-gray-600 text-[10px] font-black uppercase tracking-[0.3em] italic">{text}</p>
+    <div className="text-center py-10 sm:py-20 border-2 border-dashed border-white/5 rounded-2xl sm:rounded-[2.5rem] bg-white/[0.02]">
+        <span className="material-icons-outlined text-3xl sm:text-4xl text-gray-800 block mb-4">{icon}</span>
+        <p className="text-gray-600 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.3em] italic">{text}</p>
     </div>
 );
