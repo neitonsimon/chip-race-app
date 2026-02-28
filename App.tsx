@@ -17,9 +17,15 @@ export default function App() {
 
     const showFooter = ['home', 'the-chosen-details', 'calendar', 'ranking', 'vip', 'recharge', 'the-chosen-regulations', 'terms', 'privacy', 'rules', 'responsible-gaming'].includes(currentView);
 
-    // Track Page Views
+    // Track Page Views and Setup Global Events
     React.useEffect(() => {
-        if (!currentView) return;
+        const handleOpenSupport = () => {
+            if (isLoggedIn) setIsSupportOpen(true);
+            else handleNavigate('login');
+        };
+        window.addEventListener('open-support-modal', handleOpenSupport);
+
+        if (!currentView) return () => window.removeEventListener('open-support-modal', handleOpenSupport);
 
         const trackView = async () => {
             try {
@@ -30,7 +36,9 @@ export default function App() {
             } catch (e) { }
         };
         trackView();
-    }, [currentView, currentUser?.id]);
+
+        return () => window.removeEventListener('open-support-modal', handleOpenSupport);
+    }, [currentView, currentUser?.id, isLoggedIn, handleNavigate]);
 
     return (
         <div className="min-h-screen flex flex-col bg-background-light dark:bg-background-dark relative">

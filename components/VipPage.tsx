@@ -323,10 +323,13 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate, currentUser, onUpd
           </div>
         )}
 
-        <div className="mt-20 text-center">
+        <div className="mt-20 flex flex-col items-center justify-center text-center">
           <p className="text-gray-500 text-sm mb-4">Dúvidas sobre os planos?</p>
-          <button className="flex items-center gap-2 mx-auto text-white hover:text-green-400 transition-colors font-bold">
-            <span className="material-icons-outlined">whatsapp</span> Fale com nosso consultor
+          <button
+            onClick={() => window.dispatchEvent(new Event('open-support-modal'))}
+            className="flex items-center justify-center gap-2 text-white hover:text-primary transition-colors font-bold"
+          >
+            <span className="material-icons-outlined">chat</span> Fale com nosso consultor
           </button>
         </div>
 
