@@ -72,7 +72,11 @@ export const WalletMonitorTab: React.FC = () => {
                 .select('*, profiles!user_id(name, numeric_id, avatar_url)')
                 .order('created_at', { ascending: false })
                 .limit(txLimit);
-            if (data) setTransactions(data as any);
+            if (data) {
+                // Remove transactions that are physical cash/pix so they don't mess up digital wallet numbers
+                const digitalTx = data.filter((tx: any) => tx.metadata?.payment_method !== 'cash_pix' && tx.metadata?.payment_method !== 'cash');
+                setTransactions(digitalTx as any);
+            }
             setLastUpdated(new Date());
         } catch (err) {
             console.error('Error fetching transactions:', err);

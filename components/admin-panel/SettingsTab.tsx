@@ -89,6 +89,19 @@ export const SettingsTab: React.FC = () => {
         'auto_awesome', 'military_tech', 'psychology', 'sports_poker'
     ];
 
+    // Statistics State
+    const [stats, setStats] = useState({
+        totalUsers: 0,
+        closedEvents: 0,
+        uniqueRankedPlayers: 0,
+        totalPrizeDistributed: 0,
+        theChosenQualifiers: 0,
+        totalChipz: 0,
+        totalDebt: 0
+    });
+    const [pageViews, setPageViews] = useState<{ view_name: string, count: number }[]>([]);
+    const [isLoadingStats, setIsLoadingStats] = useState(false);
+
     // Sidebar active section
     const [activeSection, setActiveSection] = useState<'roadmap' | 'hero' | 'details' | 'faq' | 'months' | 'ecosystem' | 'daily-rewards' | 'defaults'>('roadmap');
 
@@ -97,7 +110,62 @@ export const SettingsTab: React.FC = () => {
         fetchContent();
         fetchDailyRewards();
         fetchBadgeTemplates();
+        fetchStatistics();
     }, []);
+
+    const fetchStatistics = async () => {
+        setIsLoadingStats(true);
+        try {
+            const [{ count: usersCount }, { count: eventsCount }, { data: eventsData }, { count: chosenCount }, { data: profilesData }] = await Promise.all([
+                supabase.from('profiles').select('id', { count: 'exact', head: true }),
+                supabase.from('events').select('id', { count: 'exact', head: true }).eq('status', 'closed'),
+                supabase.from('events').select('total_prize, details').eq('status', 'closed'),
+                supabase.from('the_chosen_qualifiers').select('id', { count: 'exact', head: true }),
+                supabase.from('profiles').select('id, balance_chipz, total_pending_debt')
+            ]);
+
+            const sumPrizes = (eventsData || []).reduce((acc: number, e: any) => {
+                const prize = Number(e.total_prize || 0) || Number(e.details?.prizePayoutBrl || 0);
+                return acc + prize;
+            }, 0);
+
+            const activePlayers = (profilesData || []).filter(p => p.balance_chipz > 0 || p.total_pending_debt > 0).length;
+            const totalChipzDb = (profilesData || []).reduce((s, p) => s + (Number(p.balance_chipz) || 0), 0);
+            const totalDebtDb = (profilesData || []).reduce((s, p) => s + (Number(p.total_pending_debt) || 0), 0);
+
+            setStats({
+                totalUsers: usersCount || 0,
+                closedEvents: eventsCount || 0,
+                uniqueRankedPlayers: activePlayers || 0,
+                totalPrizeDistributed: sumPrizes,
+                theChosenQualifiers: chosenCount || 0,
+                totalChipz: totalChipzDb,
+                totalDebt: totalDebtDb
+            });
+
+            // Fetch Page Views independently to prevent crashing if table doesn't exist yet
+            try {
+                // Since there is no GROUP BY in supabase-js, we fetch all and group locally (limit reasonably)
+                const { data: views } = await supabase.from('page_views').select('view_name').limit(10000);
+                if (views) {
+                    const counts: Record<string, number> = {};
+                    views.forEach((v: any) => {
+                        counts[v.view_name] = (counts[v.view_name] || 0) + 1;
+                    });
+                    const sortedViews = Object.entries(counts)
+                        .map(([name, count]) => ({ view_name: name, count }))
+                        .sort((a, b) => b.count - a.count);
+                    setPageViews(sortedViews);
+                }
+            } catch (vErr) {
+                console.log("Page views tracking not available yet", vErr);
+            }
+        } catch (err) {
+            console.error('Error fetching stats:', err);
+        } finally {
+            setIsLoadingStats(false);
+        }
+    };
 
     const fetchRoadmap = async () => {
         setIsLoadingRoadmap(true);
@@ -400,7 +468,7 @@ export const SettingsTab: React.FC = () => {
                     icon="info"
                     label="The Chosen"
                 />
-                <SidebarButton active={activeSection === 'defaults'} onClick={() => setActiveSection('defaults')} icon="webhook" label="App Defaults" />
+                <SidebarButton active={activeSection === 'defaults'} onClick={() => setActiveSection('defaults')} icon="analytics" label="Estatísticas" />
                 <div className="h-px w-full bg-white/5 my-2"></div>
                 <SidebarButton active={activeSection === 'daily-rewards'} onClick={() => setActiveSection('daily-rewards')} icon="calendar_today" label="Login Diário" />
                 <SidebarButton
@@ -791,32 +859,127 @@ export const SettingsTab: React.FC = () => {
 
                 {activeSection === 'defaults' && (
                     <div className="animate-in fade-in slide-in-from-bottom-4 lg:slide-in-from-right duration-500">
-                        <SectionHeader title="Application Defaults" subtitle="Variáveis globais do sistema" />
-                        <div className="max-w-md mx-auto space-y-8 mt-6 sm:mt-10">
-                            <div className="bg-white/5 border border-white/10 rounded-2xl sm:rounded-[2.5rem] p-5 sm:p-8">
-                                <FormGroup label="Total de Classificados" fullWidth>
-                                    <div className="flex gap-4 items-center">
-                                        <input
-                                            type="text"
-                                            inputMode="numeric"
-                                            value={totalQualifiers === null ? '' : totalQualifiers}
-                                            onChange={e => {
-                                                const val = e.target.value.replace(/\D/g, '');
-                                                setTotalQualifiers(val === '' ? null : parseInt(val));
-                                            }}
-                                            placeholder="Auto"
-                                            className="flex-1 form-input text-center text-lg sm:text-xl font-display italic text-primary"
-                                        />
-                                        <button onClick={() => setTotalQualifiers(null)} className="text-gray-500 hover:text-white" title="Resetar"><span className="material-icons-outlined">restart_alt</span></button>
-                                    </div>
-                                    <p className="text-[8px] text-gray-600 mt-2 px-2 uppercase font-black tracking-widest italic leading-normal">* Deixe em branco para o sistema calcular automaticamente.</p>
-                                </FormGroup>
+                        <div className="flex items-center justify-between mb-6">
+                            <SectionHeader title="Estatísticas Analíticas" subtitle="Métricas principais do app" />
+                            <button onClick={fetchStatistics} disabled={isLoadingStats} className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 flex items-center justify-center transition-all disabled:opacity-50">
+                                <span className={`material-icons-outlined ${isLoadingStats ? 'animate-spin' : ''}`}>refresh</span>
+                            </button>
+                        </div>
 
-                                <div className="pt-8 flex justify-center">
-                                    <button onClick={() => handleSaveContent('total_qualifiers', totalQualifiers)} disabled={isSavingContent} className="btn-save shadow-neon-pink w-full">
-                                        <span className="material-icons-outlined text-sm">webhook</span> {isSavingContent ? 'Sincronizando...' : 'Publicar Variável'}
-                                    </button>
+                        {isLoadingStats ? (
+                            <div className="flex justify-center p-12">
+                                <div className="text-primary font-black uppercase text-xs animate-pulse tracking-widest flex items-center gap-2">
+                                    <span className="material-icons-outlined animate-spin text-sm">sync</span>
+                                    Calculando estatísticas...
                                 </div>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mt-6">
+                                <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col justify-center items-center text-center gap-2 hover:bg-white/10 transition-colors group">
+                                    <span className="material-icons-outlined text-primary text-3xl mb-1 group-hover:scale-110 transition-transform duration-300">group</span>
+                                    <div className="text-3xl font-display font-black text-white">{stats.totalUsers}</div>
+                                    <div className="text-[9px] uppercase font-black tracking-widest text-gray-500">Usuários Cadastrados</div>
+                                </div>
+
+                                <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col justify-center items-center text-center gap-2 hover:bg-white/10 transition-colors group">
+                                    <span className="material-icons-outlined text-blue-400 text-3xl mb-1 group-hover:scale-110 transition-transform duration-300">verified</span>
+                                    <div className="text-3xl font-display font-black text-white">100%</div>
+                                    <div className="text-[9px] uppercase font-black tracking-widest text-gray-500">Usuários Verificados</div>
+                                </div>
+
+                                <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col justify-center items-center text-center gap-2 hover:bg-white/10 transition-colors group">
+                                    <span className="material-icons-outlined text-green-400 text-3xl mb-1 group-hover:scale-110 transition-transform duration-300">event_available</span>
+                                    <div className="text-3xl font-display font-black text-white">{stats.closedEvents}</div>
+                                    <div className="text-[9px] uppercase font-black tracking-widest text-gray-500">Eventos Encerrados</div>
+                                </div>
+
+                                <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col justify-center items-center text-center gap-2 hover:bg-white/10 transition-colors group">
+                                    <span className="material-icons-outlined text-secondary text-3xl mb-1 group-hover:scale-110 transition-transform duration-300">emoji_events</span>
+                                    <div className="text-3xl font-display font-black text-white">{stats.uniqueRankedPlayers}</div>
+                                    <div className="text-[9px] uppercase font-black tracking-widest text-gray-500">Jogadores Frequentes</div>
+                                </div>
+
+                                <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col justify-center items-center text-center gap-2 lg:col-span-2 hover:bg-white/10 transition-colors group">
+                                    <span className="material-icons-outlined text-yellow-400 text-3xl mb-1 group-hover:scale-110 transition-transform duration-300">attach_money</span>
+                                    <div className="text-3xl sm:text-4xl font-display font-black text-white text-glow-yellow">R$ {stats.totalPrizeDistributed.toLocaleString('pt-BR')}</div>
+                                    <div className="text-[9px] uppercase font-black tracking-widest text-gray-500">Premiação Repassada</div>
+                                </div>
+
+                                <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col justify-center items-center text-center gap-2 hover:bg-white/10 transition-colors group">
+                                    <span className="material-icons-outlined text-cyan-400 text-3xl mb-1 group-hover:scale-110 transition-transform duration-300">diamond</span>
+                                    <div className="text-3xl font-display font-black text-white text-glow-cyan">{stats.theChosenQualifiers}</div>
+                                    <div className="text-[9px] uppercase font-black tracking-widest text-gray-500">Vagas The Chosen</div>
+                                </div>
+
+                                <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col justify-center items-center text-center gap-2 hover:bg-white/10 transition-colors group">
+                                    <span className="material-icons-outlined text-orange-400 text-3xl mb-1 group-hover:scale-110 transition-transform duration-300">savings</span>
+                                    <div className="text-3xl font-display font-black text-white">{stats.totalChipz.toLocaleString('pt-BR')}</div>
+                                    <div className="text-[9px] uppercase font-black tracking-widest text-gray-500">Chipz em Circulação</div>
+                                </div>
+
+                                <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col justify-center items-center text-center gap-2 lg:col-span-4 bg-red-900/10 border-red-500/20 hover:bg-red-900/20 transition-colors group">
+                                    <span className="material-icons-outlined text-red-500 text-3xl mb-1 group-hover:scale-110 transition-transform duration-300">account_balance_wallet</span>
+                                    <div className="text-3xl sm:text-4xl font-display font-black text-white text-glow-red">R$ {stats.totalDebt.toLocaleString('pt-BR')}</div>
+                                    <div className="text-[9px] uppercase font-black tracking-widest text-red-400/80">Total em Penduras a Receber</div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+                            <div className="bg-white/5 border border-white/10 rounded-[2rem] p-6 lg:p-8">
+                                <h4 className="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center gap-2">
+                                    <span className="material-icons-outlined text-primary">local_fire_department</span>
+                                    Mapa de Calor (Páginas)
+                                </h4>
+                                {pageViews.length === 0 ? (
+                                    <div className="text-center py-6">
+                                        <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">Dados de acesso não disponíveis ainda ou tabela não criada.</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {pageViews.slice(0, 10).map((pv, idx) => (
+                                            <div key={idx} className="flex justify-between items-center bg-black/40 border border-white/5 rounded-xl p-4 group">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-gray-500 font-black text-xs w-4">{idx + 1}º</span>
+                                                    <span className="text-white font-bold text-sm tracking-wide capitalize">{pv.view_name.replace(/-/g, ' ')}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 bg-primary/10 px-3 py-1 rounded-lg border border-primary/20">
+                                                    <span className="material-icons-outlined text-[14px] text-primary">visibility</span>
+                                                    <span className="text-primary font-black text-sm">{pv.count}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="bg-white/5 border border-white/10 rounded-[2rem] p-6 lg:p-8 flex flex-col justify-between">
+                                <div>
+                                    <h4 className="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center gap-2">
+                                        <span className="material-icons-outlined text-primary">webhook</span>
+                                        Variável: Total Classificados The Chosen
+                                    </h4>
+                                    <FormGroup label="Substituir auto-cálculo do App" fullWidth>
+                                        <div className="flex gap-4 items-center">
+                                            <input
+                                                type="text"
+                                                inputMode="numeric"
+                                                value={totalQualifiers === null ? '' : totalQualifiers}
+                                                onChange={e => {
+                                                    const val = e.target.value.replace(/\D/g, '');
+                                                    setTotalQualifiers(val === '' ? null : parseInt(val));
+                                                }}
+                                                placeholder="Automático (DB)"
+                                                className="flex-1 form-input text-center text-lg font-display italic text-primary"
+                                            />
+                                            <button onClick={() => setTotalQualifiers(null)} className="text-gray-500 hover:text-white" title="Resetar"><span className="material-icons-outlined">restart_alt</span></button>
+                                        </div>
+                                        <p className="text-[8px] text-gray-500 mt-2 px-2 uppercase font-black tracking-widest italic leading-normal">* Deixe em aberto para o app usar a contagem acima.</p>
+                                    </FormGroup>
+                                </div>
+                                <button onClick={() => handleSaveContent('total_qualifiers', totalQualifiers)} disabled={isSavingContent} className="btn-save shadow-neon-pink w-full py-4 text-xs h-auto mt-4">
+                                    <span className="material-icons-outlined text-sm">save</span> {isSavingContent ? 'Salvando...' : 'Salvar Variável'}
+                                </button>
                             </div>
                         </div>
                     </div>

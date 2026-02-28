@@ -17,6 +17,21 @@ export default function App() {
 
     const showFooter = ['home', 'the-chosen-details', 'calendar', 'ranking', 'vip', 'recharge', 'the-chosen-regulations', 'terms', 'privacy', 'rules', 'responsible-gaming'].includes(currentView);
 
+    // Track Page Views
+    React.useEffect(() => {
+        if (!currentView) return;
+
+        const trackView = async () => {
+            try {
+                await supabase.from('page_views').insert([{
+                    view_name: currentView,
+                    user_id: currentUser?.id || null
+                }]);
+            } catch (e) { }
+        };
+        trackView();
+    }, [currentView, currentUser?.id]);
+
     return (
         <div className="min-h-screen flex flex-col bg-background-light dark:bg-background-dark relative">
             <Navigation
