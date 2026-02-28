@@ -266,59 +266,61 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
-          {(showAll ? categories : categories.slice(0, 12)).map((cat, index) => {
-            const styles = getColors(cat.color);
-            const isMystery = cat.is_mystery;
+          {(showAll ? categories : categories.slice(0, 12))
+            .filter(cat => !cat.is_hidden)
+            .map((cat, index) => {
+              const styles = getColors(cat.color);
+              const isMystery = cat.is_mystery;
 
-            return (
-              <div
-                key={cat.id || index}
-                className={`group relative bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/5 rounded-2xl p-4 sm:p-5 ${styles.border} transition-all duration-300 hover:-translate-y-2 overflow-hidden`}
-              >
-                <div className={`absolute inset-0 bg-gradient-to-br ${styles.glow} to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
+              return (
+                <div
+                  key={cat.id || index}
+                  className={`group relative bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/5 rounded-2xl p-4 sm:p-5 ${styles.border} transition-all duration-300 hover:-translate-y-2 overflow-hidden`}
+                >
+                  <div className={`absolute inset-0 bg-gradient-to-br ${styles.glow} to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
 
-                {/* Padlock Icon for Admin to toggle Mystery/Lock */}
+                  {/* Padlock Icon for Admin to toggle Mystery/Lock */}
 
-                <div className="relative z-10 flex flex-col items-center text-center mt-2">
-                  {isMystery && !isAdmin ? (
-                    // Mystery Card Content for regular users
-                    <div className="flex flex-col items-center justify-center py-6">
-                      <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-4 text-gray-600 animate-pulse">
-                        <span className="material-icons-outlined text-4xl">lock</span>
+                  <div className="relative z-10 flex flex-col items-center text-center mt-2">
+                    {isMystery && !isAdmin ? (
+                      // Mystery Card Content for regular users
+                      <div className="flex flex-col items-center justify-center py-6">
+                        <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-4 text-gray-600 animate-pulse">
+                          <span className="material-icons-outlined text-4xl">lock</span>
+                        </div>
+                        <h3 className="text-lg font-display font-black text-gray-700 uppercase tracking-widest">
+                          Em Breve
+                        </h3>
+                        <p className="text-[10px] text-gray-500 uppercase font-black mt-2">Mistério!</p>
                       </div>
-                      <h3 className="text-lg font-display font-black text-gray-700 uppercase tracking-widest">
-                        Em Breve
-                      </h3>
-                      <p className="text-[10px] text-gray-500 uppercase font-black mt-2">Mistério!</p>
-                    </div>
-                  ) : (
-                    // Standard Card Content
-                    <>
-                      <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-b from-gray-800 to-black flex items-center justify-center mb-3 sm:mb-4 shadow-lg ${styles.shadow} transition-shadow duration-300 border border-white/10`}>
-                        <span className={`material-icons-outlined text-2xl sm:text-3xl ${styles.icon}`}>{cat.icon}</span>
-                      </div>
+                    ) : (
+                      // Standard Card Content
+                      <>
+                        <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-b from-gray-800 to-black flex items-center justify-center mb-3 sm:mb-4 shadow-lg ${styles.shadow} transition-shadow duration-300 border border-white/10`}>
+                          <span className={`material-icons-outlined text-2xl sm:text-3xl ${styles.icon}`}>{cat.icon}</span>
+                        </div>
 
-                      <h3 className={`text-xs sm:text-base font-display font-bold text-gray-900 dark:text-white mb-1 ${styles.text} transition-colors w-full flex items-center justify-center gap-2`}>
-                        {cat.title}
+                        <h3 className={`text-xs sm:text-base font-display font-bold text-gray-900 dark:text-white mb-1 ${styles.text} transition-colors w-full flex items-center justify-center gap-2`}>
+                          {cat.title}
 
-                      </h3>
+                        </h3>
 
-                      <p className="hidden md:flex text-xs text-gray-500 dark:text-gray-400 mb-4 min-h-[40px] items-center justify-center w-full px-2">
-                        {cat.description}
-                      </p>
+                        <p className="hidden md:flex text-xs text-gray-500 dark:text-gray-400 mb-4 min-h-[40px] items-center justify-center w-full px-2">
+                          {cat.description}
+                        </p>
 
-                      <button
-                        onClick={(e) => handleOpenRegulation(e, cat.id)}
-                        className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider ${styles.btn} hover:scale-105 transition-all flex items-center gap-1 sm:gap-2 cursor-pointer bg-white/5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/10 hover:border-white/30 shadow-sm group-hover:bg-white/10`}
-                      >
-                        Ver <span className="hidden sm:inline">Mais</span> <span className="material-icons-outlined text-xs sm:text-sm">add_circle</span>
-                      </button>
-                    </>
-                  )}
+                        <button
+                          onClick={(e) => handleOpenRegulation(e, cat.id)}
+                          className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider ${styles.btn} hover:scale-105 transition-all flex items-center gap-1 sm:gap-2 cursor-pointer bg-white/5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/10 hover:border-white/30 shadow-sm group-hover:bg-white/10`}
+                        >
+                          Ver <span className="hidden sm:inline">Mais</span> <span className="material-icons-outlined text-xs sm:text-sm">add_circle</span>
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
         </div>
 
         {categories.length > 12 && (

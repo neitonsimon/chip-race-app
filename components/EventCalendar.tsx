@@ -828,13 +828,13 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                         </div>
                                     )}
                                     {viewEvent.gameMode !== 'cash_game' && (
-                                        <div className="flex justify-center items-center gap-8 w-full">
+                                        <div className="flex justify-center items-center gap-6 w-full">
                                             <div className="flex flex-col items-center">
-                                                <span className="text-xs font-bold text-gray-500 uppercase tracking-[0.2em] mb-1">Buy-in</span>
-                                                <div className="flex items-baseline gap-1.5 font-display">
-                                                    <span className="text-2xl sm:text-4xl font-black text-primary drop-shadow-[0_0_15px_rgba(217,0,255,0.4)]">{viewEvent.buyin}</span>
+                                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Buy-in</span>
+                                                <div className="flex items-center gap-1 font-display">
+                                                    <span className="text-xl sm:text-3xl font-black text-primary drop-shadow-[0_0_15px_rgba(217,0,255,0.4)] leading-none">{viewEvent.buyin}</span>
                                                     {viewEvent.staffBonusValue && viewEvent.staffBonusValue !== '0' && (
-                                                        <span className="text-lg sm:text-xl font-bold text-yellow-500">
+                                                        <span className="text-xl sm:text-3xl font-black text-yellow-500 leading-none">
                                                             + {viewEvent.staffBonusValue}
                                                         </span>
                                                     )}
@@ -842,8 +842,8 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                             </div>
                                             <div className="w-px h-8 bg-white/10"></div>
                                             <div className="flex flex-col items-center">
-                                                <span className="text-xs font-bold text-gray-500 uppercase tracking-[0.2em] mb-1">Garantido</span>
-                                                <span className="text-2xl sm:text-4xl font-display font-black text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.4)]">{viewEvent.guaranteed}</span>
+                                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-0.5">Garantido</span>
+                                                <span className="text-xl sm:text-3xl font-display font-black text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.4)] leading-tight">{viewEvent.guaranteed}</span>
                                             </div>
                                         </div>
                                     )}
@@ -1135,7 +1135,12 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                         </select>
                                         <div className="mt-4">
                                             <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Jogadores</label>
-                                            <input type="number" value={totalPlayers} onChange={(e) => handleGlobalChange('players', e.target.value)} className="w-full bg-black/30 border border-white/20 rounded p-2 text-white" />
+                                            <input type="text" inputMode="numeric" value={totalPlayers}
+                                                onChange={(e) => {
+                                                    const val = e.target.value.replace(/\D/g, '');
+                                                    handleGlobalChange('players', val);
+                                                }}
+                                                className="w-full bg-black/30 border border-white/20 rounded p-2 text-white" />
                                         </div>
                                         {/* REMOVED BUY-IN TOTAL INPUT AS REQUESTED */}
                                     </div>
@@ -1146,11 +1151,21 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                         <div className="grid grid-cols-2 gap-3">
                                             <div>
                                                 <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Rebuys</label>
-                                                <input type="number" value={rebuysCount} onChange={(e) => setRebuysCount(parseInt(e.target.value) || 0)} className="w-full bg-black/30 border border-white/20 rounded p-2 text-white text-sm" />
+                                                <input type="text" inputMode="numeric" value={rebuysCount}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value.replace(/\D/g, '');
+                                                        setRebuysCount(parseInt(val) || 0);
+                                                    }}
+                                                    className="w-full bg-black/30 border border-white/20 rounded p-2 text-white text-sm" />
                                             </div>
                                             <div>
                                                 <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Add-ons</label>
-                                                <input type="number" value={addonsCount} onChange={(e) => setAddonsCount(parseInt(e.target.value) || 0)} className="w-full bg-black/30 border border-white/20 rounded p-2 text-white text-sm" />
+                                                <input type="text" inputMode="numeric" value={addonsCount}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value.replace(/\D/g, '');
+                                                        setAddonsCount(parseInt(val) || 0);
+                                                    }}
+                                                    className="w-full bg-black/30 border border-white/20 rounded p-2 text-white text-sm" />
                                             </div>
                                             <div className="col-span-2">
                                                 <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Premiação Total (Estimada)</label>
@@ -1230,33 +1245,55 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                     return isCashLayout ? (
                                                         <>
                                                             <input
-                                                                type="number"
+                                                                type="text"
+                                                                inputMode="decimal"
                                                                 placeholder="Rake"
                                                                 value={p.rake || ''}
-                                                                onChange={(e) => updatePlayerResult(p.id, 'rake', parseFloat(e.target.value) || 0)}
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value.replace(',', '.');
+                                                                    if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                                                        updatePlayerResult(p.id, 'rake', parseFloat(val) || 0);
+                                                                    }
+                                                                }}
                                                                 className="w-20 bg-black/50 text-center text-white rounded border border-white/10"
                                                             />
                                                             <input
-                                                                type="number"
+                                                                type="text"
+                                                                inputMode="decimal"
                                                                 placeholder="+/-"
                                                                 value={p.profitLoss || ''}
-                                                                onChange={(e) => updatePlayerResult(p.id, 'profitLoss', parseFloat(e.target.value) || 0)}
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value.replace(',', '.');
+                                                                    if (val === '' || /^-?\d*\.?\d*$/.test(val)) {
+                                                                        updatePlayerResult(p.id, 'profitLoss', parseFloat(val) || 0);
+                                                                    }
+                                                                }}
                                                                 className="w-20 bg-black/50 text-center text-white rounded border border-white/10"
                                                             />
                                                         </>
                                                     ) : (
                                                         <>
                                                             <input
-                                                                type="number"
+                                                                type="text"
+                                                                inputMode="numeric"
                                                                 value={p.position}
-                                                                onChange={(e) => updatePlayerResult(p.id, 'position', parseInt(e.target.value))}
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value.replace(/\D/g, '');
+                                                                    updatePlayerResult(p.id, 'position', parseInt(val) || 0);
+                                                                }}
                                                                 className="w-12 bg-black/50 text-center text-white rounded border border-white/10"
                                                             />
                                                             <input
-                                                                type="number"
+                                                                type="text"
+                                                                inputMode="decimal"
                                                                 placeholder="0"
                                                                 value={p.prize || ''}
-                                                                onChange={(e) => updatePlayerResult(p.id, 'prize', parseFloat(e.target.value) || 0)}
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value.replace(',', '.');
+                                                                    if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                                                        updatePlayerResult(p.id, 'prize', parseFloat(val) || 0);
+                                                                    }
+                                                                }}
                                                                 className="w-20 bg-black/50 text-right text-green-400 font-bold rounded border border-white/10 px-2"
                                                             />
                                                         </>

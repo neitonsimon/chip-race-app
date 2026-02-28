@@ -87,9 +87,13 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
             }
 
             if (onUpdateProfile) {
-                onUpdateProfile(currentUser.id, {
-                    balanceBrl: (currentUser.balanceBrl || 0) + amountToAdd
-                } as any);
+                // Fetch the absolute latest balance from DB to avoid any local state mismatch
+                const { data: profile } = await supabase.from('profiles').select('balance_brl').eq('id', currentUser.id).single();
+                if (profile) {
+                    onUpdateProfile(currentUser.id, {
+                        balanceBrl: Number(profile.balance_brl)
+                    } as any);
+                }
             }
 
             setCustomBrlAmount('');

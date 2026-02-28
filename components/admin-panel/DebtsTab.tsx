@@ -119,6 +119,7 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
     const [salePayMethod, setSalePayMethod] = useState<'balance' | 'cash'>('balance');
     const [saleLoading, setSaleLoading] = useState(false);
     const [saleSuccess, setSaleSuccess] = useState('');
+    const [saleIsAnonymous, setSaleIsAnonymous] = useState(false);
 
     const searchPlayers = useCallback(async (query: string, setResults: (r: any[]) => void) => {
         if (query.length < 2) { setResults([]); return; }
@@ -137,51 +138,33 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
         if (!window.confirm(`Confirmar depósito de R$ ${amount.toFixed(2)} para ${creditUser.name}?`)) return;
         setCreditLoading(true);
         try {
-            // 1. Credit BRL balance
-            const { error } = await supabase.rpc('increment_balance_brl', {
-                p_user_id: creditUser.id,
-                p_amount: amount
-            });
-            if (error) throw error;
-
-            // 2. Calculate bonuses
+            // 1. Calculate bonuses first
             const expBonus = Math.floor(amount / 20);     // 1 EXP per R$20
             const chipzBonus = Math.floor(amount / 100);  // 1 Chipz per R$100
 
-            // 3. Award EXP
+            // 2. Single atomic transaction: Credit BRL + Chipz Bonus + Log Transaction
+            const description = creditNote.trim()
+                ? `${creditNote.trim()}${chipzBonus > 0 ? ` (+${chipzBonus} Chipz Bônus)` : ''}`
+                : `Recarga de crédito via Admin${chipzBonus > 0 ? ` (+${chipzBonus} Chipz Bônus)` : ''}`;
+
+            const { data: txSuccess, error: txError } = await supabase.rpc('secure_balance_transaction', {
+                p_user_id: creditUser.id,
+                p_brl_amount: amount,
+                p_chipz_amount: chipzBonus,
+                p_description: description,
+                p_category: 'wallet_deposit'
+            });
+
+            if (txError) throw txError;
+            if (!txSuccess) throw new Error('Falha ao processar transação atômica.');
+
+            // 3. Award EXP (Direct call remains for now)
             if (expBonus > 0) {
                 await supabase.rpc('bulk_add_event_exp', {
                     p_user_ids: [creditUser.id],
                     p_exp_amount: expBonus
                 });
             }
-
-            // 4. Award Chipz
-            if (chipzBonus > 0) {
-                const { error: chipzErr } = await supabase.rpc('add_chipz_balance', {
-                    user_id: creditUser.id,
-                    amount: chipzBonus
-                });
-                if (chipzErr) console.warn('Chipz bonus error:', chipzErr);
-
-                // Log chipz gift in transactions
-                await supabase.from('transactions').insert({
-                    user_id: creditUser.id,
-                    amount_brl: 0,
-                    amount_chipz: chipzBonus,
-                    description: `Bônus Chipz por depósito de R$ ${amount.toFixed(2)}`,
-                    category: 'wallet_deposit'
-                });
-            }
-
-            // 5. Log BRL transaction
-            await supabase.from('transactions').insert({
-                user_id: creditUser.id,
-                amount_brl: amount,
-                amount_chipz: 0,
-                description: creditNote.trim() || 'Depósito em Dinheiro (Admin)',
-                category: 'wallet_deposit'
-            });
 
             // 6. Notify user — base message
             await supabase.from('messages').insert({
@@ -216,6 +199,17 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
             setCreditSearch('');
             setCreditAmount('');
             setCreditNote('');
+
+            // Sync local profile state (UI Refresh)
+            if (onUpdateProfile) {
+                const { data: freshP } = await supabase.from('profiles').select('balance_brl, balance_chipz').eq('id', creditUser.id).single();
+                if (freshP) {
+                    onUpdateProfile(creditUser.id, {
+                        balanceBrl: Number(freshP.balance_brl),
+                        balanceChipz: Number(freshP.balance_chipz)
+                    } as any);
+                }
+            }
         } catch (err: any) {
             alert('Erro ao creditar: ' + err.message);
         } finally {
@@ -223,20 +217,48 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
         }
     };
 
+    const handleRepairMissingTransaction = async () => {
+        if (!creditUser) {
+            alert("Selecione um jogador primeiro para reparar o rastro.");
+            return;
+        }
+        const amount = 50;
+        if (!window.confirm(`Deseja registrar MANUALMENTE o rastro de R$ ${amount} para ${creditUser.name}? \n\n⚠️ Isso criará APENAS o registro na aba de transações (sem alterar o saldo atual), corrigindo a falta de rastro anterior.`)) return;
+
+        setCreditLoading(true);
+        try {
+            const { error } = await supabase.from('transactions').insert({
+                user_id: creditUser.id,
+                brl_amount: amount,
+                description: 'Recarga de Crédito (Correção de Log Retroativo)',
+                category: 'wallet_deposit'
+            });
+
+            if (error) throw error;
+            alert("✅ Rastro de R$ 50 registrado com sucesso para " + creditUser.name);
+        } catch (err: any) {
+            alert("Erro ao reparar: " + err.message);
+        } finally {
+            setCreditLoading(false);
+        }
+    };
+
     // ── Vender Direto handler ──
     const handleDirectSale = async () => {
-        if (!saleUser || !saleProduct) return;
+        if (!saleIsAnonymous && !saleUser) return;
+        if (!saleProduct) return;
         const qty = parseInt(saleQuantity) || 1;
         const total = Number(saleProduct.price) * qty;
 
-        if (salePayMethod === 'balance') {
+        if (!saleIsAnonymous && salePayMethod === 'balance') {
             const balance = Number(saleUser.balance_brl || 0);
             if (balance < total) {
                 alert(`Saldo insuficiente! Saldo: R$ ${balance.toFixed(2)} · Necessário: R$ ${total.toFixed(2)}`);
                 return;
             }
         }
-        if (!window.confirm(`Confirmar venda direta:\n${qty}x ${saleProduct.name} = R$ ${total.toFixed(2)}\nPara: ${saleUser.name}\nPagamento: ${salePayMethod === 'balance' ? 'Saldo R$' : 'Dinheiro (manual)'}`)) return;
+        const buyerName = saleIsAnonymous ? 'Cliente Anônimo' : (saleUser?.name || 'Jogador');
+        if (!window.confirm(`Confirmar venda direta:\n${qty}x ${saleProduct.name} = R$ ${total.toFixed(2)}\nPara: ${buyerName}\nPagamento: ${salePayMethod === 'balance' ? 'Saldo R$' : 'Dinheiro (manual)'}`)) return;
 
         setSaleLoading(true);
         try {
@@ -252,7 +274,7 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
             // Create a closed command record for tracking
             const { data: cmd, error: cmdErr } = await supabase.from('commands').insert({
                 event_id: null,
-                user_id: saleUser.id,
+                user_id: saleIsAnonymous ? null : saleUser.id,
                 status: 'closed',
                 opened_by: currentUser.id,
                 total_brl: total,
@@ -270,35 +292,56 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                 unit_price_chipz: 0,
                 total_price_brl: total,
                 total_price_chipz: 0,
-                notes: `Venda Direta — ${salePayMethod === 'balance' ? 'Saldo R$' : 'Dinheiro'}`,
+                notes: `Venda Direta — ${saleIsAnonymous ? 'Anônimo' : (salePayMethod === 'balance' ? 'Saldo R$' : 'Dinheiro')}`,
                 created_by: currentUser.id
             });
 
-            // Log transaction
-            await supabase.from('transactions').insert({
-                user_id: saleUser.id,
-                amount_brl: -total,
-                amount_chipz: 0,
-                description: `Venda Direta: ${qty}x ${saleProduct.name}`,
-                category: 'command_charge'
-            });
+            // Log transaction ONLY if NOT anonymous (wallet movement)
+            if (!saleIsAnonymous) {
+                await supabase.from('transactions').insert({
+                    user_id: saleUser.id,
+                    amount_brl: -total,
+                    amount_chipz: 0,
+                    description: `Venda Direta: ${qty}x ${saleProduct.name}`,
+                    category: 'purchase',
+                    type: 'debit',
+                    metadata: {
+                        payment_method: salePayMethod,
+                        product_id: saleProduct.id,
+                        is_direct_sale: true
+                    }
+                });
+            }
 
-            // Notify user
-            await supabase.from('messages').insert({
-                user_id: saleUser.id,
-                sender_id: currentUser.id,
-                content: `Compra direta registrada: ${qty}x ${saleProduct.name} — R$ ${total.toFixed(2)} (${salePayMethod === 'balance' ? 'Debitado do saldo' : 'Pago em dinheiro'}).`,
-                category: 'system',
-                is_read: false
-            });
+            // Notify user ONLY if NOT anonymous
+            if (!saleIsAnonymous) {
+                await supabase.from('messages').insert({
+                    user_id: saleUser.id,
+                    sender_id: currentUser.id,
+                    content: `Compra direta registrada: ${qty}x ${saleProduct.name} — R$ ${total.toFixed(2)} (${salePayMethod === 'balance' ? 'Debitado do saldo' : 'Pago em dinheiro'}).`,
+                    category: 'system',
+                    is_read: false
+                });
+            }
 
-            setSaleSuccess(`✅ Venda registrada! ${qty}x ${saleProduct.name} = R$ ${total.toFixed(2)} para ${saleUser.name}`);
+            const successName = saleIsAnonymous ? 'Cliente Anônimo' : saleUser.name;
+            setSaleSuccess(`✅ Venda registrada! ${qty}x ${saleProduct.name} = R$ ${total.toFixed(2)} para ${successName}`);
             setTimeout(() => setSaleSuccess(''), 5000);
             setSaleUser(null);
-            setSaleSearch('');
             setSaleProduct(null);
             setSaleCategory('');
             setSaleQuantity('1');
+
+            // Sync local profile state (UI Refresh) ONLY if NOT anonymous
+            if (!saleIsAnonymous && onUpdateProfile) {
+                const { data: freshP } = await supabase.from('profiles').select('balance_brl, balance_chipz').eq('id', saleUser.id).single();
+                if (freshP) {
+                    onUpdateProfile(saleUser.id, {
+                        balanceBrl: Number(freshP.balance_brl),
+                        balanceChipz: Number(freshP.balance_chipz)
+                    } as any);
+                }
+            }
         } catch (err: any) {
             alert('Erro na venda: ' + err.message);
         } finally {
@@ -401,7 +444,14 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                                 </div>
                                 <div>
                                     <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Valor (R$)</label>
-                                    <input type="number" value={newDebtData.amount} onChange={e => setNewDebtData({ ...newDebtData, amount: e.target.value })} placeholder="0.00"
+                                    <input type="text" inputMode="decimal" value={newDebtData.amount}
+                                        onChange={e => {
+                                            const val = e.target.value.replace(',', '.');
+                                            if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                                setNewDebtData({ ...newDebtData, amount: val });
+                                            }
+                                        }}
+                                        placeholder="0.00"
                                         className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-black focus:border-red-500 outline-none" />
                                 </div>
                                 <div>
@@ -473,12 +523,15 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                                                 <div className="flex items-center gap-2 flex-1 w-full lg:w-auto">
                                                     <span className="text-[9px] text-gray-500 uppercase font-black whitespace-nowrap">Pagar R$</span>
                                                     <input
-                                                        type="number"
-                                                        min="0.01"
-                                                        max={fullAmt}
-                                                        step="0.01"
+                                                        type="text"
+                                                        inputMode="decimal"
                                                         value={inputVal}
-                                                        onChange={e => setSettleAmounts(prev => ({ ...prev, [debt.id]: e.target.value }))}
+                                                        onChange={e => {
+                                                            const val = e.target.value.replace(',', '.');
+                                                            if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                                                setSettleAmounts(prev => ({ ...prev, [debt.id]: val }));
+                                                            }
+                                                        }}
                                                         className="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-right text-white text-sm font-bold outline-none focus:border-primary/50"
                                                     />
                                                     <button
@@ -561,11 +614,15 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                             <div className="relative">
                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-green-400 font-black text-lg">R$</span>
                                 <input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
+                                    type="text"
+                                    inputMode="decimal"
                                     value={creditAmount}
-                                    onChange={e => setCreditAmount(e.target.value)}
+                                    onChange={e => {
+                                        const val = e.target.value.replace(',', '.');
+                                        if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                            setCreditAmount(val);
+                                        }
+                                    }}
                                     placeholder="0.00"
                                     className="w-full bg-black/40 border border-white/10 rounded-xl pl-12 pr-4 py-4 text-white text-xl sm:text-2xl font-display font-black focus:border-green-500/50 outline-none transition-colors"
                                 />
@@ -624,6 +681,18 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                                 <><span className="material-icons-outlined text-base">add_card</span> CONFIRMAR DEPÓSITO</>
                             )}
                         </button>
+
+                        <div className="pt-4 border-t border-white/5 flex flex-col items-center gap-2">
+                            <p className="text-[9px] text-gray-600 uppercase font-black">Problemas com transações passadas?</p>
+                            <button
+                                onClick={handleRepairMissingTransaction}
+                                disabled={creditLoading || !creditUser}
+                                className="text-[10px] font-black text-green-500/50 hover:text-green-400 transition-colors uppercase tracking-widest flex items-center gap-1"
+                            >
+                                <span className="material-icons-outlined text-xs">history</span>
+                                Reparar Rastro de R$ 50 (Antigo)
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -651,17 +720,45 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                     )}
 
                     <div className="bg-blue-500/5 border border-blue-500/20 rounded-3xl p-4 sm:p-8 space-y-6">
+                        {/* Anonymous Toggle */}
+                        <div className="flex items-center gap-2 mb-2 bg-white/5 p-4 rounded-3xl border border-white/10 hover:border-blue-500/30 transition-all group">
+                            <label className="flex items-center gap-3 cursor-pointer w-full">
+                                <div className="relative flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={saleIsAnonymous}
+                                        onChange={e => {
+                                            setSaleIsAnonymous(e.target.checked);
+                                            if (e.target.checked) {
+                                                setSaleUser(null);
+                                                setSaleSearch('');
+                                                setSalePayMethod('cash');
+                                            }
+                                        }}
+                                        className="sr-only"
+                                    />
+                                    <div className={`w-10 h-5 rounded-full transition-colors ${saleIsAnonymous ? 'bg-blue-500' : 'bg-gray-700'}`}></div>
+                                    <div className={`absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${saleIsAnonymous ? 'translate-x-5' : ''}`}></div>
+                                </div>
+                                <span className={`text-[11px] font-black uppercase tracking-widest transition-colors ${saleIsAnonymous ? 'text-blue-400' : 'text-gray-400'}`}>
+                                    Venda para Cliente Anônimo (Sem cadastro)
+                                </span>
+                            </label>
+                        </div>
+
                         {/* Player */}
-                        <PlayerSearchDropdown
-                            query={saleSearch}
-                            onQueryChange={q => { setSaleSearch(q); searchPlayers(q, setSaleSearchResults); }}
-                            results={saleSearchResults}
-                            onSelect={u => { setSaleUser(u); setSaleSearch(''); setSaleSearchResults([]); }}
-                            onClear={() => { setSaleUser(null); setSaleSearch(''); setSaleProduct(null); }}
-                            selectedUser={saleUser}
-                            accentColor="blue-400"
-                            label="Jogador Comprador"
-                        />
+                        {!saleIsAnonymous && (
+                            <PlayerSearchDropdown
+                                query={saleSearch}
+                                onQueryChange={q => { setSaleSearch(q); searchPlayers(q, setSaleSearchResults); }}
+                                results={saleSearchResults}
+                                onSelect={u => { setSaleUser(u); setSaleSearch(''); setSaleSearchResults([]); }}
+                                onClear={() => { setSaleUser(null); setSaleSearch(''); setSaleProduct(null); }}
+                                selectedUser={saleUser}
+                                accentColor="blue-400"
+                                label="Jogador Comprador"
+                            />
+                        )}
 
                         {/* Category + Product */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -681,10 +778,13 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                             <div className="w-full">
                                 <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Quantidade</label>
                                 <input
-                                    type="number"
-                                    min="1"
+                                    type="text"
+                                    inputMode="numeric"
                                     value={saleQuantity}
-                                    onChange={e => setSaleQuantity(e.target.value)}
+                                    onChange={e => {
+                                        const val = e.target.value.replace(/\D/g, '');
+                                        setSaleQuantity(val);
+                                    }}
                                     className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-black focus:border-blue-500/50 outline-none"
                                 />
                             </div>
@@ -732,11 +832,15 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                                 ].map(m => (
                                     <button
                                         key={m.value}
-                                        onClick={() => setSalePayMethod(m.value as any)}
+                                        onClick={() => {
+                                            if (saleIsAnonymous && m.value === 'balance') return;
+                                            setSalePayMethod(m.value as any);
+                                        }}
+                                        disabled={saleIsAnonymous && m.value === 'balance'}
                                         className={`flex-1 flex items-center justify-center sm:justify-start gap-2 px-4 py-3 rounded-xl border font-black text-xs uppercase transition-all ${salePayMethod === m.value
                                             ? `bg-${m.color}-500/20 border-${m.color}-500/50 text-${m.color}-400`
                                             : 'bg-white/5 border-white/10 text-gray-500 hover:bg-white/10'
-                                            }`}
+                                            } ${saleIsAnonymous && m.value === 'balance' ? 'opacity-20 cursor-not-allowed grayscale' : ''}`}
                                     >
                                         <span className="material-icons-outlined text-sm">{m.icon}</span>
                                         {m.label}
@@ -746,14 +850,20 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                         </div>
 
                         {/* Summary */}
-                        {saleUser && saleProduct && (
+                        {(saleIsAnonymous || saleUser) && saleProduct && (
                             <div className="bg-black/30 border border-blue-500/30 rounded-2xl p-4 sm:p-5">
                                 <p className="text-[10px] text-gray-500 uppercase font-black mb-3 text-center sm:text-left">Resumo da Venda</p>
                                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                                     <div className="flex items-center gap-3 w-full sm:w-auto">
-                                        <img src={saleUser.avatar_url || `https://ui-avatars.com/api/?name=${saleUser.name}&background=random`} className="w-10 h-10 rounded-xl" alt="" />
+                                        {saleIsAnonymous ? (
+                                            <div className="w-10 h-10 rounded-xl bg-gray-700 flex items-center justify-center">
+                                                <span className="material-icons-outlined text-gray-400">person_off</span>
+                                            </div>
+                                        ) : (
+                                            <img src={saleUser.avatar_url || `https://ui-avatars.com/api/?name=${saleUser.name}&background=random`} className="w-10 h-10 rounded-xl" alt="" />
+                                        )}
                                         <div>
-                                            <p className="text-white font-bold text-sm">{saleUser.name}</p>
+                                            <p className="text-white font-bold text-sm">{saleIsAnonymous ? 'Cliente Anônimo' : saleUser.name}</p>
                                             <p className="text-xs text-gray-500">{parseInt(saleQuantity) || 1}x {saleProduct.name}</p>
                                         </div>
                                     </div>
@@ -762,7 +872,7 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                                         <p className="text-2xl font-display font-black text-blue-400">
                                             R$ {(Number(saleProduct.price) * (parseInt(saleQuantity) || 1)).toFixed(2)}
                                         </p>
-                                        {salePayMethod === 'balance' && (
+                                        {!saleIsAnonymous && salePayMethod === 'balance' && (
                                             <p className="text-[9px] text-gray-500">
                                                 Saldo pós: <span className={Number(saleUser.balance_brl || 0) >= Number(saleProduct.price) * (parseInt(saleQuantity) || 1) ? 'text-green-400' : 'text-red-400'}>
                                                     R$ {(Number(saleUser.balance_brl || 0) - Number(saleProduct.price) * (parseInt(saleQuantity) || 1)).toFixed(2)}
@@ -776,7 +886,7 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
 
                         <button
                             onClick={handleDirectSale}
-                            disabled={saleLoading || !saleUser || !saleProduct}
+                            disabled={saleLoading || (!saleIsAnonymous && !saleUser) || !saleProduct}
                             className="w-full bg-blue-500 hover:bg-blue-400 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black py-4 rounded-2xl transition-all shadow-lg uppercase tracking-widest text-sm flex items-center justify-center gap-2"
                         >
                             {saleLoading ? (

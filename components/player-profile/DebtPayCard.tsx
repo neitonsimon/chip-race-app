@@ -66,12 +66,15 @@ export const DebtPayCard: React.FC<DebtPayCardProps> = ({ debt, fullAmt, playerB
                 {payType === 'partial' && (
                     <div className="space-y-3 animate-in fade-in zoom-in duration-200">
                         <input
-                            type="number"
-                            min="1"
-                            max={fullAmt}
-                            step="10"
+                            type="text"
+                            inputMode="decimal"
                             value={partialAmt}
-                            onChange={e => setPartialAmt(e.target.value)}
+                            onChange={e => {
+                                const val = e.target.value.replace(',', '.');
+                                if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                    setPartialAmt(val);
+                                }
+                            }}
                             placeholder={`Máx: R$ ${fullAmt.toFixed(2)}`}
                             className="w-full bg-black/50 border border-white/10 rounded-lg p-3 sm:p-4 text-white font-bold text-center focus:border-red-500 outline-none text-sm sm:text-base transition-colors"
                         />

@@ -558,9 +558,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             <div>
                                 <h3 className="text-2xl font-display font-black text-white uppercase tracking-widest flex items-center gap-3">
                                     <span className="material-icons text-primary text-3xl">emoji_events</span>
-                                    Todas as Insígnias
+                                    Todas as Medalhas
                                 </h3>
-                                <p className="text-gray-500 text-xs mt-1 uppercase font-black tracking-widest italic">Coleção completa de conquistas Chip Race</p>
+                                <p className="text-gray-500 text-xs mt-1 uppercase font-black tracking-widest italic">Coleção completa de medalhas Chip Race</p>
                             </div>
                             <button onClick={() => setShowAllBadges(false)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/10 transition-all">
                                 <span className="material-icons-outlined">close</span>
@@ -601,7 +601,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         </div>
 
                         <div className="mt-8 pt-6 border-t border-white/5 text-center">
-                            <p className="text-[10px] text-gray-600 font-black uppercase tracking-[0.3em]">Total de Insígnias: {badgeTemplates.length}</p>
+                            <p className="text-[10px] text-gray-600 font-black uppercase tracking-[0.3em]">Total de Medalhas: {badgeTemplates.length}</p>
                         </div>
                     </div>
                 </div>

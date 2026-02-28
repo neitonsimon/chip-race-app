@@ -38,6 +38,7 @@ interface PlayerProfileProps {
     userVotes?: Record<string, number>;
     onVotePoll?: (pollId: string, optionIndex: number) => void;
     onMarkAsRead?: (id: string) => void;
+    onDeleteMessage?: (id: string) => void;
     onReply?: (id: string, text: string) => void;
     rankings?: RankingInstance[];
     rankingPlayers?: RankingPlayer[];
@@ -79,6 +80,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     userVotes,
     onVotePoll,
     onMarkAsRead,
+    onDeleteMessage,
     onReply,
     rankings,
     rankingPlayers = [],
@@ -655,77 +657,52 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
     const activeDailyRewards = dailyRewards.length > 0 ? dailyRewards : FALLBACK_DAILY_REWARDS;
 
-    const handleClaimToday = async (dayIndex?: number) => {
-        if (isSavingExp) return;
+    const handleClaimToday = async () => {
+        if (isSavingExp || !player.id) return;
         setIsSavingExp(true);
         try {
-            const currentStreak = player.dailyStreak || 0;
-            const targetDay = dayIndex !== undefined ? dayIndex : currentStreak;
-            const reward = activeDailyRewards[targetDay % activeDailyRewards.length];
+            // Call the secure RPC to process the claim
+            const { data, error } = await supabase.rpc('process_daily_login', { u_id: player.id });
 
-            if (!reward) throw new Error("Recompensa não encontrada.");
+            if (error) throw error;
 
-            let updatedPlayer = { ...player };
+            if (data.status === 'already_claimed') {
+                alert('Você já resgatou sua recompensa de hoje!');
+                setCanClaimDaily(false);
+                setShowClaimModal(false);
+                return;
+            }
 
-            // 1. Processar Recompensa - Suporte para novo e antigo schema
-            const rType = reward.reward_type || ((reward as any).xp > 0 ? 'xp' : ((reward as any).item ? 'item' : 'unknown'));
-            const rValue = reward.reward_value || (reward as any).xp || (reward as any).value || 0;
+            if (data.status === 'success') {
+                // Find the reward details for animation
+                const reward = activeDailyRewards[(data.streak - 1) % activeDailyRewards.length];
+                claimedRewardRef.current = reward || {
+                    day: data.streak,
+                    reward_type: data.reward_type,
+                    reward_value: data.reward_value,
+                    reward_label: data.reward_label
+                };
 
-            if (rType === 'xp') {
-                const xpGain = Number(rValue) || 0;
-                let newExp = (updatedPlayer.currentExp || 0) + xpGain;
-                let newLevel = updatedPlayer.level || 1;
-                let newDebtLimit = updatedPlayer.debtLimitBrl || 0;
+                // Show animation
+                setClaimAnimation(true);
 
-                if (experienceLevels && experienceLevels.length > 0) {
-                    const sortedLevels = [...experienceLevels].sort((a, b) => a.level - b.level);
-                    let nextLvlObj = sortedLevels.find(l => l.level === newLevel + 1);
-                    while (nextLvlObj && newExp >= nextLvlObj.required_exp) {
-                        newLevel++;
-                        if (nextLvlObj.credit_limit !== undefined) {
-                            newDebtLimit = nextLvlObj.credit_limit;
-                        }
-                        nextLvlObj = sortedLevels.find(l => l.level === newLevel + 1);
-                    }
+                // Fetch profile again to update all stats (XP, Balances, Badges)
+                if (currentUser?.id) {
+                    // This will trigger the useEffect in AppContext that fetches everything
+                    // but we can also call fetchProfile directly if we had access to it.
+                    // Since we're in a child component, we rely on the parent (AppContext)
+                    // fetching again via its own mechanisms or we update what we can.
+
+                    // Force refresh via a global event or similar if needed
+                    window.dispatchEvent(new CustomEvent('refresh-profile-data'));
                 }
 
-                updatedPlayer.currentExp = newExp;
-                updatedPlayer.level = newLevel;
-                updatedPlayer.debtLimitBrl = newDebtLimit;
-            } else if (rType === 'brl' || rType === 'BRL') {
-                updatedPlayer.balanceBrl = (updatedPlayer.balanceBrl || 0) + (Number(rValue) || 0);
-            } else if (rType === 'chipz' || rType === 'CHIPZ') {
-                updatedPlayer.balanceChipz = (updatedPlayer.balanceChipz || 0) + (Number(rValue) || 0);
+                setTimeout(() => {
+                    setClaimAnimation(false);
+                    setShowClaimModal(false);
+                    setCanClaimDaily(false);
+                }, 3000);
             }
-
-            // 2. Atualizar Streak (Incrementar ao coletar) e Data
-            updatedPlayer.lastDailyClaim = new Date().toISOString();
-            updatedPlayer.dailyStreak = (player.dailyStreak || 0) + 1;
-
-            // 3. Persistir no Supabase através do handler global
-            if (onUpdateProfile && targetIdRef.current) {
-                await onUpdateProfile(targetIdRef.current, {
-                    currentExp: updatedPlayer.currentExp,
-                    level: updatedPlayer.level,
-                    debtLimitBrl: updatedPlayer.debtLimitBrl,
-                    balanceBrl: updatedPlayer.balanceBrl,
-                    balanceChipz: updatedPlayer.balanceChipz,
-                    lastDailyClaim: updatedPlayer.lastDailyClaim,
-                    dailyStreak: updatedPlayer.dailyStreak
-                } as any);
-            }
-
-            // 4. Atualizar estado local e rodar animação
-            setPlayer(updatedPlayer);
-            claimedRewardRef.current = reward;
-            setClaimAnimation(true);
-
-            setTimeout(() => {
-                setClaimAnimation(false);
-                setShowClaimModal(false);
-                setCanClaimDaily(false);
-            }, 3000);
-
         } catch (err: any) {
             console.error('Erro ao resgatar recompensa:', err);
             alert('Falha ao resgatar: ' + err.message);
@@ -1144,6 +1121,11 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                         setInboxFilter={setInboxFilter}
                         setViewedMessage={setViewedMessage}
                         onMarkAsRead={onMarkAsRead}
+                        onDeleteMessage={(id) => {
+                            if (window.confirm('Excluir esta mensagem?')) {
+                                onDeleteMessage?.(id);
+                            }
+                        }}
                     />
                 )}
 
@@ -1414,7 +1396,19 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                 )}
 
                                 {/* ACTION BUTTONS */}
-                                <div className="mt-10 flex justify-center">
+                                <div className="mt-10 flex justify-center gap-4">
+                                    <button
+                                        onClick={() => {
+                                            if (window.confirm('Excluir esta mensagem permanentemente?')) {
+                                                onDeleteMessage?.(viewedMessage.id);
+                                                setViewedMessage(null);
+                                            }
+                                        }}
+                                        className="px-8 py-3 bg-red-600/10 hover:bg-red-600/20 text-red-500 font-bold rounded-2xl border border-red-500/20 transition-all flex items-center gap-2"
+                                    >
+                                        <span className="material-icons-outlined text-sm">delete_outline</span>
+                                        Excluir
+                                    </button>
                                     <button
                                         onClick={() => setViewedMessage(null)}
                                         className="px-12 py-3 bg-white/5 hover:bg-white/10 text-white font-bold rounded-2xl transition-all"
@@ -1518,7 +1512,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                                     return (
                                                         <div
                                                             key={i}
-                                                            onClick={canClaimThis ? () => handleClaimToday(i) : undefined}
+                                                            onClick={canClaimThis ? () => handleClaimToday() : undefined}
                                                             className={`flex items-center justify-between px-4 py-2.5 transition-colors ${isCurrentDay ? 'bg-primary/10 border-l-2 border-primary' :
                                                                 isPast ? 'bg-white/5 cursor-pointer hover:bg-white/10' :
                                                                     isFuture ? 'opacity-30 cursor-not-allowed' : ''

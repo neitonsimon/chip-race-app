@@ -61,12 +61,42 @@ export const SettingsTab: React.FC = () => {
     const [isLoadingContent, setIsLoadingContent] = useState(false);
     const [isSavingContent, setIsSavingContent] = useState(false);
 
+    // Daily Rewards State
+    const [dailyRewards, setDailyRewards] = useState<any[]>([]);
+    const [isLoadingRewards, setIsLoadingRewards] = useState(false);
+    const [isSavingReward, setIsSavingReward] = useState(false);
+    const [badgeTemplates, setBadgeTemplates] = useState<any[]>([]);
+    const [editingReward, setEditingReward] = useState<any | null>(null);
+    const [rewardForm, setRewardForm] = useState({
+        day: 1,
+        reward_type: 'xp',
+        reward_value: '',
+        reward_label: ''
+    });
+
+    // Nova Categoria Form State
+    const [showAddCategory, setShowAddCategory] = useState(false);
+    const [newCatData, setNewCatData] = useState({ slug: '', title: '', icon: 'inventory_2' });
+    const [showIconPicker, setShowIconPicker] = useState<number | null>(null); // Index or -1 for New Cat
+
+    const iconPool = [
+        'inventory_2', 'category', 'stars', 'receipt_long', 'campaign', 'settings',
+        'point_of_sale', 'add_shopping_cart', 'bar_chart', 'quiz', 'home',
+        'calendar_month', 'person', 'diamond', 'wine_bar', 'restaurant',
+        'local_bar', 'sports_esports', 'local_activity', 'confirmation_number',
+        'emoji_events', 'groups', 'chat', 'info', 'account_balance_wallet',
+        'credit_card', 'monetization_on', 'redeem', 'local_fire_department',
+        'auto_awesome', 'military_tech', 'psychology', 'sports_poker'
+    ];
+
     // Sidebar active section
-    const [activeSection, setActiveSection] = useState<'roadmap' | 'hero' | 'details' | 'faq' | 'months' | 'ecosystem' | 'defaults'>('roadmap');
+    const [activeSection, setActiveSection] = useState<'roadmap' | 'hero' | 'details' | 'faq' | 'months' | 'ecosystem' | 'daily-rewards' | 'defaults'>('roadmap');
 
     useEffect(() => {
         fetchRoadmap();
         fetchContent();
+        fetchDailyRewards();
+        fetchBadgeTemplates();
     }, []);
 
     const fetchRoadmap = async () => {
@@ -126,6 +156,65 @@ export const SettingsTab: React.FC = () => {
             alert('Erro ao salvar conteúdo: ' + err.message);
         } finally {
             setIsSavingContent(false);
+        }
+    };
+
+    const fetchDailyRewards = async () => {
+        setIsLoadingRewards(true);
+        try {
+            const { data, error } = await supabase.from('daily_rewards').select('*').order('day', { ascending: true });
+            if (error) throw error;
+            setDailyRewards(data || []);
+        } catch (err: any) {
+            console.error('Error fetching daily rewards:', err.message);
+        } finally {
+            setIsLoadingRewards(false);
+        }
+    };
+
+    const fetchBadgeTemplates = async () => {
+        try {
+            const { data } = await supabase.from('badge_templates').select('*');
+            if (data) setBadgeTemplates(data);
+        } catch (err) { console.error(err); }
+    };
+
+    const handleSaveReward = async () => {
+        if (!rewardForm.day || !rewardForm.reward_value) {
+            alert('Dia e valor da recompensa são obrigatórios.');
+            return;
+        }
+        setIsSavingReward(true);
+        try {
+            const payload = {
+                day: parseInt(rewardForm.day.toString()),
+                reward_type: rewardForm.reward_type,
+                reward_value: rewardForm.reward_value.toString(),
+                reward_label: rewardForm.reward_label || `Recompensa Dia ${rewardForm.day}`
+            };
+
+            const { error } = await supabase.from('daily_rewards').upsert(payload, { onConflict: 'day' });
+            if (error) throw error;
+
+            alert('✅ Recompensa salva com sucesso!');
+            fetchDailyRewards();
+            setEditingReward(null);
+            setRewardForm({ day: dailyRewards.length + 1, reward_type: 'xp', reward_value: '', reward_label: '' });
+        } catch (err: any) {
+            alert('Erro ao salvar recompensa: ' + err.message);
+        } finally {
+            setIsSavingReward(false);
+        }
+    };
+
+    const handleDeleteReward = async (day: number) => {
+        if (!window.confirm(`Excluir recompensa do dia ${day}?`)) return;
+        try {
+            const { error } = await supabase.from('daily_rewards').delete().eq('day', day);
+            if (error) throw error;
+            fetchDailyRewards();
+        } catch (err: any) {
+            alert('Erro ao excluir: ' + err.message);
         }
     };
 
@@ -233,18 +322,42 @@ export const SettingsTab: React.FC = () => {
         }
     };
 
-    const handleAddCategory = () => {
-        const newCat: any = {
-            id: crypto.randomUUID(),
-            title: 'Nova Categoria',
-            description: 'Descrição aqui...',
-            icon: 'info',
-            color: 'primary',
-            slots: 0,
-            is_mystery: false,
-            order: categories.length
-        };
-        setCategories([...categories, newCat]);
+    const handleConfirmAddCategory = async () => {
+        if (!newCatData.slug || !newCatData.title) return;
+
+        const newCatId = newCatData.slug.toLowerCase().replace(/\s+/g, '_');
+
+        // Check if slug already exists in current list to avoid immediate errors
+        if (categories.some(c => c.id === newCatId)) {
+            alert('Este Slug já está em uso.');
+            return;
+        }
+
+        setIsSavingContent(true);
+        try {
+            const newCat: any = {
+                id: newCatId,
+                title: newCatData.title,
+                description: 'Nova categoria do ecossistema...',
+                icon: newCatData.icon,
+                color: 'primary',
+                slots: 0,
+                is_mystery: false,
+                is_hidden: false,
+                order: categories.length
+            };
+
+            const { error } = await supabase.from('ecosystem_categories').insert([newCat]);
+            if (error) throw error;
+
+            setCategories([...categories, newCat]);
+            setNewCatData({ slug: '', title: '', icon: 'inventory_2' });
+            alert('✅ Categoria criada com sucesso!');
+        } catch (err: any) {
+            alert('Erro ao criar categoria: ' + err.message);
+        } finally {
+            setIsSavingContent(false);
+        }
     };
 
     const handleDeleteCategory = async (id: string) => {
@@ -287,6 +400,9 @@ export const SettingsTab: React.FC = () => {
                     icon="info"
                     label="The Chosen"
                 />
+                <SidebarButton active={activeSection === 'defaults'} onClick={() => setActiveSection('defaults')} icon="webhook" label="App Defaults" />
+                <div className="h-px w-full bg-white/5 my-2"></div>
+                <SidebarButton active={activeSection === 'daily-rewards'} onClick={() => setActiveSection('daily-rewards')} icon="calendar_today" label="Login Diário" />
                 <SidebarButton
                     active={activeSection === 'faq'}
                     onClick={() => setActiveSection('faq')}
@@ -304,12 +420,6 @@ export const SettingsTab: React.FC = () => {
                     onClick={() => setActiveSection('ecosystem')}
                     icon="category"
                     label="Ecossistema"
-                />
-                <SidebarButton
-                    active={activeSection === 'defaults'}
-                    onClick={() => setActiveSection('defaults')}
-                    icon="settings"
-                    label="Padrões"
                 />
             </aside>
 
@@ -522,6 +632,74 @@ export const SettingsTab: React.FC = () => {
                 {activeSection === 'ecosystem' && (
                     <div className="animate-in fade-in slide-in-from-bottom-4 lg:slide-in-from-right duration-500">
                         <SectionHeader title="Ecossistema" subtitle="Categorias e slots" />
+
+                        {/* New Category Form (As per print) */}
+                        <div className="mb-10 bg-[#050214] border border-white/10 rounded-3xl p-6 sm:p-8 max-w-md mx-auto shadow-2xl relative">
+                            <div className="flex items-center gap-3 mb-8">
+                                <span className="material-icons text-primary">category</span>
+                                <h4 className="text-sm font-black text-white uppercase tracking-widest">Nova Categoria</h4>
+                            </div>
+
+                            <div className="space-y-6">
+                                <FormGroup label="Slug (Sem Espaços)">
+                                    <input
+                                        type="text"
+                                        value={newCatData.slug}
+                                        onChange={e => setNewCatData({ ...newCatData, slug: e.target.value })}
+                                        placeholder="ex: vip"
+                                        className="form-input"
+                                    />
+                                </FormGroup>
+
+                                <FormGroup label="Nome de Exibição">
+                                    <input
+                                        type="text"
+                                        value={newCatData.title}
+                                        onChange={e => setNewCatData({ ...newCatData, title: e.target.value })}
+                                        placeholder="EX: VIP"
+                                        className="form-input"
+                                    />
+                                </FormGroup>
+
+                                <div className="relative">
+                                    <FormGroup label="Ícone">
+                                        <div
+                                            onClick={() => setShowIconPicker(showIconPicker === -1 ? null : -1)}
+                                            className="form-input flex items-center justify-between cursor-pointer hover:border-primary transition-colors"
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <span className="material-icons-outlined text-primary text-sm">{newCatData.icon}</span>
+                                                <span className="text-xs text-gray-400">{newCatData.icon}</span>
+                                            </div>
+                                            <span className="material-icons text-gray-600 text-sm">expand_more</span>
+                                        </div>
+                                    </FormGroup>
+
+                                    {showIconPicker === -1 && (
+                                        <div className="absolute z-[10] top-full left-0 right-0 mt-2 p-3 bg-[#0a061e] border border-white/10 rounded-2xl shadow-2xl grid grid-cols-6 gap-2 max-h-48 overflow-y-auto">
+                                            {iconPool.map(icon => (
+                                                <button
+                                                    key={icon}
+                                                    onClick={() => { setNewCatData({ ...newCatData, icon }); setShowIconPicker(null); }}
+                                                    className={`w-full aspect-square flex items-center justify-center rounded-lg hover:bg-primary/20 transition-all ${newCatData.icon === icon ? 'bg-primary text-white shadow-neon-pink' : 'text-gray-500'}`}
+                                                >
+                                                    <span className="material-icons-outlined text-lg">{icon}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <button
+                                    onClick={handleConfirmAddCategory}
+                                    disabled={!newCatData.slug || !newCatData.title}
+                                    className="w-full py-4 bg-primary text-white font-black uppercase text-xs tracking-[0.2em] rounded-2xl shadow-neon-pink hover:bg-primary/80 transition-all disabled:opacity-30 disabled:shadow-none"
+                                >
+                                    Criar Categoria
+                                </button>
+                            </div>
+                        </div>
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                             {categories.map((cat, idx) => (
                                 <div key={cat.id || idx} className="bg-white/5 border border-white/10 rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-6 relative group">
@@ -529,17 +707,50 @@ export const SettingsTab: React.FC = () => {
                                         <span className="material-icons-outlined text-sm">delete</span>
                                     </button>
                                     <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                                        <div className="col-span-2 flex items-center gap-3 sm:gap-4 mb-2">
-                                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary flex-shrink-0">
-                                                <span className="material-icons-outlined text-lg">{cat.icon}</span>
+                                        <div className="col-span-2 flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-3 sm:gap-4 flex-1">
+                                                <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary flex-shrink-0`}>
+                                                    <span className="material-icons-outlined text-lg">{cat.icon}</span>
+                                                </div>
+                                                <input type="text" value={cat.title} onChange={e => handleUpdateCategory(idx, 'title', e.target.value)} className="w-full bg-transparent border-none text-white font-black uppercase text-xs sm:text-sm outline-none" placeholder="Nome" />
                                             </div>
-                                            <input type="text" value={cat.title} onChange={e => handleUpdateCategory(idx, 'title', e.target.value)} className="flex-1 bg-transparent border-none text-white font-black uppercase text-xs sm:text-sm outline-none" placeholder="Nome" />
+                                            {cat.is_hidden && (
+                                                <span className="text-[8px] font-black bg-red-500/10 text-red-500 px-2 py-0.5 rounded-full border border-red-500/20 uppercase tracking-tighter ml-2 shrink-0">Oculto</span>
+                                            )}
                                         </div>
-                                        <FormGroup label="Ícone">
-                                            <input type="text" value={cat.icon} onChange={e => handleUpdateCategory(idx, 'icon', e.target.value)} className="form-input text-xs" />
-                                        </FormGroup>
+
+                                        <div className="relative">
+                                            <FormGroup label="Ícone">
+                                                <div
+                                                    onClick={() => setShowIconPicker(showIconPicker === idx ? null : idx)}
+                                                    className="form-input flex items-center justify-between cursor-pointer hover:border-primary transition-colors text-xs"
+                                                >
+                                                    <span className="material-icons-outlined text-primary text-sm">{cat.icon}</span>
+                                                    <span className="material-icons text-gray-600 text-xs">expand_more</span>
+                                                </div>
+                                            </FormGroup>
+                                            {showIconPicker === idx && (
+                                                <div className="absolute z-[10] top-full left-0 right-0 mt-2 p-2 bg-[#0a061e] border border-white/10 rounded-xl shadow-2xl grid grid-cols-4 gap-2 max-h-40 overflow-y-auto w-40">
+                                                    {iconPool.map(icon => (
+                                                        <button
+                                                            key={icon}
+                                                            onClick={() => { handleUpdateCategory(idx, 'icon', icon); setShowIconPicker(null); }}
+                                                            className={`w-full aspect-square flex items-center justify-center rounded-lg hover:bg-primary/20 ${cat.icon === icon ? 'bg-primary text-white' : 'text-gray-500'}`}
+                                                        >
+                                                            <span className="material-icons-outlined text-sm">{icon}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+
                                         <FormGroup label="Slots">
-                                            <input type="number" value={cat.slots} onChange={e => handleUpdateCategory(idx, 'slots', parseInt(e.target.value))} className="form-input text-xs" />
+                                            <input type="text" inputMode="numeric" value={cat.slots}
+                                                onChange={e => {
+                                                    const val = e.target.value.replace(/\D/g, '');
+                                                    handleUpdateCategory(idx, 'slots', val === '' ? 0 : parseInt(val));
+                                                }}
+                                                className="form-input text-xs" />
                                         </FormGroup>
                                         <FormGroup label="Cor">
                                             <select value={cat.color} onChange={e => handleUpdateCategory(idx, 'color', e.target.value)} className="form-input text-[10px] appearance-none">
@@ -555,6 +766,12 @@ export const SettingsTab: React.FC = () => {
                                                 <span className="text-[9px] font-bold text-gray-500 uppercase">Habilitar</span>
                                             </div>
                                         </FormGroup>
+                                        <FormGroup label="Ocultar">
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <input type="checkbox" checked={cat.is_hidden} onChange={e => handleUpdateCategory(idx, 'is_hidden', e.target.checked)} className="w-4 h-4 rounded bg-white/5 border-white/10" />
+                                                <span className="text-[9px] font-bold text-gray-500 uppercase">Sim</span>
+                                            </div>
+                                        </FormGroup>
                                         <div className="col-span-2">
                                             <FormGroup label="Descrição" fullWidth>
                                                 <textarea rows={2} value={cat.description} onChange={e => handleUpdateCategory(idx, 'description', e.target.value)} className="form-input text-xs resize-none" />
@@ -568,10 +785,6 @@ export const SettingsTab: React.FC = () => {
                                     </div>
                                 </div>
                             ))}
-                            <button onClick={handleAddCategory} className="border-2 border-dashed border-white/5 rounded-[1.5rem] sm:rounded-[2rem] p-6 sm:p-10 flex flex-col items-center justify-center text-gray-600 hover:text-white hover:bg-white/5 transition-all group">
-                                <span className="material-icons-outlined text-3xl sm:text-4xl mb-4 group-hover:scale-110 transition-transform">add_box</span>
-                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-center">Adicionar Categoria</span>
-                            </button>
                         </div>
                     </div>
                 )}
@@ -584,9 +797,13 @@ export const SettingsTab: React.FC = () => {
                                 <FormGroup label="Total de Classificados" fullWidth>
                                     <div className="flex gap-4 items-center">
                                         <input
-                                            type="number"
+                                            type="text"
+                                            inputMode="numeric"
                                             value={totalQualifiers === null ? '' : totalQualifiers}
-                                            onChange={e => setTotalQualifiers(e.target.value === '' ? null : parseInt(e.target.value))}
+                                            onChange={e => {
+                                                const val = e.target.value.replace(/\D/g, '');
+                                                setTotalQualifiers(val === '' ? null : parseInt(val));
+                                            }}
                                             placeholder="Auto"
                                             className="flex-1 form-input text-center text-lg sm:text-xl font-display italic text-primary"
                                         />
@@ -599,6 +816,162 @@ export const SettingsTab: React.FC = () => {
                                     <button onClick={() => handleSaveContent('total_qualifiers', totalQualifiers)} disabled={isSavingContent} className="btn-save shadow-neon-pink w-full">
                                         <span className="material-icons-outlined text-sm">webhook</span> {isSavingContent ? 'Sincronizando...' : 'Publicar Variável'}
                                     </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'daily-rewards' && (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 lg:slide-in-from-right duration-500">
+                        <SectionHeader title="Recompensas Diárias" subtitle="Gestão de streak e prêmios consecutivos" />
+
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                            {/* Form Column */}
+                            <div className="lg:sticky lg:top-0 space-y-6">
+                                <div className="bg-[#050214] border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl border-l-4 border-l-primary">
+                                    <div className="flex items-center gap-3 mb-8">
+                                        <span className="material-icons text-primary">{editingReward ? 'edit_calendar' : 'add_task'}</span>
+                                        <h4 className="text-sm font-black text-white uppercase tracking-widest">{editingReward ? 'Editar Recompensa' : 'Nova Recompensa'}</h4>
+                                    </div>
+
+                                    <div className="space-y-5">
+                                        <FormGroup label="Dia Consecutivo">
+                                            <input
+                                                type="number"
+                                                value={rewardForm.day}
+                                                onChange={e => setRewardForm({ ...rewardForm, day: parseInt(e.target.value) })}
+                                                className="form-input"
+                                                placeholder="ex: 7"
+                                            />
+                                        </FormGroup>
+
+                                        <FormGroup label="Label do Prêmio">
+                                            <input
+                                                type="text"
+                                                value={rewardForm.reward_label}
+                                                onChange={e => setRewardForm({ ...rewardForm, reward_label: e.target.value })}
+                                                className="form-input"
+                                                placeholder="ex: Bônus VIP"
+                                            />
+                                        </FormGroup>
+
+                                        <FormGroup label="Tipo de Prêmio">
+                                            <select
+                                                value={rewardForm.reward_type}
+                                                onChange={e => setRewardForm({ ...rewardForm, reward_type: e.target.value as any, reward_value: '' })}
+                                                className="form-input appearance-none"
+                                            >
+                                                <option value="xp">Experiência (EXP)</option>
+                                                <option value="chipz">Chipz (Moeda Virtual)</option>
+                                                <option value="brl">BRL (Crédito Real)</option>
+                                                <option value="badge">Insígnia (Medalha)</option>
+                                            </select>
+                                        </FormGroup>
+
+                                        {rewardForm.reward_type === 'badge' ? (
+                                            <FormGroup label="Selecionar Insígnia">
+                                                <select
+                                                    value={rewardForm.reward_value}
+                                                    onChange={e => setRewardForm({ ...rewardForm, reward_value: e.target.value })}
+                                                    className="form-input appearance-none"
+                                                >
+                                                    <option value="">Escolha uma insígnia...</option>
+                                                    {badgeTemplates.map(b => (
+                                                        <option key={b.id} value={b.id}>{b.title}</option>
+                                                    ))}
+                                                </select>
+                                            </FormGroup>
+                                        ) : (
+                                            <FormGroup label="Valor do Prêmio">
+                                                <input
+                                                    type="number"
+                                                    value={rewardForm.reward_value}
+                                                    onChange={e => setRewardForm({ ...rewardForm, reward_value: e.target.value })}
+                                                    className="form-input"
+                                                    placeholder="Quantidade"
+                                                />
+                                            </FormGroup>
+                                        )}
+
+                                        <div className="flex gap-3 pt-4">
+                                            {editingReward && (
+                                                <button
+                                                    onClick={() => { setEditingReward(null); setRewardForm({ day: dailyRewards.length + 1, reward_type: 'xp', reward_value: '', reward_label: '' }); }}
+                                                    className="flex-1 py-3 text-gray-500 font-black uppercase text-[10px] tracking-widest hover:text-white transition-colors"
+                                                >
+                                                    Cancelar
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={handleSaveReward}
+                                                disabled={isSavingReward}
+                                                className={`flex-[2] py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all shadow-neon-pink ${editingReward ? 'bg-amber-500 text-black' : 'bg-primary text-white'}`}
+                                            >
+                                                {isSavingReward ? 'Salvando...' : editingReward ? 'Atualizar Dia' : 'Lançar Prêmio'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* List Column */}
+                            <div className="lg:col-span-2 space-y-4">
+                                <div className="bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8">
+                                    <div className="flex items-center justify-between mb-8">
+                                        <h4 className="text-xs font-black text-white uppercase tracking-widest">Streak Configurado</h4>
+                                        <span className="text-[10px] text-primary font-black px-3 py-1 bg-primary/10 rounded-full border border-primary/20">{dailyRewards.length} Dias</span>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        {isLoadingRewards ? (
+                                            <div className="flex justify-center p-12">
+                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                                            </div>
+                                        ) : dailyRewards.length === 0 ? (
+                                            <EmptyState icon="auto_awesome" text="Configure o primeiro dia de login" />
+                                        ) : (
+                                            dailyRewards.map((reward) => (
+                                                <div
+                                                    key={reward.day}
+                                                    className={`group p-4 bg-white/5 border rounded-2xl flex items-center gap-4 transition-all hover:bg-white/10 ${editingReward?.day === reward.day ? 'border-primary shadow-neon-pink/20 scale-[1.02]' : 'border-white/5'}`}
+                                                >
+                                                    <div className="w-12 h-12 rounded-xl bg-black/40 border border-white/10 flex flex-col items-center justify-center shrink-0">
+                                                        <span className="text-[10px] text-gray-500 font-black leading-none uppercase">Dia</span>
+                                                        <span className="text-xl font-display font-black text-white italic">{reward.day}</span>
+                                                    </div>
+
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 mb-0.5">
+                                                            <h5 className="text-white font-bold text-sm truncate uppercase tracking-tighter">{reward.reward_label}</h5>
+                                                            <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter ${reward.reward_type === 'xp' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : reward.reward_type === 'chipz' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : reward.reward_type === 'brl' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-primary/10 text-primary border border-primary/20'}`}>
+                                                                {reward.reward_type}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-[10px] text-gray-500 font-black uppercase flex items-center gap-1">
+                                                            <span className="material-icons-outlined text-[12px]">{reward.reward_type === 'xp' ? 'bolt' : reward.reward_type === 'chipz' ? 'monetization_on' : reward.reward_type === 'brl' ? 'account_balance_wallet' : 'military_tech'}</span>
+                                                            {reward.reward_type === 'badge' ? 'Insignia ID: ' + reward.reward_value?.toString().slice(0, 8) + '...' : '+' + reward.reward_value}
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => { setEditingReward(reward); setRewardForm({ ...reward }); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                                                            className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-gray-500 hover:text-white hover:bg-primary/20 border border-white/5 transition-all"
+                                                        >
+                                                            <span className="material-icons-outlined text-sm">edit</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteReward(reward.day)}
+                                                            className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-gray-700 hover:text-red-500 hover:bg-red-500/10 border border-white/5 transition-all"
+                                                        >
+                                                            <span className="material-icons-outlined text-sm">delete</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>

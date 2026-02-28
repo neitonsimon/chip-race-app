@@ -58,8 +58,11 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({
 
         if (reportFilter !== 'event') {
             extraReportData.forEach(tx => {
+                const brl = Number(tx.amount_brl || 0);
+                if (brl >= 0) return; // Ignore positive credits (not revenue)
+
                 const section = 'Outros';
-                sections[section].total += Math.abs(Number(tx.amount_brl));
+                sections[section].total += Math.abs(brl);
                 sections[section].items.push({ ...tx, isExtra: true });
             });
         }
@@ -78,11 +81,14 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({
         });
         if (reportFilter !== 'event') {
             extraReportData.forEach(tx => {
+                const brl = Number(tx.amount_brl || 0);
+                if (brl >= 0) return; // Ignore positive credits (not revenue)
+
                 const name = tx.description || 'Transação';
                 const cat = tx.category || 'outros';
                 if (!products[name]) products[name] = { qty: 0, total: 0, category: cat };
                 products[name].qty += 1;
-                products[name].total += Math.abs(Number(tx.amount_brl));
+                products[name].total += Math.abs(brl);
             });
         }
         return Object.entries(products).sort((a, b) => b[1].total - a[1].total);
@@ -105,6 +111,7 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({
     });
 
     const filteredExtraReportItems = extraReportData.filter(i => {
+        if (Number(i.amount_brl || 0) >= 0) return false; // Only revenue
         if (reportProductFilter !== 'all' && (i.description || 'Transação') !== reportProductFilter) return false;
         if (reportCategoryFilter !== 'all' && (i.category || 'outros') !== reportCategoryFilter) return false;
         return true;
@@ -164,7 +171,7 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({
                                         style={{ backgroundColor: '#0a0720' }}
                                     >
                                         <option value="" style={{ backgroundColor: '#0a0720' }}>Selecionar Evento</option>
-                                        {events.map(ev => <option key={ev.id} value={ev.id} style={{ backgroundColor: '#0a0720' }}>{ev.title} ({new Date(ev.date).toLocaleDateString('pt-BR')})</option>)}
+                                        {events.map(ev => <option key={ev.id} value={ev.id} style={{ backgroundColor: '#0a0720' }}>{ev.title} ({ev.date.split('-').reverse().join('/')})</option>)}
                                     </select>
                                     {selectedEvent && <button onClick={() => fetchReport(selectedEvent.id)} className="p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-primary/20 hover:border-primary/50 transition-all"><span className="material-icons-outlined text-sm text-gray-400">refresh</span></button>}
                                 </div>
@@ -221,7 +228,7 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({
                                 {[
                                     {
                                         label: 'Total Bruto',
-                                        val: `R$ ${(filteredReportItems.reduce((s, i) => s + Number(i.total_price_brl), 0) + (reportFilter !== 'event' ? filteredExtraReportItems.reduce((s, i) => s + Math.abs(Number(i.amount_brl)), 0) : 0)).toFixed(2)}`,
+                                        val: `R$ ${(filteredReportItems.reduce((s, i) => s + Number(i.total_price_brl), 0) + (reportFilter !== 'event' ? filteredExtraReportItems.reduce((s, i) => s + (Number(i.amount_brl) < 0 ? Math.abs(Number(i.amount_brl)) : 0), 0) : 0)).toFixed(2)}`,
                                         color: 'text-white'
                                     },
                                     {
@@ -235,7 +242,12 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({
                                         color: 'text-red-400'
                                     },
                                     {
-                                        label: 'Fichas',
+                                        label: 'Cash Out',
+                                        val: `R$ ${(reportProductFilter === 'all' && reportCategoryFilter === 'all' ? reportCommandsData.reduce((s, c) => s + Number(c.cash_out_brl || 0), 0) : 0).toFixed(2)}`,
+                                        color: 'text-blue-400'
+                                    },
+                                    {
+                                        label: 'Fichas (Cash/PIX)',
                                         val: `R$ ${(reportProductFilter === 'all' && reportCategoryFilter === 'all' ? reportCommandsData.reduce((s, c) => s + Number(c.chips_payment_brl || 0), 0) : 0).toFixed(2)}`,
                                         color: 'text-yellow-400'
                                     },
@@ -259,16 +271,16 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({
                                     </div>
                                     <div>
                                         <p className="text-xs font-black text-white uppercase">Faturamento Líquido</p>
-                                        <p className="text-[10px] text-gray-500">Total - (Quebra + Fichas)</p>
+                                        <p className="text-[10px] text-gray-500">Total - (Quebra + Cash Out)</p>
                                     </div>
                                 </div>
                                 <div className="text-center sm:text-right">
                                     <p className="text-2xl font-display font-black text-green-400">
                                         R$ {(
                                             filteredReportItems.reduce((s, i) => s + Number(i.total_price_brl), 0) +
-                                            (reportFilter !== 'event' ? filteredExtraReportItems.reduce((s, i) => s + Math.abs(Number(i.amount_brl)), 0) : 0) -
+                                            (reportFilter !== 'event' ? filteredExtraReportItems.reduce((s, i) => s + (Number(i.amount_brl) < 0 ? Math.abs(Number(i.amount_brl)) : 0), 0) : 0) -
                                             (reportProductFilter === 'all' && reportCategoryFilter === 'all' ? reportCommandsData.reduce((s, c) => s + Number(c.discount_brl || 0), 0) : 0) -
-                                            (reportProductFilter === 'all' && reportCategoryFilter === 'all' ? reportCommandsData.reduce((s, c) => s + Number(c.chips_payment_brl || 0), 0) : 0)
+                                            (reportProductFilter === 'all' && reportCategoryFilter === 'all' ? reportCommandsData.reduce((s, c) => s + Number(c.cash_out_brl || 0), 0) : 0)
                                         ).toFixed(2)}
                                     </p>
                                 </div>
@@ -334,7 +346,7 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({
                                                                 </div>
                                                             </td>
                                                             <td className="px-4 py-3 text-center text-white font-bold">{i.quantity || 1}</td>
-                                                            <td className="px-4 py-3 text-right text-white font-bold">R$ {Number(i.total_price_brl || i.amount_brl || 0).toFixed(2)}</td>
+                                                            <td className="px-4 py-3 text-right text-white font-bold">R$ {Math.abs(Number(i.total_price_brl || i.amount_brl || 0)).toFixed(2)}</td>
                                                         </tr>
                                                     ))}
                                                 </tbody>

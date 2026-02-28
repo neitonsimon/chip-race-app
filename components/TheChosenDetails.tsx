@@ -380,6 +380,8 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                             const originalIndex = (categories || []).findIndex(c => c.id === validId);
                             const cat = originalIndex !== -1 ? categories[originalIndex] : null;
 
+                            if (cat?.is_hidden) return null;
+
                             if (!cat) {
                                 if (!isAdmin) return null;
                                 return (

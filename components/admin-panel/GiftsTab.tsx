@@ -536,7 +536,7 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                         }`}
                 >
                     <span className="material-icons-outlined text-sm">{showNewBadgeForm ? 'close' : 'add_circle'}</span>
-                    {showNewBadgeForm ? 'Cancelar' : 'Nova Insígnia'}
+                    {showNewBadgeForm ? 'Cancelar' : 'Nova Medalha'}
                 </button>
             </div>
 
@@ -545,7 +545,7 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                 <div className="bg-black/40 border border-primary/20 rounded-[2rem] sm:rounded-3xl p-4 sm:p-6 animate-in slide-in-from-top-4">
                     <h4 className="text-[11px] sm:text-sm font-black text-primary uppercase mb-6 flex items-center gap-2 px-1">
                         <span className="material-icons-outlined text-sm">new_label</span>
-                        Lançar Nova Insígnia no Banco
+                        Lançar Nova Medalha no Banco
                     </h4>
 
                     {/* Preview */}
@@ -563,7 +563,7 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                                     {RARITY_COLORS.find(r => r.color === newBadge.color)?.label}
                                 </span>
                             </div>
-                            <p className="text-white font-black text-lg sm:text-xl leading-tight truncate">{newBadge.title || 'Nome da Insígnia'}</p>
+                            <p className="text-white font-black text-lg sm:text-xl leading-tight truncate">{newBadge.title || 'Nome da Medalha'}</p>
                             <p className="text-gray-500 text-[10px] sm:text-xs mt-1 line-clamp-2 max-w-sm mx-auto sm:mx-0">{newBadge.description || 'Explique como o jogador conquista esta honraria...'}</p>
                         </div>
                     </div>
@@ -571,7 +571,7 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-4">
                             <div className="text-left">
-                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Nome da Insígnia</label>
+                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Nome da Medalha</label>
                                 <input
                                     type="text"
                                     value={newBadge.title}
@@ -606,7 +606,7 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
 
                         {/* Icon picker button */}
                         <div className="text-left">
-                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Ícone da Insígnia</label>
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Ícone da Medalha</label>
                             <button
                                 onClick={() => setShowIconPicker(true)}
                                 className="w-full bg-[#050214] border border-white/10 hover:border-primary/50 rounded-xl px-4 py-3 flex items-center gap-3 transition-all group h-auto sm:h-[74px]"
@@ -639,7 +639,7 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                     >
                         {isLoading
                             ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            : <><span className="material-icons-outlined text-sm">save</span> Salvar Nova Insígnia</>
+                            : <><span className="material-icons-outlined text-sm">save</span> Salvar Nova Medalha</>
                         }
                     </button>
                 </div>
@@ -675,7 +675,7 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                                 <div className="flex gap-2">
                                     <button onClick={() => setGiftType('brl')} className={`flex-1 py-3 rounded-xl border text-[9px] sm:text-[10px] font-black uppercase transition-all ${giftType === 'brl' ? 'bg-primary border-primary text-white shadow-neon-pink' : 'bg-white/5 border-white/10 text-gray-400'}`}>R$</button>
                                     <button onClick={() => setGiftType('chipz')} className={`flex-1 py-3 rounded-xl border text-[9px] sm:text-[10px] font-black uppercase transition-all ${giftType === 'chipz' ? 'bg-cyan-500 border-cyan-500 text-white shadow-neon-cyan' : 'bg-white/5 border-white/10 text-gray-400'}`}>Chipz</button>
-                                    <button onClick={() => setGiftType('badge')} className={`flex-1 py-3 rounded-xl border text-[9px] sm:text-[10px] font-black uppercase transition-all ${giftType === 'badge' ? 'bg-primary border-primary text-white shadow-neon-pink' : 'bg-white/5 border-white/10 text-gray-400'}`}>Insígnia</button>
+                                    <button onClick={() => setGiftType('badge')} className={`flex-1 py-3 rounded-xl border text-[9px] sm:text-[10px] font-black uppercase transition-all ${giftType === 'badge' ? 'bg-primary border-primary text-white shadow-neon-pink' : 'bg-white/5 border-white/10 text-gray-400'}`}>Medalha</button>
                                 </div>
                             </div>
 
@@ -683,7 +683,7 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                             {giftType === 'badge' ? (
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between px-1">
-                                        <label className="text-[10px] font-bold text-gray-500 uppercase">Selecionar Insígnia</label>
+                                        <label className="text-[10px] font-bold text-gray-500 uppercase">Selecionar Medalha</label>
                                         <span className="text-[9px] text-gray-600 font-bold">{badgeTemplates.length} disponíveis</span>
                                     </div>
                                     {badgeTemplates.length > 3 && (
@@ -720,7 +720,7 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                                         ))}
                                         {filteredBadgeTemplates.length === 0 && (
                                             <div className="col-span-2 text-center py-6 text-gray-600 text-xs italic">
-                                                Nenhuma insígnia encontrada.
+                                                Nenhuma medalha encontrada.
                                             </div>
                                         )}
                                     </div>
@@ -730,7 +730,14 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                                     <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Quantidade</label>
                                     <div className="relative">
                                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm tracking-tighter">{giftType === 'brl' ? 'R$' : 'C'}</span>
-                                        <input type="number" value={giftAmount} onChange={e => setGiftAmount(e.target.value)} placeholder="0.00"
+                                        <input type="text" inputMode="decimal" value={giftAmount}
+                                            onChange={e => {
+                                                const val = e.target.value.replace(',', '.');
+                                                if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                                    setGiftAmount(val);
+                                                }
+                                            }}
+                                            placeholder="0.00"
                                             className="w-full bg-[#050214] border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white text-sm font-black focus:border-primary outline-none transition-all" />
                                     </div>
                                 </div>

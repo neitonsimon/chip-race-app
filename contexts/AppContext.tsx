@@ -3,7 +3,7 @@ import { supabase } from '../src/lib/supabase';
 import {
     RankingPlayer, MonthData, Message, ContentDB, TournamentCategory,
     Event, PlayerResult, PlayerStats, RankingInstance, ScoringSchema,
-    ExperienceLevel, DailyReward, Poll, MessageCategory, BadgeTemplate
+    ExperienceLevel, DailyReward, Poll, MessageCategory, BadgeTemplate, SystemMessageTemplate
 } from '../types';
 import { calculatePoints } from '../utils/scoring';
 import appConfig from '../src/config/appConfig.json';
@@ -24,6 +24,7 @@ interface AppContextType {
     experienceLevels: ExperienceLevel[];
     dailyRewards: DailyReward[];
     badgeTemplates: BadgeTemplate[];
+    systemMessageTemplates: SystemMessageTemplate[];
     prizeLabel: string;
     totalQualifiers: number;
     customTotalQualifiers: number | null;
@@ -48,6 +49,8 @@ interface AppContextType {
     handleEventClosure: (eventId: string, results: PlayerResult[], stats: { totalRebuys: number, totalAddons: number, totalPrize: number }) => Promise<void>;
     handleUpdateRankingMeta: (rankingId: string, updates: Partial<RankingInstance>) => Promise<void>;
     handleUpdateGlobalSchemas: (schemas: ScoringSchema[]) => Promise<void>;
+    handleUpdateSystemMessageTemplate: (template: SystemMessageTemplate) => Promise<void>;
+    handleCreateSystemMessageTemplate: (template: Partial<SystemMessageTemplate>) => Promise<void>;
     handleAddRanking: () => Promise<void>;
     handleDeleteRanking: (id: string) => Promise<void>;
     handleAwardBadge: (badge: { user_id: string; title: string; description: string; icon: string; ranking_id: string }) => Promise<void>;
@@ -62,6 +65,7 @@ interface AppContextType {
     handleSendMessage: (toPlayerName: string, content: string) => Promise<void>;
     handleReplyMessage: (messageId: string, replyText: string) => void;
     handleMarkAsRead: (id: string) => Promise<void>;
+    handleDeleteMessage: (id: string) => Promise<void>;
     handleCreateBadgeTemplate: (badge: Partial<BadgeTemplate>) => Promise<void>;
     updateContent: (section: keyof ContentDB, field: string, value: any) => Promise<void>;
     updateCategory: (index: number, field: keyof TournamentCategory, value: any) => Promise<void>;
@@ -98,6 +102,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [experienceLevels, setExperienceLevels] = useState<ExperienceLevel[]>([]);
     const [dailyRewards, setDailyRewards] = useState<DailyReward[]>([]);
     const [badgeTemplates, setBadgeTemplates] = useState<BadgeTemplate[]>([]);
+    const [systemMessageTemplates, setSystemMessageTemplates] = useState<SystemMessageTemplate[]>([]);
     const [selectedPlayer, setSelectedPlayer] = useState<RankingPlayer | null>(null);
 
     const [prizeLabel, setPrizeLabel] = useState(appConfig.initialDefaults.applicationDefaults.prizeLabel);
@@ -252,6 +257,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const { data: dailyRewardsData } = await supabase.from('daily_rewards').select('*').order('day', { ascending: true });
             if (dailyRewardsData) setDailyRewards(dailyRewardsData);
 
+            const { data: templatesMsgData } = await supabase.from('system_message_templates').select('*');
+            if (templatesMsgData) setSystemMessageTemplates(templatesMsgData);
+
         } catch (error) {
             console.error('Error fetching Supabase data:', error);
         } finally {
@@ -340,6 +348,73 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     };
 
+    const handleUpdateSystemMessageTemplate = async (template: SystemMessageTemplate) => {
+        setIsLoading(true);
+        try {
+            const { error } = await supabase
+                .from('system_message_templates')
+                .update({
+                    subject: template.subject,
+                    content: template.content,
+                    category: template.category,
+                    sender: template.sender,
+                    is_active: template.is_active,
+                    distribution_logic: template.distribution_logic,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', template.id);
+
+            if (error) throw error;
+            setSystemMessageTemplates(prev => prev.map(t => t.id === template.id ? template : t));
+        } catch (error: any) {
+            console.error('Error updating message template:', error);
+            alert('Erro ao atualizar template: ' + error.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleCreateSystemMessageTemplate = async (template: Partial<SystemMessageTemplate>) => {
+        setIsLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('system_message_templates')
+                .insert([template])
+                .select();
+
+            if (error) throw error;
+            if (data) setSystemMessageTemplates(prev => [...prev, data[0]]);
+        } catch (error: any) {
+            console.error('Error creating message template:', error);
+            alert('Erro ao criar template: ' + error.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const sendTemplatedMessage = async (templateId: string, targetId: string, variables: Record<string, string | number> = {}) => {
+        const template = systemMessageTemplates.find(t => t.id === templateId);
+        if (!template || !template.is_active) return;
+
+        let finalSubject = template.subject;
+        let finalContent = template.content;
+
+        Object.entries(variables).forEach(([key, value]) => {
+            const regex = new RegExp(`{{${key}}}`, 'g');
+            finalSubject = finalSubject.replace(regex, String(value));
+            finalContent = finalContent.replace(regex, String(value));
+        });
+
+        await supabase.from('messages').insert({
+            user_id: targetId,
+            sender: template.sender,
+            subject: finalSubject,
+            content: finalContent,
+            category: template.category,
+            is_read: false
+        });
+    };
+
     const fetchMessages = async (userId: string) => {
         try {
             const { data: profile } = await supabase.from('profiles').select('role').eq('id', userId).single();
@@ -366,7 +441,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 setMessages(formatted);
                 setUnreadCount(formatted.filter(m => !m.read).length);
             }
-        } catch (e) { console.error('Error fetching messages:', e); }
+        } catch (e) {
+            console.error('Error fetching messages:', e);
+        }
     };
 
     const fetchPolls = async () => {
@@ -381,7 +458,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 return { ...poll, vote_counts };
             });
             setPolls(enriched);
-        } catch (e) { console.error('Error fetching polls:', e); }
+        } catch (e) {
+            console.error('Error fetching polls:', e);
+        }
     };
 
     const fetchUserPollVotes = async (userId: string) => {
@@ -423,20 +502,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const handleCheckDailyLogin = async (userId: string) => {
         try {
+            // Check if already notified today after 21h (gaming day)
+            // Gaming day starts at 21h.
+            const now = new Date();
+            const gamingDate = new Date(now);
+            if (now.getHours() < 21) gamingDate.setDate(gamingDate.getDate() - 1);
+            const dateStr = gamingDate.toISOString().split('T')[0];
+
             const { data, error } = await supabase.rpc('process_daily_login', { u_id: userId });
             if (error) throw error;
+
             if (data && data.status === 'success') {
-                // Award happened, notify user
-                const msg = `Recompensa Diária Resgatada! Dia ${data.streak}: ${data.reward_label}. Seu sistema de níveis e conquistas foi atualizado!`;
-                await supabase.from('messages').insert({
-                    user_id: userId,
-                    sender: 'Chip Race',
-                    subject: '🎁 Login Diário',
-                    content: msg,
-                    category: 'gift',
-                    is_read: false
-                });
-                // Refresh profile to see new stats
+                // Check if we already sent the notification for this gaming day
+                const { data: existingMsg } = await supabase.from('messages')
+                    .select('id')
+                    .eq('user_id', userId)
+                    .eq('subject', '⚙️ Sistema')
+                    .ilike('content', '%Bônus de login diário disponível%')
+                    .gte('created_at', dateStr + 'T21:00:00')
+                    .limit(1);
+
+                if (!existingMsg || existingMsg.length === 0) {
+                    await sendTemplatedMessage('daily_login', userId);
+                }
                 fetchProfile(userId);
             }
         } catch (e) {
@@ -629,9 +717,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
                 // Campos Financeiros e de Status
                 if (updatedData.debtLimitBrl !== undefined) dbUpdate.debt_limit_brl = updatedData.debtLimitBrl;
-                if (updatedData.totalPendingDebt !== undefined) dbUpdate.total_pending_debt = updatedData.totalPendingDebt;
-                if (updatedData.balanceBrl !== undefined) dbUpdate.balance_brl = updatedData.balanceBrl;
-                if (updatedData.balanceChipz !== undefined) dbUpdate.balance_chipz = updatedData.balanceChipz;
                 if (updatedData.isVip !== undefined) dbUpdate.is_vip = updatedData.isVip;
                 if (updatedData.vipStatus !== undefined) dbUpdate.vip_status = updatedData.vipStatus;
                 if (updatedData.vipExpiresAt !== undefined) dbUpdate.vip_expires_at = updatedData.vipExpiresAt;
@@ -639,13 +724,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 if (updatedData.lastDailyClaim !== undefined) dbUpdate.last_daily_claim = updatedData.lastDailyClaim;
                 if (updatedData.dailyStreak !== undefined) dbUpdate.daily_streak = updatedData.dailyStreak;
 
+                /* 
+                   IMPORTANT: We DO NOT persist balance_brl, balance_chipz or total_pending_debt 
+                   directly via UPSERT here. These fields are managed by atomic transactions 
+                   (RPCs like secure_balance_transaction or database triggers). 
+                   Direct upserts from local state can cause race conditions and overwrite 
+                   correct balances with stale ones.
+                */
+
                 // Only execute update if there's something to update
                 if (Object.keys(dbUpdate).length > 0) {
+                    const isNewUser = !currentUser.name || currentUser.name === 'Usuário' || currentUser.name === 'User';
+                    const isSettingName = updatedData.name && isNewUser;
+
                     // Use upsert to handle new users who might not have a profile row yet
                     const { error } = await supabase.from('profiles').upsert({ id: targetId, ...dbUpdate }, { onConflict: 'id' });
                     if (error) {
                         console.error('Error persisting profile update:', error);
                         throw error;
+                    }
+
+                    // Se for a primeira vez definindo o nome, enviar boas-vindas
+                    if (isSettingName) {
+                        await sendTemplatedMessage('welcome', targetId);
                     }
                 }
             }
@@ -703,54 +804,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     const handleEventClosure = async (eventId: string, results: PlayerResult[], stats: { totalRebuys: number, totalAddons: number, totalPrize: number }) => {
-        const eventToUpdate = events.find(e => e.id === eventId);
-        if (!eventToUpdate) return;
-        const updatedEvent: Event = { ...eventToUpdate, status: 'closed', results, totalRebuys: stats.totalRebuys, totalAddons: stats.totalAddons, totalPrize: stats.totalPrize };
-        setEvents(prev => prev.map(e => e.id === eventId ? updatedEvent : e));
-        if (isAdmin && eventId.length >= 20) {
-            try {
-                await supabase.from('events').update({ status: 'closed', results, total_rebuys: stats.totalRebuys, total_addons: stats.totalAddons, total_prize: stats.totalPrize }).eq('id', eventId);
+        try {
+            const eventToUpdate = events.find(e => e.id === eventId);
+            if (!eventToUpdate) return;
+            const updatedEvent: Event = { ...eventToUpdate, status: 'closed', results, totalRebuys: stats.totalRebuys, totalAddons: stats.totalAddons, totalPrize: stats.totalPrize };
+            setEvents(prev => prev.map(e => e.id === eventId ? updatedEvent : e));
+            if (isAdmin && eventId.length >= 20) {
+                try {
+                    await supabase.from('events').update({ status: 'closed', results, total_rebuys: stats.totalRebuys, total_addons: stats.totalAddons, total_prize: stats.totalPrize }).eq('id', eventId);
 
-                // Award 5 EXP to each participant with a userId
-                const participantIds = results.filter(r => r.userId).map(r => r.userId);
-                if (participantIds.length > 0) {
-                    await supabase.rpc('bulk_add_event_exp', {
-                        p_user_ids: participantIds,
-                        p_exp_amount: 5
-                    });
-                }
-            } catch (e) {
-                console.error('Error closing event:', e);
-            }
-        }
-        if (results) {
-            results.forEach(r => {
-                if (r.userId) {
-                    let subject = '🏆 Resultado de Torneio';
-                    let content = `${eventToUpdate.title} encerrado, você terminou na posição ${r.position}! Você também ganhou +5 de EXP por participar!`;
-
-                    // Special messages for TOP 3
-                    if (r.position === 1) {
-                        subject = '🥇 CAMPEÃO CHIP RACE!';
-                        content = `PARABÉNS! Você venceu o torneio ${eventToUpdate.title}! Sua performance foi incrível. Além da premiação, você ganhou +5 de EXP. Continue assim!`;
-                    } else if (r.position === 2) {
-                        subject = '🥈 VICE-CAMPEÃO CHIP RACE!';
-                        content = `Excelente jogo! Você conquistou o 2º lugar no ${eventToUpdate.title}. Por pouco o título não veio! Você ganhou +5 de EXP. Parabéns pela jornada!`;
-                    } else if (r.position === 3) {
-                        subject = '🥉 PÓDIO CHIP RACE!';
-                        content = `Belo resultado! Você garantiu o Top 3 no ${eventToUpdate.title} e subiu ao pódio. Você ganhou +5 de EXP. Parabéns!`;
+                    // Award 5 EXP to each participant with a userId
+                    const participantIds = results.filter(r => r.userId).map(r => r.userId);
+                    if (participantIds.length > 0) {
+                        await supabase.rpc('bulk_add_event_exp', {
+                            p_user_ids: participantIds,
+                            p_exp_amount: 5
+                        });
                     }
-
-                    supabase.from('messages').insert({
-                        user_id: r.userId,
-                        sender: 'Chip Race',
-                        subject: subject,
-                        content: content,
-                        category: 'tournament',
-                        is_read: false
-                    });
+                } catch (e) {
+                    console.error('Error closing event:', e);
                 }
-            });
+            }
+            if (results) {
+                results.forEach(async (r) => {
+                    if (r.userId) {
+                        let slug = 'tournament_result';
+                        const vars = { tournament_name: eventToUpdate.title, position: r.position };
+
+                        if (r.position === 1) slug = 'tournament_win_1';
+                        else if (r.position === 2) slug = 'tournament_win_2';
+                        else if (r.position === 3) slug = 'tournament_win_3';
+
+                        await sendTemplatedMessage(slug, r.userId, vars);
+                    }
+                });
+            }
+        } catch (e) {
+            console.error('Error in event closure messages:', e);
         }
     };
 
@@ -926,9 +1016,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     const handleMarkAsRead = async (id: string) => {
+        const msg = messages.find(m => m.id === id);
+        if (!msg) return;
+
         setMessages(prev => prev.map(m => m.id === id ? { ...m, read: true } : m));
         setUnreadCount(prev => Math.max(0, prev - 1));
-        await supabase.from('messages').update({ is_read: true }).eq('id', id);
+
+        // Auto-delete for specific "system" notifications
+        // User wants: daily login, BRL credits, payment, welcome to be deleted when read.
+        // Most are in 'system' category.
+        if (msg.category === 'system') {
+            await supabase.from('messages').delete().eq('id', id);
+            setMessages(prev => prev.filter(m => m.id !== id));
+        } else {
+            await supabase.from('messages').update({ is_read: true }).eq('id', id);
+        }
+    };
+
+    const handleDeleteMessage = async (id: string) => {
+        setMessages(prev => prev.filter(m => m.id !== id));
+        const { error } = await supabase.from('messages').delete().eq('id', id);
+        if (error) console.error('Error deleting message:', error);
     };
 
     const updateContent = async (section: keyof ContentDB, field: string, value: any) => {
@@ -951,13 +1059,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return (
         <AppContext.Provider value={{
             currentView, setCurrentView, isAdmin, isLoggedIn, currentUserId, currentUser, events, isLoading, rankings, contentDB, globalScoringSchemas,
-            allProfiles, experienceLevels, dailyRewards, badgeTemplates, prizeLabel, totalQualifiers, customTotalQualifiers, nextGoal,
+            allProfiles, experienceLevels, dailyRewards, badgeTemplates, systemMessageTemplates, prizeLabel, totalQualifiers, customTotalQualifiers, nextGoal,
             messages, unreadCount, polls, pollVotesByCurrentUser, newNotification, selectedPlayer, setSelectedPlayer, months,
             handleNavigate, handleLogin, handleLogout, handlePlayerSelect, handleProfileUpdate, handleSaveEvent, handleDeleteEventAcrossApp,
-            handleEventClosure, handleUpdateRankingMeta, handleUpdateGlobalSchemas, handleAddRanking, handleDeleteRanking, handleAwardBadge,
+            handleEventClosure, handleUpdateRankingMeta, handleUpdateGlobalSchemas, handleUpdateSystemMessageTemplate, handleCreateSystemMessageTemplate, handleAddRanking, handleDeleteRanking, handleAwardBadge,
             handleUpdateRankingPrize, handleUpdateTotalQualifiers, handleUpdateMonth, handleToggleMonthStatus,
             handleNavigateToPlayerByName, handleCreatePoll, handleVoteOnPoll, handleSendAdminMessage, handleSendMessage, handleReplyMessage,
-            handleMarkAsRead, handleCreateBadgeTemplate, updateContent, updateCategory, setNewNotification, getAllUniquePlayers,
+            handleMarkAsRead, handleDeleteMessage, handleCreateBadgeTemplate, updateContent, updateCategory, setNewNotification, getAllUniquePlayers,
             setEvents, setExperienceLevels, setDailyRewards
         }}>
             {children}

@@ -134,7 +134,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                             <option value="" style={{ backgroundColor: '#0a0720' }}>Selecionar Evento</option>
                             {(eventFilterTab === 'proximos' ? upcomingEventsList : pastEventsList).map(ev => (
                                 <option key={ev.id} value={ev.id} style={{ backgroundColor: '#0a0720' }}>
-                                    {ev.title} ({new Date(ev.date).toLocaleDateString('pt-BR')})
+                                    {ev.title} ({ev.date.split('-').reverse().join('/')})
                                 </option>
                             ))}
                         </select>
@@ -189,9 +189,15 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                             <span className="text-gray-500">Staff / Galpão:</span>
                                             <div className="flex items-center gap-2">
                                                 <input
-                                                    type="number"
+                                                    type="text"
+                                                    inputMode="decimal"
                                                     value={staffExpenses}
-                                                    onChange={e => setStaffExpenses(e.target.value)}
+                                                    onChange={e => {
+                                                        const val = e.target.value.replace(',', '.');
+                                                        if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                                            setStaffExpenses(val);
+                                                        }
+                                                    }}
                                                     onBlur={updateStaffExpenses}
                                                     className="w-16 bg-black/40 border border-white/5 rounded px-1 py-0.5 text-right text-red-400 outline-none"
                                                 />
@@ -201,9 +207,15 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                             <span className="text-gray-500">Premiações Pagas:</span>
                                             <div className="flex items-center gap-2">
                                                 <input
-                                                    type="number"
+                                                    type="text"
+                                                    inputMode="decimal"
                                                     value={prizePayout}
-                                                    onChange={e => setPrizePayout(e.target.value)}
+                                                    onChange={e => {
+                                                        const val = e.target.value.replace(',', '.');
+                                                        if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                                            setPrizePayout(val);
+                                                        }
+                                                    }}
                                                     onBlur={updatePrizePayout}
                                                     className="w-16 bg-black/40 border border-white/5 rounded px-1 py-0.5 text-right text-red-400 outline-none"
                                                 />
@@ -212,6 +224,10 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                         <div className="flex justify-between text-[10px] font-black uppercase tracking-wider">
                                             <span className="text-red-400">Despesas:</span>
                                             <span className="text-red-400">- R$ {(Number(staffExpenses) + Number(prizePayout)).toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-[10px] font-black uppercase tracking-wider">
+                                            <span className="text-blue-400">Cash Out:</span>
+                                            <span className="text-blue-400">- R$ {closedCommands.reduce((s, c) => s + Number(c.cash_out_brl || 0), 0).toFixed(2)}</span>
                                         </div>
                                         <div className="flex justify-between text-[10px] font-black uppercase tracking-wider">
                                             <span className="text-yellow-400">Pago em Espécie:</span>
@@ -223,7 +239,8 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                             <span className="text-primary shadow-neon-pink">R$ {(
                                                 openCommands.reduce((s, c) => s + Number(c.total_brl), 0) +
                                                 closedCommands.reduce((s, c) => s + Number(c.total_brl), 0) -
-                                                (Number(staffExpenses) + Number(prizePayout))
+                                                (Number(staffExpenses) + Number(prizePayout)) -
+                                                closedCommands.reduce((s, c) => s + Number(c.cash_out_brl || 0), 0)
                                             ).toFixed(2)}</span>
                                         </div>
 
@@ -244,6 +261,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                                 openCommands.reduce((s, c) => s + Number(c.total_brl), 0) +
                                                 closedCommands.reduce((s, c) => s + Number(c.total_brl), 0) -
                                                 (Number(staffExpenses) + Number(prizePayout)) -
+                                                closedCommands.reduce((s, c) => s + Number(c.cash_out_brl || 0), 0) -
                                                 closedCommands.reduce((s, c) => s + Number(c.discount_brl || 0), 0) -
                                                 closedCommands.reduce((s, c) => s + Number(c.unpaid_amount_brl || 0), 0)
                                             ).toFixed(2)}</span>
@@ -284,7 +302,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                     className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-left hover:border-primary transition-all group"
                                 >
                                     <p className="text-xs font-bold text-white group-hover:text-primary transition-colors">{ev.title}</p>
-                                    <p className="text-[10px] text-gray-500">{new Date(ev.date).toLocaleDateString('pt-BR')}</p>
+                                    <p className="text-[10px] text-gray-500">{ev.date.split('-').reverse().join('/')}</p>
                                 </button>
                             ))}
                         </div>
@@ -489,10 +507,16 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                         {productSection === 'cash' && (
                                             <div className="mb-4 flex gap-2">
                                                 <input
-                                                    type="number"
+                                                    type="text"
+                                                    inputMode="decimal"
                                                     placeholder="Valor Cash R$"
                                                     value={cashAmount}
-                                                    onChange={(e) => setCashAmount(e.target.value)}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value.replace(',', '.');
+                                                        if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                                            setCashAmount(val);
+                                                        }
+                                                    }}
                                                     className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-bold focus:border-primary outline-none transition-all"
                                                 />
                                                 <button
@@ -507,10 +531,16 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                         {productSection === 'diversos' && selectedSubCategory === 'poker-online' && (
                                             <div className="mb-4 flex gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
                                                 <input
-                                                    type="number"
+                                                    type="text"
+                                                    inputMode="decimal"
                                                     placeholder="Valor Fichas Online R$"
                                                     value={cashAmount}
-                                                    onChange={(e) => setCashAmount(e.target.value)}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value.replace(',', '.');
+                                                        if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                                            setCashAmount(val);
+                                                        }
+                                                    }}
                                                     className="flex-1 bg-white/5 border border-secondary/30 rounded-xl px-3 py-2 text-xs text-white font-bold focus:border-secondary outline-none transition-all"
                                                 />
                                                 <button
@@ -574,7 +604,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                                         </div>
                                                     </div>
                                                     {selectedCommand.status === 'open' && (
-                                                        <button onClick={() => handleDeleteCommandItem(item.id)} className="w-8 h-8 rounded-full bg-red-400/10 text-red-400 hover:bg-red-400 hover:text-white flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 shrink-0">
+                                                        <button onClick={() => handleDeleteCommandItem(item)} className="w-8 h-8 rounded-full bg-red-400/10 text-red-400 hover:bg-red-400 hover:text-white flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 shrink-0">
                                                             <span className="material-icons-outlined text-sm">delete</span>
                                                         </button>
                                                     )}

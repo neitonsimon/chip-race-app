@@ -7,6 +7,7 @@ export interface TournamentCategory {
   color: 'primary' | 'secondary' | 'cyan' | 'pink';
   slots: number; // Número de vagas fixas/editáveis
   is_mystery?: boolean;
+  is_hidden?: boolean;
 }
 
 export interface NavLink {
@@ -285,9 +286,19 @@ export interface ExperienceLevel {
 
 export interface DailyReward {
   day: number;
-  reward_type: 'xp' | 'chipz' | 'brl';
-  reward_value: number;
+  reward_type: 'xp' | 'chipz' | 'brl' | 'badge';
+  reward_value: string | number;
   reward_label: string | null;
+}
+
+export interface SystemMessageTemplate {
+  id: string;
+  subject: string;
+  content: string;
+  category: MessageCategory;
+  sender: string;
+  is_active: boolean;
+  distribution_logic?: string;
 }
 
 

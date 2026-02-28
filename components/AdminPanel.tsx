@@ -92,11 +92,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const toastTimer = useRef<any>(null);
 
     // Launch Tab State
-    const [newProduct, setNewProduct] = useState({ name: '', category: '', price: '', description: '', price_unit: '' });
+    const [newProduct, setNewProduct] = useState({ name: '', category: 'bar', price: '', description: '', price_unit: '' });
     const [allProducts, setAllProducts] = useState<any[]>([]); // Includes inactive
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [productCategories, setProductCategories] = useState<any[]>([]);
-    const [newCategory, setNewCategory] = useState({ name: '', label: '', icon: 'inventory_2' });
+    const [editingProduct, setEditingProduct] = useState<any | null>(null);
 
     // Gift Tab State
     const [giftTarget, setGiftTarget] = useState<'single' | 'all'>('single');
@@ -167,7 +167,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         }
     };
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const upcomingEventsList = events.filter(ev => ev.date >= todayStr && ev.status !== 'closed').sort((a, b) => a.date.localeCompare(b.date));
     const pastEventsList = events.filter(ev => ev.date < todayStr || ev.status === 'closed').sort((a, b) => b.date.localeCompare(a.date));
 
@@ -452,25 +453,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             })));
         }
     };
-    const handleAddCategory = async () => {
-        if (!newCategory.name || !newCategory.label) { alert('Nome e Rótulo são obrigatórios.'); return; }
-        setIsLoading(true);
-        try {
-            const id = newCategory.name.toLowerCase().replace(/\s+/g, '_');
-            const { error } = await supabase.from('ecosystem_categories').insert({
-                id,
-                title: newCategory.label,
-                icon: newCategory.icon,
-                color: 'primary', // Default color
-                order: productCategories.length + 1
-            });
-            if (error) throw error;
-            alert('✅ Categoria criada com sucesso!');
-            setNewCategory({ name: '', label: '', icon: 'inventory_2' });
-            fetchProductCategories();
-        } catch (err: any) { alert('Erro: ' + err.message); }
-        finally { setIsLoading(false); }
-    };
     const handleAddProduct = async () => {
         if (!newProduct.name || !newProduct.price) { alert('Nome e preço são obrigatórios.'); return; }
         setIsLoading(true);
@@ -491,6 +473,29 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         } catch (err: any) { alert('Erro: ' + err.message); }
         finally { setIsLoading(false); }
     };
+
+    const handleUpdateProduct = async () => {
+        if (!editingProduct || !newProduct.name || !newProduct.price) { alert('Nome e preço são obrigatórios.'); return; }
+        setIsLoading(true);
+        try {
+            const { error } = await supabase.from('products').update({
+                name: newProduct.name,
+                category: newProduct.category,
+                price: parseFloat(newProduct.price),
+                description: newProduct.description,
+                price_unit: newProduct.price_unit
+            }).eq('id', editingProduct.id);
+
+            if (error) throw error;
+            alert('✅ Produto atualizado com sucesso!');
+            setEditingProduct(null);
+            setNewProduct({ name: '', category: 'bar', price: '', description: '', price_unit: '' });
+            fetchAllProducts();
+            fetchProducts();
+        } catch (err: any) { alert('Erro ao atualizar: ' + err.message); }
+        finally { setIsLoading(false); }
+    };
+
     const toggleProductStatus = async (product: any) => {
         const { error } = await supabase.from('products').update({ active: !product.active }).eq('id', product.id);
         if (error) { alert('Erro: ' + error.message); return; }
@@ -513,22 +518,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             .select('*, profiles!user_id(name, numeric_id, avatar_url, vip_status, role, balance_brl, debt_limit_brl, total_pending_debt)')
             .eq('event_id', eventId)
             .eq('status', 'closed')
-            .order('closed_at', { ascending: false });
+            .order('created_at', { ascending: false }); // Use created_at as backup if closed_at is missing/buggy
 
         if (error) {
             console.error('Error fetching closed commands:', error);
             return;
         }
-        if (data) setClosedCommands(data);
+        setClosedCommands(data || []);
     };
 
     const handleSaveExpenses = async () => {
         if (!selectedEvent) return;
+
+        const expensesVal = parseFloat(staffExpenses) || 0;
+        const prizeVal = parseFloat(prizePayout) || 0;
+
+        // Only save if values actually changed to prevent loops
+        if (expensesVal === (selectedEvent.staff_expenses_brl || 0) && prizeVal === (selectedEvent.prize_payout_brl || 0)) {
+            return;
+        }
+
         setIsLoading(true);
         try {
-            const expensesVal = parseFloat(staffExpenses) || 0;
-            const prizeVal = parseFloat(prizePayout) || 0;
-
             const { error } = await supabase.from('events').update({
                 staff_expenses_brl: expensesVal,
                 prize_payout_brl: prizeVal
@@ -548,7 +559,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                 prize_payout_brl: prizeVal
             }));
 
-            alert('✅ Despesas do evento salvas com sucesso!');
+            // Removendo alert de sucesso pois causava loop com onBlur
+            // O usuário pode ver a atualização nos cards de faturamento abaixo.
         } catch (err: any) {
             alert('Erro ao salvar despesas: ' + err.message);
         } finally {
@@ -650,7 +662,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             .select('*, profiles!user_id(name, numeric_id)')
             .gte('created_at', start + 'T00:00:00.000Z')
             .lte('created_at', end + 'T23:59:59.999Z')
-            .not('category', 'eq', 'wallet_deposit'); // Don't count deposits as revenue, only sales
+            .filter('category', 'not.in', '("wallet_deposit","gift","purchase","debt_payment","command_charge")');
 
         if (cmdItems) setReportData(cmdItems);
         if (txs) setExtraReportData(txs);
@@ -675,29 +687,50 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     };
 
     const reopenCommand = async (cmd: any) => {
-        const total = Number(cmd.total_brl);
+        const total = Number(cmd.total_brl || 0);
         const discount = Number(cmd.discount_brl || 0);
         const debt = Number(cmd.unpaid_amount_brl || 0);
         const chips = Number(cmd.chips_payment_brl || 0);
-        const refundedAmount = Math.max(0, total - discount - debt - chips);
+        const cashOut = Number(cmd.cash_out_brl || 0);
+        const profit = Number(cmd.profit_brl || 0);
+        const profitCash = Number(cmd.profit_cash_payment_brl || 0);
 
-        if (!window.confirm(`Reabrir comanda de ${cmd.profiles?.name}? O valor pago de R$ ${refundedAmount.toFixed(2)} será reembolsado ao saldo.`)) return;
+        const netCost = total - discount - debt - chips;
+        const hasProfit = profit > 0.01;
 
-        if (refundedAmount > 0) {
+        let balanceImpact = 0;
+        if (hasProfit) {
+            // Player received credit added to balance
+            balanceImpact = profit - profitCash;
+        } else {
+            // amount that was deducted from balance
+            const finalToDeduct = cashOut > 0 ? Math.max(0, netCost - cashOut) : Math.max(0, netCost);
+            balanceImpact = -finalToDeduct;
+        }
+
+        // To undo, we apply the negative of the impact
+        const refundAmount = -balanceImpact;
+
+        const label = refundAmount >= 0 ? 'reembolsado ao' : 'estornado do';
+        const confirmMsg = `Reabrir comanda de ${cmd.profiles?.name}? O valor de R$ ${Math.abs(refundAmount).toFixed(2)} será ${label} saldo.`;
+        if (!window.confirm(confirmMsg)) return;
+
+        if (Math.abs(refundAmount) > 0.01) {
             const { error } = await supabase.rpc('secure_balance_transaction', {
                 p_user_id: cmd.user_id,
-                p_brl_amount: refundedAmount,
+                p_brl_amount: refundAmount,
                 p_chipz_amount: 0,
-                p_description: `Reembolso por reabertura de comanda ${cmd.id.slice(0, 8)}`,
+                p_description: `Estorno/Reembolso por reabertura de comanda ${cmd.id.slice(0, 8)}`,
                 p_category: 'wallet_deposit',
                 p_metadata: { command_id: cmd.id, event_id: cmd.event_id }
             });
-            if (error) { alert('Erro ao reembolsar saldo: ' + error.message); return; }
+            if (error) { alert('Erro ao processar estorno/reembolso: ' + error.message); return; }
         }
 
         // Delete associated pending debt if exists
         if (debt > 0) {
             await supabase.from('debts').delete().eq('command_id', cmd.id).eq('status', 'pending');
+            updatePlayerDebtLocally(cmd.user_id, -debt);
         }
 
         const { error: upErr } = await supabase.from('commands').update({
@@ -705,14 +738,29 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             closed_at: null,
             discount_brl: 0,
             unpaid_amount_brl: 0,
-            chips_payment_brl: 0
+            chips_payment_brl: 0,
+            cash_out_brl: 0,
+            profit_brl: 0,
+            profit_cash_payment_brl: 0
         }).eq('id', cmd.id);
 
         if (upErr) { alert('Erro ao reabrir: ' + upErr.message); return; }
-        await supabase.from('messages').insert({ user_id: cmd.user_id, sender_id: currentUser.id, content: `Sua comanda foi reaberta pelo admin. R$ ${refundedAmount.toFixed(2)} reembolsados ao saldo.`, category: 'system', is_read: false });
+
+        const msg = refundAmount >= 0
+            ? `Sua comanda foi reaberta. R$ ${refundAmount.toFixed(2)} devolvidos ao saldo.`
+            : `Sua comanda foi reaberta. R$ ${Math.abs(refundAmount).toFixed(2)} estornados do saldo (lucro revertido).`;
+
+        await supabase.from('messages').insert({
+            user_id: cmd.user_id,
+            sender_id: currentUser.id,
+            content: msg,
+            category: 'system',
+            is_read: false
+        });
+
         if (selectedEvent) { fetchOpenCommands(selectedEvent.id); fetchClosedCommands(selectedEvent.id); }
-        updatePlayerBalanceLocally(cmd.user_id, refundedAmount); // Refund balance locally
-        setSelectedCommand({ ...cmd, status: 'open', closed_at: null, discount_brl: 0, unpaid_amount_brl: 0, chips_payment_brl: 0 });
+        updatePlayerBalanceLocally(cmd.user_id, refundAmount);
+        setSelectedCommand({ ...cmd, status: 'open', closed_at: null, discount_brl: 0, unpaid_amount_brl: 0, chips_payment_brl: 0, cash_out_brl: 0, profit_brl: 0, profit_cash_payment_brl: 0 });
         setCommandsTab('ativas');
     };
 
@@ -1121,6 +1169,21 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                     }
                     updatePlayerBalanceLocally(selectedCommand.user_id, profitCredit);
                 }
+
+                if (profitCash > 0.01) {
+                    await supabase.from('transactions').insert({
+                        user_id: selectedCommand.user_id,
+                        amount_brl: profitCash,
+                        description: `Pagamento de lucro Cash Game (Em mãos) — Comanda ${selectedCommand.id.slice(0, 8)}`,
+                        category: 'wallet_deposit',
+                        type: 'credit',
+                        metadata: {
+                            command_id: selectedCommand.id,
+                            event_id: selectedCommand.event_id,
+                            payment_method: 'cash'
+                        }
+                    });
+                }
             }
             // 2b. Normal deduction from balance
             else if (finalToDeduct > 0.01) {
@@ -1145,8 +1208,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                 updatePlayerBalanceLocally(selectedCommand.user_id, -finalToDeduct);
             }
 
+            // 2c. Log Cash/PIX payment if any (to appear in reports/monitor)
+            if (chips > 0.01) {
+                await supabase.from('transactions').insert({
+                    user_id: selectedCommand.user_id,
+                    amount_brl: -chips,
+                    description: `Pagamento comanda ${selectedCommand.id.slice(0, 8)} (Dinheiro/PIX)`,
+                    category: 'purchase',
+                    type: 'debit',
+                    metadata: {
+                        command_id: selectedCommand.id,
+                        event_id: selectedCommand.event_id,
+                        payment_method: 'cash_pix'
+                    }
+                });
+            }
+
             // 3. Close the command (store cashOut for records)
-            await supabase.from('commands').update({
+            const { error: upErr } = await supabase.from('commands').update({
                 status: 'closed',
                 closed_at: new Date().toISOString(),
                 discount_brl: discount,
@@ -1156,6 +1235,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                 profit_brl: profit,
                 profit_cash_payment_brl: profitCash
             }).eq('id', selectedCommand.id);
+
+            if (upErr) throw upErr;
 
             // 4. Notify user
             const msgContent = [
@@ -1247,6 +1328,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                     }).eq('id', debt.id);
                     if (updateErr) throw updateErr;
                 }
+            }
+
+            // Log transaction for manual settlement
+            if (type === 'manual') {
+                await supabase.from('transactions').insert({
+                    user_id: debt.user_id,
+                    amount_brl: -payAmount,
+                    description: `Baixa PIX Pendura${isPartial ? ' (Parcial)' : ''} — Ref: ${debt.events?.title || debt.description || 'S/ Ref'}`,
+                    category: 'debt_payment',
+                    type: 'debit'
+                });
             }
 
             // Trigger will handle total_pending_debt update in database
@@ -1440,7 +1532,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                         user_id: uid,
                         sender: 'Admin',
                         sender_id: currentUser.id,
-                        subject: giftType === 'badge' ? '🎖️ Você recebeu uma Insígnia!' : '🎁 Você recebeu um Presente!',
+                        subject: giftType === 'badge' ? '🎖️ Você recebeu uma medalha!' : '🎁 Você recebeu um Presente!',
                         content: `${finalDescription}. ${giftType !== 'badge' ? 'O saldo já foi atualizado e está disponível para uso.' : ''}`,
                         category: 'gift',
                         is_read: false
@@ -1575,8 +1667,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             handleAddManualCash={handleAddManualCash}
                             handleAddManualOnline={handleAddManualOnline}
                             commandsTab={commandsTab === 'ativas' ? 'ativas' : 'encerradas'}
-                            setCommandsTab={(t) => {
-                                const newTab = t === 'ativas' ? 'ativas' : 'historico';
+                            setCommandsTab={(tabName) => {
+                                const newTab = tabName === 'ativas' ? 'ativas' : 'historico';
                                 setCommandsTab(newTab);
                                 if (newTab === 'historico' && selectedEvent) {
                                     fetchClosedCommands(selectedEvent.id);
@@ -1636,9 +1728,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             deleteProduct={deleteProduct}
                             isLoading={isLoading}
                             productCategories={productCategories}
-                            newCategory={newCategory}
-                            setNewCategory={setNewCategory}
-                            handleAddCategory={handleAddCategory}
+                            editingProduct={editingProduct}
+                            setEditingProduct={setEditingProduct}
+                            handleUpdateProduct={handleUpdateProduct}
                         />
                     )}
                     {activeTab === 'send-gifts' && (

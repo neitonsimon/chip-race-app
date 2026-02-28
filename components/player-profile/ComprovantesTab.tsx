@@ -80,7 +80,7 @@ export const ComprovantesTab: React.FC<ComprovantesTabProps> = ({ playerCommands
                                         <h4 className="text-base font-bold text-white leading-tight mb-1">{cmd.events?.title || 'Torneio'}</h4>
                                         <div className="flex items-center gap-2 text-xs text-gray-400 mb-4">
                                             <span className="material-icons-outlined text-xs">calendar_today</span>
-                                            {cmd.closed_at ? new Date(cmd.closed_at).toLocaleDateString('pt-BR') : (cmd.events?.date ? new Date(cmd.events.date).toLocaleDateString('pt-BR') : '')}
+                                            {cmd.closed_at ? new Date(cmd.closed_at).toLocaleDateString('pt-BR') : (cmd.events?.date ? cmd.events.date.split('-').reverse().join('/') : '')}
                                             <span className="w-1 h-1 rounded-full bg-gray-600"></span>
                                             {cmd.closed_at ? new Date(cmd.closed_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
                                         </div>

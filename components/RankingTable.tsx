@@ -207,7 +207,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                     </p>
                     {activeRanking?.startDate && activeRanking?.endDate && (
                         <div className="mt-2 text-[10px] md:text-xs font-bold text-primary/60 uppercase tracking-[0.3em]">
-                            {new Date(activeRanking.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} - {new Date(activeRanking.endDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                            {activeRanking.startDate.split('-').reverse().slice(0, 2).join('/')} - {activeRanking.endDate.split('-').reverse().slice(0, 2).join('/')}
                         </div>
                     )}
 
@@ -756,7 +756,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Insígnia Automática</label>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Medalha Automática</label>
                                     <select
                                         value={editingRanking.badgeTemplateId || ''}
                                         onChange={e => setEditingRanking({ ...editingRanking, badgeTemplateId: e.target.value })}
