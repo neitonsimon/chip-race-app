@@ -213,12 +213,12 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                                     onClick={() => handlePurchase(customBrlAmount, 'brl')}
                                     className="w-full bg-green-500 hover:bg-green-400 disabled:bg-white/5 disabled:text-gray-500 text-black font-black py-4 rounded-xl transition-colors uppercase tracking-widest flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(34,197,94,0.2)] hover:shadow-[0_0_30px_rgba(34,197,94,0.4)] disabled:shadow-none cursor-pointer"
                                 >
-                                    <span className="material-icons-outlined">payments</span> Prosseguir
+                                    <span className="material-icons-outlined">payments</span> Pagar com PIX
                                 </button>
                             </div>
                         </div>
                     </div>
-                ) : (
+                ) : activeTab === 'chipz' ? (
                     <>
                         <div className="py-20 flex flex-col items-center justify-center text-center bg-surface-dark/50 border border-white/5 rounded-3xl backdrop-blur-sm">
                             <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-6">
@@ -250,6 +250,29 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                             </div>
                         </div>
                     </>
+                ) : (
+                    <div className="flex justify-center w-full">
+                        <div className="w-full max-w-md bg-surface-dark border border-primary/30 rounded-3xl p-8 flex flex-col relative overflow-hidden text-center shadow-[0_0_30px_rgba(236,72,153,0.1)]">
+                            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 mx-auto border border-primary/20">
+                                <span className="material-icons-outlined text-3xl text-primary">qr_code_scanner</span>
+                            </div>
+                            <h3 className="text-xl font-bold text-white uppercase mb-2 text-primary">Pagar via PIX</h3>
+                            <p className="text-gray-400 text-sm mb-6">Escaneie o QR Code abaixo ou copie o código PIX para concluir o pagamento de R$ {Number(customBrlAmount).toFixed(2).replace('.', ',')}</p>
+
+                            <div className="bg-white p-4 rounded-xl mb-6 mx-auto w-[200px] h-[200px] flex items-center justify-center border-4 border-primary/20">
+                                <span className="material-icons-outlined text-gray-400 text-6xl">qr_code_2</span>
+                            </div>
+
+                            <button className="w-full bg-white/5 border border-white/10 hover:bg-white/10 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors mb-4">
+                                <span className="material-icons-outlined text-sm">content_copy</span> Copiar Código PIX
+                            </button>
+
+                            <div className="flex items-center justify-center gap-2 text-primary text-xs font-bold uppercase animate-pulse">
+                                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                                Aguardando pagamento...
+                            </div>
+                        </div>
+                    </div>
                 )}
             </div>
 
