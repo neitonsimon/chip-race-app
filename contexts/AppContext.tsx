@@ -121,7 +121,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const fetchSupabaseData = async () => {
         setIsLoading(true);
         try {
-            const { data: rankingsData } = await supabase.from('rankings').select('*');
+            const [
+                { data: rankingsData },
+                { data: templatesData },
+                { data: schemasData },
+                { data: eventsData },
+                { data: contentData },
+                { data: ecoCategoriesData },
+                { data: profilesData },
+                { data: allUserBadges },
+                { data: expLevelsData },
+                { data: dailyRewardsData },
+                { data: templatesMsgData }
+            ] = await Promise.all([
+                supabase.from('rankings').select('*'),
+                supabase.from('badge_templates').select('*'),
+                supabase.from('scoring_schemas').select('*'),
+                supabase.from('events').select('*').order('date', { ascending: true }),
+                supabase.from('content_db').select('*'),
+                supabase.from('ecosystem_categories').select('*').order('order', { ascending: true }),
+                supabase.from('profiles_public').select('id, numeric_id, name, avatar_url, city, is_vip, vip_status, vip_expires_at, social, bio, level, current_exp, next_level_exp, gallery, play_styles, is_verified, total_pending_debt'),
+                supabase.from('user_badges').select('*, badge_templates(*)'),
+                supabase.from('experience_levels').select('*').order('level', { ascending: true }),
+                supabase.from('daily_rewards').select('*').order('day', { ascending: true }),
+                supabase.from('system_message_templates').select('*')
+            ]);
+
             if (rankingsData) {
                 setRankings(rankingsData.map(r => ({
                     id: r.id,
@@ -142,10 +167,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 })));
             }
 
-            const { data: templatesData } = await supabase.from('badge_templates').select('*');
             if (templatesData) setBadgeTemplates(templatesData);
 
-            const { data: schemasData } = await supabase.from('scoring_schemas').select('*');
             if (schemasData) {
                 setGlobalScoringSchemas(schemasData.map(s => ({
                     id: s.id,
@@ -155,7 +178,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 })));
             }
 
-            const { data: eventsData } = await supabase.from('events').select('*').order('date', { ascending: true });
             if (eventsData) {
                 setEvents(eventsData.map(e => ({
                     id: e.id,
@@ -205,7 +227,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 })));
             }
 
-            const { data: contentData } = await supabase.from('content_db').select('*');
             if (contentData) {
                 contentData.forEach(item => {
                     if (item.key === 'hero') setContentDB(prev => ({ ...prev, hero: item.value }));
@@ -216,11 +237,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 });
             }
 
-            const { data: ecoCategoriesData } = await supabase.from('ecosystem_categories').select('*').order('order', { ascending: true });
             if (ecoCategoriesData) setContentDB(prev => ({ ...prev, categories: ecoCategoriesData }));
-
-            const { data: profilesData } = await supabase.from('profiles_public').select('*');
-            const { data: allUserBadges } = await supabase.from('user_badges').select('*, badge_templates(*)');
 
             if (profilesData) {
                 setAllProfiles(profilesData.map(p => ({
@@ -251,13 +268,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 })));
             }
 
-            const { data: expLevelsData } = await supabase.from('experience_levels').select('*').order('level', { ascending: true });
             if (expLevelsData) setExperienceLevels(expLevelsData);
 
-            const { data: dailyRewardsData } = await supabase.from('daily_rewards').select('*').order('day', { ascending: true });
             if (dailyRewardsData) setDailyRewards(dailyRewardsData);
 
-            const { data: templatesMsgData } = await supabase.from('system_message_templates').select('*');
             if (templatesMsgData) setSystemMessageTemplates(templatesMsgData);
 
         } catch (error) {
