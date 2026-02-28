@@ -173,6 +173,7 @@ export const AppRouter: React.FC = () => {
                             categories={contentDB.categories}
                             onUpdateCategory={updateCategory}
                             prizeLabel={prizeLabel}
+                            onNavigate={handleNavigate}
                         />
                         <RoadmapSection />
                         <SponsorsSection />

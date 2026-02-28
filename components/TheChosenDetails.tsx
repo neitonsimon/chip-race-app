@@ -442,7 +442,13 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                                                 </div>
                                                 <div className="mt-auto flex gap-2">
                                                     <button
-                                                        onClick={() => setActiveRegulation(cat.id)}
+                                                        onClick={() => {
+                                                            if (cat.id === 'vip' && onNavigate) {
+                                                                onNavigate('vip');
+                                                            } else {
+                                                                setActiveRegulation(cat.id);
+                                                            }
+                                                        }}
                                                         className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:border-white/30 transition-all ${styles.btn}`}
                                                     >
                                                         VER MAIS <span className="material-icons-outlined text-xs">add_circle</span>

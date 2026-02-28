@@ -7,6 +7,7 @@ interface TournamentCategoriesProps {
   categories: TournamentCategory[];
   onUpdateCategory: (index: number, updates: Partial<TournamentCategory>) => void;
   prizeLabel?: string;
+  onNavigate?: (view: string) => void;
 }
 
 // Mapeamento dos Regulamentos (Cópia fiel do conteúdo de TheChosenDetails para consistência)
@@ -112,7 +113,8 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
   isAdmin,
   categories,
   onUpdateCategory,
-  prizeLabel = "2026"
+  prizeLabel = "2026",
+  onNavigate
 }) => {
   const [activeRegulation, setActiveRegulation] = useState<string | null>(null);
   const [activeTemplateSelect, setActiveTemplateSelect] = useState<number | null>(null);
@@ -246,8 +248,14 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
 
   const handleOpenRegulation = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
+    if (id === 'vip' && onNavigate) {
+      onNavigate('vip');
+      return;
+    }
     // Verifica se existe dado para este ID, se não, não abre
-    if (REGULATIONS_DATA[id]) {
+    if (REGULATIONS_DATA[id] || (productDetails && id === productDetails.category_id)) {
+      setActiveRegulation(id);
+    } else if (REGULATIONS_DATA[id]) {
       setActiveRegulation(id);
     }
   };
