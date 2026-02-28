@@ -127,8 +127,8 @@ serve(async (req: Request) => {
 
     } catch (err: any) {
         console.error("Payment creation error:", err);
-        return new Response(JSON.stringify({ error: err.message || 'Internal Server Error' }), {
-            status: 500,
+        return new Response(JSON.stringify({ error: err.message || 'Internal Server Error', stack: err.stack }), {
+            status: 200,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
     }

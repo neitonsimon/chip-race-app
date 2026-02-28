@@ -186,7 +186,7 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                     </div>
                 )}
 
-                {activeTab === 'brl' ? (
+                {activeTab === 'brl' && !pixData ? (
                     <div className="flex justify-center w-full">
                         <div className="w-full max-w-md bg-surface-dark border border-white/10 rounded-3xl p-8 flex flex-col relative overflow-hidden text-center shadow-2xl">
                             <div className="absolute top-4 right-[-35px] bg-green-500 text-black text-[10px] font-black uppercase py-1.5 px-12 rotate-45 shadow-lg">
