@@ -37,6 +37,8 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
         fetchPackages();
     }, []);
 
+    const [pixData, setPixData] = useState<{ qr_code: string, qr_code_base64: string, payment_id: string } | null>(null);
+
     const handlePurchase = async (id: string, type: 'brl' | 'chipz') => {
         if (type === 'chipz') {
             alert('A venda de Chipz ainda não está disponível.');
@@ -44,67 +46,72 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
         }
 
         setIsProcessing(true);
+        setPixData(null);
         try {
-            // Type BRL (Recharge Wallet)
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
             const amountToAdd = parseFloat(id);
             if (isNaN(amountToAdd) || amountToAdd <= 0) {
                 setIsProcessing(false);
                 return;
             }
 
-            // Usar RPC para adicionar saldo de forma segura
-            console.log('Iniciando transação segura para:', currentUser.id, 'Valor:', amountToAdd);
-            const { data: txData, error: txError } = await supabase.rpc('secure_balance_transaction', {
-                p_user_id: currentUser.id,
-                p_brl_amount: amountToAdd,
-                p_chipz_amount: 0,
-                p_description: `Depósito: Adicionar Reais (R$ ${amountToAdd.toFixed(2)})`,
-                p_category: 'wallet_deposit',
-                p_metadata: { method: 'automatic', source: 'RechargePage' }
+            console.log('Solicitando PIX via Edge Function:', amountToAdd);
+
+            const { data, error } = await supabase.functions.invoke('create-pix-payment', {
+                body: { amount: amountToAdd, description: 'Recarga BRL - Chip Race' }
             });
 
-            console.log('Resultado RPC:', { txData, txError });
-
-            if (txError) {
-                console.error('Erro técnico no RPC:', txError);
-                throw new Error(`Erro no servidor: ${txError.message}`);
+            if (error || !data || data.error) {
+                console.error("Erro ao gerar PIX:", error || data?.error);
+                throw new Error(data?.error || "Serviço de pagamento indisponível no momento.");
             }
 
-            if (txData === false) {
-                console.error('RPC retornou FALSE (Provável falha de validação no banco)');
-                throw new Error('A transação foi recusada pelo sistema. Verifique seu saldo ou tente um valor diferente.');
-            }
+            // Exibir o QR Code na tela
+            setPixData({
+                qr_code: data.qr_code,
+                qr_code_base64: data.qr_code_base64,
+                payment_id: data.payment_id
+            });
 
-            // Award EXP Bonus (1 EXP per R$ 20, same as Admin panel)
-            const expBonus = Math.floor(amountToAdd / 20);
-            if (expBonus > 0) {
-                await supabase.rpc('bulk_add_event_exp', {
-                    p_user_ids: [currentUser.id],
-                    p_exp_amount: expBonus
-                });
-            }
-
-            if (onUpdateProfile) {
-                // Fetch the absolute latest balance from DB to avoid any local state mismatch
-                const { data: profile } = await supabase.from('profiles').select('balance_brl').eq('id', currentUser.id).single();
-                if (profile) {
-                    onUpdateProfile(currentUser.id, {
-                        balanceBrl: Number(profile.balance_brl)
-                    } as any);
-                }
-            }
-
-            setCustomBrlAmount('');
-            alert(`Sucesso! R$ ${amountToAdd.toFixed(2)} foram adicionados à sua carteira.${expBonus > 0 ? ` Você ganhou +${expBonus} de EXP!` : ''}`);
         } catch (err: any) {
             console.error('Erro na compra:', err);
-            alert('Falha ao processar solicitação.');
+            alert(`Falha ao gerar cobrança: ${err.message}`);
         } finally {
             setIsProcessing(false);
         }
     };
+
+    // Monitoramento do status do pagamento quando um PIX é gerado
+    useEffect(() => {
+        if (!pixData?.payment_id) return;
+
+        const interval = setInterval(async () => {
+            // Verifica no banco de dados se o status do payment intent mudou para approved
+            const { data, error } = await supabase
+                .from('payment_intents')
+                .select('status, amount')
+                .eq('gateway_id', pixData.payment_id)
+                .single();
+
+            if (!error && data && data.status === 'approved') {
+                clearInterval(interval);
+
+                // Atualiza o perfil na tela (o webhook já fez a recarga por trás)
+                if (onUpdateProfile) {
+                    const { data: profile } = await supabase.from('profiles').select('balance_brl').eq('id', currentUser.id).single();
+                    if (profile) {
+                        onUpdateProfile(currentUser.id, { balanceBrl: Number(profile.balance_brl) } as any);
+                    }
+                }
+
+                alert(`Pagamento de R$ ${data.amount} reconhecido com sucesso!`);
+                setPixData(null);
+                setCustomBrlAmount('');
+                setActiveTab('brl');
+            }
+        }, 3000); // Poll every 3 seconds
+
+        return () => clearInterval(interval);
+    }, [pixData]);
 
     return (
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in slide-in-from-bottom-8">
@@ -250,6 +257,39 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                             </div>
                         </div>
                     </>
+                ) : pixData ? (
+                    <div className="flex justify-center w-full">
+                        <div className="w-full max-w-md bg-surface-dark border border-primary/30 rounded-3xl p-8 flex flex-col relative overflow-hidden text-center shadow-[0_0_30px_rgba(236,72,153,0.1)]">
+                            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 mx-auto border border-primary/20">
+                                <span className="material-icons-outlined text-3xl text-primary">qr_code_scanner</span>
+                            </div>
+                            <h3 className="text-xl font-bold text-white uppercase mb-2 text-primary">Pagar via PIX</h3>
+                            <p className="text-gray-400 text-sm mb-6">Escaneie o QR Code abaixo ou copie o código PIX para concluir o pagamento de R$ {Number(customBrlAmount).toFixed(2).replace('.', ',')}</p>
+
+                            <div className="bg-white p-4 rounded-xl mb-6 mx-auto w-[250px] h-[250px] flex items-center justify-center border-4 border-primary/20">
+                                {pixData.qr_code_base64 ? (
+                                    <img src={`data:image/jpeg;base64,${pixData.qr_code_base64}`} alt="QR Code PIX" className="w-full h-full object-contain" />
+                                ) : (
+                                    <span className="material-icons-outlined text-gray-400 text-6xl">qr_code_2</span>
+                                )}
+                            </div>
+
+                            <button
+                                onClick={() => {
+                                    navigator.clipboard.writeText(pixData.qr_code);
+                                    alert('Código PIX Copiado!');
+                                }}
+                                className="w-full bg-white/5 border border-white/10 hover:bg-white/10 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors mb-4"
+                            >
+                                <span className="material-icons-outlined text-sm">content_copy</span> Copiar Código PIX
+                            </button>
+
+                            <div className="flex items-center justify-center gap-2 text-primary text-xs font-bold uppercase animate-pulse">
+                                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                                Aguardando pagamento...
+                            </div>
+                        </div>
+                    </div>
                 ) : (
                     <div className="flex justify-center w-full">
                         <div className="w-full max-w-md bg-surface-dark border border-primary/30 rounded-3xl p-8 flex flex-col relative overflow-hidden text-center shadow-[0_0_30px_rgba(236,72,153,0.1)]">
