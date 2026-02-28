@@ -1426,59 +1426,58 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             {
                 showClaimModal && (
                     <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
-                        <div className="bg-surface-dark border border-white/10 rounded-2xl w-full max-w-sm p-8 text-center animate-float shadow-[0_0_50px_rgba(250,204,21,0.2)]">
-                            <div className="w-24 h-24 bg-gradient-to-br from-yellow-400 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-neon-pink">
-                                <span className="material-icons-outlined text-5xl text-white">redeem</span>
+                        <div className="bg-surface-dark border border-white/10 rounded-2xl w-full max-w-sm p-6 text-center shadow-[0_0_50px_rgba(250,204,21,0.2)] flex flex-col max-h-[90vh]">
+                            <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-neon-pink shrink-0">
+                                <span className="material-icons-outlined text-3xl text-white">redeem</span>
                             </div>
 
                             {claimAnimation ? (
-                                <div className="animate-in zoom-in duration-500 py-4">
-                                    <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/50 shadow-[0_0_30px_rgba(34,197,94,0.3)]">
-                                        <span className="material-icons-outlined text-4xl text-green-500">check_circle</span>
+                                <div className="animate-in zoom-in duration-500 py-2 overflow-y-auto custom-scrollbar">
+                                    <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-500/50 shadow-[0_0_30px_rgba(34,197,94,0.3)]">
+                                        <span className="material-icons-outlined text-3xl text-green-500">check_circle</span>
                                     </div>
-                                    <h3 className="text-3xl font-black text-white mb-2 tracking-tight">RESGATADO!</h3>
-                                    <div className="text-5xl font-black text-primary mb-4 animate-pulse drop-shadow-[0_0_15px_rgba(250,204,21,0.5)]">
+                                    <h3 className="text-xl font-black text-white mb-2 tracking-tight">RESGATADO!</h3>
+                                    <div className="text-4xl font-black text-primary mb-3 animate-pulse drop-shadow-[0_0_15px_rgba(250,204,21,0.5)]">
                                         +{claimedRewardRef.current?.reward_label}
                                     </div>
-                                    <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden mb-8 max-w-[200px] mx-auto">
+                                    <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden mb-6 max-w-[200px] mx-auto">
                                         <div className="bg-gradient-to-r from-green-500 to-emerald-400 h-full transition-all duration-1000" style={{ width: '100%' }}></div>
                                     </div>
-                                    <p className="text-gray-400 text-sm font-medium">Volte amanhã às <span className="text-white font-bold">21:00</span> para mais!</p>
+                                    <p className="text-gray-400 text-xs font-medium">Volte amanhã às <span className="text-white font-bold">21:00</span> para mais!</p>
                                 </div>
                             ) : (
-                                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                    <div className="mb-6">
-                                        <h3 className="text-2xl font-black text-white mb-1 uppercase tracking-tighter">Bônus Diário</h3>
-                                        <div className="flex items-center justify-center gap-2 text-primary text-xs font-bold uppercase tracking-[0.2em]">
+                                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col overflow-hidden">
+                                    <div className="mb-4 shrink-0">
+                                        <h3 className="text-xl font-black text-white uppercase tracking-tighter">Bônus Diário</h3>
+                                        <div className="flex items-center justify-center gap-2 text-primary text-[10px] font-bold uppercase tracking-[0.2em]">
                                             <span className="w-8 h-[1px] bg-primary/30"></span>
                                             Dia {activeDailyRewards ? Math.min(player.dailyStreak + 1, activeDailyRewards.length) : (player.dailyStreak % 7) + 1}
-
                                             <span className="w-8 h-[1px] bg-primary/30"></span>
                                         </div>
                                     </div>
 
                                     {/* Reward Card - compact */}
-                                    <div className="bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 rounded-3xl p-6 mb-6 relative overflow-hidden">
-                                        <div className="absolute -top-8 -right-8 w-28 h-28 bg-primary/20 rounded-full blur-3xl pointer-events-none"></div>
-                                        <div className="relative z-10 flex items-center justify-between gap-4">
-                                            <div>
-                                                <div className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-1">Sua Recompensa Hoje</div>
-                                                <div className="text-4xl font-black tracking-tighter">
+                                    <div className="bg-gradient-to-b from-white/10 to-white/[0.02] border border-white/10 rounded-2xl p-4 mb-4 relative overflow-hidden shrink-0">
+                                        <div className="absolute -top-8 -right-8 w-24 h-24 bg-primary/20 rounded-full blur-2xl pointer-events-none"></div>
+                                        <div className="relative z-10 flex items-center justify-between gap-3">
+                                            <div className="text-left">
+                                                <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-0.5">Sua Recompensa Hoje</div>
+                                                <div className="text-2xl sm:text-3xl font-black tracking-tighter">
                                                     <span className="text-primary">
                                                         {activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)]?.reward_type === 'brl' ? 'R$ ' : '+'}
                                                         {activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)]?.reward_value}
                                                     </span>
-                                                    <span className="text-lg ml-1 text-gray-400">
+                                                    <span className="text-sm ml-1 text-gray-400">
                                                         {activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)]?.reward_type === 'xp' ? 'XP' :
                                                             activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)]?.reward_type === 'chipz' ? 'CHIPZ' : ''}
                                                     </span>
                                                 </div>
-                                                <div className="text-xs text-gray-600 mt-1">
+                                                <div className="text-[10px] text-gray-600 mt-0.5">
                                                     {activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)]?.reward_label}
                                                 </div>
                                             </div>
-                                            <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
-                                                <span className="material-icons-outlined text-2xl text-primary">
+                                            <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
+                                                <span className="material-icons-outlined text-xl text-primary">
                                                     {activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)]?.reward_type === 'brl' ? 'payments' :
                                                         activeDailyRewards[Math.min(player.dailyStreak, activeDailyRewards.length - 1)]?.reward_type === 'chipz' ? 'toll' : 'auto_awesome'}
                                                 </span>
@@ -1489,20 +1488,20 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                     {/* Rewards Table Toggle */}
                                     <button
                                         onClick={() => setShowRewardsTable(prev => !prev)}
-                                        className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold text-gray-400 hover:text-white transition-all mb-4"
+                                        className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[10px] font-bold text-gray-400 hover:text-white transition-all mb-3 shrink-0"
                                     >
-                                        <span className="material-icons-outlined text-sm text-secondary">calendar_month</span>
-                                        {showRewardsTable ? 'Ocultar tabela de recompensas' : 'Ver tabela completa de recompensas'}
-                                        <span className={`material-icons-outlined text-sm transition-transform duration-300 ${showRewardsTable ? 'rotate-180' : ''}`}>expand_more</span>
+                                        <span className="material-icons-outlined text-[14px] text-secondary">calendar_month</span>
+                                        {showRewardsTable ? 'Ocultar tabela' : 'Ver tabela completa'}
+                                        <span className={`material-icons-outlined text-[14px] transition-transform duration-300 ${showRewardsTable ? 'rotate-180' : ''}`}>expand_more</span>
                                     </button>
 
                                     {showRewardsTable && (
-                                        <div className="mb-6 overflow-hidden rounded-2xl border border-white/10 animate-in slide-in-from-top-2 duration-300">
-                                            <div className="bg-black/40 px-4 py-2.5 border-b border-white/10 flex items-center gap-2">
-                                                <span className="material-icons-outlined text-sm text-secondary">emoji_events</span>
-                                                <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Recompensas por Dia</span>
+                                        <div className="mb-3 overflow-hidden rounded-xl border border-white/10 animate-in slide-in-from-top-2 duration-300 shrink-0">
+                                            <div className="bg-black/40 px-3 py-2 border-b border-white/10 flex items-center gap-2">
+                                                <span className="material-icons-outlined text-xs text-secondary">emoji_events</span>
+                                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Recompensas por Dia</span>
                                             </div>
-                                            <div className="divide-y divide-white/5 max-h-56 overflow-y-auto custom-scrollbar">
+                                            <div className="divide-y divide-white/5 max-h-32 sm:max-h-40 overflow-y-auto custom-scrollbar">
                                                 {activeDailyRewards.map((reward, i) => {
                                                     const isCurrentDay = i === Math.min(player.dailyStreak, activeDailyRewards.length - 1);
                                                     const isPast = i < player.dailyStreak;
@@ -1513,17 +1512,17 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                                         <div
                                                             key={i}
                                                             onClick={canClaimThis ? () => handleClaimToday() : undefined}
-                                                            className={`flex items-center justify-between px-4 py-2.5 transition-colors ${isCurrentDay ? 'bg-primary/10 border-l-2 border-primary' :
+                                                            className={`flex items-center justify-between px-3 py-2 transition-colors ${isCurrentDay ? 'bg-primary/10 border-l-2 border-primary' :
                                                                 isPast ? 'bg-white/5 cursor-pointer hover:bg-white/10' :
                                                                     isFuture ? 'opacity-30 cursor-not-allowed' : ''
                                                                 } ${canClaimThis && !isCurrentDay ? 'cursor-pointer hover:bg-white/10' : ''}`}
                                                         >
-                                                            <div className="flex items-center gap-3">
-                                                                <span className={`text-[10px] font-black w-10 ${isCurrentDay ? 'text-primary' : isPast ? 'text-gray-400' : 'text-gray-600'
+                                                            <div className="flex items-center gap-2">
+                                                                <span className={`text-[9px] font-black w-8 ${isCurrentDay ? 'text-primary' : isPast ? 'text-gray-400' : 'text-gray-600'
                                                                     }`}>
                                                                     DIA {reward.day ?? i + 1}
                                                                 </span>
-                                                                <span className={`material-icons-outlined text-sm ${reward.reward_type === 'brl' ? 'text-green-400' :
+                                                                <span className={`material-icons-outlined text-[14px] ${reward.reward_type === 'brl' ? 'text-green-400' :
                                                                     reward.reward_type === 'chipz' ? 'text-secondary' : 'text-blue-400'
                                                                     }`}>
                                                                     {reward.reward_type === 'brl' ? 'payments' :
@@ -1531,14 +1530,12 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                                                 </span>
                                                             </div>
                                                             <div className="flex items-center gap-2">
-                                                                <span className={`text-xs font-bold ${isCurrentDay ? 'text-primary' :
+                                                                <span className={`text-[10px] sm:text-xs font-bold ${isCurrentDay ? 'text-primary' :
                                                                     isPast ? 'text-gray-300' : 'text-gray-600'
                                                                     }`}>
                                                                     {reward.reward_label}
                                                                 </span>
-                                                                {isPast && <span className="material-icons-outlined text-[10px] text-primary/50">history</span>}
-                                                                {isCurrentDay && <span className="text-[8px] font-black text-primary bg-primary/10 border border-primary/30 px-1.5 py-0.5 rounded-full uppercase">Hoje</span>}
-                                                                {canClaimThis && !isCurrentDay && <span className="material-icons-outlined text-xs text-primary animate-pulse">ads_click</span>}
+                                                                {isCurrentDay && <span className="text-[8px] font-black text-primary bg-primary/10 border border-primary/30 px-1 py-0.5 rounded-full uppercase">Hoje</span>}
                                                             </div>
                                                         </div>
                                                     );
@@ -1547,31 +1544,29 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                         </div>
                                     )}
 
-                                    {/* Reset timer */}
-                                    <div className="flex items-center justify-center gap-2 mb-6 px-4 py-2 bg-black/40 border border-white/5 rounded-full text-gray-400 text-[10px] font-bold uppercase tracking-widest">
-                                        <span className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span>
-                                        Reset Diário: <span className="text-white ml-1">21:00H</span>
-                                    </div>
-
-                                    <div className="space-y-3">
+                                    <div className="overflow-y-auto custom-scrollbar pr-1 shrink-0 space-y-2 mt-auto">
                                         <button
                                             onClick={handleClaimToday}
-                                            className="w-full py-5 bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_auto] hover:bg-right text-white font-black text-lg rounded-2xl shadow-[0_10px_30px_rgba(250,204,21,0.3)] transition-all duration-500 active:scale-95 uppercase tracking-wider"
+                                            className="w-full py-3 sm:py-4 bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_auto] hover:bg-right text-white font-black text-sm rounded-xl shadow-[0_5px_15px_rgba(250,204,21,0.2)] transition-all duration-500 active:scale-95 uppercase tracking-wider"
                                         >
-                                            RESGATAR RECOMPENSA DE HOJE
+                                            RESGATAR DE HOJE
                                         </button>
                                         <button
                                             onClick={handleSkipToday}
-                                            className="w-full py-3 text-gray-400 hover:text-white border border-gray-600 hover:border-white font-bold text-sm rounded-xl transition-colors active:scale-95 mb-2"
+                                            className="w-full py-2.5 text-gray-400 hover:text-white border border-gray-600 hover:border-white font-bold text-xs rounded-lg transition-colors active:scale-95"
                                         >
                                             PULAR RECOMPENSA E MELHORAR AMANHÃ
                                         </button>
                                         <button
                                             onClick={() => setShowClaimModal(false)}
-                                            className="w-full py-3 text-gray-500 hover:text-white font-bold text-xs transition-colors uppercase tracking-widest"
+                                            className="w-full py-2 text-gray-500 hover:text-white font-bold text-[10px] transition-colors uppercase tracking-widest mb-1"
                                         >
-                                            FECHAR (O Bônus continua disponível)
+                                            FECHAR (Guarda para depois)
                                         </button>
+                                        <div className="flex items-center justify-center gap-1.5 pt-1 text-gray-500 text-[9px] font-bold uppercase tracking-widest border-t border-white/5">
+                                            <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse"></span>
+                                            Reset: <span className="text-white">21:00H</span>
+                                        </div>
                                     </div>
                                 </div>
                             )}
