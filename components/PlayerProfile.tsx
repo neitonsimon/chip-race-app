@@ -375,7 +375,6 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     useEffect(() => { viewingReceiptRef.current = viewingReceipt; }, [viewingReceipt]);
 
     useEffect(() => {
-        let interval: NodeJS.Timeout;
         let channel: any;
 
         if (activeTab === 'comprovantes' && (targetIdRef.current || player.id)) {
@@ -383,14 +382,6 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             if (!targetIdRef.current && player.id) targetIdRef.current = player.id;
 
             fetchPlayerCommands();
-
-            // Polling para "tempo real" garantido
-            interval = setInterval(() => {
-                fetchPlayerCommands();
-                if (viewingReceiptRef.current) {
-                    handleViewReceipt(viewingReceiptRef.current, true);
-                }
-            }, 5000);
 
             // Realtime listener
             channel = supabase.channel('commands_realtime_profile_' + targetIdRef.current)
@@ -407,7 +398,6 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         }
 
         return () => {
-            if (interval) clearInterval(interval);
             if (channel) supabase.removeChannel(channel);
         };
     }, [activeTab, player.id]);
