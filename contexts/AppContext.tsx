@@ -1022,15 +1022,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setMessages(prev => prev.map(m => m.id === id ? { ...m, read: true } : m));
         setUnreadCount(prev => Math.max(0, prev - 1));
 
-        // Auto-delete for specific "system" notifications
-        // User wants: daily login, BRL credits, payment, welcome to be deleted when read.
-        // Most are in 'system' category.
-        if (msg.category === 'system') {
-            await supabase.from('messages').delete().eq('id', id);
-            setMessages(prev => prev.filter(m => m.id !== id));
-        } else {
-            await supabase.from('messages').update({ is_read: true }).eq('id', id);
-        }
+        await supabase.from('messages').update({ is_read: true }).eq('id', id);
     };
 
     const handleDeleteMessage = async (id: string) => {
