@@ -376,7 +376,7 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                        {Object.keys(REGULATIONS_DATA).map((validId) => {
+                        {((content as any).chosen_slots || Object.keys(REGULATIONS_DATA)).map((validId: string, index: number) => {
                             const originalIndex = (categories || []).findIndex(c => c.id === validId);
                             const cat = originalIndex !== -1 ? categories[originalIndex] : null;
 
@@ -385,14 +385,14 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                             if (!cat) {
                                 if (!isAdmin) return null;
                                 return (
-                                    <div key={`empty-${validId}`} className="relative bg-[#0f0a20]/50 border border-dashed border-white/10 p-6 sm:p-8 rounded-2xl flex flex-col h-full text-center items-center justify-center min-h-[300px] group hover:border-primary/50 transition-colors">
+                                    <div key={`empty-${index}`} className="relative bg-[#0f0a20]/50 border border-dashed border-white/10 p-6 sm:p-8 rounded-2xl flex flex-col h-full text-center items-center justify-center min-h-[300px] group hover:border-primary/50 transition-colors">
                                         <div className="w-16 h-16 rounded-full bg-white/5 border border-white/5 flex items-center justify-center mb-4">
                                             <span className="material-icons-outlined text-gray-700 text-3xl">add</span>
                                         </div>
-                                        <p className="text-[10px] font-black uppercase text-gray-600 tracking-widest mb-4">Slot {validId} Livre</p>
+                                        <p className="text-[10px] font-black uppercase text-gray-600 tracking-widest mb-4">Slot Livre</p>
 
                                         <button
-                                            onClick={() => setActiveTemplateSelect(`new-${validId}`)}
+                                            onClick={() => setActiveTemplateSelect(`slot-${index}`)}
                                             className="bg-primary/20 hover:bg-primary/40 text-primary text-[10px] font-black px-4 py-2 rounded-lg transition-all"
                                         >
                                             CONFIGURAR CATEGORIA
@@ -440,12 +440,30 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                                                         {cat.description}
                                                     </p>
                                                 </div>
-                                                <button
-                                                    onClick={() => setActiveRegulation(cat.id)}
-                                                    className={`mt-auto text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:border-white/30 transition-all ${styles.btn}`}
-                                                >
-                                                    VER MAIS <span className="material-icons-outlined text-xs">add_circle</span>
-                                                </button>
+                                                <div className="mt-auto flex gap-2">
+                                                    <button
+                                                        onClick={() => setActiveRegulation(cat.id)}
+                                                        className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:border-white/30 transition-all ${styles.btn}`}
+                                                    >
+                                                        VER MAIS <span className="material-icons-outlined text-xs">add_circle</span>
+                                                    </button>
+                                                    {isAdmin && (
+                                                        <button
+                                                            onClick={async (e) => {
+                                                                e.stopPropagation();
+                                                                if (window.confirm('Remover esta categoria do slot?')) {
+                                                                    const newSlots = [...((content as any).chosen_slots || Object.keys(REGULATIONS_DATA))];
+                                                                    newSlots[index] = 'empty';
+                                                                    onUpdateContent('chosen_slots', newSlots as any);
+                                                                }
+                                                            }}
+                                                            className="text-[10px] font-bold uppercase flex items-center justify-center px-2 py-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/30 transition-all border border-red-500/20"
+                                                            title="Remover Categoria do Slot"
+                                                        >
+                                                            <span className="material-icons-outlined text-xs">delete</span>
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </>
                                         )}
                                     </div>
@@ -630,43 +648,52 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                             </button>
                         </div>
                         <div className="max-h-64 overflow-y-auto custom-scrollbar">
-                            {Object.entries(REGULATIONS_DATA).map(([key, data]) => (
+                            {categories.map((cat) => (
                                 <button
-                                    key={key}
+                                    key={cat.id}
                                     onClick={async () => {
-                                        const isNew = typeof activeTemplateSelect === 'string' && activeTemplateSelect.startsWith('new-');
-                                        const index = isNew ? parseInt(activeTemplateSelect.toString().split('-')[1]) : activeTemplateSelect as number;
-
-                                        const colorValue = (data.color.replace('text-', '').replace('-500', '') as any);
-                                        const firstRule = data.rules.trim().split('\n')[0].replace(/^\d+\.\s*/, '');
-
-                                        if (isNew) {
-                                            const { error } = await supabase.from('ecosystem_categories').insert({
-                                                id: key,
-                                                title: data.title,
-                                                icon: data.icon,
-                                                description: firstRule,
-                                                color: colorValue === 'primary' || colorValue === 'secondary' || colorValue === 'cyan' || colorValue === 'pink' ? colorValue : 'primary',
-                                                order: index,
-                                                slots: 1
-                                            });
-                                            if (error) alert('Erro ao criar: ' + error.message);
-                                            else window.location.reload();
+                                        const isSlotMode = typeof activeTemplateSelect === 'string' && activeTemplateSelect.startsWith('slot-');
+                                        if (isSlotMode) {
+                                            const slotIndex = parseInt(activeTemplateSelect.toString().split('-')[1]);
+                                            const newSlots = [...((content as any).chosen_slots || Object.keys(REGULATIONS_DATA))];
+                                            newSlots[slotIndex] = cat.id;
+                                            onUpdateContent('chosen_slots', newSlots as any);
                                         } else {
-                                            onUpdateCategory(index, {
-                                                id: key,
-                                                title: data.title,
-                                                icon: data.icon,
-                                                description: firstRule,
-                                                color: colorValue === 'primary' || colorValue === 'secondary' || colorValue === 'cyan' || colorValue === 'pink' ? colorValue : 'primary'
-                                            });
+                                            // Handle original isNew logic if still active
+                                            const isNew = typeof activeTemplateSelect === 'string' && activeTemplateSelect.startsWith('new-');
+                                            const index = isNew ? parseInt(activeTemplateSelect.toString().split('-')[1]) : activeTemplateSelect as number;
+
+                                            const colorValue = (cat.color.replace('text-', '').replace('-500', '') as any);
+                                            const firstRule = cat.description.trim().split('\n')[0].replace(/^\d+\.\s*/, '');
+
+                                            if (isNew) {
+                                                const { error } = await supabase.from('ecosystem_categories').insert({
+                                                    id: cat.id,
+                                                    title: cat.title,
+                                                    icon: cat.icon,
+                                                    description: firstRule,
+                                                    color: colorValue === 'primary' || colorValue === 'secondary' || colorValue === 'cyan' || colorValue === 'pink' ? colorValue : 'primary',
+                                                    order: index,
+                                                    slots: 1
+                                                });
+                                                if (error) alert('Erro ao criar: ' + error.message);
+                                                else window.location.reload();
+                                            } else {
+                                                onUpdateCategory(index, {
+                                                    id: cat.id,
+                                                    title: cat.title,
+                                                    icon: cat.icon,
+                                                    description: firstRule,
+                                                    color: colorValue === 'primary' || colorValue === 'secondary' || colorValue === 'cyan' || colorValue === 'pink' ? colorValue : 'primary'
+                                                });
+                                            }
                                         }
                                         setActiveTemplateSelect(null);
                                     }}
                                     className="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-white/5 transition-colors flex items-center gap-2 group/item"
                                 >
-                                    <span className={`material-icons-outlined text-sm ${data.color}`}>{data.icon}</span>
-                                    <span className="text-gray-300 group-hover/item:text-white truncate">{data.title}</span>
+                                    <span className={`material-icons-outlined text-sm text-${cat.color}-500`}>{cat.icon}</span>
+                                    <span className="text-gray-300 group-hover/item:text-white truncate">{cat.title}</span>
                                 </button>
                             ))}
                         </div>

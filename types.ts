@@ -377,6 +377,7 @@ export interface ContentDB {
     plus_title: string;
     plus_desc: string;
     ways_title: string;
+    chosen_slots?: string[];
   };
   // Adicione mais seções conforme necessário
   categories: TournamentCategory[]; // Categories são dinâmicas agora
