@@ -19,7 +19,7 @@ export default function App() {
 
     // OneSignal Push Notifications Setup
     React.useEffect(() => {
-        const appId = "6fd92a0e-7442-45e6-bc8a-fbc8416d863f"; // Substitua pelo seu ID real do OneSignal se for diferente
+        const appId = "87ad3921-2743-4a35-8498-56b4aefd7b16"; // ID Real OneSignal Chip Race
 
         if (typeof window !== 'undefined') {
             (window as any).OneSignal = (window as any).OneSignal || [];
