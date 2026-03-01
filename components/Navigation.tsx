@@ -77,7 +77,7 @@ export const Navigation: React.FC<NavigationProps> = ({
     const handleCategoryClick = (cat: any) => {
         setMobileMenuOpen(false);
         if (cat.id === 'rankings') return onNavigate('ranking');
-        if (cat.id === 'ladies-league') return onNavigate('vip');
+        if (cat.id === 'ladies-league' || cat.id === 'vip') return onNavigate('vip');
         if (cat.id === 'online' || cat.id === 'online-credits') return onNavigate('online-credits');
         onNavigate('category-' + cat.id);
     };
