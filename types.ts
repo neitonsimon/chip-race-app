@@ -155,6 +155,19 @@ export interface RankingPlayer {
   debtLimitBrl?: number;
   totalPendingDebt?: number;
   badges?: Badge[];
+  suprema_nickname?: string;
+  suprema_user_id?: string;
+}
+
+export interface OnlineCreditRequest {
+  id: string;
+  user_id: string;
+  suprema_nickname: string;
+  suprema_user_id: string;
+  amount_brl: number;
+  status: 'pending' | 'completed' | 'cancelled';
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ChipzPackage {

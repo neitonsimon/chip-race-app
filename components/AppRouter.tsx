@@ -20,6 +20,7 @@ import { TermsOfUse } from './TermsOfUse';
 import { PrivacyPolicy } from './PrivacyPolicy';
 import { ClubRules } from './ClubRules';
 import { ResponsibleGaming } from './ResponsibleGaming';
+import { OnlineCreditsPage } from './OnlineCreditsPage';
 
 export const AppRouter: React.FC = () => {
     const {
@@ -134,7 +135,6 @@ export const AppRouter: React.FC = () => {
                 />;
             case 'recharge':
                 return <RechargePage currentUser={currentUser as any} onNavigate={handleNavigate} onUpdateProfile={handleProfileUpdate} />;
-            case 'admin':
                 return <AdminPanel
                     currentUser={currentUser as any}
                     onClose={() => handleNavigate('home')}
@@ -144,6 +144,12 @@ export const AppRouter: React.FC = () => {
                     onCreateBadgeTemplate={handleCreateBadgeTemplate}
                     onSendAdminMessage={handleSendAdminMessage}
                     onCreatePoll={handleCreatePoll}
+                />;
+            case 'online-credits':
+                return <OnlineCreditsPage
+                    currentUser={currentUser as any}
+                    onNavigate={handleNavigate}
+                    onUpdateProfile={handleProfileUpdate}
                 />;
             case 'terms':
                 return <TermsOfUse />;

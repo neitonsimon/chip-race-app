@@ -140,7 +140,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 supabase.from('events').select('*').order('date', { ascending: true }),
                 supabase.from('content_db').select('*'),
                 supabase.from('ecosystem_categories').select('*').order('order', { ascending: true }),
-                supabase.from('profiles_public').select('id, numeric_id, name, avatar_url, city, is_vip, vip_status, vip_expires_at, social, bio, level, current_exp, next_level_exp, gallery, play_styles, is_verified, total_pending_debt'),
+                supabase.from('profiles_public').select('id, numeric_id, name, avatar_url, city, is_vip, vip_status, vip_expires_at, social, bio, level, current_exp, next_level_exp, gallery, play_styles, is_verified, total_pending_debt, suprema_nickname, suprema_user_id'),
                 supabase.from('user_badges').select('*, badge_templates(*)'),
                 supabase.from('experience_levels').select('*').order('level', { ascending: true }),
                 supabase.from('daily_rewards').select('*').order('day', { ascending: true }),
@@ -261,6 +261,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     playStyles: p.play_styles || undefined,
                     isVerified: p.is_verified || false,
                     totalPendingDebt: p.total_pending_debt || 0,
+                    suprema_nickname: p.suprema_nickname || undefined,
+                    suprema_user_id: p.suprema_user_id || undefined,
                     badges: allUserBadges?.filter(ub => ub.user_id === p.id).map(ub => ({
                         ...ub,
                         color: ub.color // Ensure color is passed
@@ -311,6 +313,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     totalPendingDebt: data.total_pending_debt || 0,
                     debtLimitBrl: data.debt_limit_brl || 0,
                     isVerified: data.is_verified || false,
+                    suprema_nickname: data.suprema_nickname || '',
+                    suprema_user_id: data.suprema_user_id || '',
                     role: data.role,
                     badges: []
                 };
