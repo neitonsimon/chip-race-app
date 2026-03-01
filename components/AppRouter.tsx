@@ -135,6 +135,7 @@ export const AppRouter: React.FC = () => {
                 />;
             case 'recharge':
                 return <RechargePage currentUser={currentUser as any} onNavigate={handleNavigate} onUpdateProfile={handleProfileUpdate} />;
+            case 'admin':
                 return <AdminPanel
                     currentUser={currentUser as any}
                     onClose={() => handleNavigate('home')}

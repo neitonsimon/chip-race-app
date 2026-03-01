@@ -86,8 +86,8 @@ BEGIN
     WHERE id = v_user_id;
 
     -- Log transaction
-    INSERT INTO public.transactions (user_id, amount_brl, amount_chipz, description, category)
-    VALUES (v_user_id, -p_amount, 0, 'Solicitação de Créditos Online (Suprema Poker)', 'purchase');
+    INSERT INTO public.transactions (user_id, amount_brl, amount_chipz, description, category, type)
+    VALUES (v_user_id, -p_amount, 0, 'Solicitação de Créditos Online (Suprema Poker)', 'purchase', 'debit');
 
     -- Create request record
     INSERT INTO public.online_credit_requests (user_id, suprema_nickname, suprema_user_id, amount_brl)
@@ -158,8 +158,8 @@ BEGIN
         WHERE id = v_req.user_id;
 
         -- Log refund
-        INSERT INTO public.transactions (user_id, amount_brl, amount_chipz, description, category)
-        VALUES (v_req.user_id, v_req.amount_brl, 0, 'Estorno: Solicitação de Créditos Online Cancelada/Recusada', 'wallet_deposit');
+        INSERT INTO public.transactions (user_id, amount_brl, amount_chipz, description, category, type)
+        VALUES (v_req.user_id, v_req.amount_brl, 0, 'Estorno: Solicitação de Créditos Online Cancelada/Recusada', 'wallet_deposit', 'credit');
 
         -- Send message to user
         INSERT INTO public.messages (user_id, sender_id, sender, subject, content, category, is_read)

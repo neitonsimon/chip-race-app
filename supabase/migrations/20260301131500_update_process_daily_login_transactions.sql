@@ -90,13 +90,13 @@ BEGIN
             
         WHEN 'chipz' THEN
             UPDATE profiles SET balance_chipz = balance_chipz + v_reward_value::INT WHERE id = u_id;
-            INSERT INTO transactions (user_id, amount_brl, amount_chipz, description, category, created_at)
-            VALUES (u_id, 0, v_reward_value::INT, 'Recompensa de Login Diário', 'system', NOW());
+            INSERT INTO transactions (user_id, amount_brl, amount_chipz, description, category, type, created_at)
+            VALUES (u_id, 0, v_reward_value::INT, 'Recompensa de Login Diário', 'system', 'credit', NOW());
             
         WHEN 'brl' THEN
             UPDATE profiles SET balance_brl = balance_brl + v_reward_value::NUMERIC WHERE id = u_id;
-            INSERT INTO transactions (user_id, amount_brl, amount_chipz, description, category, created_at)
-            VALUES (u_id, v_reward_value::NUMERIC, 0, 'Recompensa de Login Diário', 'system', NOW());
+            INSERT INTO transactions (user_id, amount_brl, amount_chipz, description, category, type, created_at)
+            VALUES (u_id, v_reward_value::NUMERIC, 0, 'Recompensa de Login Diário', 'system', 'credit', NOW());
             
         WHEN 'badge' THEN
             -- Award insignia
