@@ -850,23 +850,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                             slug = 'tournament_win_1';
                             defaultSubject = '🏆 Grande Campeão!';
                             defaultContent = `Incrível! Você venceu o ${eventToUpdate.title}! Parabéns pela cravada fenomenal, você jogou muito!`;
+
+                            try {
+                                await supabase.functions.invoke('send-push-notification', {
+                                    body: {
+                                        userIds: r.userId,
+                                        title: '🏆 Você é o grande campeão!',
+                                        message: `Cravada fenomenal! Você venceu o ${eventToUpdate.title}. Parabéns!`
+                                    }
+                                });
+                            } catch (e) {
+                                console.error('Error sending win push:', e);
+                            }
                         } else if (r.position === 2) {
                             slug = 'tournament_win_2';
                             defaultSubject = '🥈 Vice-Campeão';
                             defaultContent = `Excelente desempenho! Você foi vice-campeão do ${eventToUpdate.title}. Quase lá!`;
+
+                            try {
+                                await supabase.functions.invoke('send-push-notification', {
+                                    body: {
+                                        userIds: r.userId,
+                                        title: '🥈 Vice-Campeão!',
+                                        message: `Parabéns pelo 2º lugar no ${eventToUpdate.title}! Jogou muito!`
+                                    }
+                                });
+                            } catch (e) {
+                                console.error('Error sending win push:', e);
+                            }
                         } else if (r.position === 3) {
                             slug = 'tournament_win_3';
                             defaultSubject = '🥉 Pódio Garantido';
                             defaultContent = `Bom jogo! Você subiu ao pódio e garantiu o 3º lugar no ${eventToUpdate.title}. Parabéns!`;
+
+                            try {
+                                await supabase.functions.invoke('send-push-notification', {
+                                    body: {
+                                        userIds: r.userId,
+                                        title: '🥉 Você está no Pódio!',
+                                        message: `Excelente jogo! Garantiu o 3º lugar no ${eventToUpdate.title}.`
+                                    }
+                                });
+                            } catch (e) {
+                                console.error('Error sending win push:', e);
+                            }
                         }
 
-                        // Try to use template if exists, else fallback
                         const templateExists = systemMessageTemplates.some(t => t.id === slug && t.is_active);
                         if (templateExists) {
-                            const vars = { tournament_name: eventToUpdate.title, position: r.position };
-                            await sendTemplatedMessage(slug, r.userId, vars);
+                            await sendTemplatedMessage(slug, r.userId, { tournament_name: eventToUpdate.title, position: r.position });
                         } else if (r.position <= 3) {
-                            // Insert manual fallback for top 3
                             await supabase.from('messages').insert({
                                 user_id: r.userId,
                                 sender: 'Chip Race',
@@ -878,6 +911,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                         }
                     }
                 }
+
             }
         } catch (e) {
             console.error('Error in event closure messages:', e);

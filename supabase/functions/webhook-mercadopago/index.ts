@@ -112,9 +112,31 @@ serve(async (req: Request) => {
 
                 if (rpcError || rpcData === false) {
                     console.error("Failed to add balance via RPC:", rpcError);
-                    // Not returning 500 here so MP stops retrying if it's our DB's deterministic fault,
-                    // but normally you might want MP to retry if it's a transient DB disconnect
                 } else {
+                    // Send Push Notification
+                    const ONESIGNAL_APP_ID = Deno.env.get('ONESIGNAL_APP_ID')
+                    const ONESIGNAL_REST_API_KEY = Deno.env.get('ONESIGNAL_REST_API_KEY')
+
+                    if (ONESIGNAL_APP_ID && ONESIGNAL_REST_API_KEY) {
+                        const title = `💰 PIX Aprovado!`
+                        const message = `Seu depósito de R$ ${intent.amount.toFixed(2)} foi creditado com sucesso em sua carteira.`
+
+                        await fetch('https://onesignal.com/api/v1/notifications', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Basic ${ONESIGNAL_REST_API_KEY}`,
+                            },
+                            body: JSON.stringify({
+                                app_id: ONESIGNAL_APP_ID,
+                                headings: { en: title, pt: title },
+                                contents: { en: message, pt: message },
+                                include_external_user_ids: [intent.user_id],
+                                url: 'https://chip-race-app.vercel.app/recargas',
+                            }),
+                        })
+                    }
+
                     // Also add EXP BONUS
                     const expBonus = Math.floor(intent.amount / 20);
                     if (expBonus > 0) {

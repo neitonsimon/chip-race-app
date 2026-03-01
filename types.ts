@@ -57,6 +57,17 @@ export interface PlayerResult {
   profitLoss?: number; // For Cash Games
 }
 
+export interface TournamentReservation {
+  id: string;
+  event_id: string;
+  user_id: string;
+  status: 'reserved' | 'confirmed' | 'cancelled';
+  created_at: string;
+  updated_at?: string;
+  profiles?: any;
+  events?: any;
+}
+
 export interface Event {
   id: string;
   title: string;

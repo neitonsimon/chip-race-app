@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Event, PlayerResult, RankingPlayer, RankingInstance, ScoringSchema, RankingFormula } from '../types';
+import { Event, PlayerResult, RankingPlayer, RankingInstance, ScoringSchema, RankingFormula, PlayerStats } from '../types';
+import { supabase } from '../src/lib/supabase';
 import { calculatePoints } from '../utils/scoring';
 import appConfig from '../src/config/appConfig.json';
 import { EventSkeleton } from './Skeleton';
@@ -12,6 +13,7 @@ interface EventStats {
 
 interface EventCalendarProps {
     isAdmin?: boolean;
+    currentUser?: PlayerStats | null;
     events: Event[];
     setEvents: React.Dispatch<React.SetStateAction<Event[]>>;
     onCloseEvent: (eventId: string, results: PlayerResult[], stats: EventStats) => void;
@@ -31,6 +33,7 @@ const PARALLEL_PRODUCTS = appConfig.events.parallelProducts;
 
 export const EventCalendar: React.FC<EventCalendarProps> = ({
     isAdmin,
+    currentUser,
     events,
     setEvents,
     onCloseEvent,
@@ -313,6 +316,37 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                 newRankings = [...currentRankings, rankingId];
             }
             setEditingEvent({ ...editingEvent, includedRankings: newRankings });
+        }
+    };
+
+    const handleReserveSeat = async (eventToReserve: Event) => {
+        if (!currentUser) {
+            alert("Você precisa estar logado para reservar um assento.");
+            return;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('tournament_reservations')
+                .insert({
+                    event_id: eventToReserve.id,
+                    user_id: currentUser.id,
+                    status: 'reserved'
+                });
+
+            if (error) {
+                if (error.code === '23505') { // Unique constraint violation usually
+                    alert("Você já possui reserva para este evento.");
+                } else {
+                    console.error("Erro ao reservar:", error);
+                    alert("Não foi possível reservar seu assento no momento.");
+                }
+            } else {
+                alert("Assento reservado com sucesso! A organização foi notificada.");
+            }
+        } catch (err) {
+            console.error("Erro inesperado:", err);
+            alert("Ocorreu um erro ao processar sua reserva.");
         }
     };
 
@@ -768,6 +802,17 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                 VER DETALHES <span className="material-icons-outlined text-lg">visibility</span>
                                             </button>
                                         </div>
+
+                                        {/* Botão de Reservar (Para todos os usuários em eventos abertos) */}
+                                        {event.status !== 'closed' && event.gameMode === 'tournament' && (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleReserveSeat(event); }}
+                                                className="px-6 py-2 w-full mt-2 rounded-full font-bold text-xs uppercase tracking-widest transition-all bg-green-600/20 text-green-500 border border-green-600/50 hover:bg-green-600 hover:text-white flex items-center gap-2 md:w-auto justify-center"
+                                            >
+                                                <span className="material-icons-outlined text-sm">event_seat</span>
+                                                Reservar Assento
+                                            </button>
+                                        )}
 
                                         {/* BOTÃO DE ENCERRAR EVENTO (ADMIN ONLY - Só se não estiver fechado) */}
                                         {isAdmin && event.status !== 'closed' && (

@@ -45,6 +45,7 @@ export const AppRouter: React.FC = () => {
             case 'calendar':
                 return <EventCalendar
                     isAdmin={isAdmin}
+                    currentUser={currentUser as any}
                     events={events}
                     setEvents={setEvents}
                     onCloseEvent={handleEventClosure}

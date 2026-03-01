@@ -65,6 +65,21 @@ export default function App() {
         }
     }, []);
 
+    // Link User to OneSignal for targeted push notifications
+    React.useEffect(() => {
+        if (typeof window !== 'undefined' && (window as any).OneSignal) {
+            if (isLoggedIn && currentUser?.id) {
+                (window as any).OneSignal.push(() => {
+                    (window as any).OneSignal.login(currentUser.id);
+                });
+            } else {
+                (window as any).OneSignal.push(() => {
+                    (window as any).OneSignal.logout();
+                });
+            }
+        }
+    }, [isLoggedIn, currentUser?.id]);
+
     // Track Page Views and Setup Global Events
     React.useEffect(() => {
         const handleOpenSupport = () => {

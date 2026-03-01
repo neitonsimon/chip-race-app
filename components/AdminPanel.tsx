@@ -12,6 +12,7 @@ import { CheckoutModal } from './admin-panel/modals/CheckoutModal';
 import { TopUpModal } from './admin-panel/modals/TopUpModal';
 import { EditClosedCommandModal } from './admin-panel/modals/EditClosedCommandModal';
 import { ViewCommandItemsModal } from './admin-panel/modals/ViewCommandItemsModal';
+import { ReservationsTab } from './admin-panel/ReservationsTab';
 
 interface AdminPanelProps {
     onClose: () => void;
@@ -42,7 +43,6 @@ function applyVipDiscount(price: number, category: string, productName: string, 
     return price;
 }
 
-
 // One-time products: category+key that can only appear once per command
 function getOneTimeKey(product: any): string | null {
     const name = (product.name || '').toLowerCase();
@@ -60,7 +60,7 @@ function getOneTimeKeyFromNote(note: string): string | null {
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, isAdmin = false, onUpdateProfile, badgeTemplates = [], onCreateBadgeTemplate, onSendAdminMessage, onCreatePoll }) => {
-    const [activeTab, setActiveTab] = useState<'operational' | 'reports' | 'launch' | 'send-gifts' | 'debts' | 'communications'>('operational');
+    const [activeTab, setActiveTab] = useState<'operational' | 'reports' | 'launch' | 'send-gifts' | 'debts' | 'communications' | 'reservations'>('operational');
     const [events, setEvents] = useState<any[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -1397,6 +1397,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                 await supabase.from('profiles').update({ current_exp: (Number(profData?.current_exp) || 0) + expBonus }).eq('id', userId);
             }
 
+            // 3. Send Push Notification
+            try {
+                await supabase.functions.invoke('send-push-notification', {
+                    body: {
+                        userIds: userId,
+                        title: '💰 Crédito Recebido!',
+                        message: `Seu pagamento de R$ ${amount.toFixed(2)} foi confirmado e seu saldo no Chip Race já foi atualizado.`
+                    }
+                });
+            } catch (pErr) {
+                console.error('Error sending push notification:', pErr);
+            }
+
             // 5. Base system message
             await supabase.from('messages').insert({
                 user_id: userId,
@@ -1592,6 +1605,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                     { id: 'send-gifts', icon: 'stars', label: 'Prêmios' },
                     { id: 'debts', icon: 'receipt_long', label: 'Crédito' },
                     { id: 'communications', icon: 'campaign', label: 'Comunic.' },
+                    { id: 'reservations', icon: 'event_seat', label: 'Reservas' },
                     { id: 'settings', icon: 'settings', label: 'Site' }
                 ].filter(t => currentUser?.role !== 'staff' || t.id === 'operational').map(t => (
                     <button key={t.id} onClick={() => { setActiveTab(t.id as any); if (t.id === 'reports' && selectedEvent) fetchReport(selectedEvent.id); }}
@@ -1610,6 +1624,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                         { id: 'send-gifts', icon: 'stars', label: 'Prêmios' },
                         { id: 'debts', icon: 'receipt_long', label: 'Crédito' },
                         { id: 'communications', icon: 'campaign', label: 'Comunic.' },
+                        { id: 'reservations', icon: 'event_seat', label: 'Reservas' },
                         { id: 'settings', icon: 'settings', label: 'Site' }
                     ].filter(t => currentUser?.role !== 'staff' || t.id === 'operational').map(t => (
                         <button key={t.id} onClick={() => { setActiveTab(t.id as any); if (t.id === 'reports' && selectedEvent) fetchReport(selectedEvent.id); }}
@@ -1714,6 +1729,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             fetchReport={fetchReport}
                             fetchMonthlyReport={fetchMonthlyReport}
                         />
+                    )}
+
+                    {activeTab === 'reservations' && (
+                        <ReservationsTab events={events} />
                     )}
 
                     {activeTab === 'launch' && (
