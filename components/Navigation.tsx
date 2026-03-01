@@ -17,6 +17,7 @@ interface NavigationProps {
 }
 
 import appConfig from '../src/config/appConfig.json';
+import { useApp } from '../contexts/AppContext';
 
 export const Navigation: React.FC<NavigationProps> = ({
     currentView,
@@ -33,6 +34,8 @@ export const Navigation: React.FC<NavigationProps> = ({
     totalPendingDebt = 0,
     isAdmin = false
 }) => {
+    const { contentDB } = useApp();
+    const categories = contentDB?.categories || [];
     const [scrolled, setScrolled] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [messagesOpen, setMessagesOpen] = useState(false);
@@ -71,6 +74,14 @@ export const Navigation: React.FC<NavigationProps> = ({
         }
     };
 
+    const handleCategoryClick = (cat: any) => {
+        setMobileMenuOpen(false);
+        if (cat.id === 'rankings') return onNavigate('ranking');
+        if (cat.id === 'ladies-league') return onNavigate('vip');
+        if (cat.id === 'online' || cat.id === 'online-credits') return onNavigate('online-credits');
+        onNavigate('category-' + cat.id);
+    };
+
     return (
         <>
             <nav className={`fixed w-full z-50 top-0 left-0 transition-all duration-300 ${scrolled ? 'bg-[#050821] border-b border-white/5 shadow-lg' : 'bg-[#050821]/80 border-transparent backdrop-blur-sm'}`}>
@@ -84,6 +95,39 @@ export const Navigation: React.FC<NavigationProps> = ({
                         {/* Desktop Menu */}
                         <div className="hidden md:flex items-center gap-2">
                             <div className="flex items-baseline space-x-1">
+                                {/* Dropdown Ecossistema */}
+                                <div className="relative group">
+                                    <button
+                                        className={`px-2 py-2 rounded-md text-sm font-medium transition-colors relative flex items-center gap-1 ${currentView.startsWith('category-') ? 'text-primary' : 'text-gray-300 hover:text-white'
+                                            }`}
+                                    >
+                                        <span className="material-icons-outlined text-sm">widgets</span>
+                                        Ecossistema
+                                        <span className="material-icons-outlined text-[10px]">expand_more</span>
+                                        <span className={`absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300 ${currentView.startsWith('category-') ? 'w-full' : 'w-0 group-hover:w-full'}`}></span>
+                                    </button>
+
+                                    {/* Dropdown Menu Desktop */}
+                                    <div className="absolute top-full left-0 mt-2 w-56 bg-[#0a061d] border border-white/10 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform origin-top-left -translate-y-2 group-hover:translate-y-0 z-50 p-2 grid grid-cols-1 gap-1">
+                                        {categories.filter(c => !c.is_hidden || isAdmin).map(cat => (
+                                            <button
+                                                key={cat.id}
+                                                onClick={() => handleCategoryClick(cat)}
+                                                className="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-white/10 transition-colors flex items-center gap-2 group/item"
+                                            >
+                                                <span className={`material-icons-outlined text-sm ${cat.color === 'primary' ? 'text-primary' :
+                                                    cat.color === 'secondary' ? 'text-secondary' :
+                                                        cat.color === 'cyan' ? 'text-cyan-400' : 'text-pink-400'
+                                                    }`}>{cat.icon}</span>
+                                                <span className="text-gray-300 group-hover/item:text-white truncate font-medium">{cat.title}</span>
+                                                {cat.is_mystery && !isAdmin && (
+                                                    <span className="material-icons-outlined text-[10px] text-gray-500 ml-auto flex-shrink-0">lock</span>
+                                                )}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
                                 {links.map((link) => (
                                     <button
                                         key={link.label}
@@ -318,6 +362,9 @@ export const Navigation: React.FC<NavigationProps> = ({
                 {mobileMenuOpen && (
                     <div className="md:hidden bg-background-dark/95 backdrop-blur-xl border-b border-white/10">
                         <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                            <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase tracking-widest bg-black/50 mx-2 rounded-md mb-2">
+                                Menu Principal
+                            </div>
                             {links.map((link) => (
                                 <button
                                     key={link.label}
@@ -355,6 +402,29 @@ export const Navigation: React.FC<NavigationProps> = ({
                                     <span className="material-icons-outlined">admin_panel_settings</span> PAINEL ADMIN
                                 </button>
                             )}
+
+                            {/* Dropdown Ecossistema Mobile */}
+                            <div className="mt-4 border-t border-white/5 pt-2">
+                                <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase tracking-widest bg-black/50 mx-2 rounded-md mb-2 flex items-center gap-2">
+                                    <span className="material-icons-outlined text-sm">widgets</span>
+                                    Ecossistema
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 px-2 pb-2">
+                                    {categories.filter(c => !c.is_hidden || isAdmin).map(cat => (
+                                        <button
+                                            key={`mob-${cat.id}`}
+                                            onClick={() => handleCategoryClick(cat)}
+                                            className="w-full text-left px-3 py-3 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 transition-colors flex flex-col gap-1 items-start"
+                                        >
+                                            <span className={`material-icons-outlined text-sm ${cat.color === 'primary' ? 'text-primary' :
+                                                cat.color === 'secondary' ? 'text-secondary' :
+                                                    cat.color === 'cyan' ? 'text-cyan-400' : 'text-pink-400'
+                                                }`}>{cat.icon}</span>
+                                            <span className="text-gray-300 text-xs font-medium truncate w-full">{cat.title}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
 
                             {isLoggedIn ? (
                                 <>
@@ -429,54 +499,56 @@ export const Navigation: React.FC<NavigationProps> = ({
                         </div>
                     </div>
                 )}
-            </nav>
+            </nav >
 
             {/* MESSAGE DETAIL MODAL — read-only, no reply box */}
-            {selectedMessage && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-                    <div className="bg-surface-dark border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl relative animate-float flex flex-col max-h-[90vh]">
-                        <div className="p-6">
-                            <div className="flex justify-between items-start mb-6 border-b border-white/10 pb-4">
-                                <div>
-                                    <h3 className="text-xl font-bold text-white mb-1">{selectedMessage.subject}</h3>
-                                    <p className="text-sm text-gray-400 flex items-center gap-2">
-                                        <span className="material-icons-outlined text-sm">person</span>
-                                        {selectedMessage.from}
-                                        <span className="mx-1">•</span>
-                                        {selectedMessage.date}
-                                    </p>
+            {
+                selectedMessage && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+                        <div className="bg-surface-dark border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl relative animate-float flex flex-col max-h-[90vh]">
+                            <div className="p-6">
+                                <div className="flex justify-between items-start mb-6 border-b border-white/10 pb-4">
+                                    <div>
+                                        <h3 className="text-xl font-bold text-white mb-1">{selectedMessage.subject}</h3>
+                                        <p className="text-sm text-gray-400 flex items-center gap-2">
+                                            <span className="material-icons-outlined text-sm">person</span>
+                                            {selectedMessage.from}
+                                            <span className="mx-1">•</span>
+                                            {selectedMessage.date}
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => setSelectedMessage(null)}
+                                        className="text-gray-400 hover:text-white transition-colors"
+                                    >
+                                        <span className="material-icons-outlined">close</span>
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={() => setSelectedMessage(null)}
-                                    className="text-gray-400 hover:text-white transition-colors"
-                                >
-                                    <span className="material-icons-outlined">close</span>
-                                </button>
-                            </div>
 
-                            <div className="bg-black/20 p-4 rounded-xl border border-white/5 text-gray-300 text-sm leading-relaxed max-h-64 overflow-y-auto custom-scrollbar">
-                                {selectedMessage.content}
-                            </div>
-
-                            {selectedMessage.category === 'poll' && (
-                                <div className="mt-4 flex items-center gap-2 text-yellow-400 text-xs font-bold bg-yellow-400/10 border border-yellow-400/20 rounded-xl px-4 py-2">
-                                    <span className="material-icons-outlined text-sm">how_to_vote</span>
-                                    Acesse a aba Mensagens no seu perfil para votar nesta enquete.
+                                <div className="bg-black/20 p-4 rounded-xl border border-white/5 text-gray-300 text-sm leading-relaxed max-h-64 overflow-y-auto custom-scrollbar">
+                                    {selectedMessage.content}
                                 </div>
-                            )}
 
-                            <div className="mt-6 flex justify-end">
-                                <button
-                                    onClick={() => setSelectedMessage(null)}
-                                    className="px-6 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold rounded-xl transition-colors"
-                                >
-                                    Fechar
-                                </button>
+                                {selectedMessage.category === 'poll' && (
+                                    <div className="mt-4 flex items-center gap-2 text-yellow-400 text-xs font-bold bg-yellow-400/10 border border-yellow-400/20 rounded-xl px-4 py-2">
+                                        <span className="material-icons-outlined text-sm">how_to_vote</span>
+                                        Acesse a aba Mensagens no seu perfil para votar nesta enquete.
+                                    </div>
+                                )}
+
+                                <div className="mt-6 flex justify-end">
+                                    <button
+                                        onClick={() => setSelectedMessage(null)}
+                                        className="px-6 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold rounded-xl transition-colors"
+                                    >
+                                        Fechar
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
         </>
     );
 };

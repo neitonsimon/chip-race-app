@@ -21,6 +21,7 @@ import { PrivacyPolicy } from './PrivacyPolicy';
 import { ClubRules } from './ClubRules';
 import { ResponsibleGaming } from './ResponsibleGaming';
 import { OnlineCreditsPage } from './OnlineCreditsPage';
+import { CategoryPage } from './CategoryPage';
 
 export const AppRouter: React.FC = () => {
     const {
@@ -42,6 +43,12 @@ export const AppRouter: React.FC = () => {
     } = useApp();
 
     const renderContent = () => {
+        if (currentView.startsWith('category-')) {
+            const categoryId = currentView.replace('category-', '');
+            const categoryInfo = contentDB?.categories?.find(c => c.id === categoryId);
+            return <CategoryPage categoryId={categoryId} category={categoryInfo} onNavigate={handleNavigate} isAdmin={isAdmin} />;
+        }
+
         switch (currentView) {
             case 'calendar':
                 return <EventCalendar
