@@ -177,7 +177,8 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
                         <select
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value as any)}
-                            className="bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-primary flex-1 md:w-40"
+                            className="bg-gray-50 dark:bg-black border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-primary flex-1 md:w-40 appearance-none bg-no-repeat bg-[right_0.5rem_center] bg-[length:1.2em_1.2em]"
+                            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")` }}
                         >
                             <option value="upcoming">Próximos Eventos</option>
                             <option value="completed">Eventos Concluídos</option>
@@ -186,7 +187,8 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
                         <select
                             value={eventFilter}
                             onChange={(e) => setEventFilter(e.target.value)}
-                            className="bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-primary flex-1 md:w-60"
+                            className="bg-gray-50 dark:bg-black border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-primary flex-1 md:w-60 appearance-none bg-no-repeat bg-[right_0.5rem_center] bg-[length:1.2em_1.2em]"
+                            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")` }}
                         >
                             <option value="all">Todos os Eventos</option>
                             {Array.from(new Set(reservations.filter(r => (statusFilter === 'upcoming' ? r.events?.status !== 'closed' : r.events?.status === 'closed')).map(r => r.event_id))).map(eventId => {
@@ -209,7 +211,8 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
                         <select
                             value={creditStatusFilter}
                             onChange={(e) => setCreditStatusFilter(e.target.value as any)}
-                            className="bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-primary flex-1 sm:w-48"
+                            className="bg-gray-50 dark:bg-black border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-primary flex-1 sm:w-48 appearance-none bg-no-repeat bg-[right_0.5rem_center] bg-[length:1.2em_1.2em]"
+                            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")` }}
                         >
                             <option value="pending">Aguardando Envio</option>
                             <option value="completed">Concluídos</option>
