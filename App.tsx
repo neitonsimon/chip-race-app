@@ -17,6 +17,54 @@ export default function App() {
 
     const showFooter = ['home', 'the-chosen-details', 'calendar', 'ranking', 'vip', 'recharge', 'the-chosen-regulations', 'terms', 'privacy', 'rules', 'responsible-gaming'].includes(currentView);
 
+    // OneSignal Push Notifications Setup
+    React.useEffect(() => {
+        const appId = "6fd92a0e-7442-45e6-bc8a-fbc8416d863f"; // Substitua pelo seu ID real do OneSignal se for diferente
+
+        if (typeof window !== 'undefined') {
+            (window as any).OneSignal = (window as any).OneSignal || [];
+            (window as any).OneSignal.push(() => {
+                (window as any).OneSignal.init({
+                    appId: appId,
+                    safari_web_id: "web.onesignal.auto.1764121d-9371-4648-9a4f-cc76fa51319c", // Exemplo
+                    notifyButton: {
+                        enable: true,
+                        position: 'bottom-left',
+                        size: 'medium',
+                        theme: 'dark',
+                        colors: {
+                            'circle.background': '#00E0FF',
+                            'circle.foreground': 'white',
+                            'badge.background': '#00E0FF',
+                            'badge.foreground': 'white',
+                            'badge.bordercolor': 'white',
+                            'pulse.color': 'white',
+                            'dialog.button.background.hover': '#00A2FF',
+                            'dialog.button.background.active': '#00A2FF',
+                            'dialog.button.background': '#00E0FF',
+                            'dialog.button.foreground': 'white'
+                        },
+                        text: {
+                            'tip.state.unsubscribed': 'Receber notificações',
+                            'tip.state.subscribed': "Você está inscrito",
+                            'tip.state.blocked': "Você bloqueou as notificações",
+                            'message.prenotify': 'Clique para receber notícias e bônus da Chip Race!',
+                            'message.action.subscribed': "Obrigado por se inscrever!",
+                            'message.action.resubscribed': "Você está inscrito novamente!",
+                            'message.action.unsubscribed': "Você não receberá mais notificações",
+                            'dialog.main.title': 'Gerenciar Notificações',
+                            'dialog.main.button.subscribe': 'INSCREVER',
+                            'dialog.main.button.unsubscribe': 'DESCADASTRAR',
+                            'dialog.blocked.title': 'Desbloquear Notificações',
+                            'dialog.blocked.message': "Siga estas instruções para permitir notificações:"
+                        }
+                    },
+                    allowLocalhostAsSecureOrigin: true,
+                });
+            });
+        }
+    }, []);
+
     // Track Page Views and Setup Global Events
     React.useEffect(() => {
         const handleOpenSupport = () => {
