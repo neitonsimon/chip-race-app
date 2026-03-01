@@ -252,6 +252,13 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
       onNavigate('vip');
       return;
     }
+
+    // Redireciona para a página de créditos online
+    if ((id === 'online' || id === 'online-credits') && onNavigate) {
+      onNavigate('online-credits');
+      return;
+    }
+
     // Verifica se existe dado para este ID, se não, não abre
     if (REGULATIONS_DATA[id] || (productDetails && id === productDetails.category_id)) {
       setActiveRegulation(id);
