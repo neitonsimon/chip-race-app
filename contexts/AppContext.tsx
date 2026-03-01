@@ -840,18 +840,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 }
             }
             if (results) {
-                results.forEach(async (r) => {
+                for (const r of results) {
                     if (r.userId) {
                         let slug = 'tournament_result';
-                        const vars = { tournament_name: eventToUpdate.title, position: r.position };
+                        let defaultSubject = 'Resultado do Torneio';
+                        let defaultContent = `Parabéns! Você ficou em ${r.position}º lugar no ${eventToUpdate.title}.`;
 
-                        if (r.position === 1) slug = 'tournament_win_1';
-                        else if (r.position === 2) slug = 'tournament_win_2';
-                        else if (r.position === 3) slug = 'tournament_win_3';
+                        if (r.position === 1) {
+                            slug = 'tournament_win_1';
+                            defaultSubject = '🏆 Grande Campeão!';
+                            defaultContent = `Incrível! Você venceu o ${eventToUpdate.title}! Parabéns pela cravada fenomenal, você jogou muito!`;
+                        } else if (r.position === 2) {
+                            slug = 'tournament_win_2';
+                            defaultSubject = '🥈 Vice-Campeão';
+                            defaultContent = `Excelente desempenho! Você foi vice-campeão do ${eventToUpdate.title}. Quase lá!`;
+                        } else if (r.position === 3) {
+                            slug = 'tournament_win_3';
+                            defaultSubject = '🥉 Pódio Garantido';
+                            defaultContent = `Bom jogo! Você subiu ao pódio e garantiu o 3º lugar no ${eventToUpdate.title}. Parabéns!`;
+                        }
 
-                        await sendTemplatedMessage(slug, r.userId, vars);
+                        // Try to use template if exists, else fallback
+                        const templateExists = systemMessageTemplates.some(t => t.id === slug && t.is_active);
+                        if (templateExists) {
+                            const vars = { tournament_name: eventToUpdate.title, position: r.position };
+                            await sendTemplatedMessage(slug, r.userId, vars);
+                        } else if (r.position <= 3) {
+                            // Insert manual fallback for top 3
+                            await supabase.from('messages').insert({
+                                user_id: r.userId,
+                                sender: 'Chip Race',
+                                subject: defaultSubject,
+                                content: defaultContent,
+                                category: 'system',
+                                is_read: false
+                            });
+                        }
                     }
-                });
+                }
             }
         } catch (e) {
             console.error('Error in event closure messages:', e);
