@@ -150,6 +150,46 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                         </button>
                     </div>
 
+                    <div className="space-y-2">
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase ml-1">Abrir Nova Comanda</label>
+                        <div className="relative">
+                            <input
+                                type="text"
+                                placeholder="Nome ou CR#..."
+                                onChange={(e) => handleSearchPlayers(e.target.value)}
+                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none focus:border-primary"
+                            />
+                            {(searchResults.length > 0 || (searchQuery && searchQuery.length >= 2)) && (
+                                <div className="absolute top-full left-0 right-0 mt-1 bg-[#0a0720] border border-white/10 rounded-xl overflow-hidden shadow-2xl z-50">
+                                    {searchResults.length > 0 ? searchResults.map(u => (
+                                        <button
+                                            key={u.id}
+                                            onClick={() => handleOpenCommand(u)}
+                                            className="w-full flex items-center gap-3 p-3 hover:bg-primary/20 text-left border-b border-white/5 last:border-0"
+                                        >
+                                            <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${u.name}&background=random`} className="w-8 h-8 rounded-full" />
+                                            <div>
+                                                <p className="text-xs font-bold text-white">{u.name}</p>
+                                                <p className="text-[10px] text-primary font-black">CR#{String(u.numeric_id).padStart(3, '0')}</p>
+                                            </div>
+                                        </button>
+                                    )) : (
+                                        handleCreateGhostUser && (
+                                            <button
+                                                onClick={() => handleCreateGhostUser(searchQuery!)}
+                                                className="w-full flex items-center justify-center gap-2 p-4 hover:bg-primary/20 text-center"
+                                            >
+                                                <span className="material-icons-outlined text-gray-400">person_add</span>
+                                                <span className="text-xs font-bold text-gray-300">
+                                                    Criar Fantasma: <span className="text-white">"{searchQuery}"</span>
+                                                </span>
+                                            </button>
+                                        )
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
@@ -314,7 +354,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                         </div>
                     ) : (
                         <div className="flex flex-col gap-4">
-                            <div className="bg-black/20 border border-white/5 p-4 rounded-xl shadow-lg">
+                            <div className="bg-black/20 border border-white/5 p-4 rounded-xl shadow-lg lg:hidden">
                                 <label className="block text-xs font-bold text-gray-500 uppercase ml-1 mb-2">Abrir Nova Comanda</label>
                                 <div className="relative">
                                     <input
