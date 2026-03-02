@@ -21,48 +21,52 @@ export default function App() {
     React.useEffect(() => {
         const appId = "87ad3921-2743-4a35-8498-56b4aefd7b16"; // ID Real OneSignal Chip Race
 
-        if (typeof window !== 'undefined') {
-            (window as any).OneSignal = (window as any).OneSignal || [];
-            (window as any).OneSignal.push(() => {
-                (window as any).OneSignal.init({
-                    appId: appId,
-                    safari_web_id: "web.onesignal.auto.1764121d-9371-4648-9a4f-cc76fa51319c", // Exemplo
-                    notifyButton: {
-                        enable: true,
-                        position: 'bottom-left',
-                        size: 'medium',
-                        theme: 'dark',
-                        colors: {
-                            'circle.background': '#00E0FF',
-                            'circle.foreground': 'white',
-                            'badge.background': '#00E0FF',
-                            'badge.foreground': 'white',
-                            'badge.bordercolor': 'white',
-                            'pulse.color': 'white',
-                            'dialog.button.background.hover': '#00A2FF',
-                            'dialog.button.background.active': '#00A2FF',
-                            'dialog.button.background': '#00E0FF',
-                            'dialog.button.foreground': 'white'
+        const initOneSignal = () => {
+            if (typeof window !== 'undefined') {
+                (window as any).OneSignalDeferred = (window as any).OneSignalDeferred || [];
+                (window as any).OneSignalDeferred.push(async function (OneSignal: any) {
+                    await OneSignal.init({
+                        appId: appId,
+                        safari_web_id: "web.onesignal.auto.1764121d-9371-4648-9a4f-cc76fa51319c", // Exemplo
+                        notifyButton: {
+                            enable: true,
+                            position: 'bottom-left',
+                            size: 'medium',
+                            theme: 'dark',
+                            colors: {
+                                'circle.background': '#00E0FF',
+                                'circle.foreground': 'white',
+                                'badge.background': '#00E0FF',
+                                'badge.foreground': 'white',
+                                'badge.bordercolor': 'white',
+                                'pulse.color': 'white',
+                                'dialog.button.background.hover': '#00A2FF',
+                                'dialog.button.background.active': '#00A2FF',
+                                'dialog.button.background': '#00E0FF',
+                                'dialog.button.foreground': 'white'
+                            },
+                            text: {
+                                'tip.state.unsubscribed': 'Receber notificações',
+                                'tip.state.subscribed': "Você está inscrito",
+                                'tip.state.blocked': "Você bloqueou as notificações",
+                                'message.prenotify': 'Receba avisos da Chip Race!',
+                                'message.action.subscribed': "Obrigado por se inscrever!",
+                                'message.action.resubscribed': "Você está inscrito novamente!",
+                                'message.action.unsubscribed': "Você não receberá mais notificações",
+                                'dialog.main.title': 'Gerenciar Notificações',
+                                'dialog.main.button.subscribe': 'INSCREVER',
+                                'dialog.main.button.unsubscribe': 'DESCADASTRAR',
+                                'dialog.blocked.title': 'Desbloquear Notificações',
+                                'dialog.blocked.message': "Siga estas instruções para permitir notificações:"
+                            }
                         },
-                        text: {
-                            'tip.state.unsubscribed': 'Receber notificações',
-                            'tip.state.subscribed': "Você está inscrito",
-                            'tip.state.blocked': "Você bloqueou as notificações",
-                            'message.prenotify': 'Clique para receber notícias e bônus da Chip Race!',
-                            'message.action.subscribed': "Obrigado por se inscrever!",
-                            'message.action.resubscribed': "Você está inscrito novamente!",
-                            'message.action.unsubscribed': "Você não receberá mais notificações",
-                            'dialog.main.title': 'Gerenciar Notificações',
-                            'dialog.main.button.subscribe': 'INSCREVER',
-                            'dialog.main.button.unsubscribe': 'DESCADASTRAR',
-                            'dialog.blocked.title': 'Desbloquear Notificações',
-                            'dialog.blocked.message': "Siga estas instruções para permitir notificações:"
-                        }
-                    },
-                    allowLocalhostAsSecureOrigin: true,
+                        allowLocalhostAsSecureOrigin: true,
+                    });
                 });
-            });
-        }
+            }
+        };
+
+        initOneSignal();
     }, []);
 
     // Link User to OneSignal for targeted push notifications

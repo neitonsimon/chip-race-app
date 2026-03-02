@@ -590,6 +590,39 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             setIsLoading(false);
         }
     };
+
+    const handleCreateQuickEvent = async () => {
+        const title = prompt('Nome do Evento Rápido (Ex: Cash Game 5/5 ou Torneio VIP):');
+        if (!title) return;
+        setIsLoading(true);
+        try {
+            const now = new Date();
+            const dateStr = now.toISOString().split('T')[0];
+            const timeStr = now.toTimeString().split(' ')[0].substring(0, 5);
+
+            const newEvent = {
+                title,
+                date: dateStr,
+                time: timeStr,
+                type: 'live',
+                status: 'open',
+                game_mode: 'cash_game',
+                ranking_type: 'none'
+            };
+
+            const { data, error } = await supabase.from('events').insert(newEvent).select().single();
+            if (error) throw error;
+
+            alert('✅ Evento rápido criado com sucesso!');
+            await fetchEvents();
+            if (data) setSelectedEvent(data);
+        } catch (err: any) {
+            alert('Erro ao criar evento: ' + err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const fetchCommandItems = async (commandId: string) => {
         const { data } = await supabase.from('command_items').select('*, products(name, category)').eq('command_id', commandId).order('created_at', { ascending: true });
         if (data) setCommandItems(data);
@@ -1605,7 +1638,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                     { id: 'send-gifts', icon: 'stars', label: 'Prêmios' },
                     { id: 'debts', icon: 'receipt_long', label: 'Crédito' },
                     { id: 'communications', icon: 'campaign', label: 'Comunic.' },
-                    { id: 'reservations', icon: 'event_seat', label: 'Reservas' },
+                    { id: 'reservations', icon: 'support_agent', label: 'Atendimento' },
                     { id: 'settings', icon: 'settings', label: 'Site' }
                 ].filter(t => currentUser?.role !== 'staff' || t.id === 'operational').map(t => (
                     <button key={t.id} onClick={() => { setActiveTab(t.id as any); if (t.id === 'reports' && selectedEvent) fetchReport(selectedEvent.id); }}
@@ -1624,7 +1657,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                         { id: 'send-gifts', icon: 'stars', label: 'Prêmios' },
                         { id: 'debts', icon: 'receipt_long', label: 'Crédito' },
                         { id: 'communications', icon: 'campaign', label: 'Comunic.' },
-                        { id: 'reservations', icon: 'event_seat', label: 'Reservas' },
+                        { id: 'reservations', icon: 'support_agent', label: 'Atend.' },
                         { id: 'settings', icon: 'settings', label: 'Site' }
                     ].filter(t => currentUser?.role !== 'staff' || t.id === 'operational').map(t => (
                         <button key={t.id} onClick={() => { setActiveTab(t.id as any); if (t.id === 'reports' && selectedEvent) fetchReport(selectedEvent.id); }}
@@ -1699,6 +1732,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             productCategories={productCategories}
                             pastEventsList={pastEventsList}
                             handleFinalizeEvent={handleFinalizeEvent}
+                            handleCreateQuickEvent={handleCreateQuickEvent}
                             updateStaffExpenses={handleSaveExpenses}
                             updatePrizePayout={handleSaveExpenses}
                         />

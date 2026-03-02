@@ -98,12 +98,12 @@ export const Navigation: React.FC<NavigationProps> = ({
                                 {/* Dropdown Ecossistema */}
                                 <div className="relative group">
                                     <button
-                                        className={`px-2 py-2 rounded-md text-sm font-medium transition-colors relative flex items-center gap-1.5 tracking-wide ${currentView.startsWith('category-') ? 'text-primary' : 'text-gray-300 hover:text-white'
+                                        className={`px-2 py-1.5 rounded-md text-sm font-medium transition-colors relative flex items-center gap-2 tracking-wide ${currentView.startsWith('category-') ? 'text-primary' : 'text-gray-300 hover:text-white'
                                             }`}
                                     >
-                                        <span className="material-icons-outlined text-base leading-none">widgets</span>
-                                        <span className="leading-none">Ecossistema</span>
-                                        <span className="material-icons-outlined text-[12px] leading-none opacity-50">expand_more</span>
+                                        <span className="material-icons-outlined text-lg">widgets</span>
+                                        <span>Ecossistema</span>
+                                        <span className="material-icons-outlined text-[14px] opacity-50">expand_more</span>
                                         <span className={`absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300 ${currentView.startsWith('category-') ? 'w-full' : 'w-0 group-hover:w-full'}`}></span>
                                     </button>
 

@@ -50,6 +50,7 @@ interface OperationalTabProps {
     isTourItemDisabled: (i: any) => boolean;
     pastEventsList: Event[];
     handleFinalizeEvent: () => Promise<void>;
+    handleCreateQuickEvent?: () => void;
 }
 
 export const OperationalTab: React.FC<OperationalTabProps> = ({
@@ -63,7 +64,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
     commandsTab, setCommandsTab, staffExpenses, setStaffExpenses,
     prizePayout, setPrizePayout, updateStaffExpenses, updatePrizePayout, handleAddManualOnline, isAdmin,
     isProductDisabled, isTourItemDisabled, productCategories = [],
-    pastEventsList, handleFinalizeEvent
+    pastEventsList, handleFinalizeEvent, handleCreateQuickEvent
 }) => {
     const [eventFilterTab, setEventFilterTab] = React.useState<'proximos' | 'concluidos'>('proximos');
     const [selectedSubCategory, setSelectedSubCategory] = React.useState<string | null>(null);
@@ -138,6 +139,12 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                 </option>
                             ))}
                         </select>
+                        <button
+                            onClick={handleCreateQuickEvent}
+                            className="w-full mt-2 py-2 rounded-xl text-[10px] font-black uppercase transition-all bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white border border-green-500/20"
+                        >
+                            + Evento Comum (Simples)
+                        </button>
                     </div>
 
                     <div className="space-y-2">

@@ -9,7 +9,15 @@ interface ReservationsTabProps {
 
 export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
     const { currentUser } = useApp();
-    const [activeSubTab, setActiveSubTab] = useState<'tournaments' | 'credits'>('tournaments');
+    const [activeSubTab, setActiveSubTab] = useState<'tournaments' | 'credits' | 'merge'>('tournaments');
+
+    // Merge State
+    const [ghostAccount, setGhostAccount] = useState<any | null>(null);
+    const [realAccount, setRealAccount] = useState<any | null>(null);
+    const [mergeSearchQuery1, setMergeSearchQuery1] = useState('');
+    const [mergeSearchQuery2, setMergeSearchQuery2] = useState('');
+    const [mergeSearchResults1, setMergeSearchResults1] = useState<any[]>([]);
+    const [mergeSearchResults2, setMergeSearchResults2] = useState<any[]>([]);
 
     // Tournaments State
     const [reservations, setReservations] = useState<(TournamentReservation & { profiles: any, events: any })[]>([]);
@@ -116,8 +124,7 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
         try {
             const { data, error } = await supabase.rpc('process_online_credit_request', {
                 p_request_id: id,
-                p_action: action,
-                p_admin_id: currentUser?.id
+                p_action: action
             });
 
             if (error) throw error;
@@ -138,15 +145,71 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
 
     const filteredCredits = creditRequests.filter(req => req.status === creditStatusFilter);
 
+    // --- MERGE LOGIC ---
+    const handleMergeSearch1 = async (query: string) => {
+        setMergeSearchQuery1(query);
+        if (query.length < 2) { setMergeSearchResults1([]); return; }
+        const isNumeric = /^\d+$/.test(query);
+        let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, role');
+        q = isNumeric ? q.eq('numeric_id', parseInt(query)) : q.ilike('name', `%${query}%`);
+        const { data } = await q.limit(5);
+        setMergeSearchResults1(data || []);
+    };
+
+    const handleMergeSearch2 = async (query: string) => {
+        setMergeSearchQuery2(query);
+        if (query.length < 2) { setMergeSearchResults2([]); return; }
+        const isNumeric = /^\d+$/.test(query);
+        let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, role');
+        q = isNumeric ? q.eq('numeric_id', parseInt(query)) : q.ilike('name', `%${query}%`);
+        const { data } = await q.limit(5);
+        setMergeSearchResults2(data || []);
+    };
+
+    const handleMergeAccounts = async () => {
+        if (!ghostAccount || !realAccount) { alert('Selecione as duas contas para mesclar.'); return; }
+        if (ghostAccount.id === realAccount.id) { alert('Você selecionou a mesma conta duas vezes.'); return; }
+        const confirmMsg = `ATENÇÃO! Você está prestes a transferir todo o histórico de:\n\n[FANTASMA] ${ghostAccount.name}\n\nPara a conta:\n\n[REAL] ${realAccount.name}\n\nO perfil fantasma será DELETADO PARA SEMPRE. Tem certeza?`;
+        if (!window.confirm(confirmMsg)) return;
+
+        setIsLoading(true);
+        try {
+            // First we need to check if both profiles exist in current database
+            const { data, error } = await supabase.rpc('merge_player_accounts', {
+                p_old_id: ghostAccount.id,
+                p_new_id: realAccount.id
+            });
+            if (error) throw error;
+            if (data && data.success === false) {
+                if (data.error) throw new Error(data.error);
+                throw new Error('Erro desconhecido ao mesclar contas. Verifique se a conta não é a sua ou um admin.');
+            }
+
+            alert('✅ Contas mescladas com sucesso!');
+            setGhostAccount(null);
+            setRealAccount(null);
+            setMergeSearchQuery1('');
+            setMergeSearchQuery2('');
+            setMergeSearchResults1([]);
+            setMergeSearchResults2([]);
+        } catch (err: any) {
+            console.error('Merge error:', err);
+            alert('Erro ao mesclar contas: ' + err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-surface-dark p-4 rounded-xl shadow-sm border border-gray-100 dark:border-white/5">
                 <div>
                     <h3 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                        <span className="material-icons-outlined text-primary">event_seat</span>
-                        Solicitações & Reservas
+                        <span className="material-icons-outlined text-primary">support_agent</span>
+                        Atendimento & Contas
                     </h3>
-                    <p className="text-sm text-gray-500">Gerencie assentos e fichas online.</p>
+                    <p className="text-sm text-gray-500">Gerencie assentos, fichas online e mesclagem de contas.</p>
                 </div>
 
                 {/* SUB-TABS OVERRIDE */}
@@ -167,6 +230,12 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
                                 {creditRequests.filter(r => r.status === 'pending').length}
                             </span>
                         )}
+                    </button>
+                    <button
+                        onClick={() => setActiveSubTab('merge')}
+                        className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeSubTab === 'merge' ? 'bg-white dark:bg-white/10 text-primary shadow-sm' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-white/5'}`}
+                    >
+                        Mesclar Contas
                     </button>
                 </div>
             </div>
@@ -205,7 +274,7 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
                         </button>
                     </div>
                 </>
-            ) : (
+            ) : activeSubTab === 'credits' ? (
                 <>
                     <div className="flex items-center gap-3 w-full sm:w-auto">
                         <select
@@ -219,11 +288,10 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
                             <option value="cancelled">Estornados / Editados</option>
                         </select>
                         <button onClick={fetchCreditRequests} className="p-2 bg-gray-100 dark:bg-white/5 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400">
-                            <span className="material-icons-outlined text-sm">refresh</span>
                         </button>
                     </div>
                 </>
-            )}
+            ) : null}
 
             <div className="bg-white dark:bg-surface-dark rounded-xl shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden">
                 <div className="overflow-x-auto">
@@ -300,7 +368,7 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
                                 )}
                             </tbody>
                         </table>
-                    ) : (
+                    ) : activeSubTab === 'credits' ? (
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-gray-50 dark:bg-white/[0.02] border-b border-gray-200 dark:border-white/10">
@@ -384,9 +452,160 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
                                 )}
                             </tbody>
                         </table>
-                    )}
+                    ) : null}
                 </div>
             </div>
+
+            {activeSubTab === 'merge' && (
+                <div className="bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/10 rounded-2xl p-6 shadow-xl w-full max-w-4xl mx-auto">
+                    <div className="mb-6 pb-6 border-b border-gray-100 dark:border-white/5">
+                        <div className="flex items-center gap-3 mb-2">
+                            <span className="material-icons-outlined text-red-500 text-3xl">warning</span>
+                            <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-wider">Fusão de Contas (Merge)</h2>
+                        </div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 leading-relaxed">
+                            Atenção: Esta ação transfere todo o histórico de jogo, créditos online, comandas e débitos da Conta A (Fantasma) para a Conta B (App). Após a transferência, a Conta A será <strong className="text-red-500">deletada permanentemente</strong>. Não pode ser desfeita.
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start relative">
+                        {/* Old / Ghost Account Column */}
+                        <div className="space-y-4">
+                            <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2">1. Conta Antiga (Fantasma)</h3>
+                            {!ghostAccount ? (
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <span className="material-icons-outlined text-gray-400 text-sm">search</span>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar Perfil (Nome ou ID)"
+                                        value={mergeSearchQuery1}
+                                        onChange={(e) => handleMergeSearch1(e.target.value)}
+                                        className="w-full bg-gray-50 dark:bg-black border border-gray-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm focus:border-primary focus:outline-none"
+                                    />
+                                    {mergeSearchResults1.length > 0 && (
+                                        <div className="absolute z-[100] w-full mt-2 bg-white dark:bg-[#1A1A1A] border border-gray-200 dark:border-white/10 rounded-xl shadow-2xl overflow-hidden max-h-64 overflow-y-auto">
+                                            {mergeSearchResults1.map(user => (
+                                                <button
+                                                    key={user.id}
+                                                    onClick={() => {
+                                                        setGhostAccount(user);
+                                                        setMergeSearchQuery1('');
+                                                        setMergeSearchResults1([]);
+                                                    }}
+                                                    className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-3 border-b border-gray-100 dark:border-white/5 last:border-0"
+                                                >
+                                                    <img src={user.avatar_url || '/default-avatar.png'} alt="" className="w-8 h-8 rounded-full border border-gray-200 dark:border-white/10 object-cover" onError={(e) => { e.currentTarget.src = 'https://ui-avatars.com/api/?name=User&background=random'; }} />
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="text-sm font-bold text-gray-900 dark:text-white truncate">{user.name}</div>
+                                                        <div className="text-xs text-gray-500 truncate">ID: {user.numeric_id}</div>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl flex items-center justify-between shadow-sm">
+                                    <div className="flex items-center gap-3">
+                                        <img src={ghostAccount.avatar_url || '/default-avatar.png'} alt="" className="w-12 h-12 rounded-full border-2 border-red-400 object-cover" onError={(e) => { e.currentTarget.src = 'https://ui-avatars.com/api/?name=User&background=random'; }} />
+                                        <div>
+                                            <div className="text-sm font-black text-red-700 dark:text-red-400">{ghostAccount.name}</div>
+                                            <div className="text-xs text-red-600/70 font-medium tracking-wide">ID: {ghostAccount.numeric_id}</div>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setGhostAccount(null)} className="w-8 h-8 flex items-center justify-center bg-red-100 hover:bg-red-200 dark:bg-red-500/20 dark:hover:bg-red-500/40 text-red-600 rounded-full transition-colors">
+                                        <span className="material-icons-outlined text-sm">close</span>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Middle Arrow for large screens, omitted on small screens */}
+                        <div className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center justify-center w-12 h-12 bg-white dark:bg-surface-dark border-4 border-gray-100 dark:border-black rounded-full z-10 shadow-sm text-gray-400">
+                            <span className="material-icons-outlined">arrow_forward</span>
+                        </div>
+                        <div className="flex md:hidden items-center justify-center my-2 text-gray-400">
+                            <span className="material-icons-outlined">arrow_downward</span>
+                        </div>
+
+                        {/* New / App Account Column */}
+                        <div className="space-y-4">
+                            <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2">2. Conta Nova (Destino)</h3>
+                            {!realAccount ? (
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <span className="material-icons-outlined text-gray-400 text-sm">search</span>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar Perfil (Nome ou ID)"
+                                        value={mergeSearchQuery2}
+                                        onChange={(e) => handleMergeSearch2(e.target.value)}
+                                        className="w-full bg-gray-50 dark:bg-black border border-gray-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm focus:border-green-500 focus:outline-none"
+                                    />
+                                    {mergeSearchResults2.length > 0 && (
+                                        <div className="absolute z-[100] w-full mt-2 bg-white dark:bg-[#1A1A1A] border border-gray-200 dark:border-white/10 rounded-xl shadow-2xl overflow-hidden max-h-64 overflow-y-auto">
+                                            {mergeSearchResults2.map(user => (
+                                                <button
+                                                    key={user.id}
+                                                    onClick={() => {
+                                                        setRealAccount(user);
+                                                        setMergeSearchQuery2('');
+                                                        setMergeSearchResults2([]);
+                                                    }}
+                                                    className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-3 border-b border-gray-100 dark:border-white/5 last:border-0"
+                                                >
+                                                    <img src={user.avatar_url || '/default-avatar.png'} alt="" className="w-8 h-8 rounded-full border border-gray-200 dark:border-white/10 object-cover" onError={(e) => { e.currentTarget.src = 'https://ui-avatars.com/api/?name=User&background=random'; }} />
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="text-sm font-bold text-gray-900 dark:text-white truncate">{user.name}</div>
+                                                        <div className="text-xs text-gray-500 truncate">ID: {user.numeric_id}</div>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="p-4 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30 rounded-xl flex items-center justify-between shadow-sm">
+                                    <div className="flex items-center gap-3">
+                                        <img src={realAccount.avatar_url || '/default-avatar.png'} alt="" className="w-12 h-12 rounded-full border-2 border-green-400 object-cover" onError={(e) => { e.currentTarget.src = 'https://ui-avatars.com/api/?name=User&background=random'; }} />
+                                        <div>
+                                            <div className="text-sm font-black text-green-700 dark:text-green-400">{realAccount.name}</div>
+                                            <div className="text-xs text-green-600/70 font-medium tracking-wide">ID: {realAccount.numeric_id}</div>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setRealAccount(null)} className="w-8 h-8 flex items-center justify-center bg-green-100 hover:bg-green-200 dark:bg-green-500/20 dark:hover:bg-green-500/40 text-green-600 rounded-full transition-colors">
+                                        <span className="material-icons-outlined text-sm">close</span>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="mt-8 flex justify-end">
+                        <button
+                            onClick={handleMergeAccounts}
+                            disabled={!ghostAccount || !realAccount || isLoading}
+                            className={`px-8 py-3 rounded-xl font-black text-sm uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all ${!ghostAccount || !realAccount || isLoading
+                                ? 'bg-gray-200 dark:bg-white/5 text-gray-400 dark:text-gray-600 cursor-not-allowed shadow-none'
+                                : 'bg-primary hover:bg-white text-white hover:text-primary hover:shadow-neon-pink'
+                                }`}
+                        >
+                            {isLoading ? (
+                                <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                            ) : (
+                                <>
+                                    <span className="material-icons-outlined">merge</span>
+                                    Fundir Contas (Merge)
+                                </>
+                            )}
+                        </button>
+                    </div>
+
+                </div>
+            )}
         </div>
     );
 };
