@@ -607,7 +607,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                 type: 'live',
                 status: 'open',
                 game_mode: 'cash_game',
-                ranking_type: 'none'
+                ranking_type: 'none',
+                is_hidden: true
             };
 
             const { data, error } = await supabase.from('events').insert(newEvent).select().single();
