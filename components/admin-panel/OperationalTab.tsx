@@ -51,6 +51,8 @@ interface OperationalTabProps {
     pastEventsList: Event[];
     handleFinalizeEvent: () => Promise<void>;
     handleCreateQuickEvent?: () => void;
+    searchQuery?: string;
+    handleCreateGhostUser?: (name: string) => Promise<void>;
 }
 
 export const OperationalTab: React.FC<OperationalTabProps> = ({
@@ -64,7 +66,8 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
     commandsTab, setCommandsTab, staffExpenses, setStaffExpenses,
     prizePayout, setPrizePayout, updateStaffExpenses, updatePrizePayout, handleAddManualOnline, isAdmin,
     isProductDisabled, isTourItemDisabled, productCategories = [],
-    pastEventsList, handleFinalizeEvent, handleCreateQuickEvent
+    pastEventsList, handleFinalizeEvent, handleCreateQuickEvent,
+    searchQuery, handleCreateGhostUser
 }) => {
     const [eventFilterTab, setEventFilterTab] = React.useState<'proximos' | 'concluidos'>('proximos');
     const [selectedSubCategory, setSelectedSubCategory] = React.useState<string | null>(null);
@@ -156,9 +159,9 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                 onChange={(e) => handleSearchPlayers(e.target.value)}
                                 className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none focus:border-primary"
                             />
-                            {searchResults.length > 0 && (
+                            {(searchResults.length > 0 || (searchQuery && searchQuery.length >= 2)) && (
                                 <div className="absolute top-full left-0 right-0 mt-1 bg-[#0a0720] border border-white/10 rounded-xl overflow-hidden shadow-2xl z-50">
-                                    {searchResults.map(u => (
+                                    {searchResults.length > 0 ? searchResults.map(u => (
                                         <button
                                             key={u.id}
                                             onClick={() => handleOpenCommand(u)}
@@ -170,7 +173,19 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                                 <p className="text-[10px] text-primary font-black">CR#{String(u.numeric_id).padStart(3, '0')}</p>
                                             </div>
                                         </button>
-                                    ))}
+                                    )) : (
+                                        handleCreateGhostUser && (
+                                            <button
+                                                onClick={() => handleCreateGhostUser(searchQuery!)}
+                                                className="w-full flex items-center justify-center gap-2 p-4 hover:bg-primary/20 text-center"
+                                            >
+                                                <span className="material-icons-outlined text-gray-400">person_add</span>
+                                                <span className="text-xs font-bold text-gray-300">
+                                                    Criar Fantasma: <span className="text-white">"{searchQuery}"</span>
+                                                </span>
+                                            </button>
+                                        )
+                                    )}
                                 </div>
                             )}
                         </div>

@@ -847,6 +847,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         setSearchResults(data || []);
     };
 
+    const handleCreateGhostUser = async (name: string) => {
+        if (!name || name.length < 2) return;
+        setIsLoading(true);
+        try {
+            const { data, error } = await supabase.rpc('create_ghost_user', { p_name: name });
+            if (error) throw error;
+
+            // Re-fetch the newly created user to open command
+            const { data: user, error: userErr } = await supabase.from('profiles').select('id, name, numeric_id, avatar_url, vip_status, role, balance_brl, debt_limit_brl, total_pending_debt').eq('id', data).single();
+            if (userErr) throw userErr;
+
+            if (user) {
+                await handleOpenCommand(user);
+                alert('Jogador fantasma criado com sucesso e comanda aberta!');
+            }
+        } catch (err: any) {
+            alert('Erro ao criar jogador fantasma: ' + err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const handleOpenCommand = async (player: any) => {
         if (!selectedEvent) { alert('Selecione um evento primeiro.'); return; }
         if (openCommands.find(c => c.user_id === player.id)) { alert('Jogador já tem comanda aberta.'); return; }
@@ -1736,6 +1758,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             handleCreateQuickEvent={handleCreateQuickEvent}
                             updateStaffExpenses={handleSaveExpenses}
                             updatePrizePayout={handleSaveExpenses}
+                            searchQuery={searchQuery}
+                            handleCreateGhostUser={handleCreateGhostUser}
                         />
                     )}
 
