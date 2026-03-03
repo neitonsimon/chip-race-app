@@ -109,6 +109,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
     // Filter & Sort Events
     const filteredEvents = events
         .filter(e => {
+            if (e.is_hidden) return false;
             // Tab Filter
             if (activeTab === 'upcoming') {
                 return e.status === 'open' || e.status === 'running';

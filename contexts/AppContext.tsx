@@ -223,7 +223,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     cashGameOpenBar: e.cash_game_open_bar,
                     cashGameNotes: e.cash_game_notes,
                     staffExpensesBrl: e.staff_expenses_brl || 0,
-                    prizePayoutBrl: e.prize_payout_brl || 0
+                    prizePayoutBrl: e.prize_payout_brl || 0,
+                    is_hidden: e.is_hidden
                 })));
             }
 

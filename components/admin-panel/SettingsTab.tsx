@@ -143,22 +143,27 @@ export const SettingsTab: React.FC = () => {
                 totalDebt: totalDebtDb
             });
 
-            // Fetch Page Views independently to prevent crashing if table doesn't exist yet
+            // Fetch Page Views simplified from page_stats (Counter table)
             try {
-                // Since there is no GROUP BY in supabase-js, we fetch all and group locally (limit reasonably)
-                const { data: views } = await supabase.from('page_views').select('view_name').limit(10000);
-                if (views) {
-                    const counts: Record<string, number> = {};
-                    views.forEach((v: any) => {
-                        counts[v.view_name] = (counts[v.view_name] || 0) + 1;
-                    });
-                    const sortedViews = Object.entries(counts)
-                        .map(([name, count]) => ({ view_name: name, count }))
-                        .sort((a, b) => b.count - a.count);
-                    setPageViews(sortedViews);
+                // Nova abordagem: Lê diretamente da tabela de contadores, muito mais leve.
+                const { data: stats } = await supabase.from('page_stats').select('view_name, count').order('count', { ascending: false });
+
+                if (stats && stats.length > 0) {
+                    setPageViews(stats.map((s: any) => ({ ...s, isNew: true })));
+                } else {
+                    // Fallback para a tabela antiga se a nova ainda estiver vazia ou sendo migrada
+                    const { data: oldViews } = await supabase.from('page_views').select('view_name').limit(2000);
+                    if (oldViews) {
+                        const counts: Record<string, number> = {};
+                        oldViews.forEach((v: any) => { counts[v.view_name] = (counts[v.view_name] || 0) + 1; });
+                        const sorted = Object.entries(counts)
+                            .map(([name, count]) => ({ view_name: name, count, isNew: false }))
+                            .sort((a, b) => b.count - a.count);
+                        setPageViews(sorted);
+                    }
                 }
             } catch (vErr) {
-                console.log("Page views tracking not available yet", vErr);
+                console.log("Lightweight analytics stats not available yet", vErr);
             }
         } catch (err) {
             console.error('Error fetching stats:', err);
@@ -937,15 +942,20 @@ export const SettingsTab: React.FC = () => {
                                     </div>
                                 ) : (
                                     <div className="space-y-3">
-                                        {pageViews.slice(0, 10).map((pv, idx) => (
-                                            <div key={idx} className="flex justify-between items-center bg-black/40 border border-white/5 rounded-xl p-4 group">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-gray-500 font-black text-xs w-4">{idx + 1}º</span>
-                                                    <span className="text-white font-bold text-sm tracking-wide capitalize">{pv.view_name.replace(/-/g, ' ')}</span>
+                                        {pageViews.slice(0, 10).map((pv: any, idx) => (
+                                            <div key={idx} className="flex justify-between items-center bg-white/5 border border-white/5 rounded-2xl p-5 hover:bg-white/10 transition-all group relative overflow-hidden">
+                                                {/* Badge de origem do dado */}
+                                                <div className={`absolute top-0 right-0 px-2 py-0.5 text-[7px] font-black uppercase tracking-tighter ${pv.isNew ? 'bg-green-500/20 text-green-400' : 'bg-amber-500/20 text-amber-500'} rounded-bl-lg border-l border-b border-white/5`}>
+                                                    {pv.isNew ? 'Modo Leve' : 'Legado'}
                                                 </div>
-                                                <div className="flex items-center gap-2 bg-primary/10 px-3 py-1 rounded-lg border border-primary/20">
-                                                    <span className="material-icons-outlined text-[14px] text-primary">visibility</span>
-                                                    <span className="text-primary font-black text-sm">{pv.count}</span>
+
+                                                <div className="flex items-center gap-4">
+                                                    <span className="text-primary font-black text-[10px] italic w-5">{idx + 1}º</span>
+                                                    <span className="text-white font-black text-xs uppercase tracking-widest">{pv.view_name.replace(/-/g, ' ')}</span>
+                                                </div>
+                                                <div className="bg-primary/20 border border-primary/30 px-3 py-1.5 rounded-xl flex items-center gap-2 group-hover:scale-105 transition-transform">
+                                                    <span className="material-icons-outlined text-[14px] text-cyan-400 opacity-80">visibility</span>
+                                                    <span className="text-cyan-400 font-black text-xs font-display italic">{pv.count}</span>
                                                 </div>
                                             </div>
                                         ))}

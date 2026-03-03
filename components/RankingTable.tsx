@@ -163,7 +163,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
         if (!events) return [];
 
         const scores = events
-            .filter(e => e.status === 'closed' && e.results && (!e.includedRankings || e.includedRankings.includes(activeRankingId)))
+            .filter(e => e.status === 'closed' && e.results && !e.is_hidden && (!e.includedRankings || e.includedRankings.includes(activeRankingId)))
             .map(e => {
                 const res = e.results?.find(r => r.name.toLowerCase() === playerName.toLowerCase());
                 if (!res) return null;

@@ -301,7 +301,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         let realLogs: TournamentResult[] = [];
         if (events) {
             realLogs = events
-                .filter(e => e.status === 'closed' && e.results)
+                .filter(e => e.status === 'closed' && e.results && !e.is_hidden)
                 .map(e => {
                     // Find result for this player (Priority to ID, Fallback to Name)
                     const res = e.results?.find(r =>

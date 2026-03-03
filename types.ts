@@ -120,6 +120,7 @@ export interface Event {
   scoringSchemaId?: string; // ID of the scoring formula to use
   staffExpensesBrl?: number;
   prizePayoutBrl?: number;
+  is_hidden?: boolean;
 }
 
 export interface RankingPlayer {

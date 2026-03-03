@@ -96,11 +96,13 @@ export default function App() {
 
         const trackView = async () => {
             try {
-                await supabase.from('page_views').insert([{
-                    view_name: currentView,
-                    user_id: currentUser?.id || null
-                }]);
-            } catch (e) { }
+                // Nova abordagem leve: Apenas incrementa um contador na tabela 'page_stats'
+                // ao invés de criar um log completo por clique.
+                await supabase.rpc('increment_page_view', { p_view_name: currentView });
+            } catch (e) {
+                // Fallback silencioso caso a função ainda não exista (durante migração do DB)
+                console.log("Analytics increment failed", e);
+            }
         };
         trackView();
 
