@@ -462,9 +462,18 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                                 <div key={cat.id} className={`relative bg-[#0f0a20] border border-white/5 p-4 sm:p-8 rounded-2xl ${styles.border} transition-all duration-300 hover:-translate-y-2 overflow-hidden flex flex-col h-full text-center items-center shadow-lg group duration-300`}>
                                     <div className={`absolute inset-0 bg-gradient-to-br ${styles.glow} to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
 
-                                    <div className={`absolute top-4 right-4 text-[10px] font-black uppercase px-2 py-1 rounded-full border ${styles.badge} z-20 flex items-center gap-1`}>
-                                        {isMystery ? '?' : String(cat.slots || 0)}
-                                        <span>{isMystery ? '' : 'Vagas'}</span>
+                                    <div className={`absolute top-4 right-4 text-[10px] font-black uppercase px-2 py-1 rounded-full border ${isMystery ? 'bg-gray-800 border-white/10 text-gray-500' : styles.badge} z-20 flex items-center gap-1 shadow-lg`}>
+                                        {isAdmin && cat.is_mystery ? (
+                                            <span className="flex items-center gap-1">
+                                                <span className="text-white/80">?</span>
+                                                <span className="opacity-50">({cat.slots || 0})</span>
+                                            </span>
+                                        ) : isMystery ? (
+                                            '?'
+                                        ) : (
+                                            String(cat.slots || 0)
+                                        )}
+                                        {(!isMystery || (isAdmin && cat.is_mystery)) && <span>Vagas</span>}
                                     </div>
 
                                     <div className="relative z-10 flex flex-col items-center w-full h-full">
@@ -611,157 +620,161 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
             </div>
 
             {/* MODAL PRODUTO / DETALHES ESPECÍFICOS */}
-            {activeRegulation && (REGULATIONS_DATA[activeRegulation] || productDetails || categories.some(cat => cat.id === activeRegulation)) && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center sm:p-4 bg-black/95 backdrop-blur-xl animate-in fade-in duration-300">
-                    <div className="bg-[#0f0a28] border-white/10 sm:border rounded-none sm:rounded-[3rem] w-full h-full sm:h-auto sm:max-w-4xl shadow-[0_0_100px_rgba(0,0,0,0.8)] relative overflow-hidden flex flex-col">
+            {
+                activeRegulation && (REGULATIONS_DATA[activeRegulation] || productDetails || categories.some(cat => cat.id === activeRegulation)) && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center sm:p-4 bg-black/95 backdrop-blur-xl animate-in fade-in duration-300">
+                        <div className="bg-[#0f0a28] border-white/10 sm:border rounded-none sm:rounded-[3rem] w-full h-full sm:h-auto sm:max-w-4xl shadow-[0_0_100px_rgba(0,0,0,0.8)] relative overflow-hidden flex flex-col">
 
-                        {/* Header Background Glow */}
-                        <div className={`absolute -top-20 -right-20 w-64 h-64 rounded-full blur-[100px] opacity-20 bg-gradient-to-br from-primary/20 to-secondary/20`}></div>
+                            {/* Header Background Glow */}
+                            <div className={`absolute -top-20 -right-20 w-64 h-64 rounded-full blur-[100px] opacity-20 bg-gradient-to-br from-primary/20 to-secondary/20`}></div>
 
-                        {/* Fixed Close Button */}
-                        <button
-                            onClick={() => setActiveRegulation(null)}
-                            className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors p-2 bg-white/5 rounded-full z-[30]"
-                        >
-                            <span className="material-icons-outlined text-2xl">close</span>
-                        </button>
-
-                        {/* Content Area - Scrollable */}
-                        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 sm:p-8 relative z-10 pt-16 sm:pt-10">
-
-                            {(() => {
-                                const category = categories.find(c => c.id === activeRegulation);
-                                const styles = getColors(category?.color || '');
-                                return (
-                                    <div key={category?.id || 'product'}>
-                                        <div className="flex flex-col items-center text-center mb-8 pt-4">
-                                            <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-black border border-white/10 flex items-center justify-center mb-6 shadow-2xl relative overflow-hidden group`}>
-                                                <div className={`absolute inset-0 opacity-20 bg-gradient-to-br ${styles.glow}`}></div>
-                                                {productDetails?.image_url ? (
-                                                    <img src={productDetails.image_url} alt={productDetails.name} className="w-full h-full object-cover relative z-10" />
-                                                ) : (
-                                                    <span className={`material-icons-outlined text-4xl sm:text-5xl relative z-10 ${styles.icon}`}>{category?.icon || 'star'}</span>
-                                                )}
-                                            </div>
-
-                                            <h3 className="text-2xl sm:text-3xl font-display font-black text-white uppercase tracking-wider mb-2">
-                                                {productDetails?.name || category?.title}
-                                            </h3>
-                                            <div className="h-1 w-16 bg-gradient-to-r from-primary to-secondary rounded-full"></div>
-                                        </div>
-
-                                        <div className="space-y-6">
-                                            {/* Botão de Ação - Movido para o topo para melhor visibilidade */}
-                                            <div className="px-2">
-                                                <button
-                                                    onClick={() => setActiveRegulation(null)}
-                                                    className="w-full py-4 bg-gradient-to-r from-primary to-accent text-white rounded-xl font-black uppercase tracking-widest shadow-lg hover:shadow-primary/50 transition-all hover:scale-[1.01] mb-2"
-                                                >
-                                                    {productDetails ? 'Adquirir via App' : 'Entendido'}
-                                                </button>
-                                            </div>
-
-                                            <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-                                                <h4 className="text-xs font-black text-primary uppercase tracking-[0.2em] mb-4">
-                                                    {productDetails ? 'DESCRIÇÃO DO PRODUTO' : 'INFORMAÇÕES GERAIS'}
-                                                </h4>
-                                                <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap font-light max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
-                                                    {productDetails?.description || REGULATIONS_DATA[activeRegulation]?.rules || category?.description}
-                                                </div>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="bg-white/5 border border-white/5 p-4 rounded-xl">
-                                                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">
-                                                        {productDetails ? 'Valor' : 'Status'}
-                                                    </p>
-                                                    <p className="text-white font-bold text-sm">
-                                                        {productDetails ? `R$ ${parseFloat(productDetails.price).toFixed(2).replace('.', ',')}` : 'Disponível'}
-                                                    </p>
-                                                </div>
-                                                <div className="bg-white/5 border border-white/5 p-4 rounded-xl">
-                                                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">
-                                                        {productDetails ? 'Disponível' : 'Vagas'}
-                                                    </p>
-                                                    <p className="text-white font-bold uppercase text-sm">
-                                                        {productDetails ? `${productDetails.stock} uni.` : `${category?.slots || 0} Vagas`}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })()}
-                        </div>
-
-                    </div>
-                </div>
-            )}
-            {/* CATEGORY TEMPLATE SELECTOR MODAL (FIXED POSITION OUTSIDE MAP LOOP) */}
-            {activeTemplateSelect !== null && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setActiveTemplateSelect(null)}>
-                    <div
-                        className="w-full max-w-[280px] bg-[#1a1438] border border-white/20 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] p-3 animate-in fade-in zoom-in duration-200"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest p-2 border-b border-white/5 mb-1 flex justify-between items-center">
-                            <span>Categorias do Sistema</span>
-                            <button onClick={() => setActiveTemplateSelect(null)} className="hover:text-white transition-colors">
-                                <span className="material-icons-outlined text-xs font-black">close</span>
+                            {/* Fixed Close Button */}
+                            <button
+                                onClick={() => setActiveRegulation(null)}
+                                className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors p-2 bg-white/5 rounded-full z-[30]"
+                            >
+                                <span className="material-icons-outlined text-2xl">close</span>
                             </button>
-                        </div>
-                        <div className="max-h-64 overflow-y-auto custom-scrollbar">
-                            {categories.map((cat) => (
-                                <button
-                                    key={cat.id}
-                                    onClick={async () => {
-                                        const isSlotMode = typeof activeTemplateSelect === 'string' && activeTemplateSelect.startsWith('slot-');
-                                        if (isSlotMode) {
-                                            const slotIndex = parseInt(activeTemplateSelect.toString().split('-')[1]);
-                                            const newSlots = [...((content as any).chosen_slots || Object.keys(REGULATIONS_DATA))];
-                                            newSlots[slotIndex] = cat.id;
-                                            onUpdateContent('chosen_slots', newSlots as any);
-                                        } else {
-                                            // Handle original isNew logic if still active
-                                            const isNew = typeof activeTemplateSelect === 'string' && activeTemplateSelect.startsWith('new-');
-                                            const index = isNew ? parseInt(activeTemplateSelect.toString().split('-')[1]) : activeTemplateSelect as number;
 
-                                            const colorValue = (cat.color.replace('text-', '').replace('-500', '') as any);
-                                            const firstRule = cat.description.trim().split('\n')[0].replace(/^\d+\.\s*/, '');
+                            {/* Content Area - Scrollable */}
+                            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 sm:p-8 relative z-10 pt-16 sm:pt-10">
 
-                                            if (isNew) {
-                                                const { error } = await supabase.from('ecosystem_categories').insert({
-                                                    id: cat.id,
-                                                    title: cat.title,
-                                                    icon: cat.icon,
-                                                    description: firstRule,
-                                                    color: colorValue === 'primary' || colorValue === 'secondary' || colorValue === 'cyan' || colorValue === 'pink' ? colorValue : 'primary',
-                                                    order: index,
-                                                    slots: 1
-                                                });
-                                                if (error) alert('Erro ao criar: ' + error.message);
-                                                else window.location.reload();
-                                            } else {
-                                                onUpdateCategory(index, {
-                                                    id: cat.id,
-                                                    title: cat.title,
-                                                    icon: cat.icon,
-                                                    description: firstRule,
-                                                    color: colorValue === 'primary' || colorValue === 'secondary' || colorValue === 'cyan' || colorValue === 'pink' ? colorValue : 'primary'
-                                                });
-                                            }
-                                        }
-                                        setActiveTemplateSelect(null);
-                                    }}
-                                    className="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-white/5 transition-colors flex items-center gap-2 group/item"
-                                >
-                                    <span className={`material-icons-outlined text-sm text-${cat.color}-500`}>{cat.icon}</span>
-                                    <span className="text-gray-300 group-hover/item:text-white truncate">{cat.title}</span>
-                                </button>
-                            ))}
+                                {(() => {
+                                    const category = categories.find(c => c.id === activeRegulation);
+                                    const styles = getColors(category?.color || '');
+                                    return (
+                                        <div key={category?.id || 'product'}>
+                                            <div className="flex flex-col items-center text-center mb-8 pt-4">
+                                                <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-black border border-white/10 flex items-center justify-center mb-6 shadow-2xl relative overflow-hidden group`}>
+                                                    <div className={`absolute inset-0 opacity-20 bg-gradient-to-br ${styles.glow}`}></div>
+                                                    {productDetails?.image_url ? (
+                                                        <img src={productDetails.image_url} alt={productDetails.name} className="w-full h-full object-cover relative z-10" />
+                                                    ) : (
+                                                        <span className={`material-icons-outlined text-4xl sm:text-5xl relative z-10 ${styles.icon}`}>{category?.icon || 'star'}</span>
+                                                    )}
+                                                </div>
+
+                                                <h3 className="text-2xl sm:text-3xl font-display font-black text-white uppercase tracking-wider mb-2">
+                                                    {productDetails?.name || category?.title}
+                                                </h3>
+                                                <div className="h-1 w-16 bg-gradient-to-r from-primary to-secondary rounded-full"></div>
+                                            </div>
+
+                                            <div className="space-y-6">
+                                                {/* Botão de Ação - Movido para o topo para melhor visibilidade */}
+                                                <div className="px-2">
+                                                    <button
+                                                        onClick={() => setActiveRegulation(null)}
+                                                        className="w-full py-4 bg-gradient-to-r from-primary to-accent text-white rounded-xl font-black uppercase tracking-widest shadow-lg hover:shadow-primary/50 transition-all hover:scale-[1.01] mb-2"
+                                                    >
+                                                        {productDetails ? 'Adquirir via App' : 'Entendido'}
+                                                    </button>
+                                                </div>
+
+                                                <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+                                                    <h4 className="text-xs font-black text-primary uppercase tracking-[0.2em] mb-4">
+                                                        {productDetails ? 'DESCRIÇÃO DO PRODUTO' : 'INFORMAÇÕES GERAIS'}
+                                                    </h4>
+                                                    <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap font-light max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
+                                                        {productDetails?.description || REGULATIONS_DATA[activeRegulation]?.rules || category?.description}
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="bg-white/5 border border-white/5 p-4 rounded-xl">
+                                                        <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">
+                                                            {productDetails ? 'Valor' : 'Status'}
+                                                        </p>
+                                                        <p className="text-white font-bold text-sm">
+                                                            {productDetails ? `R$ ${parseFloat(productDetails.price).toFixed(2).replace('.', ',')}` : 'Disponível'}
+                                                        </p>
+                                                    </div>
+                                                    <div className="bg-white/5 border border-white/5 p-4 rounded-xl">
+                                                        <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">
+                                                            {productDetails ? 'Disponível' : 'Vagas'}
+                                                        </p>
+                                                        <p className="text-white font-bold uppercase text-sm">
+                                                            {productDetails ? `${productDetails.stock} uni.` : `${category?.slots || 0} Vagas`}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+            {/* CATEGORY TEMPLATE SELECTOR MODAL (FIXED POSITION OUTSIDE MAP LOOP) */}
+            {
+                activeTemplateSelect !== null && (
+                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setActiveTemplateSelect(null)}>
+                        <div
+                            className="w-full max-w-[280px] bg-[#1a1438] border border-white/20 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] p-3 animate-in fade-in zoom-in duration-200"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest p-2 border-b border-white/5 mb-1 flex justify-between items-center">
+                                <span>Categorias do Sistema</span>
+                                <button onClick={() => setActiveTemplateSelect(null)} className="hover:text-white transition-colors">
+                                    <span className="material-icons-outlined text-xs font-black">close</span>
+                                </button>
+                            </div>
+                            <div className="max-h-64 overflow-y-auto custom-scrollbar">
+                                {categories.map((cat) => (
+                                    <button
+                                        key={cat.id}
+                                        onClick={async () => {
+                                            const isSlotMode = typeof activeTemplateSelect === 'string' && activeTemplateSelect.startsWith('slot-');
+                                            if (isSlotMode) {
+                                                const slotIndex = parseInt(activeTemplateSelect.toString().split('-')[1]);
+                                                const newSlots = [...((content as any).chosen_slots || Object.keys(REGULATIONS_DATA))];
+                                                newSlots[slotIndex] = cat.id;
+                                                onUpdateContent('chosen_slots', newSlots as any);
+                                            } else {
+                                                // Handle original isNew logic if still active
+                                                const isNew = typeof activeTemplateSelect === 'string' && activeTemplateSelect.startsWith('new-');
+                                                const index = isNew ? parseInt(activeTemplateSelect.toString().split('-')[1]) : activeTemplateSelect as number;
+
+                                                const colorValue = (cat.color.replace('text-', '').replace('-500', '') as any);
+                                                const firstRule = cat.description.trim().split('\n')[0].replace(/^\d+\.\s*/, '');
+
+                                                if (isNew) {
+                                                    const { error } = await supabase.from('ecosystem_categories').insert({
+                                                        id: cat.id,
+                                                        title: cat.title,
+                                                        icon: cat.icon,
+                                                        description: firstRule,
+                                                        color: colorValue === 'primary' || colorValue === 'secondary' || colorValue === 'cyan' || colorValue === 'pink' ? colorValue : 'primary',
+                                                        order: index,
+                                                        slots: 1
+                                                    });
+                                                    if (error) alert('Erro ao criar: ' + error.message);
+                                                    else window.location.reload();
+                                                } else {
+                                                    onUpdateCategory(index, {
+                                                        id: cat.id,
+                                                        title: cat.title,
+                                                        icon: cat.icon,
+                                                        description: firstRule,
+                                                        color: colorValue === 'primary' || colorValue === 'secondary' || colorValue === 'cyan' || colorValue === 'pink' ? colorValue : 'primary'
+                                                    });
+                                                }
+                                            }
+                                            setActiveTemplateSelect(null);
+                                        }}
+                                        className="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-white/5 transition-colors flex items-center gap-2 group/item"
+                                    >
+                                        <span className={`material-icons-outlined text-sm text-${cat.color}-500`}>{cat.icon}</span>
+                                        <span className="text-gray-300 group-hover/item:text-white truncate">{cat.title}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+        </div >
     );
 };

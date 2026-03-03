@@ -355,6 +355,23 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
                 >
                   <div className={`absolute inset-0 bg-gradient-to-br ${styles.glow} to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
 
+                  {/* Vagas (Slots) Badge */}
+                  {(cat.slots > 0 || cat.is_mystery) && (
+                    <div className={`absolute top-3 right-3 text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${isMystery ? 'bg-gray-800 border-white/10 text-gray-500' : `${styles.badge}`} z-20 flex items-center gap-1 shadow-lg`}>
+                      {isAdmin && cat.is_mystery ? (
+                        <span className="flex items-center gap-1">
+                          <span className="text-white/80">?</span>
+                          <span className="opacity-50 font-bold">({cat.slots})</span>
+                        </span>
+                      ) : isMystery ? (
+                        <span className="text-gray-500">?</span>
+                      ) : (
+                        String(cat.slots)
+                      )}
+                      {(!isMystery || (isAdmin && cat.is_mystery)) && <span>Vagas</span>}
+                    </div>
+                  )}
+
                   <div className="relative z-10 flex flex-col items-center text-center mt-2">
                     {/* Ícone — sempre visível, mas com estilo de mistério se ativado */}
                     <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-b from-gray-800 to-black flex items-center justify-center mb-3 sm:mb-4 shadow-lg ${isMystery ? '' : styles.shadow} transition-shadow duration-300 border border-white/10`}>

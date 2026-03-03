@@ -558,9 +558,52 @@ export const SettingsTab: React.FC = () => {
         setSponsorshipPlans(newPlans);
     };
 
+    const handleAddSponsorshipPlan = () => {
+        const newPlan = {
+            id: 'plan-' + Date.now(),
+            name: 'Novo Plano de Patrocínio',
+            subtitle: 'Subtítulo do Plano',
+            physical_application: 'Local de Aplicação',
+            structural_responsibilities: [],
+            benefits: [],
+            price: '0.00',
+            is_sold_out: false,
+            is_most_noble: false,
+            color: 'primary',
+            icon: 'emoji_events'
+        };
+        setSponsorshipPlans([...sponsorshipPlans, newPlan]);
+    };
+
+    const handleDeleteSponsorshipPlan = (index: number) => {
+        if (!window.confirm('Tem certeza que deseja excluir este plano de patrocínio?')) return;
+        const newPlans = sponsorshipPlans.filter((_, i) => i !== index);
+        setSponsorshipPlans(newPlans);
+    };
+
     const handleUpdateVipPlan = (index: number, field: string, value: any) => {
         const newPlans = [...vipPlans];
         newPlans[index] = { ...newPlans[index], [field]: value };
+        setVipPlans(newPlans);
+    };
+
+    const handleAddVipPlan = () => {
+        const newId = 'vip-' + Date.now();
+        const newPlan = {
+            id: newId,
+            title: 'Novo Plano VIP',
+            price: '100,00',
+            period: 'MÊS',
+            features: ['Benefício 1', 'Benefício 2'],
+            color: 'border-primary',
+            btnColor: 'bg-primary text-white'
+        };
+        setVipPlans([...vipPlans, newPlan]);
+    };
+
+    const handleDeleteVipPlan = (index: number) => {
+        if (!window.confirm('Tem certeza que deseja excluir este plano VIP?')) return;
+        const newPlans = vipPlans.filter((_, i) => i !== index);
         setVipPlans(newPlans);
     };
 
@@ -1335,16 +1378,26 @@ export const SettingsTab: React.FC = () => {
 
                 {activeSection === 'sponsorship' && (
                     <div className="animate-in fade-in slide-in-from-bottom-4 lg:slide-in-from-right duration-500">
-                        <SectionHeader title="Planos de Patrocínio" subtitle="Naming Rights e Estrutura Física" />
+                        <div className="flex justify-between items-center mb-6">
+                            <SectionHeader title="Planos de Patrocínio" subtitle="Naming Rights e Estrutura Física" />
+                            <button
+                                onClick={handleAddSponsorshipPlan}
+                                className="bg-primary/20 hover:bg-primary/40 text-primary px-6 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all"
+                            >
+                                <span className="material-icons-outlined text-sm">add_circle</span>
+                                Novo Plano
+                            </button>
+                        </div>
 
                         <div className="space-y-8 mb-12">
                             {sponsorshipPlans.map((plan, idx) => (
                                 <div key={plan.id} className={`bg-white/5 border border-white/10 rounded-[2rem] lg:rounded-[3rem] p-6 lg:p-10 relative overflow-hidden transition-all hover:bg-white/11 ${plan.is_most_noble ? 'border-amber-500/30 ring-1 ring-amber-500/10' : ''}`}>
-                                    {plan.is_most_noble && (
-                                        <div className="absolute top-0 right-0 px-6 py-2 bg-amber-500 text-black text-[10px] font-black uppercase tracking-widest rounded-bl-3xl shadow-xl z-20">
-                                            PLATINUM / NOBRE
-                                        </div>
-                                    )}
+                                    <div
+                                        onClick={() => handleUpdateSponsorshipPlan(idx, 'is_most_noble', !plan.is_most_noble)}
+                                        className={`absolute top-0 right-0 px-6 py-2 transition-all cursor-pointer z-20 ${plan.is_most_noble ? 'bg-amber-500 text-black' : 'bg-white/10 text-gray-500'} text-[10px] font-black uppercase tracking-widest rounded-bl-3xl shadow-xl`}
+                                    >
+                                        {plan.is_most_noble ? 'PLATINUM / NOBRE' : 'Destaque Desativado'}
+                                    </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-6">
                                         <div className="md:col-span-12 flex items-center gap-4 mb-4 pb-4 border-b border-white/5">
@@ -1478,11 +1531,29 @@ export const SettingsTab: React.FC = () => {
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-3 pt-6 border-t border-white/5 opacity-40">
-                                        <div className={`w-8 h-8 rounded-lg bg-${plan.color}/20 flex items-center justify-center text-${plan.color}`}>
-                                            <span className="material-icons-outlined text-base">{plan.icon}</span>
+                                    <div className="flex items-center justify-between pt-6 border-t border-white/5">
+                                        <div className="flex items-center gap-3 opacity-40">
+                                            <div className={`w-8 h-8 rounded-lg bg-${plan.color}/20 flex items-center justify-center text-${plan.color}`}>
+                                                <span className="material-icons-outlined text-base">{plan.icon}</span>
+                                            </div>
+                                            <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Preview visual no site habilitado</span>
                                         </div>
-                                        <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Preview visual no site habilitado</span>
+
+                                        <div className="flex gap-4">
+                                            <button
+                                                onClick={() => handleDeleteSponsorshipPlan(idx)}
+                                                className="bg-red-500/10 hover:bg-red-500/20 text-red-500 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-red-500/20"
+                                            >
+                                                Excluir Plano
+                                            </button>
+                                            <button
+                                                onClick={() => handleSaveContent('sponsorship_plans', sponsorshipPlans)}
+                                                disabled={isSavingContent}
+                                                className="bg-primary hover:bg-primary/90 text-white px-8 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-neon-pink"
+                                            >
+                                                {isSavingContent ? 'Salvando...' : 'Salvar Alterações'}
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             ))}
@@ -1503,7 +1574,16 @@ export const SettingsTab: React.FC = () => {
 
                 {activeSection === 'vip' && (
                     <div className="animate-in fade-in slide-in-from-bottom-4 lg:slide-in-from-right duration-500">
-                        <SectionHeader title="Gestão Planos VIP" subtitle="Preços, Períodos e Benefícios" />
+                        <div className="flex justify-between items-center mb-6">
+                            <SectionHeader title="Gestão Planos VIP" subtitle="Preços, Períodos e Benefícios" />
+                            <button
+                                onClick={handleAddVipPlan}
+                                className="bg-primary/20 hover:bg-primary/40 text-primary px-6 py-3 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all"
+                            >
+                                <span className="material-icons-outlined text-sm">add_circle</span>
+                                Novo Plano VIP
+                            </button>
+                        </div>
 
                         <div className="space-y-8 mb-12">
                             {vipPlans.map((plan, idx) => (
@@ -1561,6 +1641,22 @@ export const SettingsTab: React.FC = () => {
                                                 />
                                             </FormGroup>
                                         </div>
+                                    </div>
+
+                                    <div className="flex justify-end gap-3 pt-6 border-t border-white/5">
+                                        <button
+                                            onClick={() => handleDeleteVipPlan(idx)}
+                                            className="bg-red-500/10 hover:bg-red-500/20 text-red-500 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-red-500/20"
+                                        >
+                                            Excluir VIP
+                                        </button>
+                                        <button
+                                            onClick={handleSyncVipPlans}
+                                            disabled={isSavingContent}
+                                            className="bg-primary hover:bg-primary/90 text-white px-8 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-neon-pink"
+                                        >
+                                            {isSavingContent ? 'Sincronizando...' : 'Salvar Todos'}
+                                        </button>
                                     </div>
                                 </div>
                             ))}
