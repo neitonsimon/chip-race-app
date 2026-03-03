@@ -138,14 +138,12 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
         if (!window.confirm(`Confirmar depósito de R$ ${amount.toFixed(2)} para ${creditUser.name}?`)) return;
         setCreditLoading(true);
         try {
-            // 1. Calculate bonuses first
-            const expBonus = Math.floor(amount / 20);     // 1 EXP per R$20
-            const chipzBonus = Math.floor(amount / 100);  // 1 Chipz per R$100
+            // 1. Calculate bonuses: R$ 50 = 1 EXP, Chipz = 0 (Removido)
+            const expBonus = Math.floor(amount / 50);
+            const chipzBonus = 0;
 
             // 2. Single atomic transaction: Credit BRL + Chipz Bonus + Log Transaction
-            const description = creditNote.trim()
-                ? `${creditNote.trim()}${chipzBonus > 0 ? ` (+${chipzBonus} Chipz Bônus)` : ''}`
-                : `Recarga de crédito via Admin${chipzBonus > 0 ? ` (+${chipzBonus} Chipz Bônus)` : ''}`;
+            const description = creditNote.trim() || `Recarga de crédito via Admin`;
 
             const { data: txSuccess, error: txError } = await supabase.rpc('secure_balance_transaction', {
                 p_user_id: creditUser.id,
@@ -176,12 +174,9 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
             });
 
             // 7. Bonus notification in Gift inbox (only if bonuses were earned)
-            if (expBonus > 0 || chipzBonus > 0) {
-                const rewardLines = [
-                    expBonus > 0 ? `⭐ ${expBonus} EXP` : '',
-                    chipzBonus > 0 ? `🌟 ${chipzBonus} Chipz de Bônus` : ''
-                ].filter(Boolean).join('\n');
+            const rewardLines = expBonus > 0 ? `⭐ ${expBonus} EXP` : '';
 
+            if (expBonus > 0) {
                 await supabase.from('messages').insert({
                     user_id: creditUser.id,
                     sender_id: currentUser.id,
@@ -191,10 +186,7 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                 });
             }
 
-            alert(`✅ R$ ${amount.toFixed(2)} creditados para ${creditUser.name}!${expBonus > 0 || chipzBonus > 0
-                ? `\n🎁 Bônus: ${expBonus > 0 ? `${expBonus} EXP ` : ''}${chipzBonus > 0 ? `+ ${chipzBonus} Chipz` : ''}`
-                : ''
-                }`);
+            alert(`✅ R$ ${amount.toFixed(2)} creditados para ${creditUser.name}!${expBonus > 0 ? `\n🎁 Bônus: ${expBonus} EXP` : ''}`);
             setCreditUser(null);
             setCreditSearch('');
             setCreditAmount('');

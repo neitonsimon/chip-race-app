@@ -13,6 +13,8 @@ export default function App() {
         currentUser, newNotification, setNewNotification
     } = useApp();
 
+    const lastTrackedView = React.useRef<string | null>(null);
+
     const [isSupportOpen, setIsSupportOpen] = React.useState(false);
 
     const showFooter = ['home', 'the-chosen-details', 'calendar', 'ranking', 'vip', 'recharge', 'the-chosen-regulations', 'terms', 'privacy', 'rules', 'responsible-gaming'].includes(currentView);
@@ -92,15 +94,14 @@ export default function App() {
         };
         window.addEventListener('open-support-modal', handleOpenSupport);
 
-        if (!currentView) return () => window.removeEventListener('open-support-modal', handleOpenSupport);
+        // Bloqueia se a página não mudou
+        if (!currentView || lastTrackedView.current === currentView) return () => window.removeEventListener('open-support-modal', handleOpenSupport);
 
         const trackView = async () => {
             try {
-                // Nova abordagem leve: Apenas incrementa um contador na tabela 'page_stats'
-                // ao invés de criar um log completo por clique.
+                lastTrackedView.current = currentView; // Trava imediata
                 await supabase.rpc('increment_page_view', { p_view_name: currentView });
             } catch (e) {
-                // Fallback silencioso caso a função ainda não exista (durante migração do DB)
                 console.log("Analytics increment failed", e);
             }
         };
