@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../src/lib/supabase';
 import { TournamentCategory } from '../../types';
+import appConfig from '../../src/config/appConfig.json';
 
 interface RoadmapMilestone {
     id?: string;
@@ -76,7 +77,7 @@ export const SettingsTab: React.FC = () => {
 
     // Nova Categoria Form State
     const [showAddCategory, setShowAddCategory] = useState(false);
-    const [newCatData, setNewCatData] = useState({ slug: '', title: '', icon: 'inventory_2' });
+    const [newCatData, setNewCatData] = useState({ slug: '', title: '', icon: 'inventory_2', color: 'primary' as any });
     const [showIconPicker, setShowIconPicker] = useState<number | null>(null); // Index or -1 for New Cat
 
     const iconPool = [
@@ -102,8 +103,14 @@ export const SettingsTab: React.FC = () => {
     const [pageViews, setPageViews] = useState<{ view_name: string, count: number }[]>([]);
     const [isLoadingStats, setIsLoadingStats] = useState(false);
 
+    // Sponsorship State
+    const [sponsorshipPlans, setSponsorshipPlans] = useState<any[]>([]);
+
+    // VIP Plans State
+    const [vipPlans, setVipPlans] = useState<any[]>(appConfig.vip.plans || []);
+
     // Sidebar active section
-    const [activeSection, setActiveSection] = useState<'roadmap' | 'hero' | 'details' | 'faq' | 'months' | 'ecosystem' | 'daily-rewards' | 'defaults'>('roadmap');
+    const [activeSection, setActiveSection] = useState<'roadmap' | 'hero' | 'details' | 'faq' | 'months' | 'ecosystem' | 'daily-rewards' | 'defaults' | 'sponsorship' | 'vip'>('roadmap');
 
     useEffect(() => {
         fetchRoadmap();
@@ -206,8 +213,73 @@ export const SettingsTab: React.FC = () => {
                     setMonths(item.value);
                 } else if (item.key === 'total_qualifiers') {
                     setTotalQualifiers(item.value);
+                } else if (item.key === 'sponsorship_plans') {
+                    setSponsorshipPlans(item.value);
+                } else if (item.key === 'vip_plans') {
+                    setVipPlans(item.value);
                 }
             });
+
+            // Enhanced VIP fetch: Always try to merge products with appConfig defaults if content_db is missing or outdated
+            const { data: productsData } = await supabase
+                .from('products')
+                .select('*')
+                .eq('category', 'vip')
+                .order('price', { ascending: true });
+
+            if (productsData && productsData.length > 0) {
+                const mappedFromProducts = productsData.map((product, index) => {
+                    const lowerName = product.name.toLowerCase();
+                    let type: 'quarterly' | 'annual' | 'master' | 'honorario' = 'quarterly';
+                    if (lowerName.includes('master')) type = 'master';
+                    else if (lowerName.includes('anual') || lowerName.includes('ano')) type = 'annual';
+                    else if (lowerName.includes('trimestral')) type = 'quarterly';
+                    else if (lowerName.includes('honorario') || lowerName.includes('honorário')) type = 'honorario';
+                    else {
+                        if (Number(product.price) === 0) type = 'honorario';
+                        else if (index === 0) type = 'honorario';
+                        else if (index === 1) type = 'quarterly';
+                        else if (index === 2) type = 'annual';
+                        else type = 'master';
+                    }
+                    const configTemplate = (appConfig.vip.plans as any[]).find(p => p.id === type) || appConfig.vip.plans[0];
+                    return {
+                        ...configTemplate,
+                        id: type,
+                        db_id: product.id,
+                        title: product.name,
+                        price: Number(product.price).toFixed(2).replace('.', ','),
+                        rawPrice: Number(product.price),
+                        period: product.price_unit || configTemplate.period,
+                        features: product.description
+                            ? product.description.split('\n').map((f: string) => f.replace(/^[•*-]\s*/, '').trim()).filter(Boolean)
+                            : configTemplate.features
+                    };
+                });
+
+                const savedVipPlans = data?.find(item => item.key === 'vip_plans')?.value;
+                if (savedVipPlans && Array.isArray(savedVipPlans)) {
+                    // Merge saved content_db with products (keep db_id and price in sync)
+                    const merged = savedVipPlans.map(savedPlan => {
+                        const productMatch = mappedFromProducts.find(mp => mp.id === savedPlan.id);
+                        if (productMatch) {
+                            return {
+                                ...savedPlan,
+                                db_id: productMatch.db_id,
+                                price: productMatch.price,
+                                rawPrice: productMatch.rawPrice,
+                                // If features are empty in content_db, use product or config
+                                features: (savedPlan.features && savedPlan.features.length > 0) ? savedPlan.features : productMatch.features
+                            };
+                        }
+                        return savedPlan;
+                    });
+                    setVipPlans(merged);
+                } else {
+                    setVipPlans(mappedFromProducts);
+                }
+            }
+
             setContent(newContent);
         } catch (err: any) {
             console.error('Error fetching content:', err.message);
@@ -227,6 +299,39 @@ export const SettingsTab: React.FC = () => {
             alert(`Configuração "${key.toUpperCase()}" salva com sucesso!`);
         } catch (err: any) {
             alert('Erro ao salvar conteúdo: ' + err.message);
+        } finally {
+            setIsSavingContent(false);
+        }
+    };
+
+    const handleSyncVipPlans = async () => {
+        setIsSavingContent(true);
+        try {
+            // 1. Save to content_db for UI/Features
+            const { error: contentErr } = await supabase
+                .from('content_db')
+                .upsert({ key: 'vip_plans', value: vipPlans }, { onConflict: 'key' });
+
+            if (contentErr) throw contentErr;
+
+            // 2. Sync with Products table (Price, Name, Description)
+            for (const plan of vipPlans) {
+                if (plan.db_id) {
+                    const cleanPrice = parseFloat(plan.price.replace(',', '.'));
+                    const featuresTxt = plan.features.join('\n');
+
+                    await supabase.from('products').update({
+                        name: plan.title,
+                        price: cleanPrice,
+                        price_unit: plan.period,
+                        description: featuresTxt
+                    }).eq('id', plan.db_id);
+                }
+            }
+
+            alert('✅ Planos VIP sincronizados e publicados com sucesso!');
+        } catch (err: any) {
+            alert('Erro ao sincronizar VIP: ' + err.message);
         } finally {
             setIsSavingContent(false);
         }
@@ -413,7 +518,7 @@ export const SettingsTab: React.FC = () => {
                 title: newCatData.title,
                 description: 'Nova categoria do ecossistema...',
                 icon: newCatData.icon,
-                color: 'primary',
+                color: newCatData.color || 'primary',
                 slots: 0,
                 is_mystery: false,
                 is_hidden: false,
@@ -445,6 +550,18 @@ export const SettingsTab: React.FC = () => {
         } finally {
             setIsSavingContent(false);
         }
+    };
+
+    const handleUpdateSponsorshipPlan = (index: number, field: string, value: any) => {
+        const newPlans = [...sponsorshipPlans];
+        newPlans[index] = { ...newPlans[index], [field]: value };
+        setSponsorshipPlans(newPlans);
+    };
+
+    const handleUpdateVipPlan = (index: number, field: string, value: any) => {
+        const newPlans = [...vipPlans];
+        newPlans[index] = { ...newPlans[index], [field]: value };
+        setVipPlans(newPlans);
     };
 
     return (
@@ -494,10 +611,22 @@ export const SettingsTab: React.FC = () => {
                     icon="category"
                     label="Ecossistema"
                 />
+                <SidebarButton
+                    active={activeSection === 'sponsorship'}
+                    onClick={() => setActiveSection('sponsorship')}
+                    icon="handshake"
+                    label="Patrocínio"
+                />
+                <SidebarButton
+                    active={activeSection === 'vip'}
+                    onClick={() => setActiveSection('vip')}
+                    icon="diamond"
+                    label="Planos VIP"
+                />
             </aside>
 
             {/* Content Area */}
-            <main className="flex-1 p-4 sm:p-8 overflow-y-auto max-h-[1000px] custom-scrollbar">
+            <main className="flex-1 p-4 lg:p-12 overflow-y-auto custom-scrollbar">
                 {activeSection === 'roadmap' && (
                     <div className="animate-in fade-in slide-in-from-bottom-4 lg:slide-in-from-right duration-500">
                         <SectionHeader title="Timeline do Roadmap" subtitle="Evolução pública do ecossistema" />
@@ -763,6 +892,25 @@ export const SettingsTab: React.FC = () => {
                                     )}
                                 </div>
 
+                                <FormGroup label="Cor Base">
+                                    <select
+                                        value={newCatData.color}
+                                        onChange={e => setNewCatData({ ...newCatData, color: e.target.value })}
+                                        className="form-input text-xs appearance-none cursor-pointer hover:border-primary transition-all mb-4"
+                                    >
+                                        <option value="primary">Pink (Destaque)</option>
+                                        <option value="secondary">Blue (Chip Race)</option>
+                                        <option value="cyan">Ciano (Neon)</option>
+                                        <option value="pink">Rosa (Suave)</option>
+                                        <option value="amber">Amarelo (Gold)</option>
+                                        <option value="orange">Laranja (Vibrant)</option>
+                                        <option value="emerald">Verde (Emerald)</option>
+                                        <option value="blue">Azul (Standard)</option>
+                                        <option value="purple">Roxo (Luxury)</option>
+                                        <option value="red">Vermelho (Danger)</option>
+                                    </select>
+                                </FormGroup>
+
                                 <button
                                     onClick={handleConfirmAddCategory}
                                     disabled={!newCatData.slug || !newCatData.title}
@@ -782,7 +930,18 @@ export const SettingsTab: React.FC = () => {
                                     <div className="grid grid-cols-2 gap-3 sm:gap-4">
                                         <div className="col-span-2 flex items-center justify-between mb-2">
                                             <div className="flex items-center gap-3 sm:gap-4 flex-1">
-                                                <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary flex-shrink-0`}>
+                                                <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${cat.color === 'primary' ? 'bg-primary/20 text-primary' :
+                                                    cat.color === 'secondary' ? 'bg-secondary/20 text-secondary' :
+                                                        cat.color === 'cyan' ? 'bg-cyan-500/20 text-cyan-400' :
+                                                            cat.color === 'pink' ? 'bg-pink-500/20 text-pink-400' :
+                                                                cat.color === 'amber' ? 'bg-amber-500/20 text-amber-400' :
+                                                                    cat.color === 'orange' ? 'bg-orange-500/20 text-orange-400' :
+                                                                        cat.color === 'emerald' ? 'bg-emerald-500/20 text-emerald-400' :
+                                                                            cat.color === 'blue' ? 'bg-blue-500/20 text-blue-400' :
+                                                                                cat.color === 'purple' ? 'bg-purple-500/20 text-purple-400' :
+                                                                                    cat.color === 'red' ? 'bg-red-500/20 text-red-400' :
+                                                                                        'bg-white/10 text-white'
+                                                    }`}>
                                                     <span className="material-icons-outlined text-lg">{cat.icon}</span>
                                                 </div>
                                                 <input type="text" value={cat.title} onChange={e => handleUpdateCategory(idx, 'title', e.target.value)} className="w-full bg-transparent border-none text-white font-black uppercase text-xs sm:text-sm outline-none" placeholder="Nome" />
@@ -796,9 +955,22 @@ export const SettingsTab: React.FC = () => {
                                             <FormGroup label="Ícone">
                                                 <div
                                                     onClick={() => setShowIconPicker(showIconPicker === idx ? null : idx)}
-                                                    className="form-input flex items-center justify-between cursor-pointer hover:border-primary transition-colors text-xs"
+                                                    className={`form-input flex items-center justify-between cursor-pointer transition-colors text-xs ${cat.color === 'primary' ? 'hover:border-primary' :
+                                                        cat.color === 'secondary' ? 'hover:border-secondary' :
+                                                            'hover:border-white/40'
+                                                        }`}
                                                 >
-                                                    <span className="material-icons-outlined text-primary text-sm">{cat.icon}</span>
+                                                    <span className={`material-icons-outlined text-sm ${cat.color === 'primary' ? 'text-primary' :
+                                                        cat.color === 'secondary' ? 'text-secondary' :
+                                                            cat.color === 'cyan' ? 'text-cyan-400' :
+                                                                cat.color === 'pink' ? 'text-pink-400' :
+                                                                    cat.color === 'amber' ? 'text-amber-400' :
+                                                                        cat.color === 'orange' ? 'text-orange-400' :
+                                                                            cat.color === 'emerald' ? 'text-emerald-400' :
+                                                                                cat.color === 'blue' ? 'text-blue-400' :
+                                                                                    cat.color === 'purple' ? 'text-purple-400' :
+                                                                                        cat.color === 'red' ? 'text-red-400' : 'text-white'
+                                                        }`}>{cat.icon}</span>
                                                     <span className="material-icons text-gray-600 text-xs">expand_more</span>
                                                 </div>
                                             </FormGroup>
@@ -826,11 +998,21 @@ export const SettingsTab: React.FC = () => {
                                                 className="form-input text-xs" />
                                         </FormGroup>
                                         <FormGroup label="Cor">
-                                            <select value={cat.color} onChange={e => handleUpdateCategory(idx, 'color', e.target.value)} className="form-input text-[10px] appearance-none">
-                                                <option value="primary">Pink</option>
-                                                <option value="secondary">Blue</option>
-                                                <option value="cyan">Ciano</option>
-                                                <option value="pink">Rosa</option>
+                                            <select
+                                                value={cat.color}
+                                                onChange={e => handleUpdateCategory(idx, 'color', e.target.value)}
+                                                className="form-input text-[10px] appearance-none cursor-pointer hover:border-primary transition-all"
+                                            >
+                                                <option value="primary">Pink (Destaque)</option>
+                                                <option value="secondary">Blue (Chip Race)</option>
+                                                <option value="cyan">Ciano (Neon)</option>
+                                                <option value="pink">Rosa (Suave)</option>
+                                                <option value="amber">Amarelo (Gold)</option>
+                                                <option value="orange">Laranja (Vibrant)</option>
+                                                <option value="emerald">Verde (Emerald)</option>
+                                                <option value="blue">Azul (Standard)</option>
+                                                <option value="purple">Roxo (Luxury)</option>
+                                                <option value="red">Vermelho (Danger)</option>
                                             </select>
                                         </FormGroup>
                                         <FormGroup label="Mstry">
@@ -1150,6 +1332,252 @@ export const SettingsTab: React.FC = () => {
                         </div>
                     </div>
                 )}
+
+                {activeSection === 'sponsorship' && (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 lg:slide-in-from-right duration-500">
+                        <SectionHeader title="Planos de Patrocínio" subtitle="Naming Rights e Estrutura Física" />
+
+                        <div className="space-y-8 mb-12">
+                            {sponsorshipPlans.map((plan, idx) => (
+                                <div key={plan.id} className={`bg-white/5 border border-white/10 rounded-[2rem] lg:rounded-[3rem] p-6 lg:p-10 relative overflow-hidden transition-all hover:bg-white/11 ${plan.is_most_noble ? 'border-amber-500/30 ring-1 ring-amber-500/10' : ''}`}>
+                                    {plan.is_most_noble && (
+                                        <div className="absolute top-0 right-0 px-6 py-2 bg-amber-500 text-black text-[10px] font-black uppercase tracking-widest rounded-bl-3xl shadow-xl z-20">
+                                            PLATINUM / NOBRE
+                                        </div>
+                                    )}
+
+                                    <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-6">
+                                        <div className="md:col-span-12 flex items-center gap-4 mb-4 pb-4 border-b border-white/5">
+                                            <div className={`w-12 h-12 rounded-2xl bg-${plan.color}/20 flex items-center justify-center text-${plan.color} shadow-lg`}>
+                                                <span className="material-icons-outlined">{plan.icon}</span>
+                                            </div>
+                                            <div>
+                                                <h4 className="text-white font-black uppercase text-base tracking-tight">{plan.name || 'Novo Plano'}</h4>
+                                                <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest leading-none mt-1">Configurações Gerais do Espaço</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="md:col-span-6">
+                                            <FormGroup label="NOME DO PLANO" fullWidth>
+                                                <input
+                                                    type="text"
+                                                    value={plan.name}
+                                                    onChange={e => handleUpdateSponsorshipPlan(idx, 'name', e.target.value)}
+                                                    className="form-input font-bold text-white uppercase text-sm"
+                                                    placeholder="Ex: PLANO MASTER"
+                                                />
+                                            </FormGroup>
+                                        </div>
+
+                                        <div className="md:col-span-6">
+                                            <FormGroup label="SUBTÍTULO ESTRATÉGICO" fullWidth>
+                                                <input
+                                                    type="text"
+                                                    value={plan.subtitle}
+                                                    onChange={e => handleUpdateSponsorshipPlan(idx, 'subtitle', e.target.value)}
+                                                    className="form-input text-gray-400 font-medium text-sm"
+                                                    placeholder="Ex: Naming Rights da Entrada"
+                                                />
+                                            </FormGroup>
+                                        </div>
+
+                                        <div className="md:col-span-6">
+                                            <FormGroup label="APLICAÇÃO FÍSICA NO CLUBE" fullWidth>
+                                                <input
+                                                    type="text"
+                                                    value={plan.physical_application}
+                                                    onChange={e => handleUpdateSponsorshipPlan(idx, 'physical_application', e.target.value)}
+                                                    className="form-input text-primary font-bold text-sm w-full"
+                                                    placeholder="Ex: Fachada + Hall"
+                                                />
+                                            </FormGroup>
+                                        </div>
+
+                                        <div className="md:col-span-3">
+                                            <FormGroup label="VALOR" fullWidth>
+                                                <input
+                                                    type="text"
+                                                    value={plan.price}
+                                                    onChange={e => handleUpdateSponsorshipPlan(idx, 'price', e.target.value)}
+                                                    className="form-input text-amber-500 font-display italic font-black text-xl text-center w-full"
+                                                    placeholder="0.00"
+                                                />
+                                            </FormGroup>
+                                        </div>
+
+                                        <div className="md:col-span-3">
+                                            <FormGroup label="STATUS" fullWidth>
+                                                <div
+                                                    onClick={() => handleUpdateSponsorshipPlan(idx, 'is_sold_out', !plan.is_sold_out)}
+                                                    className={`form-input flex items-center justify-center gap-2 cursor-pointer transition-all h-[54px] text-[11px] font-black ${plan.is_sold_out ? 'bg-red-500/20 border-red-500/50 text-red-500' : 'bg-green-500/10 border-green-500/30 text-green-500'}`}
+                                                >
+                                                    {plan.is_sold_out ? 'ESGOTADO' : 'DISPONÍVEL'}
+                                                    <span className="material-icons-outlined text-sm">{plan.is_sold_out ? 'lock_clock' : 'check_circle'}</span>
+                                                </div>
+                                            </FormGroup>
+                                        </div>
+
+                                        <div className="md:col-span-3">
+                                            <FormGroup label="ÍCONE (MATERIAL ICON)" fullWidth>
+                                                <div className="flex gap-2">
+                                                    <div className="w-[54px] h-[54px] rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-400">
+                                                        <span className="material-icons-outlined">{plan.icon}</span>
+                                                    </div>
+                                                    <input
+                                                        type="text"
+                                                        value={plan.icon}
+                                                        onChange={e => handleUpdateSponsorshipPlan(idx, 'icon', e.target.value)}
+                                                        className="form-input font-bold flex-1"
+                                                        placeholder="Ex: emoji_events"
+                                                    />
+                                                </div>
+                                            </FormGroup>
+                                        </div>
+
+                                        <div className="md:col-span-3">
+                                            <FormGroup label="COR (TAILWIND CLASS)" fullWidth>
+                                                <div className="flex gap-2">
+                                                    <div className={`w-[54px] h-[54px] rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-${plan.color}`}>
+                                                        <div className={`w-3 h-3 rounded-full bg-current`}></div>
+                                                    </div>
+                                                    <input
+                                                        type="text"
+                                                        value={plan.color}
+                                                        onChange={e => handleUpdateSponsorshipPlan(idx, 'color', e.target.value)}
+                                                        className="form-input font-bold flex-1"
+                                                        placeholder="Ex: amber-500"
+                                                    />
+                                                </div>
+                                            </FormGroup>
+                                        </div>
+
+                                        <div className="md:col-span-6 flex items-end pb-1">
+                                            <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest pl-2">As cores e ícones seguem o padrão Material e Tailwind CSS.</p>
+                                        </div>
+
+                                        <div className="md:col-span-6">
+                                            <FormGroup label="EXPOSIÇÃO DE MARCA & BENEFÍCIOS (UM POR LINHA)" fullWidth>
+                                                <textarea
+                                                    value={plan.benefits.join('\n')}
+                                                    onChange={e => handleUpdateSponsorshipPlan(idx, 'benefits', e.target.value.split('\n'))}
+                                                    className="form-input min-h-[220px] text-[13px] sm:text-sm text-green-400 font-bold leading-relaxed py-4 custom-scrollbar w-full"
+                                                    placeholder="Ex: Logo na fachada principal\nPainel Bem-Vindos..."
+                                                />
+                                            </FormGroup>
+                                        </div>
+
+                                        <div className="md:col-span-6">
+                                            <FormGroup label="ENCARGOS ESTRUTURANTE (UM POR LINHA)" fullWidth>
+                                                <textarea
+                                                    value={plan.structural_responsibilities.join('\n')}
+                                                    onChange={e => handleUpdateSponsorshipPlan(idx, 'structural_responsibilities', e.target.value.split('\n'))}
+                                                    className="form-input min-h-[220px] text-[13px] sm:text-sm text-gray-300 font-medium leading-relaxed py-4 custom-scrollbar w-full"
+                                                    placeholder="Ex: Paisagismo externo\nIluminação arquitetônica..."
+                                                />
+                                            </FormGroup>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-3 pt-6 border-t border-white/5 opacity-40">
+                                        <div className={`w-8 h-8 rounded-lg bg-${plan.color}/20 flex items-center justify-center text-${plan.color}`}>
+                                            <span className="material-icons-outlined text-base">{plan.icon}</span>
+                                        </div>
+                                        <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Preview visual no site habilitado</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="flex justify-center pb-12">
+                            <button
+                                onClick={() => handleSaveContent('sponsorship_plans', sponsorshipPlans)}
+                                disabled={isSavingContent}
+                                className="btn-save shadow-neon-blue w-full max-w-md py-6 h-auto"
+                            >
+                                <span className="material-icons-outlined text-sm">cloud_sync</span>
+                                {isSavingContent ? 'Sincronizando...' : 'Publicar Alterações de Patrocínio'}
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'vip' && (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 lg:slide-in-from-right duration-500">
+                        <SectionHeader title="Gestão Planos VIP" subtitle="Preços, Períodos e Benefícios" />
+
+                        <div className="space-y-8 mb-12">
+                            {vipPlans.map((plan, idx) => (
+                                <div key={plan.id} className="bg-white/5 border border-white/10 rounded-[2rem] p-6 lg:p-8 relative overflow-hidden transition-all hover:bg-white/11">
+                                    <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                                        <div className="md:col-span-12 flex items-center gap-4 mb-2 pb-4 border-b border-white/5">
+                                            <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary shadow-lg">
+                                                <span className="material-icons-outlined">diamond</span>
+                                            </div>
+                                            <div>
+                                                <h4 className="text-white font-black uppercase text-base tracking-tight">{plan.title || 'Novo Plano VIP'}</h4>
+                                                <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest leading-none mt-1">ID: {plan.id}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="md:col-span-4">
+                                            <FormGroup label="TÍTULO DO PLANO">
+                                                <input
+                                                    type="text"
+                                                    value={plan.title}
+                                                    onChange={e => handleUpdateVipPlan(idx, 'title', e.target.value)}
+                                                    className="form-input font-bold text-white text-sm"
+                                                />
+                                            </FormGroup>
+                                        </div>
+
+                                        <div className="md:col-span-4">
+                                            <FormGroup label="PREÇO (EX: 189,90)">
+                                                <input
+                                                    type="text"
+                                                    value={plan.price}
+                                                    onChange={e => handleUpdateVipPlan(idx, 'price', e.target.value)}
+                                                    className="form-input text-primary font-bold text-sm"
+                                                />
+                                            </FormGroup>
+                                        </div>
+
+                                        <div className="md:col-span-4">
+                                            <FormGroup label="PERÍODO (EX: MÊS)">
+                                                <input
+                                                    type="text"
+                                                    value={plan.period}
+                                                    onChange={e => handleUpdateVipPlan(idx, 'period', e.target.value)}
+                                                    className="form-input text-gray-400 text-sm"
+                                                />
+                                            </FormGroup>
+                                        </div>
+
+                                        <div className="md:col-span-12">
+                                            <FormGroup label="BENEFÍCIOS (UM POR LINHA)" fullWidth>
+                                                <textarea
+                                                    value={plan.features.join('\n')}
+                                                    onChange={e => handleUpdateVipPlan(idx, 'features', e.target.value.split('\n'))}
+                                                    className="form-input min-h-[160px] text-sm text-gray-300 leading-relaxed py-4 custom-scrollbar"
+                                                />
+                                            </FormGroup>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="flex justify-center pb-12">
+                            <button
+                                onClick={handleSyncVipPlans}
+                                disabled={isSavingContent}
+                                className="btn-save shadow-neon-pink w-full max-w-md py-6 h-auto"
+                            >
+                                <span className="material-icons-outlined text-sm">auto_awesome</span>
+                                {isSavingContent ? 'Publicando...' : 'Atualizar Todos Planos VIP'}
+                            </button>
+                        </div>
+                    </div>
+                )}
             </main>
         </div>
     );
@@ -1169,8 +1597,8 @@ const SectionHeader = ({ title, subtitle }: { title: string, subtitle: string })
     </div>
 );
 
-const FormGroup = ({ label, children, fullWidth }: { label: string, children: React.ReactNode, fullWidth?: boolean }) => (
-    <div className={fullWidth ? 'col-span-1 sm:col-span-2' : 'col-span-1'}>
+const FormGroup = ({ label, children, className, fullWidth }: { label: string, children: React.ReactNode, className?: string, fullWidth?: boolean }) => (
+    <div className={`w-full ${fullWidth ? 'col-span-1 sm:col-span-2' : ''} ${className || ''}`}>
         <label className="text-[9px] sm:text-[10px] text-primary uppercase font-black block mb-2 ml-2 sm:ml-4 tracking-[0.15em] opacity-80">{label}</label>
         {children}
     </div>

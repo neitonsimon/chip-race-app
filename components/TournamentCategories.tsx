@@ -234,6 +234,60 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
         btn: 'text-gray-400 group-hover:text-white',
         badge: 'bg-white/5 text-gray-400 border-white/10'
       };
+      case 'blue': return {
+        border: 'hover:border-blue-500/40',
+        icon: 'text-gray-400 group-hover:text-blue-400',
+        shadow: 'group-hover:shadow-[0_0_20px_rgba(59,130,246,0.3)]',
+        glow: 'from-blue-500/5',
+        text: 'group-hover:text-gray-200',
+        btn: 'text-gray-400 group-hover:text-white',
+        badge: 'bg-white/5 text-gray-400 border-white/10'
+      };
+      case 'emerald': return {
+        border: 'hover:border-emerald-500/40',
+        icon: 'text-gray-400 group-hover:text-emerald-400',
+        shadow: 'group-hover:shadow-[0_0_20px_rgba(16,185,129,0.3)]',
+        glow: 'from-emerald-500/5',
+        text: 'group-hover:text-gray-200',
+        btn: 'text-gray-400 group-hover:text-white',
+        badge: 'bg-white/5 text-gray-400 border-white/10'
+      };
+      case 'amber': return {
+        border: 'hover:border-amber-500/40',
+        icon: 'text-gray-400 group-hover:text-amber-400',
+        shadow: 'group-hover:shadow-[0_0_20px_rgba(245,158,11,0.3)]',
+        glow: 'from-amber-500/5',
+        text: 'group-hover:text-gray-200',
+        btn: 'text-gray-400 group-hover:text-white',
+        badge: 'bg-white/5 text-gray-400 border-white/10'
+      };
+      case 'orange': return {
+        border: 'hover:border-orange-500/40',
+        icon: 'text-gray-400 group-hover:text-orange-400',
+        shadow: 'group-hover:shadow-[0_0_20px_rgba(249,115,22,0.3)]',
+        glow: 'from-orange-500/5',
+        text: 'group-hover:text-gray-200',
+        btn: 'text-gray-400 group-hover:text-white',
+        badge: 'bg-white/5 text-gray-400 border-white/10'
+      };
+      case 'purple': return {
+        border: 'hover:border-purple-500/40',
+        icon: 'text-gray-400 group-hover:text-purple-400',
+        shadow: 'group-hover:shadow-[0_0_20px_rgba(168,85,247,0.3)]',
+        glow: 'from-purple-500/5',
+        text: 'group-hover:text-gray-200',
+        btn: 'text-gray-400 group-hover:text-white',
+        badge: 'bg-white/5 text-gray-400 border-white/10'
+      };
+      case 'red': return {
+        border: 'hover:border-red-500/40',
+        icon: 'text-gray-400 group-hover:text-red-400',
+        shadow: 'group-hover:shadow-[0_0_20px_rgba(239,68,68,0.3)]',
+        glow: 'from-red-500/5',
+        text: 'group-hover:text-gray-200',
+        btn: 'text-gray-400 group-hover:text-white',
+        badge: 'bg-white/5 text-gray-400 border-white/10'
+      };
       default: return {
         border: 'hover:border-white/20',
         icon: 'text-gray-400 group-hover:text-white',
@@ -248,8 +302,15 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
 
   const handleOpenRegulation = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
+
     if (id === 'vip' && onNavigate) {
       onNavigate('vip');
+      return;
+    }
+
+    // Navegar para o ranking
+    if ((id === 'rankings' || id === 'ranking') && onNavigate) {
+      onNavigate('ranking');
       return;
     }
 
@@ -285,7 +346,7 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
             .filter(cat => !cat.is_hidden)
             .map((cat, index) => {
               const styles = getColors(cat.color);
-              const isMystery = cat.is_mystery;
+              const isMystery = cat.is_mystery && !isAdmin;
 
               return (
                 <div
@@ -294,44 +355,39 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
                 >
                   <div className={`absolute inset-0 bg-gradient-to-br ${styles.glow} to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
 
-                  {/* Padlock Icon for Admin to toggle Mystery/Lock */}
-
                   <div className="relative z-10 flex flex-col items-center text-center mt-2">
-                    {isMystery && !isAdmin ? (
-                      // Mystery Card Content for regular users
-                      <div className="flex flex-col items-center justify-center py-6">
-                        <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-4 text-gray-600 animate-pulse">
-                          <span className="material-icons-outlined text-4xl">lock</span>
-                        </div>
-                        <h3 className="text-lg font-display font-black text-gray-700 uppercase tracking-widest">
-                          Em Breve
-                        </h3>
-                        <p className="text-[10px] text-gray-500 uppercase font-black mt-2">Mistério!</p>
-                      </div>
-                    ) : (
-                      // Standard Card Content
-                      <>
-                        <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-b from-gray-800 to-black flex items-center justify-center mb-3 sm:mb-4 shadow-lg ${styles.shadow} transition-shadow duration-300 border border-white/10`}>
-                          <span className={`material-icons-outlined text-2xl sm:text-3xl ${styles.icon}`}>{cat.icon}</span>
-                        </div>
+                    {/* Ícone — sempre visível, mas com estilo de mistério se ativado */}
+                    <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-b from-gray-800 to-black flex items-center justify-center mb-3 sm:mb-4 shadow-lg ${isMystery ? '' : styles.shadow} transition-shadow duration-300 border border-white/10`}>
+                      <span className={`material-icons-outlined text-2xl sm:text-3xl ${isMystery ? 'text-gray-600 animate-pulse' : styles.icon}`}>
+                        {isMystery ? 'help_outline' : cat.icon}
+                      </span>
+                    </div>
 
-                        <h3 className={`text-xs sm:text-base font-display font-bold text-gray-900 dark:text-white mb-1 ${styles.text} transition-colors w-full flex items-center justify-center gap-2`}>
-                          {cat.title}
+                    {/* Nome: ??? se mistério */}
+                    <h3 className={`text-xs sm:text-base font-display font-bold mb-1 transition-colors w-full flex items-center justify-center gap-2 ${isMystery ? 'text-gray-600 tracking-[0.3em]' : `text-gray-900 dark:text-white ${styles.text}`}`}>
+                      {isMystery ? '???' : cat.title}
+                    </h3>
 
-                        </h3>
+                    {/* Descrição: ??? se mistério */}
+                    <p className="hidden md:flex text-xs mb-4 min-h-[40px] items-center justify-center w-full px-2">
+                      <span className={isMystery ? 'text-gray-700 tracking-[0.2em] font-black text-[10px]' : 'text-gray-500 dark:text-gray-400'}>
+                        {isMystery ? '??? ??? ???' : cat.description}
+                      </span>
+                    </p>
 
-                        <p className="hidden md:flex text-xs text-gray-500 dark:text-gray-400 mb-4 min-h-[40px] items-center justify-center w-full px-2">
-                          {cat.description}
-                        </p>
-
-                        <button
-                          onClick={(e) => handleOpenRegulation(e, cat.id)}
-                          className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider ${styles.btn} hover:scale-105 transition-all flex items-center gap-1 sm:gap-2 cursor-pointer bg-white/5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/10 hover:border-white/30 shadow-sm group-hover:bg-white/10`}
-                        >
-                          Ver <span className="hidden sm:inline">Mais</span> <span className="material-icons-outlined text-xs sm:text-sm">add_circle</span>
-                        </button>
-                      </>
-                    )}
+                    <button
+                      onClick={(e) => !isMystery && handleOpenRegulation(e, cat.id)}
+                      className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1 sm:gap-2 bg-white/5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border shadow-sm ${isMystery
+                        ? 'text-gray-700 border-white/5 cursor-default'
+                        : `${styles.btn} hover:scale-105 cursor-pointer border-white/10 hover:border-white/30 group-hover:bg-white/10`
+                        }`}
+                    >
+                      {isMystery ? (
+                        <><span className="material-icons-outlined text-xs sm:text-sm">lock</span> Em Breve</>
+                      ) : (
+                        <>Ver <span className="hidden sm:inline">Mais</span> <span className="material-icons-outlined text-xs sm:text-sm">add_circle</span></>
+                      )}
+                    </button>
                   </div>
                 </div>
               );

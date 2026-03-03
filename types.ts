@@ -4,7 +4,7 @@ export interface TournamentCategory {
   title: string;
   description: string;
   icon: string;
-  color: 'primary' | 'secondary' | 'cyan' | 'pink';
+  color: 'primary' | 'secondary' | 'cyan' | 'pink' | 'amber' | 'emerald' | 'blue' | 'orange' | 'purple' | 'red';
   slots: number; // Número de vagas fixas/editáveis
   is_mystery?: boolean;
   is_hidden?: boolean;
@@ -81,6 +81,7 @@ export interface Event {
   rankingType?: 'weekly' | 'monthly' | 'special'; // Novo campo para definir peso do ranking
   includedRankings?: string[]; // 'annual', 'quarterly', 'legacy'
   description?: string;
+  modality?: string; // e.g. KO, Bounty Progressive KO, Turbo, DeepStack, etc.
   stack?: string;
   blinds?: string;
   lateReg?: string;

@@ -89,16 +89,30 @@ export const Navigation: React.FC<NavigationProps> = ({
                     <div className="flex items-center justify-between h-20">
                         {/* Official Logo */}
                         <div className="flex items-center cursor-pointer group" onClick={() => onNavigate('home')}>
-                            <img src="/cr-logo.png" alt="Chip Race" className="h-[48px] w-auto transition-transform duration-300 group-hover:scale-105" />
+                            <img src="/cr-logo.png" alt="Chip Race" className="h-[48px] w-auto transition-transform duration-300 group-hover:scale-110" />
                         </div>
 
                         {/* Desktop Menu */}
                         <div className="hidden md:flex items-center gap-2">
                             <div className="flex items-center space-x-1">
+                                {links.map((link) => (
+                                    <button
+                                        key={link.label}
+                                        onClick={() => onNavigate(link.view)}
+                                        className={`px-2 py-2 rounded-md text-sm font-medium transition-colors relative group whitespace-nowrap ${currentView === link.view
+                                            ? 'text-primary'
+                                            : 'text-gray-300 hover:text-white'
+                                            }`}
+                                    >
+                                        {link.label}
+                                        <span className={`absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300 ${currentView === link.view ? 'w-full' : 'w-0 group-hover:w-full'}`}></span>
+                                    </button>
+                                ))}
+
                                 {/* Dropdown Ecossistema */}
                                 <div className="relative group">
                                     <button
-                                        className={`px-2 py-1.5 rounded-md text-sm font-medium transition-colors relative flex items-center gap-2 tracking-wide ${currentView.startsWith('category-') ? 'text-primary' : 'text-gray-300 hover:text-white'
+                                        className={`px-2 py-2 rounded-md text-sm font-medium transition-colors relative flex items-center gap-2 tracking-wide ${currentView.startsWith('category-') ? 'text-primary' : 'text-gray-300 hover:text-white'
                                             }`}
                                     >
                                         <span className="material-icons-outlined text-lg">widgets</span>
@@ -127,20 +141,6 @@ export const Navigation: React.FC<NavigationProps> = ({
                                         ))}
                                     </div>
                                 </div>
-
-                                {links.map((link) => (
-                                    <button
-                                        key={link.label}
-                                        onClick={() => onNavigate(link.view)}
-                                        className={`px-2 py-2 rounded-md text-sm font-medium transition-colors relative group whitespace-nowrap ${currentView === link.view
-                                            ? 'text-primary'
-                                            : 'text-gray-300 hover:text-white'
-                                            }`}
-                                    >
-                                        {link.label}
-                                        <span className={`absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300 ${currentView === link.view ? 'w-full' : 'w-0 group-hover:w-full'}`}></span>
-                                    </button>
-                                ))}
                             </div>
 
                             {/* VIP Button */}
@@ -381,28 +381,6 @@ export const Navigation: React.FC<NavigationProps> = ({
                                 </button>
                             ))}
 
-                            <button
-                                onClick={() => {
-                                    onNavigate('vip');
-                                    setMobileMenuOpen(false);
-                                }}
-                                className="block w-full text-left px-3 py-4 text-lg font-bold text-yellow-400 hover:text-yellow-300 hover:bg-white/5 border-b border-white/5 flex items-center gap-2"
-                            >
-                                <span className="material-icons-outlined">diamond</span> SEJA VIP
-                            </button>
-
-                            {isAdmin && (
-                                <button
-                                    onClick={() => {
-                                        onNavigate('admin');
-                                        setMobileMenuOpen(false);
-                                    }}
-                                    className="block w-full text-left px-3 py-4 text-lg font-bold text-primary hover:bg-white/5 border-b border-white/5 flex items-center gap-2"
-                                >
-                                    <span className="material-icons-outlined">admin_panel_settings</span> PAINEL ADMIN
-                                </button>
-                            )}
-
                             {/* Dropdown Ecossistema Mobile */}
                             <div className="mt-4 border-t border-white/5 pt-2">
                                 <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase tracking-widest bg-black/50 mx-2 rounded-md mb-2 flex items-center gap-2">
@@ -425,6 +403,28 @@ export const Navigation: React.FC<NavigationProps> = ({
                                     ))}
                                 </div>
                             </div>
+
+                            <button
+                                onClick={() => {
+                                    onNavigate('vip');
+                                    setMobileMenuOpen(false);
+                                }}
+                                className="block w-full text-left px-3 py-4 text-lg font-bold text-yellow-400 hover:text-yellow-300 hover:bg-white/5 border-b border-white/5 flex items-center gap-2"
+                            >
+                                <span className="material-icons-outlined">diamond</span> SEJA VIP
+                            </button>
+
+                            {isAdmin && (
+                                <button
+                                    onClick={() => {
+                                        onNavigate('admin');
+                                        setMobileMenuOpen(false);
+                                    }}
+                                    className="block w-full text-left px-3 py-4 text-lg font-bold text-primary hover:bg-white/5 border-b border-white/5 flex items-center gap-2"
+                                >
+                                    <span className="material-icons-outlined">admin_panel_settings</span> PAINEL ADMIN
+                                </button>
+                            )}
 
                             {isLoggedIn ? (
                                 <>

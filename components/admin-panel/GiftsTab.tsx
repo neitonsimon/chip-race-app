@@ -3,8 +3,10 @@ import React from 'react';
 interface GiftsTabProps {
     giftTarget: 'single' | 'all';
     setGiftTarget: (t: 'single' | 'all') => void;
-    giftType: 'brl' | 'chipz' | 'badge';
-    setGiftType: (t: 'brl' | 'chipz' | 'badge') => void;
+    giftType: 'brl' | 'chipz' | 'badge' | 'vip';
+    setGiftType: (t: 'brl' | 'chipz' | 'badge' | 'vip') => void;
+    selectedVipType?: 'trimestral' | 'anual' | 'master' | 'honorario';
+    setSelectedVipType?: (t: 'trimestral' | 'anual' | 'master' | 'honorario') => void;
     giftAmount: string;
     setGiftAmount: (a: string) => void;
     giftSearchQuery: string;
@@ -487,7 +489,8 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
     giftSearchQuery, setGiftSearchQuery, giftDescription, setGiftDescription,
     selectedBadgeId, setSelectedBadgeId, giftSearchResults, setGiftSearchResults,
     badgeTemplates, selectedGiftUsers, setSelectedGiftUsers, usersWithSelectedBadge,
-    handleSendGifts, handleGiftSearch, onCreateBadgeTemplate, isLoading
+    handleSendGifts, handleGiftSearch, onCreateBadgeTemplate, isLoading,
+    selectedVipType, setSelectedVipType
 }) => {
     const [showNewBadgeForm, setShowNewBadgeForm] = React.useState(false);
     const [newBadge, setNewBadge] = React.useState({ title: '', description: '', icon: 'stars', color: '#00E5FF' });
@@ -676,8 +679,37 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                                     <button onClick={() => setGiftType('brl')} className={`flex-1 py-3 rounded-xl border text-[9px] sm:text-[10px] font-black uppercase transition-all ${giftType === 'brl' ? 'bg-primary border-primary text-white shadow-neon-pink' : 'bg-white/5 border-white/10 text-gray-400'}`}>R$</button>
                                     <button onClick={() => setGiftType('chipz')} className={`flex-1 py-3 rounded-xl border text-[9px] sm:text-[10px] font-black uppercase transition-all ${giftType === 'chipz' ? 'bg-cyan-500 border-cyan-500 text-white shadow-neon-cyan' : 'bg-white/5 border-white/10 text-gray-400'}`}>Chipz</button>
                                     <button onClick={() => setGiftType('badge')} className={`flex-1 py-3 rounded-xl border text-[9px] sm:text-[10px] font-black uppercase transition-all ${giftType === 'badge' ? 'bg-primary border-primary text-white shadow-neon-pink' : 'bg-white/5 border-white/10 text-gray-400'}`}>Medalha</button>
+                                    <button onClick={() => setGiftType('vip')} className={`flex-1 py-3 rounded-xl border text-[9px] sm:text-[10px] font-black uppercase transition-all ${giftType === 'vip' ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg' : 'bg-white/5 border-white/10 text-gray-400'}`}>VIP</button>
                                 </div>
                             </div>
+
+                            {/* VIP Selector */}
+                            {giftType === 'vip' && (
+                                <div className="animate-in slide-in-from-top-2">
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-3 ml-1">Modalidade VIP</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {[
+                                            { id: 'honorario', label: 'Honorário', icon: 'auto_awesome', color: '#FFF' },
+                                            { id: 'trimestral', label: 'Trimestral', icon: 'workspace_premium', color: '#00E5FF' },
+                                            { id: 'anual', label: 'Anual', icon: 'stars', color: '#ec4899' },
+                                            { id: 'master', label: 'Master', icon: 'diamond', color: '#eab308' }
+                                        ].map((v) => (
+                                            <button
+                                                key={v.id}
+                                                onClick={() => setSelectedVipType && setSelectedVipType(v.id as any)}
+                                                className={`flex flex-col items-center gap-2 p-3 rounded-2xl border transition-all ${selectedVipType === v.id
+                                                    ? 'bg-white/10 border-white/30 scale-[1.02]'
+                                                    : 'bg-black/20 border-white/5 hover:border-white/10 opacity-70 hover:opacity-100'}`}
+                                            >
+                                                <div className="w-10 h-10 rounded-xl bg-black/40 flex items-center justify-center border border-white/5 shadow-inner">
+                                                    <span className="material-icons-outlined text-xl" style={{ color: v.color }}>{v.icon}</span>
+                                                </div>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-white">{v.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Badge selector OR amount */}
                             {giftType === 'badge' ? (
@@ -725,7 +757,7 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                                         )}
                                     </div>
                                 </div>
-                            ) : (
+                            ) : giftType === 'vip' ? null : (
                                 <div>
                                     <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Quantidade</label>
                                     <div className="relative">
@@ -753,7 +785,7 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
 
                             <button
                                 onClick={handleSendGifts}
-                                disabled={isLoading || (giftType !== 'badge' && !giftAmount) || (giftType === 'badge' && !selectedBadgeId)}
+                                disabled={isLoading || (giftType !== 'badge' && giftType !== 'vip' && !giftAmount) || (giftType === 'badge' && !selectedBadgeId) || (giftType === 'vip' && !selectedVipType)}
                                 className="w-full bg-primary hover:bg-white hover:text-black text-white font-black py-4 rounded-2xl transition-all shadow-neon-pink uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
                             >
                                 {isLoading

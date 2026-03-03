@@ -45,6 +45,12 @@ export const CategoryPage: React.FC<CategoryPageProps> = ({ categoryId, category
             case 'secondary': return { glow: 'from-secondary/20', text: 'text-secondary' };
             case 'cyan': return { glow: 'from-cyan-500/20', text: 'text-cyan-500' };
             case 'pink': return { glow: 'from-pink-500/20', text: 'text-pink-500' };
+            case 'amber': return { glow: 'from-amber-500/20', text: 'text-amber-500' };
+            case 'emerald': return { glow: 'from-emerald-500/20', text: 'text-emerald-500' };
+            case 'blue': return { glow: 'from-blue-500/20', text: 'text-blue-500' };
+            case 'orange': return { glow: 'from-orange-500/20', text: 'text-orange-500' };
+            case 'purple': return { glow: 'from-purple-500/20', text: 'text-purple-500' };
+            case 'red': return { glow: 'from-red-500/20', text: 'text-red-500' };
             default: return { glow: 'from-white/10', text: 'text-gray-400' };
         }
     };

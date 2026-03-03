@@ -203,6 +203,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
             lateReg: '',
             location: '',
             description: '',
+            modality: '',
             rebuyValue: '',
             rebuyChips: '',
             addonValue: '',
@@ -704,6 +705,12 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                 </>
                                             ) : (
                                                 <>
+                                                    {event.modality && (
+                                                        <div className="flex items-center gap-1" title="Modalidade">
+                                                            <span className="material-icons-outlined text-[12px] text-primary">local_fire_department</span>
+                                                            <span className="text-gray-400 capitalize">{event.modality}</span>
+                                                        </div>
+                                                    )}
                                                     {event.stack && (
                                                         <div className="flex items-center gap-1" title="Stack Inicial">
                                                             <span className="material-icons-outlined text-[12px] text-primary">layers</span>
@@ -897,7 +904,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
                                 {/* 2. Body Section */}
                                 <div className="flex-1 flex flex-col px-6 pb-4 overflow-hidden gap-4">
-                                    <div className="grid grid-cols-3 bg-white/[0.03] rounded-xl border border-white/5 divide-x divide-white/5 p-3 shrink-0">
+                                    <div className={`grid ${viewEvent.gameMode === 'cash_game' ? 'grid-cols-3' : (viewEvent.modality ? 'grid-cols-4' : 'grid-cols-3')} bg-white/[0.03] rounded-xl border border-white/5 divide-x divide-white/5 p-2 md:p-3 shrink-0`}>
                                         {viewEvent.gameMode === 'cash_game' ? (
                                             <>
                                                 <div className="flex flex-col items-center justify-center p-1">
@@ -915,6 +922,12 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                             </>
                                         ) : (
                                             <>
+                                                {viewEvent.modality && (
+                                                    <div className="flex flex-col items-center justify-center p-1">
+                                                        <span className="text-[9px] md:text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1 text-center truncate w-full px-1" title={viewEvent.modality}>Mod.</span>
+                                                        <span className="text-xs md:text-sm font-bold text-white uppercase text-center truncate w-full px-1">{viewEvent.modality}</span>
+                                                    </div>
+                                                )}
                                                 <div className="flex flex-col items-center justify-center p-1">
                                                     <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Stack</span>
                                                     <span className="text-sm font-bold text-white">{viewEvent.stack || '-'}</span>
@@ -1464,6 +1477,27 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                         <option value="monthly" className="bg-black text-white">Mensal (High Roller)</option>
                                                         <option value="special" className="bg-black text-white">Especial (Major)</option>
                                                     </select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Modalidade</label>
+                                                    <input
+                                                        type="text"
+                                                        list="modalities-list"
+                                                        value={editingEvent.modality || ''}
+                                                        onChange={(e) => {
+                                                            setEditingEvent({ ...editingEvent, modality: e.target.value });
+                                                        }}
+                                                        className="w-full bg-black/50 border border-white/10 rounded p-3 text-white focus:border-primary outline-none"
+                                                        placeholder="Ex: Turbo, KO, etc"
+                                                    />
+                                                    <datalist id="modalities-list">
+                                                        <option value="KO" />
+                                                        <option value="Bounty Progressive KO" />
+                                                        <option value="Turbo" />
+                                                        <option value="Hyper Turbo" />
+                                                        <option value="DeepStack" />
+                                                        <option value="High Roller" />
+                                                    </datalist>
                                                 </div>
                                             </>
                                         )}

@@ -11,7 +11,8 @@ interface UseGiftsProps {
 export function useGifts({ isAdmin, currentUser, badgeTemplates, updatePlayerBalanceLocally }: UseGiftsProps) {
     const [giftTarget, setGiftTarget] = useState<'single' | 'all'>('single');
     const [selectedGiftUsers, setSelectedGiftUsers] = useState<any[]>([]);
-    const [giftType, setGiftType] = useState<'brl' | 'chipz' | 'badge'>('brl');
+    const [giftType, setGiftType] = useState<'brl' | 'chipz' | 'badge' | 'vip'>('brl');
+    const [selectedVipType, setSelectedVipType] = useState<'trimestral' | 'anual' | 'master' | 'honorario'>('trimestral');
     const [giftAmount, setGiftAmount] = useState('');
     const [giftSearchQuery, setGiftSearchQuery] = useState('');
     const [giftDescription, setGiftDescription] = useState('');
@@ -44,10 +45,11 @@ export function useGifts({ isAdmin, currentUser, badgeTemplates, updatePlayerBal
 
     const handleSendGifts = async () => {
         if (!isAdmin) return;
-        const amount = giftType === 'badge' ? 0 : parseFloat(giftAmount);
+        const amount = (giftType === 'badge' || giftType === 'vip') ? 0 : parseFloat(giftAmount);
 
-        if (giftType !== 'badge' && (!amount || amount <= 0)) { alert('Valor inválido.'); return; }
+        if (giftType !== 'badge' && giftType !== 'vip' && (!amount || amount <= 0)) { alert('Valor inválido.'); return; }
         if (giftType === 'badge' && !selectedBadgeId) { alert('Selecione uma insígnia.'); return; }
+        if (giftType === 'vip' && !selectedVipType) { alert('Selecione o tipo de VIP.'); return; }
 
         let targetUserIds: string[] = [];
 
@@ -100,8 +102,14 @@ export function useGifts({ isAdmin, currentUser, badgeTemplates, updatePlayerBal
                 return;
             }
 
-            const finalAmount = giftType === 'chipz' ? Math.floor(amount) : amount;
-            const logMsg = giftType === 'brl' ? `R$ ${finalAmount.toFixed(2)}` : giftType === 'chipz' ? `${finalAmount} Chipz` : `Insígnia: ${badgeTemplates.find(b => b.id === selectedBadgeId)?.title}`;
+            const finalAmount = (giftType === 'chipz' || giftType === 'vip') ? Math.floor(amount) : amount;
+            const logMsg = giftType === 'brl'
+                ? `R$ ${finalAmount.toFixed(2)}`
+                : giftType === 'chipz'
+                    ? `${finalAmount} Chipz`
+                    : giftType === 'vip'
+                        ? `Voucher VIP: ${selectedVipType.toUpperCase()}`
+                        : `Insígnia: ${badgeTemplates.find(b => b.id === selectedBadgeId)?.title}`;
             const finalDescription = giftDescription.trim() || `Atribuição de Admin: ${logMsg}`;
 
             // Chunks for mass sending
@@ -124,6 +132,23 @@ export function useGifts({ isAdmin, currentUser, badgeTemplates, updatePlayerBal
                                 badge_template_id: template.id
                             });
                         }
+                    } else if (giftType === 'vip') {
+                        // Create a VIP Voucher command
+                        await supabase.from('commands').insert({
+                            user_id: uid,
+                            total_brl: 0,
+                            status: 'closed',
+                            opened_by: currentUser.id,
+                            description: `Presente Admin: Voucher VIP ${selectedVipType.toUpperCase()}`,
+                            closed_at: new Date().toISOString(),
+                            metadata: {
+                                is_gift: true,
+                                is_vip_voucher: true,
+                                activated: false,
+                                vip_type: selectedVipType,
+                                admin_id: currentUser.id
+                            }
+                        });
                     } else {
                         // Use secure_balance_transaction for logging and safety
                         await supabase.rpc('secure_balance_transaction', {
@@ -150,9 +175,11 @@ export function useGifts({ isAdmin, currentUser, badgeTemplates, updatePlayerBal
                         user_id: uid,
                         sender: 'Admin',
                         sender_id: currentUser.id,
-                        subject: giftType === 'badge' ? '🎖️ Você recebeu uma medalha!' : '🎁 Você recebeu um Presente!',
-                        content: `${finalDescription}. ${giftType !== 'badge' ? 'O saldo já foi atualizado e está disponível para uso.' : ''}`,
-                        category: 'gift',
+                        subject: giftType === 'badge' ? '🎖️ Você recebeu uma medalha!' : giftType === 'vip' ? '💎 Você recebeu um VIP!' : '🎁 Você recebeu um Presente!',
+                        content: giftType === 'vip'
+                            ? `Você recebeu um Voucher VIP ${selectedVipType.toUpperCase()}! Acesse seu Perfil > aba Recibos para ativá-lo quando desejar.`
+                            : `${finalDescription}. ${giftType !== 'badge' ? 'O saldo já foi atualizado e está disponível para uso.' : ''}`,
+                        category: giftType === 'vip' ? 'vip' : 'gift',
                         is_read: false
                     });
 
@@ -183,6 +210,7 @@ export function useGifts({ isAdmin, currentUser, badgeTemplates, updatePlayerBal
         giftTarget, setGiftTarget,
         selectedGiftUsers, setSelectedGiftUsers,
         giftType, setGiftType,
+        selectedVipType, setSelectedVipType,
         giftAmount, setGiftAmount,
         giftSearchQuery, setGiftSearchQuery,
         giftDescription, setGiftDescription,

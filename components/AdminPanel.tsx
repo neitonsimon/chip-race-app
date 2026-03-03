@@ -859,6 +859,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             handleGiftSearch={giftsSystem.handleGiftSearch}
                             onCreateBadgeTemplate={onCreateBadgeTemplate}
                             isLoading={giftsSystem.isLoading}
+                            selectedVipType={giftsSystem.selectedVipType}
+                            setSelectedVipType={giftsSystem.setSelectedVipType}
                         />
                     )}
 

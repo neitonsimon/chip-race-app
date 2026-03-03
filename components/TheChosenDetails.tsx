@@ -165,6 +165,60 @@ const getColors = (color: string) => {
             btn: 'text-gray-400 group-hover:text-white',
             badge: 'bg-white/5 text-gray-400 border-white/10'
         };
+        case 'blue': return {
+            border: 'hover:border-blue-500/40',
+            icon: 'text-gray-400 group-hover:text-blue-400',
+            shadow: 'group-hover:shadow-[0_0_20px_rgba(59,130,246,0.3)]',
+            glow: 'from-blue-500/5',
+            text: 'group-hover:text-gray-200',
+            btn: 'text-gray-400 group-hover:text-white',
+            badge: 'bg-white/5 text-gray-400 border-white/10'
+        };
+        case 'emerald': return {
+            border: 'hover:border-emerald-500/40',
+            icon: 'text-gray-400 group-hover:text-emerald-400',
+            shadow: 'group-hover:shadow-[0_0_20px_rgba(16,185,129,0.3)]',
+            glow: 'from-emerald-500/5',
+            text: 'group-hover:text-gray-200',
+            btn: 'text-gray-400 group-hover:text-white',
+            badge: 'bg-white/5 text-gray-400 border-white/10'
+        };
+        case 'amber': return {
+            border: 'hover:border-amber-500/40',
+            icon: 'text-gray-400 group-hover:text-amber-400',
+            shadow: 'group-hover:shadow-[0_0_20px_rgba(245,158,11,0.3)]',
+            glow: 'from-amber-500/5',
+            text: 'group-hover:text-gray-200',
+            btn: 'text-gray-400 group-hover:text-white',
+            badge: 'bg-white/5 text-gray-400 border-white/10'
+        };
+        case 'orange': return {
+            border: 'hover:border-orange-500/40',
+            icon: 'text-gray-400 group-hover:text-orange-400',
+            shadow: 'group-hover:shadow-[0_0_20px_rgba(249,115,22,0.3)]',
+            glow: 'from-orange-500/5',
+            text: 'group-hover:text-gray-200',
+            btn: 'text-gray-400 group-hover:text-white',
+            badge: 'bg-white/5 text-gray-400 border-white/10'
+        };
+        case 'purple': return {
+            border: 'hover:border-purple-500/40',
+            icon: 'text-gray-400 group-hover:text-purple-400',
+            shadow: 'group-hover:shadow-[0_0_20px_rgba(168,85,247,0.3)]',
+            glow: 'from-purple-500/5',
+            text: 'group-hover:text-gray-200',
+            btn: 'text-gray-400 group-hover:text-white',
+            badge: 'bg-white/5 text-gray-400 border-white/10'
+        };
+        case 'red': return {
+            border: 'hover:border-red-500/40',
+            icon: 'text-gray-400 group-hover:text-red-400',
+            shadow: 'group-hover:shadow-[0_0_20px_rgba(239,68,68,0.3)]',
+            glow: 'from-red-500/5',
+            text: 'group-hover:text-gray-200',
+            btn: 'text-gray-400 group-hover:text-white',
+            badge: 'bg-white/5 text-gray-400 border-white/10'
+        };
         default: return {
             border: 'hover:border-white/20',
             icon: 'text-gray-400 group-hover:text-white',
@@ -402,76 +456,74 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                             }
 
                             const styles = getColors(cat.color || 'primary');
-                            const isMystery = cat.is_mystery;
+                            const isMystery = cat.is_mystery && !isAdmin;
 
                             return (
                                 <div key={cat.id} className={`relative bg-[#0f0a20] border border-white/5 p-4 sm:p-8 rounded-2xl ${styles.border} transition-all duration-300 hover:-translate-y-2 overflow-hidden flex flex-col h-full text-center items-center shadow-lg group duration-300`}>
                                     <div className={`absolute inset-0 bg-gradient-to-br ${styles.glow} to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
 
-                                    {/* Padlock Icon for Admin to toggle Mystery/Lock */}
-
                                     <div className={`absolute top-4 right-4 text-[10px] font-black uppercase px-2 py-1 rounded-full border ${styles.badge} z-20 flex items-center gap-1`}>
-                                        {String(cat.slots || 0)}
-                                        <span>Vagas</span>
+                                        {isMystery ? '?' : String(cat.slots || 0)}
+                                        <span>{isMystery ? '' : 'Vagas'}</span>
                                     </div>
 
                                     <div className="relative z-10 flex flex-col items-center w-full h-full">
-                                        {isMystery && !isAdmin ? (
-                                            // Mystery Card Content for regular users
-                                            <div className="flex flex-col items-center justify-center py-12 flex-1 w-full">
-                                                <div className="w-16 h-16 rounded-full bg-white/5 border border-white/5 flex items-center justify-center mb-4">
-                                                    <span className="material-icons-outlined text-gray-700 text-3xl">lock</span>
-                                                </div>
-                                                <p className="text-[10px] font-black uppercase text-gray-600 tracking-widest">CATEGORIA BLOQUEADA</p>
-                                                <p className="text-[9px] text-gray-700 mt-2">REVELAÇÃO EM BREVE</p>
+                                        {/* Ícone — sempre visível, adaptado para mistério */}
+                                        <div className="mb-6 relative mt-4">
+                                            <div className={`w-12 h-12 md:w-16 md:h-16 rounded-full bg-black border border-white/10 flex items-center justify-center relative z-10 transition-all duration-300`}>
+                                                <span className={`material-icons-outlined text-2xl md:text-3xl ${isMystery ? 'text-gray-600 animate-pulse' : styles.icon}`}>
+                                                    {isMystery ? 'help_outline' : cat.icon}
+                                                </span>
                                             </div>
-                                        ) : (
-                                            <>
-                                                <div className="mb-6 relative mt-4">
-                                                    <div className={`w-12 h-12 md:w-16 md:h-16 rounded-full bg-black border border-white/10 flex items-center justify-center relative z-10 transition-all duration-300`}>
-                                                        <span className={`material-icons-outlined text-2xl md:text-3xl ${styles.icon}`}>{cat.icon}</span>
-                                                    </div>
-                                                </div>
-                                                <div className="flex-1 flex flex-col items-center">
-                                                    <h3 className="text-sm md:text-xl font-display font-bold text-white mb-2 md:mb-3 uppercase tracking-wide flex items-center justify-center gap-2">
-                                                        {cat.title}
-                                                    </h3>
-                                                    <p className="text-[10px] md:text-xs text-gray-400 mb-4 md:mb-6 leading-relaxed max-w-[150px] md:max-w-[200px]">
-                                                        {cat.description}
-                                                    </p>
-                                                </div>
-                                                <div className="mt-auto flex gap-2">
-                                                    <button
-                                                        onClick={() => {
-                                                            if (cat.id === 'vip' && onNavigate) {
-                                                                onNavigate('vip');
-                                                            } else {
-                                                                setActiveRegulation(cat.id);
-                                                            }
-                                                        }}
-                                                        className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:border-white/30 transition-all ${styles.btn}`}
-                                                    >
-                                                        VER MAIS <span className="material-icons-outlined text-xs">add_circle</span>
-                                                    </button>
-                                                    {isAdmin && (
-                                                        <button
-                                                            onClick={async (e) => {
-                                                                e.stopPropagation();
-                                                                if (window.confirm('Remover esta categoria do slot?')) {
-                                                                    const newSlots = [...((content as any).chosen_slots || Object.keys(REGULATIONS_DATA))];
-                                                                    newSlots[index] = 'empty';
-                                                                    onUpdateContent('chosen_slots', newSlots as any);
-                                                                }
-                                                            }}
-                                                            className="text-[10px] font-bold uppercase flex items-center justify-center px-2 py-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/30 transition-all border border-red-500/20"
-                                                            title="Remover Categoria do Slot"
-                                                        >
-                                                            <span className="material-icons-outlined text-xs">delete</span>
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </>
-                                        )}
+                                        </div>
+                                        <div className="flex-1 flex flex-col items-center">
+                                            {/* Nome: ??? se mistério */}
+                                            <h3 className={`text-sm md:text-xl font-display font-bold mb-2 md:mb-3 uppercase tracking-wide flex items-center justify-center gap-2 ${isMystery ? 'text-gray-600 tracking-[0.4em]' : 'text-white'}`}>
+                                                {isMystery ? '???' : cat.title}
+                                            </h3>
+                                            {/* Descrição: ??? se mistério */}
+                                            <p className={`text-[10px] md:text-xs mb-4 md:mb-6 leading-relaxed max-w-[150px] md:max-w-[200px] ${isMystery ? 'text-gray-700 tracking-[0.2em] font-black' : 'text-gray-400'}`}>
+                                                {isMystery ? '??? ??? ???' : cat.description}
+                                            </p>
+                                        </div>
+                                        <div className="mt-auto flex gap-2">
+                                            <button
+                                                onClick={() => {
+                                                    if (isMystery) return;
+                                                    if (cat.id === 'vip' && onNavigate) {
+                                                        onNavigate('vip');
+                                                    } else {
+                                                        setActiveRegulation(cat.id);
+                                                    }
+                                                }}
+                                                className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${isMystery
+                                                    ? 'bg-white/5 border-white/5 text-gray-700 cursor-default'
+                                                    : `bg-white/5 border-white/10 hover:border-white/30 ${styles.btn}`
+                                                    }`}
+                                            >
+                                                {isMystery ? (
+                                                    <><span className="material-icons-outlined text-xs">lock</span> EM BREVE</>
+                                                ) : (
+                                                    <>VER MAIS <span className="material-icons-outlined text-xs">add_circle</span></>
+                                                )}
+                                            </button>
+                                            {isAdmin && (
+                                                <button
+                                                    onClick={async (e) => {
+                                                        e.stopPropagation();
+                                                        if (window.confirm('Remover esta categoria do slot?')) {
+                                                            const newSlots = [...((content as any).chosen_slots || Object.keys(REGULATIONS_DATA))];
+                                                            newSlots[index] = 'empty';
+                                                            onUpdateContent('chosen_slots', newSlots as any);
+                                                        }
+                                                    }}
+                                                    className="text-[10px] font-bold uppercase flex items-center justify-center px-2 py-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/30 transition-all border border-red-500/20"
+                                                    title="Remover Categoria do Slot"
+                                                >
+                                                    <span className="material-icons-outlined text-xs">delete</span>
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             );

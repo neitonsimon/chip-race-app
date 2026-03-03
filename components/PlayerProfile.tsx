@@ -563,6 +563,49 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         }
     };
 
+    const handleActivateVipVoucher = async (cmdId: string, duration: string) => {
+        if (!isLoggedIn || !isOwnProfile) return;
+
+        setIsSavingExp(true);
+        try {
+            const { data, error } = await supabase.rpc('activate_vip_voucher', {
+                p_command_id: cmdId,
+                p_duration: duration
+            });
+
+            if (error) throw error;
+            if (!data.success) throw new Error(data.message);
+
+            alert(data.message);
+
+            // Refresh commands to show it's activated
+            fetchPlayerCommands();
+
+            // Update local profile state
+            const { data: freshP } = await supabase.from('profiles').select('is_vip, vip_status, vip_expires_at').eq('id', player.id).single();
+            if (freshP) {
+                const updated = {
+                    ...player,
+                    isVip: freshP.is_vip,
+                    vipStatus: freshP.vip_status,
+                    vipExpiresAt: freshP.vip_expires_at
+                };
+                setPlayer(updated);
+                if (onUpdateProfile) onUpdateProfile(player.id, {
+                    isVip: freshP.is_vip,
+                    vipStatus: freshP.vip_status,
+                    vipExpiresAt: freshP.vip_expires_at
+                } as any);
+            }
+
+            setViewingReceipt(null);
+        } catch (err: any) {
+            alert('Erro ao ativar VIP: ' + err.message);
+        } finally {
+            setIsSavingExp(false);
+        }
+    };
+
     const handleViewReceipt = async (cmd: any, isSilentUpdate = false) => {
         const { data } = await supabase.from('command_items')
             .select('*, products(name, category)')
@@ -652,12 +695,15 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         setIsSavingExp(true);
         try {
             // Call the secure RPC to process the claim
-            const { data, error } = await supabase.rpc('process_daily_login', { u_id: player.id });
+            const { data, error } = await supabase.rpc('process_daily_login', {
+                u_id: player.id,
+                p_action: 'claim'
+            });
 
             if (error) throw error;
 
             if (data.status === 'already_claimed') {
-                alert('Você já resgatou sua recompensa de hoje!');
+                alert('Você já participou hoje!');
                 setCanClaimDaily(false);
                 setShowClaimModal(false);
                 return;
@@ -665,6 +711,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
             if (data.status === 'success') {
                 // Find the reward details for animation
+                // data.streak in the new RPC returns the day number we just claimed
                 const reward = activeDailyRewards[(data.streak - 1) % activeDailyRewards.length];
                 claimedRewardRef.current = reward || {
                     day: data.streak,
@@ -676,16 +723,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                 // Show animation
                 setClaimAnimation(true);
 
-                // Fetch profile again to update all stats (XP, Balances, Badges)
-                if (currentUser?.id) {
-                    // This will trigger the useEffect in AppContext that fetches everything
-                    // but we can also call fetchProfile directly if we had access to it.
-                    // Since we're in a child component, we rely on the parent (AppContext)
-                    // fetching again via its own mechanisms or we update what we can.
-
-                    // Force refresh via a global event or similar if needed
-                    window.dispatchEvent(new CustomEvent('refresh-profile-data'));
-                }
+                // Fetch profile again via context (dispatch event)
+                window.dispatchEvent(new CustomEvent('refresh-profile-data'));
 
                 setTimeout(() => {
                     setClaimAnimation(false);
@@ -701,26 +740,31 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         }
     };
 
-    const handleSkipToday = () => {
-        // Advance streak day (don't give XP or item)
-        // Cap streak at max days so it doesn't break
-        const streakIndex = Math.min(player.dailyStreak + 1, activeDailyRewards.length - 1);
+    const handleSkipToday = async () => {
+        if (isSavingExp || !player.id) return;
+        setIsSavingExp(true);
+        try {
+            // Use the RPC for skipping too to maintain DB consistency
+            const { data, error } = await supabase.rpc('process_daily_login', {
+                u_id: player.id,
+                p_action: 'skip'
+            });
 
-        const newPlayerData = {
-            ...player,
-            lastDailyClaim: new Date().toISOString(),
-            dailyStreak: streakIndex
-        };
+            if (error) throw error;
 
-        setPlayer(newPlayerData);
-        setCanClaimDaily(false);
-        setShowClaimModal(false);
-
-        if (onUpdateProfile) {
-            onUpdateProfile(targetIdRef.current, {
-                lastDailyClaim: newPlayerData.lastDailyClaim,
-                dailyStreak: newPlayerData.dailyStreak
-            } as any);
+            if (data.status === 'success') {
+                window.dispatchEvent(new CustomEvent('refresh-profile-data'));
+                setCanClaimDaily(false);
+                setShowClaimModal(false);
+            } else if (data.status === 'already_claimed') {
+                setCanClaimDaily(false);
+                setShowClaimModal(false);
+            }
+        } catch (err: any) {
+            console.error('Erro ao pular recompensa:', err);
+            alert('Falha ao pular: ' + err.message);
+        } finally {
+            setIsSavingExp(false);
         }
     };
 
@@ -1137,6 +1181,9 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                         <ComprovantesTab
                             playerCommands={playerCommands}
                             handleViewReceipt={handleViewReceipt}
+                            isVip={player.isVip}
+                            onActivateVip={handleActivateVipVoucher}
+                            isProcessing={isSavingExp}
                         />
                     )
                 }
@@ -2008,6 +2055,59 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                         R$ {Number(viewingReceipt.total_brl).toFixed(2)}
                                     </span>
                                 </div>
+
+                                {viewingReceipt.status === 'closed' && viewingReceipt.metadata?.is_vip_voucher && !viewingReceipt.metadata?.activated && isOwnProfile && (
+                                    <div className="mt-4 bg-primary/10 border border-primary/30 rounded-2xl p-4 space-y-4 animate-in slide-in-from-bottom-2">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                                                <span className="material-icons-outlined text-primary text-xl">stars</span>
+                                            </div>
+                                            <div>
+                                                <h4 className="text-white font-bold text-xs uppercase tracking-widest">VIP Honorário Disponível</h4>
+                                                <p className="text-gray-400 text-[9px] uppercase font-bold">Resgate via Conquista</p>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-1 gap-2">
+                                            <button
+                                                onClick={() => handleActivateVipVoucher(viewingReceipt.id, '1month')}
+                                                disabled={isSavingExp}
+                                                className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white text-[10px] font-black py-2.5 rounded-xl transition-all uppercase tracking-widest flex items-center justify-center gap-2"
+                                            >
+                                                <span className="material-icons-outlined text-sm">event</span>
+                                                Ativar por 1 Mês
+                                            </button>
+                                            <button
+                                                onClick={() => handleActivateVipVoucher(viewingReceipt.id, '3months')}
+                                                disabled={isSavingExp}
+                                                className="w-full bg-secondary/20 hover:bg-secondary/30 border border-secondary/40 text-secondary text-[10px] font-black py-2.5 rounded-xl transition-all uppercase tracking-widest flex items-center justify-center gap-2"
+                                            >
+                                                <span className="material-icons-outlined text-sm">history</span>
+                                                Ativar por 3 Meses
+                                            </button>
+                                            <button
+                                                onClick={() => handleActivateVipVoucher(viewingReceipt.id, 'december')}
+                                                disabled={isSavingExp}
+                                                className="w-full bg-primary/20 hover:bg-primary/30 border border-primary/40 text-primary text-[10px] font-black py-3 rounded-xl transition-all uppercase tracking-widest flex items-center justify-center gap-2 shadow-neon-pink"
+                                            >
+                                                <span className="material-icons-outlined text-sm">workspace_premium</span>
+                                                Ativar até Dezembro
+                                            </button>
+                                        </div>
+                                        <p className="text-[8px] text-gray-500 text-center italic">*Após ativado, este receipt será marcado como utilizado.</p>
+                                    </div>
+                                )}
+
+                                {viewingReceipt.status === 'closed' && viewingReceipt.metadata?.is_vip_voucher && viewingReceipt.metadata?.activated && (
+                                    <div className="mt-4 bg-green-500/10 border border-green-500/30 rounded-2xl p-4 flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
+                                            <span className="material-icons-outlined text-green-400">check_circle</span>
+                                        </div>
+                                        <div>
+                                            <h4 className="text-white font-bold text-xs uppercase tracking-widest">VIP Já Ativado</h4>
+                                            <p className="text-gray-400 text-[9px] uppercase font-bold">Voucher Utilizado em {new Date(viewingReceipt.metadata.activated_at).toLocaleDateString()}</p>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {viewingReceipt.status === 'open' && Number(viewingReceipt.total_brl) > 0 && (
                                     <button

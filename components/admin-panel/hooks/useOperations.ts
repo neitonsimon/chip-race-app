@@ -31,13 +31,13 @@ export function useOperations({
     const [commandsTab, setCommandsTab] = useState<'ativas' | 'historico'>('ativas');
 
     const fetchOpenCommands = async (eventId: string) => {
-        const { data } = await supabase.from('commands').select('*, profiles!user_id(name, numeric_id, avatar_url, vip_status, role, balance_brl, debt_limit_brl, total_pending_debt)').eq('event_id', eventId).eq('status', 'open').order('created_at', { ascending: false });
+        const { data } = await supabase.from('commands').select('*, profiles!user_id(name, numeric_id, avatar_url, is_vip, vip_status, vip_expires_at, role, balance_brl, debt_limit_brl, total_pending_debt)').eq('event_id', eventId).eq('status', 'open').order('created_at', { ascending: false });
         if (data) setOpenCommands(data);
     };
 
     const fetchClosedCommands = async (eventId: string) => {
         const { data, error } = await supabase.from('commands')
-            .select('*, profiles!user_id(name, numeric_id, avatar_url, vip_status, role, balance_brl, debt_limit_brl, total_pending_debt)')
+            .select('*, profiles!user_id(name, numeric_id, avatar_url, is_vip, vip_status, vip_expires_at, role, balance_brl, debt_limit_brl, total_pending_debt)')
             .eq('event_id', eventId)
             .eq('status', 'closed')
             .order('created_at', { ascending: false }); // Use created_at as backup if closed_at is missing/buggy
@@ -236,7 +236,7 @@ export function useOperations({
         setSearchQuery(query);
         if (query.length < 2) { setSearchResults([]); return; }
         const isNumeric = /^\d+$/.test(query);
-        let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, vip_status, balance_brl, debt_limit_brl, total_pending_debt');
+        let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, is_vip, vip_status, vip_expires_at, balance_brl, debt_limit_brl, total_pending_debt');
         q = isNumeric ? q.eq('numeric_id', parseInt(query)) : q.ilike('name', `%${query}%`);
         const { data } = await q.limit(5);
         setSearchResults(data || []);
@@ -245,7 +245,7 @@ export function useOperations({
     const handleOpenCommand = async (player: any) => {
         if (!selectedEvent) { alert('Selecione um evento primeiro.'); return; }
         if (openCommands.find(c => c.user_id === player.id)) { alert('Jogador já tem comanda aberta.'); return; }
-        const { data, error } = await supabase.from('commands').insert({ event_id: selectedEvent.id, user_id: player.id, status: 'open', opened_by: currentUser.id }).select('*, profiles!user_id(name, numeric_id, avatar_url, vip_status, role, balance_brl, debt_limit_brl, total_pending_debt)').single();
+        const { data, error } = await supabase.from('commands').insert({ event_id: selectedEvent.id, user_id: player.id, status: 'open', opened_by: currentUser.id }).select('*, profiles!user_id(name, numeric_id, avatar_url, is_vip, vip_status, vip_expires_at, role, balance_brl, debt_limit_brl, total_pending_debt)').single();
         if (error) { alert('Erro: ' + error.message); return; }
         setOpenCommands([data, ...openCommands]);
         setSearchQuery(''); setSearchResults([]);
@@ -260,7 +260,7 @@ export function useOperations({
             if (error) throw error;
 
             // Re-fetch the newly created user to open command
-            const { data: user, error: userErr } = await supabase.from('profiles').select('id, name, numeric_id, avatar_url, vip_status, role, balance_brl, debt_limit_brl, total_pending_debt').eq('id', data).single();
+            const { data: user, error: userErr } = await supabase.from('profiles').select('id, name, numeric_id, avatar_url, is_vip, vip_status, vip_expires_at, role, balance_brl, debt_limit_brl, total_pending_debt').eq('id', data).single();
             if (userErr) throw userErr;
 
             if (user) {
@@ -298,18 +298,30 @@ export function useOperations({
     ];
 
     const getVipPrice = (price: number, category: string, name: string) => {
-        const vipStatus = selectedCommand?.profiles?.vip_status;
-        if (!vipStatus) return price;
-        const isJanta = name.toLowerCase().startsWith('janta');
-        const isBar = category === 'bar';
-        const isStaff = name.toLowerCase() === 'staff';
-        const isBet5 = name === 'Bet R$ 5';
+        const profile = selectedCommand?.profiles;
+        if (!profile) return price;
 
-        if (vipStatus === 'vip_master') {
-            if (isJanta) return Math.max(0, price - 10);
+        const isVip = profile.is_vip;
+        const vipStatus = profile.vip_status;
+        const vipExpiresAt = profile.vip_expires_at;
+
+        const isVipActive = isVip && vipExpiresAt && new Date(vipExpiresAt) > new Date();
+        if (!isVipActive) return price;
+
+        const lowerName = name.toLowerCase();
+        const isJanta = lowerName.includes('janta') || lowerName.includes('dinner');
+        const isBar = category === 'bar';
+        const isStaff = lowerName === 'staff';
+
+        if (vipStatus === 'master') {
+            if (isJanta || isStaff) return 0;
             if (isBar) return Math.max(0, price * 0.5);
+        } else if (vipStatus === 'anual') {
+            if (isJanta || isStaff) return Math.max(0, price - 10);
+            if (isBar) return Math.max(0, price * 0.8);
+        } else if (vipStatus === 'honorario') {
             if (isStaff) return Math.max(0, price - 10);
-        } else if (vipStatus === 'vip_silver') {
+        } else if (vipStatus === 'trimestral') {
             if (isBar) return Math.max(0, price * 0.9);
         }
         return price;
@@ -341,11 +353,12 @@ export function useOperations({
 
     const addTournamentItemToCommand = async (item: any) => {
         if (!selectedCommand) return;
-        const vipStatus = selectedCommand?.profiles?.vip_status;
-        let finalPrice = item.price;
-        if (item.name === 'Staff' && vipStatus === 'vip_master') finalPrice = Math.max(0, finalPrice - 10);
+        const profile = selectedCommand?.profiles;
+        const isVipActive = profile?.is_vip && profile?.vip_expires_at && new Date(profile.vip_expires_at) > new Date();
+        const finalPrice = getVipPrice(item.price, 'torneio', item.name);
+
         const isAddon = item.name === 'Add On' || item.name === 'Add Duplo';
-        const bonusNote = isAddon && vipStatus === 'vip_master' ? ' (+5K fichas VIP)' : '';
+        const bonusNote = isAddon && isVipActive ? ' (+5K fichas VIP)' : '';
         const { error } = await supabase.from('command_items').insert({
             command_id: selectedCommand.id,
             product_id: null,

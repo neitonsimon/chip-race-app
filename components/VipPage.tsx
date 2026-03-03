@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import appConfig from '../src/config/appConfig.json';
 import { supabase } from '../src/lib/supabase';
 import { PlayerStats, MessageCategory } from '../types';
+import { useApp } from '../contexts/AppContext';
 
 interface VipPageProps {
   onNavigate: (view: string) => void;
@@ -12,12 +13,22 @@ interface VipPageProps {
 
 export const VipPage: React.FC<VipPageProps> = ({ onNavigate, currentUser, onUpdateProfile, onSendAdminMessage }) => {
 
+  const { vipPlans } = useApp();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [plans, setPlans] = useState<any[]>(appConfig.vip.plans);
+  const [plans, setPlans] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Priority: content_db plans (from admin panel) > products table > appConfig defaults
   useEffect(() => {
-    const fetchVipPlans = async () => {
+    if (vipPlans && vipPlans.length > 0) {
+      // Admin panel saved plans via content_db — use immediately
+      setPlans(vipPlans);
+      setIsLoading(false);
+      return;
+    }
+
+    // Fallback: pull from products table
+    const fetchFromProducts = async () => {
       setIsLoading(true);
       try {
         const { data: products, error } = await supabase
@@ -30,54 +41,48 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate, currentUser, onUpd
         if (error) throw error;
 
         if (products && products.length > 0) {
-          // Mapear os produtos do banco para a estrutura dos planos da UI
           const mappedPlans = products.map((product, index) => {
             const lowerName = product.name.toLowerCase();
-
-            // Determinar o tipo do plano para herdar estilos e metadados do config
-            let type: 'quarterly' | 'annual' | 'master' = 'quarterly';
+            let type: 'quarterly' | 'annual' | 'master' | 'honorario' = 'quarterly';
             if (lowerName.includes('master')) type = 'master';
             else if (lowerName.includes('anual') || lowerName.includes('ano')) type = 'annual';
             else if (lowerName.includes('trimestral')) type = 'quarterly';
+            else if (lowerName.includes('honorario') || lowerName.includes('honorário')) type = 'honorario';
             else {
-              // Fallback por índice se o nome não ajudar
-              if (index === 1) type = 'annual';
-              else if (index >= 2) type = 'master';
+              if (Number(product.price) === 0) type = 'honorario';
+              else if (index === 0) type = 'honorario';
+              else if (index === 1) type = 'quarterly';
+              else if (index === 2) type = 'annual';
+              else type = 'master';
             }
-
-            const configTemplate = appConfig.vip.plans.find(p => {
-              if (type === 'master') return p.isMaster;
-              return p.id === type;
-            }) || appConfig.vip.plans[0];
-
+            const configTemplate = (appConfig.vip.plans as any[]).find(p => p.id === type) || appConfig.vip.plans[0];
             return {
               ...configTemplate,
-              id: type, // Mantemos o ID 'quarterly', 'annual', 'master' para lógica interna
+              id: type,
               db_id: product.id,
               title: product.name,
               price: Number(product.price).toFixed(2).replace('.', ','),
               rawPrice: Number(product.price),
               period: product.price_unit || configTemplate.period,
               features: product.description
-                ? product.description.split('\n').map(f => f.replace(/^[•*-]\s*/, '').trim()).filter(Boolean)
+                ? product.description.split('\n').map((f: string) => f.replace(/^[•*-]\s*/, '').trim()).filter(Boolean)
                 : configTemplate.features
             };
           });
-
-          // Se tivermos planos mapeados, usamos eles. Caso contrário mantém os do config.
-          if (mappedPlans.length > 0) {
-            setPlans(mappedPlans);
-          }
+          setPlans(mappedPlans.length > 0 ? mappedPlans : appConfig.vip.plans);
+        } else {
+          setPlans(appConfig.vip.plans as any[]);
         }
       } catch (err) {
         console.error('Erro ao buscar planos VIP:', err);
+        setPlans(appConfig.vip.plans as any[]);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchVipPlans();
-  }, []);
+    fetchFromProducts();
+  }, [vipPlans]);
 
   const handlePurchase = async (plan: any) => {
     if (!currentUser || !currentUser.id) {
@@ -126,14 +131,17 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate, currentUser, onUpd
     setIsProcessing(true);
     let newExpiresAt = new Date();
     // Definir expiração com datas fixas (Temporadas) do config
-    if (appConfig.vip.expirationDates[plan.id as keyof typeof appConfig.vip.expirationDates]) {
+    if (plan.id === 'honorario') {
+      newExpiresAt.setDate(newExpiresAt.getDate() + 30);
+    } else if (appConfig.vip.expirationDates[plan.id as keyof typeof appConfig.vip.expirationDates]) {
       newExpiresAt = new Date(appConfig.vip.expirationDates[plan.id as keyof typeof appConfig.vip.expirationDates]);
     }
 
-    const vipStatusMap: Record<string, 'trimestral' | 'anual' | 'master'> = {
+    const vipStatusMap: Record<string, string> = {
       'quarterly': 'trimestral',
       'annual': 'anual',
-      'master': 'master'
+      'master': 'master',
+      'honorario': 'honorario'
     };
 
     try {
@@ -228,98 +236,139 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate, currentUser, onUpd
             <p className="text-gray-500 font-bold animate-pulse">CARREGANDO PLANOS EXCLUSIVOS...</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-            {plans.map((plan) => {
-              // Obter o preço base do plano atual carregado
+          <div className="flex flex-col gap-12">
+            {/* PLANO HONORÁRIO - FULL WIDTH */}
+            {plans.filter(p => p.id === 'honorario').map((plan) => {
               const isCurrentlyVip = !!(currentUser?.isVip && currentUser?.vipExpiresAt && new Date(currentUser.vipExpiresAt) > new Date());
+              const isCurrentPlan = isCurrentlyVip && currentUser?.vipStatus === 'honorario';
+              const isDisabled = true; // Blocked for direct purchase
 
-              const currentPlansPrices: Record<string, number> = {};
-              plans.forEach(p => { currentPlansPrices[p.id] = p.rawPrice; });
-
-              const userPlanKey = currentUser?.vipStatus === 'master' ? 'master' : (currentUser?.vipStatus === 'anual' ? 'annual' : 'quarterly');
-              const userPlanCost = isCurrentlyVip && currentUser?.vipStatus ? currentPlansPrices[userPlanKey] || 0 : 0;
-              const targetPlanCost = plan.rawPrice || 0;
-
-              const isCurrentPlan = isCurrentlyVip && targetPlanCost === userPlanCost;
-              const isDowngrade = isCurrentlyVip && targetPlanCost < userPlanCost;
-              const isUpgrade = isCurrentlyVip && targetPlanCost > userPlanCost;
-              const isDisabled = isProcessing || isCurrentPlan || isDowngrade;
-
-              let btnText = `Quero ser ${plan.title}`;
+              let btnText = 'DISPONÍVEL VIA CONQUISTAS';
               if (isCurrentPlan) btnText = 'Seu Plano Atual';
-              else if (isDowngrade) btnText = 'Apenas Upgrade Permitido';
-              else if (isUpgrade) btnText = 'Fazer Upgrade';
               if (isProcessing) btnText = 'Processando...';
 
               return (
                 <div
                   key={plan.db_id || plan.id}
-                  className={`relative bg-surface-dark border-2 rounded-3xl p-8 flex flex-col h-full transition-all duration-300 group ${plan.color} ${plan.isMaster ? 'transform md:-translate-y-4 shadow-2xl bg-gradient-to-b from-surface-dark to-black' : 'hover:-translate-y-2'}`}
+                  className="relative bg-surface-dark border-2 border-white/20 rounded-[2.5rem] p-8 lg:p-12 transition-all duration-300 shadow-[0_0_50px_rgba(255,255,255,0.05)]"
                 >
-                  {plan.tag && (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-white text-xs font-bold uppercase py-1 px-4 rounded-full shadow-lg">
-                      {plan.tag}
-                    </div>
-                  )}
-
-                  {plan.limit && (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white text-xs font-black uppercase py-1 px-4 rounded-full shadow-lg animate-pulse whitespace-nowrap">
-                      {plan.limit}
-                    </div>
-                  )}
-
-                  <div className="text-center mb-8 border-b border-white/5 pb-8">
-                    <h3 className="text-2xl font-display font-bold text-white uppercase tracking-wider mb-2">{plan.title}</h3>
-
-                    <div className="flex flex-col items-center justify-center min-h-[100px]">
-                      <div className="flex items-center justify-center gap-1">
-                        <span className={`text-sm font-bold ${isUpgrade ? 'text-gray-500' : 'text-gray-400'}`}>R$</span>
-                        <span className={`font-display font-black leading-none ${isUpgrade ? 'text-2xl sm:text-3xl text-gray-500 line-through' : 'text-4xl sm:text-6xl text-white'}`}>
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                    <div className="lg:col-span-4 text-center lg:text-left border-b lg:border-b-0 lg:border-r border-white/5 pb-8 lg:pb-0 lg:pr-12">
+                      <h3 className="text-3xl font-display font-black text-white uppercase tracking-wider mb-2">{plan.title}</h3>
+                      <div className="flex items-center justify-center lg:justify-start gap-1 mb-2">
+                        <span className="text-sm font-bold text-white/40">R$</span>
+                        <span className="font-display font-black leading-none text-6xl text-white">
                           {plan.price}
                         </span>
                       </div>
+                      <div className="text-sm text-gray-500 uppercase tracking-widest font-black">{plan.period}</div>
 
-                      {isUpgrade ? (
-                        <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-500 text-center">
-                          <div className="flex items-center justify-center gap-2 text-green-400 font-bold">
-                            <span className="text-sm">- R$ {userPlanCost.toFixed(2).replace('.', ',')}</span>
-                            <span className="text-[10px] bg-green-500/10 border border-green-500/20 rounded-full px-2 py-0.5 uppercase tracking-tighter">Desconto Upgrade</span>
+                      <button
+                        className={`w-full mt-8 py-5 rounded-2xl font-black uppercase tracking-widest transition-all duration-300 shadow-xl ${isDisabled ? 'bg-white/5 border-white/10 text-gray-500 cursor-not-allowed' : 'bg-white text-black hover:bg-gray-200'}`}
+                        onClick={() => handlePurchase(plan)}
+                        disabled={isDisabled}
+                      >
+                        {btnText}
+                      </button>
+                    </div>
+
+                    <div className="lg:col-span-8">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+                        {plan.features.map((feature: string, idx: number) => (
+                          <div key={idx} className="flex items-center gap-3 text-sm text-gray-300">
+                            <span className="material-icons-outlined text-xl text-white/40">verified</span>
+                            <span className="font-medium">{feature}</span>
                           </div>
-                          <div className="flex flex-col items-center justify-center mt-2">
-                            <span className="text-[10px] text-white/40 uppercase font-black mb-1">Valor do Upgrade</span>
-                            <div className="flex items-center gap-1">
-                              <span className="text-sm text-white/50 font-bold">R$</span>
-                              <span className="text-5xl font-display font-black text-white shadow-neon-pink">
-                                {(targetPlanCost - userPlanCost).toFixed(2).replace('.', ',')}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-sm text-gray-500 uppercase tracking-widest font-bold mt-2">{plan.period}</div>
-                      )}
+                        ))}
+                      </div>
                     </div>
                   </div>
-
-                  <ul className="space-y-4 mb-8 flex-1">
-                    {plan.features.map((feature: string, idx: number) => (
-                      <li key={idx} className="flex items-start gap-3 text-sm text-gray-300">
-                        <span className={`material-icons-outlined text-lg ${plan.isMaster ? 'text-yellow-400' : 'text-primary'}`}>check_circle</span>
-                        <span className="leading-tight text-left">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <button
-                    className={`w-full py-4 rounded-xl font-bold uppercase tracking-wider transition-all duration-300 ${isDisabled ? 'bg-white/5 border-white/10 text-gray-500 cursor-not-allowed' : plan.btnColor}`}
-                    onClick={() => handlePurchase(plan)}
-                    disabled={isDisabled}
-                  >
-                    {btnText}
-                  </button>
                 </div>
               );
             })}
+
+            {/* PLANOS VERTICAIS: Trimestral, Anual e Master */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+              {plans.filter(p => p.id !== 'honorario').map((plan) => {
+                const isCurrentlyVip = !!(currentUser?.isVip && currentUser?.vipExpiresAt && new Date(currentUser.vipExpiresAt) > new Date());
+                const currentPlansPrices: Record<string, number> = {};
+                plans.forEach(p => { currentPlansPrices[p.id] = p.rawPrice; });
+
+                const userPlanKey = currentUser?.vipStatus === 'master' ? 'master' : (currentUser?.vipStatus === 'anual' ? 'annual' : (currentUser?.vipStatus === 'trimestral' ? 'quarterly' : 'honorario'));
+                const userPlanCost = isCurrentlyVip && currentUser?.vipStatus ? currentPlansPrices[userPlanKey] || 0 : 0;
+                const targetPlanCost = plan.rawPrice || 0;
+
+                const isCurrentPlan = isCurrentlyVip && currentUser?.vipStatus === (plan.id === 'quarterly' ? 'trimestral' : (plan.id === 'annual' ? 'anual' : plan.id));
+                const isDowngrade = isCurrentlyVip && targetPlanCost < userPlanCost;
+                const isUpgrade = isCurrentlyVip && targetPlanCost > userPlanCost;
+
+                const isDisabled = isProcessing || isCurrentPlan || isDowngrade;
+
+                let btnText = `Quero ser ${plan.title}`;
+                if (isCurrentPlan) btnText = 'Seu Plano Atual';
+                else if (isDowngrade) btnText = 'Plano Superior Ativo';
+                else if (isUpgrade) btnText = 'Fazer Upgrade';
+                if (isProcessing) btnText = 'Processando...';
+
+                const getDynamicStyles = (id: string) => {
+                  switch (id) {
+                    case 'quarterly': return 'border-secondary shadow-neon-blue';
+                    case 'annual': return 'border-primary shadow-neon-pink';
+                    case 'master': return 'border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.2)] bg-gradient-to-b from-surface-dark to-black';
+                    default: return 'border-white/10';
+                  }
+                };
+
+                return (
+                  <div
+                    key={plan.db_id || plan.id}
+                    className={`relative bg-surface-dark border-2 rounded-[2rem] p-8 flex flex-col h-full transition-all duration-300 group hover:-translate-y-2 ${getDynamicStyles(plan.id)}`}
+                  >
+                    {plan.tag && (
+                      <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-white text-[10px] font-black uppercase py-1 px-4 rounded-full shadow-lg z-20 whitespace-nowrap">
+                        {plan.tag}
+                      </div>
+                    )}
+
+                    {plan.limit && (
+                      <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white text-[10px] font-black uppercase py-1 px-4 rounded-full shadow-lg animate-pulse whitespace-nowrap z-20">
+                        {plan.limit}
+                      </div>
+                    )}
+
+                    <div className="text-center mb-8 border-b border-white/5 pb-8">
+                      <h3 className="text-2xl font-display font-black text-white uppercase tracking-wider mb-2">{plan.title}</h3>
+                      <div className="flex flex-col items-center justify-center min-h-[100px]">
+                        <div className="flex items-center justify-center gap-1">
+                          <span className={`text-sm font-bold ${plan.id === 'master' ? 'text-yellow-500' : (plan.id === 'quarterly' ? 'text-secondary/60' : 'text-primary/60')}`}>R$</span>
+                          <span className="font-display font-black leading-none text-5xl text-white">
+                            {plan.price}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-black mt-2">{plan.period}</div>
+                      </div>
+                    </div>
+
+                    <ul className="space-y-4 mb-8 flex-1">
+                      {plan.features.map((feature: string, idx: number) => (
+                        <li key={idx} className="flex items-start gap-3 text-sm text-gray-300">
+                          <span className={`material-icons-outlined text-lg ${plan.id === 'master' ? 'text-yellow-400' : (plan.id === 'quarterly' ? 'text-secondary' : 'text-primary')}`}>verified</span>
+                          <span className="leading-tight text-left font-medium">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <button
+                      className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest transition-all duration-300 ${isDisabled ? 'bg-white/5 border-white/10 text-gray-500 cursor-not-allowed' : (plan.id === 'master' ? 'bg-gradient-to-r from-yellow-600 to-yellow-400 text-black shadow-lg hover:scale-105' : plan.btnColor)}`}
+                      onClick={() => handlePurchase(plan)}
+                      disabled={isDisabled}
+                    >
+                      {btnText}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 

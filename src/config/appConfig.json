@@ -348,19 +348,41 @@
         "basePrices": {
             "quarterly": 189.90,
             "annual": 499.90,
-            "master": 1990.90
+            "master": 1990.90,
+            "honorario": 0
         },
         "expirationDates": {
-            "quarterly": "2026-05-25T23:59:59Z",
-            "annual": "2026-11-20T23:59:59Z",
-            "master": "2026-11-20T23:59:59Z"
+            "quarterly": "2026-07-20T23:59:59Z",
+            "annual": "2026-12-31T23:59:59Z",
+            "master": "2026-12-31T23:59:59Z"
         },
         "plans": [
+            {
+                "id": "honorario",
+                "title": "Honorário",
+                "price": "0,00",
+                "rawPrice": 0,
+                "period": "MÊS",
+                "color": "border-white/20",
+                "btnColor": "bg-white/5 border border-white/10 text-white hover:bg-white/10",
+                "features": [
+                    "R$ 10 de desconto na janta",
+                    "R$ 10 de desconto na taxa adm/ staff",
+                    "5k fichas adicionais no addon",
+                    "Bet free R$ 5 por evento",
+                    "Sorteio de 1 add on por evento",
+                    "5 pontos adicionais no ranking por evento",
+                    "Participar Get Up",
+                    "Prioridade em assento em caso de lotação máxima",
+                    "R$ 10 em créditos mensais no app Chip Race",
+                    "*Valor total dos bônus no trimestre: R$ 280 + benefícios diversos"
+                ]
+            },
             {
                 "id": "quarterly",
                 "title": "Trimestral",
                 "price": "189,90",
-                "period": "trimestre (Mar-Mai 2026)",
+                "period": "trimestre (Mar-Jul 2026)",
                 "color": "border-secondary",
                 "btnColor": "bg-transparent border border-secondary text-secondary hover:bg-secondary hover:text-black",
                 "features": [
@@ -380,7 +402,7 @@
                 "id": "annual",
                 "title": "Anual",
                 "price": "499,90",
-                "period": "por ano (Mar-Nov 2026)",
+                "period": "por ano (Mar-Dez 2026)",
                 "tag": "MELHOR CUSTO-BENEFÍCIO",
                 "color": "border-primary",
                 "btnColor": "bg-primary text-white hover:bg-primary/90 shadow-neon-pink",
@@ -402,7 +424,7 @@
                 "id": "master",
                 "title": "Master",
                 "price": "1.990,90",
-                "period": "ano (Mar-Nov 2026)",
+                "period": "ano (Mar-Dez 2026)",
                 "limit": "APENAS 3 COTAS POR CLUBE",
                 "color": "border-yellow-400",
                 "btnColor": "bg-gradient-to-r from-yellow-600 to-yellow-400 text-black font-black hover:scale-105 shadow-[0_0_30px_rgba(250,204,21,0.4)]",

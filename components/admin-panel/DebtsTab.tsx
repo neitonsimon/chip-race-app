@@ -263,6 +263,24 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                 if (deductErr) throw deductErr;
             }
 
+            // Prepare VIP metadata if applicable
+            let cmdMetadata: any = { is_direct_sale: true };
+            if (saleProduct.category === 'vip') {
+                const lowerName = saleProduct.name.toLowerCase();
+                let vipType = 'trimestral';
+                if (lowerName.includes('master')) vipType = 'master';
+                else if (lowerName.includes('anual') || lowerName.includes('ano')) vipType = 'anual';
+                else if (lowerName.includes('trimestral')) vipType = 'trimestral';
+                else if (lowerName.includes('honorario') || lowerName.includes('honorário')) vipType = 'honorario';
+
+                cmdMetadata = {
+                    ...cmdMetadata,
+                    is_vip_voucher: true,
+                    activated: false,
+                    vip_type: vipType
+                };
+            }
+
             // Create a closed command record for tracking
             const { data: cmd, error: cmdErr } = await supabase.from('commands').insert({
                 event_id: null,
@@ -271,7 +289,8 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                 opened_by: currentUser.id,
                 total_brl: total,
                 discount_brl: 0,
-                closed_at: new Date().toISOString()
+                closed_at: new Date().toISOString(),
+                metadata: cmdMetadata
             }).select('id').single();
             if (cmdErr) throw cmdErr;
 

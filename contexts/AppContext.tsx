@@ -28,6 +28,7 @@ interface AppContextType {
     prizeLabel: string;
     totalQualifiers: number;
     customTotalQualifiers: number | null;
+    vipPlans: any[];
     nextGoal: { prize: number; qualifiers: number };
     messages: Message[];
     unreadCount: number;
@@ -110,6 +111,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [customTotalQualifiers, setCustomTotalQualifiers] = useState<number | null>(null);
     const [nextGoal, setNextGoal] = useState(appConfig.initialDefaults.applicationDefaults.nextGoal);
     const [months, setMonths] = useState<MonthData[]>(appConfig.initialDefaults.months as MonthData[]);
+    const [vipPlans, setVipPlans] = useState<any[]>(appConfig.vip.plans);
 
     const [messages, setMessages] = useState<Message[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
@@ -185,6 +187,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     date: e.date,
                     time: e.time,
                     type: e.type,
+                    modality: e.modality,
                     buyin: e.buyin,
                     guaranteed: e.guaranteed,
                     status: e.status,
@@ -235,6 +238,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     else if (item.key === 'faq') setContentDB(prev => ({ ...prev, faq: item.value }));
                     else if (item.key === 'months') setMonths(item.value);
                     else if (item.key === 'total_qualifiers') setCustomTotalQualifiers(item.value);
+                    else if (item.key === 'vip_plans') setVipPlans(item.value);
                 });
             }
 
@@ -785,7 +789,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         const isNew = !events.some(e => e.id === event.id) || event.id.length < 20;
         const dbData: any = {
-            title: event.title, date: event.date, time: event.time, type: event.type, buyin: event.buyin, guaranteed: event.guaranteed,
+            title: event.title, date: event.date, time: event.time, type: event.type, modality: event.modality, buyin: event.buyin, guaranteed: event.guaranteed,
             status: event.status, ranking_type: event.rankingType, included_rankings: event.includedRankings, description: event.description,
             stack: event.stack, blinds: event.blinds, late_reg: event.lateReg, location: event.location, rebuy_value: event.rebuyValue,
             rebuy_chips: event.rebuyChips, addon_value: event.addonValue, addon_chips: event.addonChips, staff_bonus_value: event.staffBonusValue,
@@ -1136,7 +1140,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         <AppContext.Provider value={{
             currentView, setCurrentView, isAdmin, isLoggedIn, currentUserId, currentUser, events, isLoading, rankings, contentDB, globalScoringSchemas,
             allProfiles, experienceLevels, dailyRewards, badgeTemplates, systemMessageTemplates, prizeLabel, totalQualifiers, customTotalQualifiers, nextGoal,
-            messages, unreadCount, polls, pollVotesByCurrentUser, newNotification, selectedPlayer, setSelectedPlayer, months,
+            messages, unreadCount, polls, pollVotesByCurrentUser, newNotification, selectedPlayer, setSelectedPlayer, months, vipPlans,
             handleNavigate, handleLogin, handleLogout, handlePlayerSelect, handleProfileUpdate, handleSaveEvent, handleDeleteEventAcrossApp,
             handleEventClosure, handleUpdateRankingMeta, handleUpdateGlobalSchemas, handleUpdateSystemMessageTemplate, handleCreateSystemMessageTemplate, handleAddRanking, handleDeleteRanking, handleAwardBadge,
             handleUpdateRankingPrize, handleUpdateTotalQualifiers, handleUpdateMonth, handleToggleMonthStatus,
