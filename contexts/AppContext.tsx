@@ -525,12 +525,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const now = new Date();
             const gamingDate = new Date(now);
             if (now.getHours() < 21) gamingDate.setDate(gamingDate.getDate() - 1);
+
+            const currentGamingDayStart = new Date(gamingDate);
+            currentGamingDayStart.setHours(21, 0, 0, 0);
             const dateStr = gamingDate.toISOString().split('T')[0];
 
-            const { data, error } = await supabase.rpc('process_daily_login', { u_id: userId });
-            if (error) throw error;
+            const { data: profile, error } = await supabase.from('profiles').select('last_daily_claim').eq('id', userId).single();
+            if (error || !profile) return;
 
-            if (data && data.status === 'success') {
+            const lastClaim = profile.last_daily_claim;
+            const canClaim = !lastClaim || new Date(lastClaim) < currentGamingDayStart;
+
+            if (canClaim) {
                 // Check if we already sent the notification for this gaming day
                 const { data: existingMsg } = await supabase.from('messages')
                     .select('id')
@@ -543,7 +549,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 if (!existingMsg || existingMsg.length === 0) {
                     await sendTemplatedMessage('daily_login', userId);
                 }
-                fetchProfile(userId);
             }
         } catch (e) {
             console.error('Error in daily login check:', e);
