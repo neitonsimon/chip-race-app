@@ -309,7 +309,7 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
     }
 
     // Navegar para o ranking
-    if ((id === 'rankings' || id === 'ranking') && onNavigate) {
+    if ((id === 'rankings' || id === 'ranking' || id === 'rank') && onNavigate) {
       onNavigate('ranking');
       return;
     }

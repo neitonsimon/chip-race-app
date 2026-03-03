@@ -492,6 +492,10 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                                                     if (isMystery) return;
                                                     if (cat.id === 'vip' && onNavigate) {
                                                         onNavigate('vip');
+                                                    } else if ((cat.id === 'rankings' || cat.id === 'ranking' || cat.id === 'rank') && onNavigate) {
+                                                        onNavigate('ranking');
+                                                    } else if ((cat.id === 'online' || cat.id === 'online-credits') && onNavigate) {
+                                                        onNavigate('online-credits');
                                                     } else {
                                                         setActiveRegulation(cat.id);
                                                     }
