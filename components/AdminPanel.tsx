@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../src/lib/supabase';
 import { PlayerName } from './PlayerName';
 import { ReportsTab } from './admin-panel/ReportsTab';
@@ -16,6 +16,9 @@ import { ReservationsTab } from './admin-panel/ReservationsTab';
 import { useCheckout } from './admin-panel/hooks/useCheckout';
 import { useTopUp } from './admin-panel/hooks/useTopUp';
 import { useDebts } from './admin-panel/hooks/useDebts';
+import { useCommunications } from './admin-panel/hooks/useCommunications';
+import { useGifts } from './admin-panel/hooks/useGifts';
+import { useOperations } from './admin-panel/hooks/useOperations';
 
 interface AdminPanelProps {
     onClose: () => void;
@@ -66,19 +69,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const [activeTab, setActiveTab] = useState<'operational' | 'reports' | 'launch' | 'send-gifts' | 'debts' | 'communications' | 'reservations'>('operational');
     const [events, setEvents] = useState<any[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [searchResults, setSearchResults] = useState<any[]>([]);
-    const [openCommands, setOpenCommands] = useState<any[]>([]);
-    const [closedCommands, setClosedCommands] = useState<any[]>([]);
     const [products, setProducts] = useState<any[]>([]);
-    const [selectedCommand, setSelectedCommand] = useState<any | null>(null);
-    const [commandItems, setCommandItems] = useState<any[]>([]);
     const [showCheckout, setShowCheckout] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [productSection, setProductSection] = useState<'bar' | 'torneio' | 'opcionais' | 'cash'>('bar');
-    const [pendingProduct, setPendingProduct] = useState<any | null>(null);
     const [showTopUp, setShowTopUp] = useState(false);
-    const [commandsTab, setCommandsTab] = useState<'ativas' | 'historico'>('ativas');
     const [reportData, setReportData] = useState<any[]>([]);
     const [reportFilter, setReportFilter] = useState<'event' | 'date' | 'product'>('event');
     const [reportCategoryFilter, setReportCategoryFilter] = useState('all');
@@ -88,8 +83,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const [startDate, setStartDate] = useState(() => { const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0] });
     const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
     const [editingClosedCommand, setEditingClosedCommand] = useState<any | null>(null);
-    const [viewingClosedCommand, setViewingClosedCommand] = useState<any | null>(null);
-    const [viewingItems, setViewingItems] = useState<any[]>([]);
     const [toast, setToast] = useState<{ msg: string; price: number } | null>(null);
     const toastTimer = useRef<any>(null);
 
@@ -100,59 +93,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const [productCategories, setProductCategories] = useState<any[]>([]);
     const [editingProduct, setEditingProduct] = useState<any | null>(null);
 
-    // Gift Tab State
-    const [giftTarget, setGiftTarget] = useState<'single' | 'all'>('single');
-    const [selectedGiftUsers, setSelectedGiftUsers] = useState<any[]>([]);
-    const [giftType, setGiftType] = useState<'brl' | 'chipz' | 'badge'>('brl');
-    const [giftAmount, setGiftAmount] = useState('');
-    const [giftSearchQuery, setGiftSearchQuery] = useState('');
-    const [giftDescription, setGiftDescription] = useState('');
-    const [selectedBadgeId, setSelectedBadgeId] = useState('');
-    const [giftSearchResults, setGiftSearchResults] = useState<any[]>([]);
+    // Gift Tab state managed by useGifts
     const [staffExpenses, setStaffExpenses] = useState('');
     const [prizePayout, setPrizePayout] = useState('');
     const [activeDebts, setActiveDebts] = useState<any[]>([]);
     const [totalActiveDebt, setTotalActiveDebt] = useState(0);
 
-    // Communication Tab State
-    const [adminSubject, setAdminSubject] = useState('');
-    const [adminMsgContent, setAdminMsgContent] = useState('');
-    const [adminMsgCategory, setAdminMsgCategory] = useState<'admin' | 'system' | 'tournament'>('admin');
-    const [pollQuestion, setPollQuestion] = useState('');
-    const [pollOptions, setPollOptions] = useState(['', '']);
-    const [cashAmount, setCashAmount] = useState('');
-    const [usersWithSelectedBadge, setUsersWithSelectedBadge] = useState<Set<string>>(new Set());
+    // Communication Tab state managed by useCommunications
+    const communicationsSystem = useCommunications({ onSendAdminMessage, onCreatePoll });
 
-    useEffect(() => {
-        const fetchBadgeOwners = async () => {
-            if (giftType === 'badge' && selectedBadgeId) {
-                const { data } = await supabase.from('user_badges').select('user_id').eq('badge_template_id', selectedBadgeId);
-                if (data) setUsersWithSelectedBadge(new Set(data.map(d => d.user_id)));
-            } else {
-                setUsersWithSelectedBadge(new Set());
-            }
-        };
-        fetchBadgeOwners();
-    }, [giftType, selectedBadgeId]);
-
-    const handleSendBroadcast = () => {
-        if (onSendAdminMessage && adminSubject && adminMsgContent) {
-            onSendAdminMessage(adminSubject, adminMsgContent, adminMsgCategory);
-            setAdminSubject('');
-            setAdminMsgContent('');
-            alert('Comunicado Global enviado!');
-        }
-    };
-
-    const handleCreatePollSubmit = () => {
-        const validOptions = pollOptions.filter(o => o.trim());
-        if (onCreatePoll && pollQuestion && validOptions.length >= 2) {
-            onCreatePoll(pollQuestion, validOptions);
-            setPollQuestion('');
-            setPollOptions(['', '']);
-            alert('Enquete publicada!');
-        }
-    };
 
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -359,23 +308,62 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             return p;
         }));
 
-        // Update searchResults for gifts and debts
-        setGiftSearchResults(prev => prev.map(p => {
-            if (p.id === userId) {
-                return {
-                    ...p,
-                    [field]: (Number(p[field]) || 0) + amount
-                };
-            }
-            return p;
-        }));
-
-
-
         if (currentUser && currentUser.id === userId && onUpdateProfile) {
             onUpdateProfile(userId, { totalPendingDebt: (Number(currentUser.totalPendingDebt) || 0) + amount });
         }
     };
+
+    const showToast = (msg: string, price: number) => {
+        if (toastTimer.current) clearTimeout(toastTimer.current);
+        setToast({ msg, price });
+        toastTimer.current = setTimeout(() => setToast(null), 2500);
+    };
+
+    const {
+        commandsTab, setCommandsTab,
+        searchQuery, setSearchQuery,
+        searchResults, setSearchResults,
+        openCommands, setOpenCommands,
+        closedCommands, setClosedCommands,
+        selectedCommand, setSelectedCommand,
+        commandItems, setCommandItems,
+        viewingClosedCommand, setViewingClosedCommand,
+        viewingItems, setViewingItems,
+        pendingProduct, setPendingProduct,
+        cashAmount, setCashAmount,
+        fetchOpenCommands,
+        fetchClosedCommands,
+        fetchCommandItems,
+        handleDeleteCommandItem,
+        reopenCommand,
+        openClosedCommandView,
+        handleSearchPlayers,
+        handleCreateGhostUser,
+        handleOpenCommand,
+        getTournamentItems,
+        getCashItems,
+        handleProductClick,
+        handleTourItemClick,
+        handleCashItemClick,
+        handleAddManualCash,
+        handleAddManualOnline,
+        isProductDisabled,
+        isTourItemDisabled
+    } = useOperations({
+        currentUser,
+        selectedEvent,
+        setIsLoading,
+        updatePlayerDebtLocally,
+        updatePlayerBalanceLocally,
+        showToast
+    });
+
+    const giftsSystem = useGifts({
+        isAdmin: isAdmin || false,
+        currentUser,
+        badgeTemplates,
+        updatePlayerBalanceLocally
+    });
 
     const checkoutSystem = useCheckout({
         selectedCommand,
@@ -430,12 +418,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         if (selectedCommand) fetchCommandItems(selectedCommand.id);
         else setCommandItems([]);
     }, [selectedCommand]);
-
-    const showToast = (msg: string, price: number) => {
-        if (toastTimer.current) clearTimeout(toastTimer.current);
-        setToast({ msg, price });
-        toastTimer.current = setTimeout(() => setToast(null), 2500);
-    };
 
     const fetchEvents = async () => {
         const { data } = await supabase.from('events').select('*').order('date', { ascending: false });
@@ -517,23 +499,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         if (error) { alert('Erro ao excluir: ' + error.message); return; }
         fetchAllProducts();
         fetchProducts();
-    };
-    const fetchOpenCommands = async (eventId: string) => {
-        const { data } = await supabase.from('commands').select('*, profiles!user_id(name, numeric_id, avatar_url, vip_status, role, balance_brl, debt_limit_brl, total_pending_debt)').eq('event_id', eventId).eq('status', 'open').order('created_at', { ascending: false });
-        if (data) setOpenCommands(data);
-    };
-    const fetchClosedCommands = async (eventId: string) => {
-        const { data, error } = await supabase.from('commands')
-            .select('*, profiles!user_id(name, numeric_id, avatar_url, vip_status, role, balance_brl, debt_limit_brl, total_pending_debt)')
-            .eq('event_id', eventId)
-            .eq('status', 'closed')
-            .order('created_at', { ascending: false }); // Use created_at as backup if closed_at is missing/buggy
-
-        if (error) {
-            console.error('Error fetching closed commands:', error);
-            return;
-        }
-        setClosedCommands(data || []);
     };
 
     const handleSaveExpenses = async () => {
@@ -633,57 +598,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         }
     };
 
-    const fetchCommandItems = async (commandId: string) => {
-        const { data } = await supabase.from('command_items').select('*, products(name, category)').eq('command_id', commandId).order('created_at', { ascending: true });
-        if (data) setCommandItems(data);
-    };
-
-    const handleDeleteCommandItem = async (item: any) => {
-        if (!selectedCommand && !viewingClosedCommand) return;
-        const currentCmd = selectedCommand || viewingClosedCommand;
-
-        if (currentCmd.status !== 'open') {
-            alert('Apenas itens de comandas abertas podem ser excluídos.');
-            return;
-        }
-
-        if (!window.confirm(`Excluir item "${item.products?.name || item.notes || 'Item'}" da comanda?`)) return;
-
-        setIsLoading(true);
-        try {
-            // 1. Deletar o item
-            const { error: delErr } = await supabase.from('command_items').delete().eq('id', item.id);
-            if (delErr) throw delErr;
-
-            // 2. Atualizar o total da comanda
-            const itemPrice = Number(item.total_price_brl) || 0;
-            const newTotal = Math.max(0, Number(currentCmd.total_brl) - itemPrice);
-
-            const { error: updErr } = await supabase.from('commands').update({ total_brl: newTotal }).eq('id', currentCmd.id);
-            if (updErr) throw updErr;
-
-            // 3. Atualizar estado local
-            if (selectedCommand?.id === currentCmd.id) {
-                const updItems = commandItems.filter(i => i.id !== item.id);
-                setCommandItems(updItems);
-                setSelectedCommand({ ...selectedCommand, total_brl: newTotal });
-            }
-
-            if (viewingClosedCommand?.id === currentCmd.id) {
-                const updItems = viewingItems.filter(i => i.id !== item.id);
-                setViewingItems(updItems);
-                setViewingClosedCommand({ ...viewingClosedCommand, total_brl: newTotal });
-            }
-
-            setOpenCommands(prev => prev.map(c => c.id === currentCmd.id ? { ...c, total_brl: newTotal } : c));
-
-            // alert('Item excluído com sucesso!');
-        } catch (err: any) {
-            alert('Erro ao excluir item: ' + err.message);
-        } finally {
-            setIsLoading(false);
-        }
-    };
     const fetchReport = async (eventId: string) => {
         const { data } = await supabase.from('command_items').select('*, products(name, category), commands!inner(event_id, profiles!user_id(name, numeric_id))').eq('commands.event_id', eventId);
         if (data) setReportData(data);
@@ -729,509 +643,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         }
     };
 
-    const reopenCommand = async (cmd: any) => {
-        const total = Number(cmd.total_brl || 0);
-        const discount = Number(cmd.discount_brl || 0);
-        const debt = Number(cmd.unpaid_amount_brl || 0);
-        const chips = Number(cmd.chips_payment_brl || 0);
-        const cashOut = Number(cmd.cash_out_brl || 0);
-        const profit = Number(cmd.profit_brl || 0);
-        const profitCash = Number(cmd.profit_cash_payment_brl || 0);
-
-        const netCost = total - discount - debt - chips;
-        const hasProfit = profit > 0.01;
-
-        let balanceImpact = 0;
-        if (hasProfit) {
-            // Player received credit added to balance
-            balanceImpact = profit - profitCash;
-        } else {
-            // amount that was deducted from balance
-            const finalToDeduct = cashOut > 0 ? Math.max(0, netCost - cashOut) : Math.max(0, netCost);
-            balanceImpact = -finalToDeduct;
-        }
-
-        // To undo, we apply the negative of the impact
-        const refundAmount = -balanceImpact;
-
-        const label = refundAmount >= 0 ? 'reembolsado ao' : 'estornado do';
-        const confirmMsg = `Reabrir comanda de ${cmd.profiles?.name}? O valor de R$ ${Math.abs(refundAmount).toFixed(2)} será ${label} saldo.`;
-        if (!window.confirm(confirmMsg)) return;
-
-        if (Math.abs(refundAmount) > 0.01) {
-            const { error } = await supabase.rpc('secure_balance_transaction', {
-                p_user_id: cmd.user_id,
-                p_brl_amount: refundAmount,
-                p_chipz_amount: 0,
-                p_description: `Estorno/Reembolso por reabertura de comanda ${cmd.id.slice(0, 8)}`,
-                p_category: 'wallet_deposit',
-                p_metadata: { command_id: cmd.id, event_id: cmd.event_id }
-            });
-            if (error) { alert('Erro ao processar estorno/reembolso: ' + error.message); return; }
-        }
-
-        // Delete associated pending debt if exists
-        if (debt > 0) {
-            await supabase.from('debts').delete().eq('command_id', cmd.id).eq('status', 'pending');
-            updatePlayerDebtLocally(cmd.user_id, -debt);
-        }
-
-        const { error: upErr } = await supabase.from('commands').update({
-            status: 'open',
-            closed_at: null,
-            discount_brl: 0,
-            unpaid_amount_brl: 0,
-            chips_payment_brl: 0,
-            cash_out_brl: 0,
-            profit_brl: 0,
-            profit_cash_payment_brl: 0
-        }).eq('id', cmd.id);
-
-        if (upErr) { alert('Erro ao reabrir: ' + upErr.message); return; }
-
-        const msg = refundAmount >= 0
-            ? `Sua comanda foi reaberta. R$ ${refundAmount.toFixed(2)} devolvidos ao saldo.`
-            : `Sua comanda foi reaberta. R$ ${Math.abs(refundAmount).toFixed(2)} estornados do saldo (lucro revertido).`;
-
-        await supabase.from('messages').insert({
-            user_id: cmd.user_id,
-            sender_id: currentUser.id,
-            content: msg,
-            category: 'system',
-            is_read: false
-        });
-
-        if (selectedEvent) { fetchOpenCommands(selectedEvent.id); fetchClosedCommands(selectedEvent.id); }
-        updatePlayerBalanceLocally(cmd.user_id, refundAmount);
-        setSelectedCommand({ ...cmd, status: 'open', closed_at: null, discount_brl: 0, unpaid_amount_brl: 0, chips_payment_brl: 0, cash_out_brl: 0, profit_brl: 0, profit_cash_payment_brl: 0 });
-        setCommandsTab('ativas');
-    };
-
-    const openClosedCommandView = async (cmd: any) => {
-        setViewingClosedCommand(cmd);
-        setViewingItems([]); // Clear previous items while loading
-
-        try {
-            const { data, error } = await supabase
-                .from('command_items')
-                .select('*, products(name, category)')
-                .eq('command_id', cmd.id)
-                .order('created_at', { ascending: true });
-
-            if (error) throw error;
-            setViewingItems(data || []);
-        } catch (err: any) {
-            console.error('Error fetching command items:', err);
-            alert('Erro ao carregar itens da comanda. Verifique sua conexão.');
-        }
-    };
-
-    // Compute which one-time keys are already used in this command
-    const usedOneTimeKeys = new Set<string>();
-    commandItems.forEach(item => {
-        const key1 = item.products ? getOneTimeKey(item.products) : null;
-        const key2 = item.notes ? getOneTimeKeyFromNote(item.notes) : null;
-        if (key1) usedOneTimeKeys.add(key1);
-        if (key2) usedOneTimeKeys.add(key2);
-    });
-
-    const isProductDisabled = (product: any): boolean => {
-        if (selectedCommand?.status === 'closed') return true;
-        const key = getOneTimeKey(product);
-        return key ? usedOneTimeKeys.has(key) : false;
-    };
-    const isTourItemDisabled = (item: any): boolean => {
-        if (selectedCommand?.status === 'closed') return true;
-        const key = getOneTimeKeyFromNote(item.name);
-        return key ? usedOneTimeKeys.has(key) : false;
-    };
-
-    const handleSearchPlayers = async (query: string) => {
-        setSearchQuery(query);
-        if (query.length < 2) { setSearchResults([]); return; }
-        const isNumeric = /^\d+$/.test(query);
-        let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, vip_status, balance_brl, debt_limit_brl, total_pending_debt');
-        q = isNumeric ? q.eq('numeric_id', parseInt(query)) : q.ilike('name', `%${query}%`);
-        const { data } = await q.limit(5);
-        setSearchResults(data || []);
-    };
-
-    const handleCreateGhostUser = async (name: string) => {
-        if (!name || name.length < 2) return;
-        setIsLoading(true);
-        try {
-            const { data, error } = await supabase.rpc('create_ghost_user', { p_name: name });
-            if (error) throw error;
-
-            // Re-fetch the newly created user to open command
-            const { data: user, error: userErr } = await supabase.from('profiles').select('id, name, numeric_id, avatar_url, vip_status, role, balance_brl, debt_limit_brl, total_pending_debt').eq('id', data).single();
-            if (userErr) throw userErr;
-
-            if (user) {
-                await handleOpenCommand(user);
-                alert('Jogador fantasma criado com sucesso e comanda aberta!');
-            }
-        } catch (err: any) {
-            alert('Erro ao criar jogador fantasma: ' + err.message);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleOpenCommand = async (player: any) => {
-        if (!selectedEvent) { alert('Selecione um evento primeiro.'); return; }
-        if (openCommands.find(c => c.user_id === player.id)) { alert('Jogador já tem comanda aberta.'); return; }
-        const { data, error } = await supabase.from('commands').insert({ event_id: selectedEvent.id, user_id: player.id, status: 'open', opened_by: currentUser.id }).select('*, profiles!user_id(name, numeric_id, avatar_url, vip_status, role, balance_brl, debt_limit_brl, total_pending_debt)').single();
-        if (error) { alert('Erro: ' + error.message); return; }
-        setOpenCommands([data, ...openCommands]);
-        setSearchQuery(''); setSearchResults([]);
-        setSelectedCommand(data);
-    };
-
-    const handleGiftSearch = async (query: string) => {
-        setGiftSearchQuery(query);
-        if (query.length < 2) { setGiftSearchResults([]); return; }
-        const isNumeric = /^\d+$/.test(query);
-        let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, vip_status, balance_brl, balance_chipz, debt_limit_brl, total_pending_debt');
-        q = isNumeric ? q.eq('numeric_id', parseInt(query)) : q.ilike('name', `%${query}%`);
-        const { data } = await q.limit(10);
-        setGiftSearchResults(data || []);
-    };
-
-    const getTournamentItems = () => {
-        if (!selectedEvent) return [];
-        const ev = selectedEvent;
-        const p = (v: string | undefined) => parseFloat((v || '0').replace(/[^0-9.]/g, ''));
-        return [
-            ev.buyin && { id: 't-buyin', name: 'Buy In', price: p(ev.buyin), chips: ev.stack || '—' },
-            ev.staff_bonus_value && { id: 't-staff', name: 'Staff', price: p(ev.staff_bonus_value), chips: ev.staff_bonus_chips || '—' },
-            ev.rebuy_value && { id: 't-rebuy', name: 'Rebuy', price: p(ev.rebuy_value), chips: ev.rebuy_chips || '—' },
-            ev.addon_value && { id: 't-addon', name: 'Add On', price: p(ev.addon_value), chips: ev.addon_chips || '—', vipBonus: true },
-            ev.double_rebuy_value && { id: 't-drebuy', name: 'Rebuy Duplo', price: p(ev.double_rebuy_value), chips: ev.double_rebuy_chips || '—' },
-            ev.double_addon_value && { id: 't-daddon', name: 'Add Duplo', price: p(ev.double_addon_value), chips: ev.double_addon_chips || '—' },
-        ].filter(Boolean) as any[];
-    };
-
-    const getCashItems = () => [
-        { id: 'cash-20', name: '20 fichas', price: 20 },
-        { id: 'cash-30', name: '30 fichas', price: 30 },
-        { id: 'cash-50', name: '50 fichas', price: 50 },
-        { id: 'cash-100', name: '100 fichas', price: 100 },
-        { id: 'cash-200', name: '200 fichas', price: 200 },
-        { id: 'cash-500', name: '500 fichas', price: 500 },
-    ];
-
-    const getVipPrice = (price: number, category: string, name: string) =>
-        applyVipDiscount(price, category, name, selectedCommand?.profiles?.vip_status);
-
-    const addProductToCommand = async (product: any) => {
-        if (!selectedCommand) return;
-        const finalPrice = getVipPrice(Number(product.price), product.category, product.name);
-        const { error } = await supabase.from('command_items').insert({
-            command_id: selectedCommand.id,
-            product_id: product.id,
-            quantity: 1,
-            unit_price_brl: finalPrice,
-            unit_price_chipz: 0,
-            total_price_brl: finalPrice,
-            total_price_chipz: 0,
-            notes: product.price_unit ? `Cobrança: ${product.price_unit}` : null,
-            created_by: currentUser.id
-        });
-        if (error) { alert('Erro: ' + error.message); return; }
-        const newTotal = Number(selectedCommand.total_brl) + finalPrice;
-        await supabase.from('commands').update({ total_brl: newTotal }).eq('id', selectedCommand.id);
-        const upd = openCommands.map(c => c.id === selectedCommand.id ? { ...c, total_brl: newTotal } : c);
-        setOpenCommands(upd);
-        setSelectedCommand({ ...selectedCommand, total_brl: newTotal });
-        fetchCommandItems(selectedCommand.id);
-        showToast(product.name, finalPrice);
-    };
-
-    const addTournamentItemToCommand = async (item: any) => {
-        if (!selectedCommand) return;
-        const vipStatus = selectedCommand?.profiles?.vip_status;
-        let finalPrice = item.price;
-        if (item.name === 'Staff' && vipStatus === 'vip_master') finalPrice = Math.max(0, finalPrice - 10);
-        const isAddon = item.name === 'Add On' || item.name === 'Add Duplo';
-        const bonusNote = isAddon && vipStatus === 'vip_master' ? ' (+5K fichas VIP)' : '';
-        const { error } = await supabase.from('command_items').insert({
-            command_id: selectedCommand.id,
-            product_id: null,
-            quantity: 1,
-            unit_price_brl: finalPrice,
-            unit_price_chipz: 0,
-            total_price_brl: finalPrice,
-            total_price_chipz: 0,
-            notes: `${item.name} — ${item.chips} fichas${bonusNote}`,
-            created_by: currentUser.id
-        });
-        if (error) { alert('Erro: ' + error.message); return; }
-        const newTotal = Number(selectedCommand.total_brl) + finalPrice;
-        await supabase.from('commands').update({ total_brl: newTotal }).eq('id', selectedCommand.id);
-        const upd = openCommands.map(c => c.id === selectedCommand.id ? { ...c, total_brl: newTotal } : c);
-        setOpenCommands(upd);
-        setSelectedCommand({ ...selectedCommand, total_brl: newTotal });
-        fetchCommandItems(selectedCommand.id);
-        showToast(item.name, finalPrice);
-    };
-
-    const addCashItemToCommand = async (item: any) => {
-        if (!selectedCommand) return;
-        const finalPrice = item.price;
-        const { error } = await supabase.from('command_items').insert({
-            command_id: selectedCommand.id,
-            product_id: null,
-            quantity: 1,
-            unit_price_brl: finalPrice,
-            unit_price_chipz: 0,
-            total_price_brl: finalPrice,
-            total_price_chipz: 0,
-            notes: `Cash Game — ${item.name}`,
-            created_by: currentUser.id
-        });
-        if (error) { alert('Erro: ' + error.message); return; }
-        const newTotal = Number(selectedCommand.total_brl) + finalPrice;
-        await supabase.from('commands').update({ total_brl: newTotal }).eq('id', selectedCommand.id);
-        const upd = openCommands.map(c => c.id === selectedCommand.id ? { ...c, total_brl: newTotal } : c);
-        setOpenCommands(upd);
-        setSelectedCommand({ ...selectedCommand, total_brl: newTotal });
-        fetchCommandItems(selectedCommand.id);
-        showToast(item.name, finalPrice);
-    };
-
-    const handleAddManualCash = async () => {
-        if (!selectedCommand) { alert('Selecione uma comanda primeiro.'); return; }
-        const amount = parseFloat(cashAmount);
-        if (isNaN(amount) || amount <= 0) { alert('Valor inválido.'); return; }
-
-        setIsLoading(true);
-        try {
-            const { error } = await supabase.from('command_items').insert({
-                command_id: selectedCommand.id,
-                product_id: null,
-                quantity: 1,
-                unit_price_brl: amount,
-                unit_price_chipz: 0,
-                total_price_brl: amount,
-                total_price_chipz: 0,
-                notes: `Cash Game — Compra Manual`,
-                created_by: currentUser.id
-            });
-            if (error) throw error;
-
-            const newTotal = Number(selectedCommand.total_brl) + amount;
-            await supabase.from('commands').update({ total_brl: newTotal }).eq('id', selectedCommand.id);
-
-            const upd = openCommands.map(c => c.id === selectedCommand.id ? { ...c, total_brl: newTotal } : c);
-            setOpenCommands(upd);
-            setSelectedCommand({ ...selectedCommand, total_brl: newTotal });
-            fetchCommandItems(selectedCommand.id);
-
-            showToast('Compra Cash', amount);
-            setCashAmount('');
-        } catch (err: any) {
-            alert('Erro ao lançar cash: ' + err.message);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleAddManualOnline = async () => {
-        if (!selectedCommand) { alert('Selecione uma comanda primeiro.'); return; }
-        const amount = parseFloat(cashAmount);
-        if (isNaN(amount) || amount <= 0) { alert('Valor inválido.'); return; }
-
-        setIsLoading(true);
-        try {
-            const { error } = await supabase.from('command_items').insert({
-                command_id: selectedCommand.id,
-                product_id: null,
-                quantity: 1,
-                unit_price_brl: amount,
-                unit_price_chipz: 0,
-                total_price_brl: amount,
-                total_price_chipz: 0,
-                notes: `Fichas Online — Compra Manual`,
-                created_by: currentUser.id
-            });
-            if (error) throw error;
-
-            const newTotal = Number(selectedCommand.total_brl) + amount;
-            await supabase.from('commands').update({ total_brl: newTotal }).eq('id', selectedCommand.id);
-
-            const upd = openCommands.map(c => c.id === selectedCommand.id ? { ...c, total_brl: newTotal } : c);
-            setOpenCommands(upd);
-            setSelectedCommand({ ...selectedCommand, total_brl: newTotal });
-            fetchCommandItems(selectedCommand.id);
-
-            showToast('Fichas Online', amount);
-            setCashAmount('');
-        } catch (err: any) {
-            alert('Erro ao lançar fichas online: ' + err.message);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-
-    const handleProductClick = (product: any) => {
-        if (!selectedCommand) { alert('Selecione uma comanda primeiro.'); return; }
-        if (selectedCommand.status === 'closed') return;
-        if (isProductDisabled(product)) return;
-        if (pendingProduct?.id === product.id) { addProductToCommand(product); setPendingProduct(null); }
-        else setPendingProduct(product);
-    };
-    const handleTourItemClick = (item: any) => {
-        if (!selectedCommand) { alert('Selecione uma comanda primeiro.'); return; }
-        if (selectedCommand.status === 'closed') return;
-        if (isTourItemDisabled(item)) return;
-        if (pendingProduct?.id === item.id) { addTournamentItemToCommand(item); setPendingProduct(null); }
-        else setPendingProduct(item);
-    };
-    const handleCashItemClick = (item: any) => {
-        if (!selectedCommand) { alert('Selecione uma comanda primeiro.'); return; }
-        if (selectedCommand.status === 'closed') return;
-        if (pendingProduct?.id === item.id) { addCashItemToCommand(item); setPendingProduct(null); }
-        else setPendingProduct(item);
-    };
-
-    const handleSendGifts = async () => {
-        if (!isAdmin) return;
-        const amount = giftType === 'badge' ? 0 : parseFloat(giftAmount);
-
-        if (giftType !== 'badge' && (!amount || amount <= 0)) { alert('Valor inválido.'); return; }
-        if (giftType === 'badge' && !selectedBadgeId) { alert('Selecione uma insígnia.'); return; }
-
-        let targetUserIds: string[] = [];
-
-        if (giftTarget === 'all') {
-            const label = giftType === 'brl' ? 'R$' : giftType === 'chipz' ? 'Chipz' : 'a Insígnia';
-            const val = giftType === 'badge' ? badgeTemplates.find(b => b.id === selectedBadgeId)?.title : amount;
-            if (!window.confirm(`Tem certeza que deseja enviar ${label} ${val} para TODOS os jogadores?`)) return;
-            setIsLoading(true);
-            const { data } = await supabase.from('profiles').select('id');
-            if (data) targetUserIds = data.map(u => u.id);
-        } else {
-            if (selectedGiftUsers.length === 0) { alert('Selecione pelo menos um usuário.'); return; }
-            targetUserIds = selectedGiftUsers.map(u => u.id);
-        }
-
-        if (targetUserIds.length === 0) { alert('Nenhum usuário encontrado.'); setIsLoading(false); return; }
-
-        setIsLoading(true);
-        try {
-            // DUPLICATE BADGE PROTECTION
-            if (giftType === 'badge') {
-                const template = badgeTemplates.find(b => b.id === selectedBadgeId);
-                if (template) {
-                    const { data: duplicates } = await supabase.from('user_badges')
-                        .select('user_id, profiles!user_id(name)')
-                        .in('user_id', targetUserIds)
-                        .eq('badge_template_id', template.id);
-
-                    if (duplicates && duplicates.length > 0) {
-                        const names = (duplicates as any[]).map(d => d.profiles?.name || 'Jogador').join(', ');
-                        if (giftTarget !== 'all') {
-                            alert(`🚫 BLOQUEADO: Os seguintes jogadores já possuem a insígnia "${template.title}":\n\n${names}\n\nO sistema não permite o envio repetido da mesma honraria para o mesmo jogador.`);
-                            setIsLoading(false);
-                            return;
-                        } else {
-                            if (!window.confirm(`Aviso: ${duplicates.length} jogadores já possuem a insígnia "${template.title}" e serão ignorados nesta operação. Deseja prosseguir com os demais ${targetUserIds.length - duplicates.length}?`)) {
-                                setIsLoading(false);
-                                return;
-                            }
-                            const duplicateIds = duplicates.map(d => d.user_id);
-                            targetUserIds = targetUserIds.filter(id => !duplicateIds.includes(id));
-                        }
-                    }
-                }
-            }
-
-            if (targetUserIds.length === 0) {
-                alert('Nenhum usuário apto a receber esta recompensa no momento.');
-                setIsLoading(false);
-                return;
-            }
-
-            const finalAmount = giftType === 'chipz' ? Math.floor(amount) : amount;
-            const logMsg = giftType === 'brl' ? `R$ ${finalAmount.toFixed(2)}` : giftType === 'chipz' ? `${finalAmount} Chipz` : `Insígnia: ${badgeTemplates.find(b => b.id === selectedBadgeId)?.title}`;
-            const finalDescription = giftDescription.trim() || `Atribuição de Admin: ${logMsg}`;
-
-            // Chunks for mass sending
-            const chunks = [];
-            for (let i = 0; i < targetUserIds.length; i += 20) {
-                chunks.push(targetUserIds.slice(i, i + 20));
-            }
-
-            for (const chunk of chunks) {
-                await Promise.all(chunk.map(async (uid) => {
-                    if (giftType === 'badge') {
-                        const template = badgeTemplates.find(b => b.id === selectedBadgeId);
-                        if (template) {
-                            await supabase.from('user_badges').insert({
-                                user_id: uid,
-                                title: template.title,
-                                description: finalDescription || template.description,
-                                icon: template.icon || 'stars',
-                                color: template.color || '#00E5FF',
-                                badge_template_id: template.id
-                            });
-                        }
-                    } else {
-                        // Use secure_balance_transaction for logging and safety
-                        await supabase.rpc('secure_balance_transaction', {
-                            p_user_id: uid,
-                            p_brl_amount: giftType === 'brl' ? finalAmount : 0,
-                            p_chipz_amount: giftType === 'chipz' ? finalAmount : 0,
-                            p_description: finalDescription,
-                            p_category: 'gift',
-                            p_metadata: { admin_id: currentUser.id }
-                        });
-                        updatePlayerBalanceLocally(uid, finalAmount, giftType);
-
-                        // Recompensa Padronizada: 1 EXP a cada R$ 50 (Prêmios em dinheiro contam como recarga)
-                        if (giftType === 'brl') {
-                            const expBonus = Math.floor(finalAmount / 50);
-                            if (expBonus > 0) {
-                                const { data: profData } = await supabase.from('profiles').select('current_exp').eq('id', uid).single();
-                                await supabase.from('profiles').update({ current_exp: (Number(profData?.current_exp) || 0) + expBonus }).eq('id', uid);
-                            }
-                        }
-                    }
-
-                    await supabase.from('messages').insert({
-                        user_id: uid,
-                        sender: 'Admin',
-                        sender_id: currentUser.id,
-                        subject: giftType === 'badge' ? '🎖️ Você recebeu uma medalha!' : '🎁 Você recebeu um Presente!',
-                        content: `${finalDescription}. ${giftType !== 'badge' ? 'O saldo já foi atualizado e está disponível para uso.' : ''}`,
-                        category: 'gift',
-                        is_read: false
-                    });
-
-                    // Log de auditoria para presentes/badges
-                    await supabase.from('audit_logs').insert({
-                        admin_id: currentUser.id,
-                        action_type: 'SEND_GIFT_OR_BADGE',
-                        description: `Admin concedeu um presente/medalha em lote: ${logMsg}`,
-                        target_user_id: uid,
-                        details: { gift_type: giftType, amount: finalAmount, badge_id: selectedBadgeId }
-                    });
-                }));
-            }
-
-            alert(`✅ Prêmios enviados com sucesso para ${targetUserIds.length} usuários!`);
-            setGiftAmount('');
-            setGiftDescription('');
-            setSelectedBadgeId('');
-            setSelectedGiftUsers([]);
-        } catch (err: any) {
-            alert('Erro ao enviar prêmios: ' + err.message);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    // handleSendGifts logic handled by useGifts
 
 
 
@@ -1425,28 +837,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                     )}
                     {activeTab === 'send-gifts' && (
                         <GiftsTab
-                            giftTarget={giftTarget}
-                            setGiftTarget={setGiftTarget}
-                            giftType={giftType}
-                            setGiftType={setGiftType}
-                            giftAmount={giftAmount}
-                            setGiftAmount={setGiftAmount}
-                            giftSearchQuery={giftSearchQuery}
-                            setGiftSearchQuery={setGiftSearchQuery}
-                            giftDescription={giftDescription}
-                            setGiftDescription={setGiftDescription}
-                            selectedBadgeId={selectedBadgeId}
-                            setSelectedBadgeId={setSelectedBadgeId}
-                            giftSearchResults={giftSearchResults}
-                            setGiftSearchResults={setGiftSearchResults}
+                            giftTarget={giftsSystem.giftTarget}
+                            setGiftTarget={giftsSystem.setGiftTarget}
+                            giftType={giftsSystem.giftType}
+                            setGiftType={giftsSystem.setGiftType}
+                            giftAmount={giftsSystem.giftAmount}
+                            setGiftAmount={giftsSystem.setGiftAmount}
+                            giftSearchQuery={giftsSystem.giftSearchQuery}
+                            setGiftSearchQuery={giftsSystem.setGiftSearchQuery}
+                            giftDescription={giftsSystem.giftDescription}
+                            setGiftDescription={giftsSystem.setGiftDescription}
+                            selectedBadgeId={giftsSystem.selectedBadgeId}
+                            setSelectedBadgeId={giftsSystem.setSelectedBadgeId}
+                            giftSearchResults={giftsSystem.giftSearchResults}
+                            setGiftSearchResults={giftsSystem.setGiftSearchResults}
                             badgeTemplates={badgeTemplates}
-                            selectedGiftUsers={selectedGiftUsers}
-                            setSelectedGiftUsers={setSelectedGiftUsers}
-                            usersWithSelectedBadge={usersWithSelectedBadge}
-                            handleSendGifts={handleSendGifts}
-                            handleGiftSearch={handleGiftSearch}
+                            selectedGiftUsers={giftsSystem.selectedGiftUsers}
+                            setSelectedGiftUsers={giftsSystem.setSelectedGiftUsers}
+                            usersWithSelectedBadge={giftsSystem.usersWithSelectedBadge}
+                            handleSendGifts={giftsSystem.handleSendGifts}
+                            handleGiftSearch={giftsSystem.handleGiftSearch}
                             onCreateBadgeTemplate={onCreateBadgeTemplate}
-                            isLoading={isLoading}
+                            isLoading={giftsSystem.isLoading}
                         />
                     )}
 
@@ -1480,18 +892,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
 
                     {activeTab === 'communications' && (
                         <CommunicationsTab
-                            adminSubject={adminSubject}
-                            setAdminSubject={setAdminSubject}
-                            adminMsgContent={adminMsgContent}
-                            setAdminMsgContent={setAdminMsgContent}
-                            adminMsgCategory={adminMsgCategory}
-                            setAdminMsgCategory={setAdminMsgCategory}
-                            pollQuestion={pollQuestion}
-                            setPollQuestion={setPollQuestion}
-                            pollOptions={pollOptions}
-                            setPollOptions={setPollOptions}
-                            handleSendAdminMessage={handleSendBroadcast}
-                            handleCreatePollSubmit={handleCreatePollSubmit}
+                            adminSubject={communicationsSystem.adminSubject}
+                            setAdminSubject={communicationsSystem.setAdminSubject}
+                            adminMsgContent={communicationsSystem.adminMsgContent}
+                            setAdminMsgContent={communicationsSystem.setAdminMsgContent}
+                            adminMsgCategory={communicationsSystem.adminMsgCategory}
+                            setAdminMsgCategory={communicationsSystem.setAdminMsgCategory}
+                            pollQuestion={communicationsSystem.pollQuestion}
+                            setPollQuestion={communicationsSystem.setPollQuestion}
+                            pollOptions={communicationsSystem.pollOptions}
+                            setPollOptions={communicationsSystem.setPollOptions}
+                            handleSendAdminMessage={communicationsSystem.handleSendBroadcast}
+                            handleCreatePollSubmit={communicationsSystem.handleCreatePollSubmit}
                         />
                     )}
 
