@@ -48,8 +48,11 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
     const [viewEvent, setViewEvent] = useState<Event | null>(null); // Modal de Flyer (Eventos Abertos)
     const [viewClosedEvent, setViewClosedEvent] = useState<Event | null>(null); // Modal de Resultados (Eventos Fechados)
 
-    // TABS STATE
+    // TAB FILTER STATE
     const [activeTab, setActiveTab] = useState<'upcoming' | 'completed'>('upcoming');
+
+    // TYPE FILTER STATE
+    const [typeFilter, setTypeFilter] = useState<'all' | 'live' | 'online'>('all');
 
     // SORT STATE
     const [sortOption, setSortOption] = useState('date');
@@ -111,11 +114,20 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
         .filter(e => {
             if (e.is_hidden) return false;
             // Tab Filter
+            let matchesTab = false;
             if (activeTab === 'upcoming') {
-                return e.status === 'open' || e.status === 'running';
+                matchesTab = e.status === 'open' || e.status === 'running';
             } else {
-                return e.status === 'closed';
+                matchesTab = e.status === 'closed';
             }
+
+            // Type Filter
+            let matchesType = true;
+            if (typeFilter !== 'all') {
+                matchesType = e.type === typeFilter;
+            }
+
+            return matchesTab && matchesType;
         })
         .sort((a, b) => {
             switch (sortOption) {
@@ -587,6 +599,19 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                     </div>
 
                     <div className="flex items-center gap-3">
+                        <div className="relative">
+                            <select
+                                value={typeFilter}
+                                onChange={(e) => setTypeFilter(e.target.value as any)}
+                                className="appearance-none bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/10 rounded-lg pl-4 pr-10 py-2 text-sm font-bold text-gray-700 dark:text-white focus:border-primary outline-none cursor-pointer shadow-sm"
+                            >
+                                <option value="all">Todos (Live/Online)</option>
+                                <option value="live">Eventos Live</option>
+                                <option value="online">Eventos Online</option>
+                            </select>
+                            <span className="material-icons-outlined absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none text-lg">filter_alt</span>
+                        </div>
+
                         <span className="text-xs font-bold text-gray-500 uppercase tracking-wider hidden sm:block">Ordenar:</span>
                         <div className="relative">
                             <select
