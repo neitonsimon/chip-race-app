@@ -385,23 +385,26 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                             </div>
 
                             <div className="mb-4">
+                                <label className="text-gray-400 text-[10px] font-bold uppercase mb-1.5 block tracking-widest text-left">Tipo de Chave PIX</label>
                                 <select
                                     value={pixType}
                                     onChange={(e) => setPixType(e.target.value)}
-                                    className="w-full bg-background border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-accent transition-colors mb-2"
+                                    className="w-full bg-black/50 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-accent transition-colors mb-4 appearance-none"
                                 >
-                                    <option value="cpf">CPF</option>
-                                    <option value="cnpj">CNPJ</option>
-                                    <option value="email">E-mail</option>
-                                    <option value="telefone">Telefone</option>
-                                    <option value="aleatoria">Chave Aleatória</option>
+                                    <option value="cpf" className="bg-[#050214]">CPF</option>
+                                    <option value="cnpj" className="bg-[#050214]">CNPJ</option>
+                                    <option value="email" className="bg-[#050214]">E-mail</option>
+                                    <option value="telefone" className="bg-[#050214]">Telefone</option>
+                                    <option value="aleatoria" className="bg-[#050214]">Chave Aleatória</option>
                                 </select>
+
+                                <label className="text-gray-400 text-[10px] font-bold uppercase mb-1.5 block tracking-widest text-left">Sua Chave PIX</label>
                                 <input
                                     type="text"
-                                    placeholder="Informe sua chave PIX"
+                                    placeholder="Ex: 123.456.789-00"
                                     value={pixKey}
                                     onChange={(e) => setPixKey(e.target.value)}
-                                    className="w-full bg-background border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-accent transition-colors"
+                                    className="w-full bg-black/50 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-accent transition-colors"
                                 />
                             </div>
 
