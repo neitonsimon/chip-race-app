@@ -53,6 +53,7 @@ interface OperationalTabProps {
     handleCreateQuickEvent?: () => void;
     searchQuery?: string;
     handleCreateGhostUser?: (name: string) => Promise<void>;
+    getVipPrice?: (price: number, category: string, name: string) => number;
 }
 
 export const OperationalTab: React.FC<OperationalTabProps> = ({
@@ -67,7 +68,8 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
     prizePayout, setPrizePayout, updateStaffExpenses, updatePrizePayout, handleAddManualOnline, isAdmin,
     isProductDisabled, isTourItemDisabled, productCategories = [],
     pastEventsList, handleFinalizeEvent, handleCreateQuickEvent,
-    searchQuery, handleCreateGhostUser
+    searchQuery, handleCreateGhostUser,
+    getVipPrice
 }) => {
     const [eventFilterTab, setEventFilterTab] = React.useState<'proximos' | 'concluidos'>('proximos');
     const [selectedSubCategory, setSelectedSubCategory] = React.useState<string | null>(null);
@@ -537,7 +539,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                         </div>
 
                                         {productSection === 'diversos' && !selectedSubCategory && (
-                                            <div className="grid grid-cols-2 gap-2 mb-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <div className="grid grid-cols-2 gap-2 mb-4">
                                                 {diversosCategories.map(cat => (
                                                     <button
                                                         key={cat.name}
@@ -556,7 +558,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                         )}
 
                                         {productSection === 'diversos' && selectedSubCategory && (
-                                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/5 animate-in fade-in slide-in-from-left-2 duration-300">
+                                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/5">
                                                 <button
                                                     onClick={() => setSelectedSubCategory(null)}
                                                     className="w-6 h-6 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-all"
@@ -594,7 +596,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                         )}
 
                                         {productSection === 'diversos' && selectedSubCategory === 'poker-online' && (
-                                            <div className="mb-4 flex gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <div className="mb-4 flex gap-2">
                                                 <input
                                                     type="text"
                                                     inputMode="decimal"
@@ -621,6 +623,10 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                             {visibleItems.map(p => {
                                                 const disabled = productSection === 'torneio' ? isTourItemDisabled(p) : isProductDisabled(p);
                                                 const count = getItemCount(p);
+                                                const originalPrice = Number(p.price);
+                                                const vipPrice = getVipPrice ? getVipPrice(originalPrice, p.category || productSection, p.name) : originalPrice;
+                                                const hasDiscount = vipPrice < originalPrice;
+
                                                 return (
                                                     <button
                                                         key={p.id}
@@ -640,7 +646,12 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <p className={`text-xs font-display font-black ${pendingProduct?.id === p.id ? 'text-white' : 'text-white'}`}>R$ {Number(p.price).toFixed(2)}</p>
+                                                        <div className="flex items-baseline gap-1.5">
+                                                            <p className={`text-xs font-display font-black ${pendingProduct?.id === p.id ? 'text-white' : 'text-white'}`}>R$ {vipPrice.toFixed(2)}</p>
+                                                            {hasDiscount && (
+                                                                <p className={`text-[8px] line-through font-bold ${pendingProduct?.id === p.id ? 'text-white/60' : 'text-gray-500'}`}>R$ {originalPrice.toFixed(2)}</p>
+                                                            )}
+                                                        </div>
                                                     </button>
                                                 );
                                             })}
@@ -754,6 +765,37 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                     })()}
                                 </div>
                             )}
+
+                            {(() => {
+                                const savings = commandItems.reduce((acc, item) => {
+                                    let originalPrice = 0;
+                                    if (item.products) {
+                                        originalPrice = Number(item.products.price);
+                                    } else if (item.notes) {
+                                        const tourMatch = tournamentItems.find(ti => item.notes.startsWith(ti.name));
+                                        if (tourMatch) originalPrice = Number(tourMatch.price);
+                                    }
+
+                                    if (originalPrice > 0) {
+                                        const diff = originalPrice - Number(item.unit_price_brl);
+                                        if (diff > 0.01) return acc + (diff * (item.quantity || 1));
+                                    }
+                                    return acc;
+                                }, 0);
+
+                                if (savings > 0) {
+                                    return (
+                                        <div className="flex items-center justify-between mb-4 p-2 bg-primary/10 border border-primary/20 rounded-xl">
+                                            <div className="flex items-center gap-2">
+                                                <span className="material-icons-outlined text-sm text-primary">auto_awesome</span>
+                                                <span className="text-[10px] font-black text-primary uppercase tracking-wider">Benefício VIP</span>
+                                            </div>
+                                            <span className="text-xs font-black text-primary">- R$ {savings.toFixed(2)}</span>
+                                        </div>
+                                    );
+                                }
+                                return null;
+                            })()}
 
                             <div className="flex items-center justify-between">
                                 <span className="text-sm font-black text-white uppercase tracking-widest">

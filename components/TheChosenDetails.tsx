@@ -30,7 +30,7 @@ const DEFAULT_CONTENT = appConfig.initialDefaults.contentDB.details;
 
 // Mapeamento dos Regulamentos (Cópia fiel do conteúdo de TournamentCategories para consistência)
 const REGULATIONS_DATA: Record<string, { title: string; icon: string; color: string; rules: string }> = {
-    'rankings': {
+    'rank': {
         title: 'Rankings 2026',
         icon: 'leaderboard',
         color: 'text-primary',
@@ -65,7 +65,7 @@ const REGULATIONS_DATA: Record<string, { title: string; icon: string; color: str
   4. Vagas ganhas via Jackpot são acumulativas para o sistema de Bônus de Stack.
           `
     },
-    'get-up': {
+    'get_up': {
         title: 'Get Up',
         icon: 'psychology',
         color: 'text-secondary',
@@ -75,7 +75,7 @@ const REGULATIONS_DATA: Record<string, { title: string; icon: string; color: str
   3. A lista de torneios Major é divulgada no início de cada mês no calendário oficial.
           `
     },
-    'sit-n-go': {
+    'sitngo': {
         title: 'Sit & Go Satélite',
         icon: 'satellite_alt',
         color: 'text-primary',
@@ -85,7 +85,7 @@ const REGULATIONS_DATA: Record<string, { title: string; icon: string; color: str
   3. A estrutura destes satélites é Turbo ou Hyper-Turbo.
           `
     },
-    'red-omaha': { // ID mapeado para "Last Longer" conforme App.tsx
+    'll': { // ID mapeado para "Last Longer" conforme App.tsx
         title: 'Last Longer',
         icon: 'timer',
         color: 'text-secondary',
@@ -95,7 +95,7 @@ const REGULATIONS_DATA: Record<string, { title: string; icon: string; color: str
   3. Válido apenas para quem se inscrever no Last Longer antes do início do torneio.
           `
     },
-    'ladies-league': { // ID mapeado para "Vip's" conforme App.tsx
+    'vip': { // ID mapeado para "Vip's" conforme App.tsx
         title: "Vip's",
         icon: 'diamond',
         color: 'text-primary',
@@ -115,7 +115,7 @@ const REGULATIONS_DATA: Record<string, { title: string; icon: string; color: str
   3. Regras específicas são divulgadas a cada campanha "Bet & Win".
           `
     },
-    'quests': {
+    'quest': {
         title: 'Quests',
         icon: 'explore',
         color: 'text-primary',
@@ -124,6 +124,16 @@ const REGULATIONS_DATA: Record<string, { title: string; icon: string; color: str
   2. Junte fragmentos suficientes para trocar por um Ticket The Chosen na loja do clube.
   3. Existem "Quests Secretas" presenciais que são reveladas apenas durante os eventos ao vivo.
           `
+    },
+    'sat': {
+        title: 'Satélite',
+        icon: 'confirmation_number',
+        color: 'text-red-500',
+        rules: `
+  1. Torneios Satélites ocorrem regularmente para diversos eventos do calendário.
+  2. Cada satélite garante um número específico de vagas para o evento alvo.
+  3. Siga a estrutura de blinds e premiações definida para cada satélite individualmente.
+        `
     }
 };
 
@@ -346,10 +356,18 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                 {/* Subtle Top Gradient instead of centered blob */}
                 <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-primary/10 via-background-dark/50 to-transparent pointer-events-none"></div>
 
-                <div className="relative z-10 max-w-4xl mx-auto px-4 text-center mt-8">
-                    <h1 className="text-4xl sm:text-5xl md:text-7xl font-display font-black text-white mb-4 drop-shadow-lg">
-                        {content.header_title} <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">{prizeLabel}</span>
-                    </h1>
+                <div className="relative z-10 max-w-4xl mx-auto px-4 text-center mt-12 md:mt-16">
+                    <div className="flex flex-col items-center justify-center space-y-4 md:space-y-6 mb-8">
+                        <img
+                            src="/the-chosen-logo.png"
+                            alt="The Chosen"
+                            className="w-full max-w-[320px] sm:max-w-[480px] md:max-w-[600px] h-auto drop-shadow-[0_0_30px_rgba(255,255,255,0.1)] drop-shadow-lg animate-float"
+                        />
+                        <div className="h-1 w-24 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50 mb-2"></div>
+                        <span className="text-4xl sm:text-5xl md:text-8xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-primary via-cyan-400 to-accent tracking-[0.2em] transform -skew-x-6 drop-shadow-[0_0_15px_rgba(var(--primary-rgb),0.4)]">
+                            {prizeLabel}
+                        </span>
+                    </div>
                     <p className="text-lg md:text-2xl text-gray-400 font-light max-w-2xl mx-auto">
                         {content.header_subtitle}
                     </p>
@@ -456,32 +474,30 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                             }
 
                             const styles = getColors(cat.color || 'primary');
-                            const isMystery = cat.is_mystery && !isAdmin;
+                            const isBlocked = (cat.is_mystery || cat.is_hidden) && !isAdmin;
+                            const isMystery = cat.is_mystery;
 
                             return (
                                 <div key={cat.id} className={`relative bg-[#0f0a20] border border-white/5 p-4 sm:p-8 rounded-2xl ${styles.border} transition-all duration-300 hover:-translate-y-2 overflow-hidden flex flex-col h-full text-center items-center shadow-lg group duration-300`}>
                                     <div className={`absolute inset-0 bg-gradient-to-br ${styles.glow} to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
 
-                                    <div className={`absolute top-4 right-4 text-[10px] font-black uppercase px-2 py-1 rounded-full border ${isMystery ? 'bg-gray-800 border-white/10 text-gray-500' : styles.badge} z-20 flex items-center gap-1 shadow-lg`}>
-                                        {isAdmin && cat.is_mystery ? (
+                                    <div className={`absolute top-4 right-4 text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${isBlocked ? 'bg-black/40 border-white/10 text-gray-500' : `${styles.badge}`} z-20 flex items-center gap-1 shadow-lg`}>
+                                        {isBlocked ? (
                                             <span className="flex items-center gap-1">
-                                                <span className="text-white/80">?</span>
-                                                <span className="opacity-50">({cat.slots || 0})</span>
+                                                <span className="material-icons-outlined text-[10px]">lock</span>
+                                                {isAdmin && <span>({cat.slots || 0})</span>}
                                             </span>
-                                        ) : isMystery ? (
-                                            '?'
                                         ) : (
-                                            String(cat.slots || 0)
+                                            <span>{cat.slots || 0} Vagas</span>
                                         )}
-                                        {(!isMystery || (isAdmin && cat.is_mystery)) && <span>Vagas</span>}
                                     </div>
 
                                     <div className="relative z-10 flex flex-col items-center w-full h-full">
                                         {/* Ícone — sempre visível, adaptado para mistério */}
                                         <div className="mb-6 relative mt-4">
                                             <div className={`w-12 h-12 md:w-16 md:h-16 rounded-full bg-black border border-white/10 flex items-center justify-center relative z-10 transition-all duration-300`}>
-                                                <span className={`material-icons-outlined text-2xl md:text-3xl ${isMystery ? 'text-gray-600 animate-pulse' : styles.icon}`}>
-                                                    {isMystery ? 'help_outline' : cat.icon}
+                                                <span className={`material-icons-outlined text-2xl md:text-3xl ${isBlocked ? 'opacity-50 ' + styles.icon : styles.icon}`}>
+                                                    {isBlocked ? 'lock' : cat.icon}
                                                 </span>
                                             </div>
                                         </div>
@@ -498,7 +514,7 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                                         <div className="mt-auto flex gap-2">
                                             <button
                                                 onClick={() => {
-                                                    if (isMystery) return;
+                                                    if (isBlocked) return;
                                                     if (cat.id === 'vip' && onNavigate) {
                                                         onNavigate('vip');
                                                     } else if ((cat.id === 'rankings' || cat.id === 'ranking' || cat.id === 'rank') && onNavigate) {
@@ -509,12 +525,12 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                                                         setActiveRegulation(cat.id);
                                                     }
                                                 }}
-                                                className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${isMystery
+                                                className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${isBlocked
                                                     ? 'bg-white/5 border-white/5 text-gray-700 cursor-default'
                                                     : `bg-white/5 border-white/10 hover:border-white/30 ${styles.btn}`
                                                     }`}
                                             >
-                                                {isMystery ? (
+                                                {isBlocked ? (
                                                     <><span className="material-icons-outlined text-xs">lock</span> EM BREVE</>
                                                 ) : (
                                                     <>VER MAIS <span className="material-icons-outlined text-xs">add_circle</span></>

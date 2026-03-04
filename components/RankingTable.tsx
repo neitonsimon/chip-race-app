@@ -235,7 +235,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                 {/* Dynamic Tabs + Rules Button */}
                 <div className="flex flex-col items-center justify-center mb-12 gap-4">
                     <div className="bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/10 p-1 rounded-full flex flex-wrap justify-center backdrop-blur-md shadow-lg max-w-full overflow-x-auto">
-                        {rankings.map(ranking => (
+                        {[...rankings].sort((a, b) => (a.order || 0) - (b.order || 0)).map(ranking => (
                             <button
                                 key={ranking.id}
                                 onClick={() => setActiveRankingId(ranking.id)}
@@ -713,14 +713,25 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                 </button>
                             </div>
 
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nome do Ranking (Aba)</label>
-                                <input
-                                    type="text"
-                                    value={editingRanking.label}
-                                    onChange={e => setEditingRanking({ ...editingRanking, label: e.target.value })}
-                                    className="w-full bg-black/30 border border-white/10 rounded p-3 text-white focus:border-primary outline-none"
-                                />
+                            <div className="grid grid-cols-3 gap-4">
+                                <div className="col-span-2">
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nome do Ranking (Aba)</label>
+                                    <input
+                                        type="text"
+                                        value={editingRanking.label}
+                                        onChange={e => setEditingRanking({ ...editingRanking, label: e.target.value })}
+                                        className="w-full bg-black/30 border border-white/10 rounded p-3 text-white focus:border-primary outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Ordem (Aba)</label>
+                                    <input
+                                        type="number"
+                                        value={editingRanking.order || 0}
+                                        onChange={e => setEditingRanking({ ...editingRanking, order: parseInt(e.target.value) || 0 })}
+                                        className="w-full bg-black/30 border border-white/10 rounded p-3 text-white focus:border-primary outline-none"
+                                    />
+                                </div>
                             </div>
 
                             <div>

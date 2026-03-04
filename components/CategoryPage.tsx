@@ -89,7 +89,7 @@ export const CategoryPage: React.FC<CategoryPageProps> = ({ categoryId, category
                     </h2>
                     <div className="h-1 w-24 bg-gradient-to-r from-primary to-secondary rounded-full mb-8"></div>
 
-                    {category?.is_mystery && !isAdmin ? (
+                    {(category?.is_mystery || category?.is_hidden) && !isAdmin ? (
                         <div className="py-8 flex flex-col items-center justify-center">
                             <span className="material-icons-outlined text-6xl text-gray-600 mb-4 animate-pulse">lock</span>
                             <h3 className="text-xl font-display font-black text-gray-400 uppercase tracking-widest">Em Breve</h3>

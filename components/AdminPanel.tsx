@@ -348,7 +348,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         handleAddManualCash,
         handleAddManualOnline,
         isProductDisabled,
-        isTourItemDisabled
+        isTourItemDisabled,
+        getVipPrice
     } = useOperations({
         currentUser,
         selectedEvent,
@@ -784,6 +785,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             updatePrizePayout={handleSaveExpenses}
                             searchQuery={searchQuery}
                             handleCreateGhostUser={handleCreateGhostUser}
+                            getVipPrice={getVipPrice}
                         />
                     )}
 

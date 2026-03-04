@@ -107,7 +107,8 @@ serve(async (req: Request) => {
                     p_chipz_amount: 0,
                     p_description: `Depósito PIX (MP-${gatewayIdStr})`,
                     p_category: "wallet_deposit",
-                    p_metadata: { source: "MercadoPago Webhook", intent_id: intent.id, gateway_id: gatewayIdStr }
+                    p_metadata: { source: "MercadoPago Webhook", intent_id: intent.id, gateway_id: gatewayIdStr },
+                    p_lock_balance: true
                 });
 
                 if (rpcError || rpcData === false) {

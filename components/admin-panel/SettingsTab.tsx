@@ -206,6 +206,7 @@ export const SettingsTab: React.FC = () => {
             const { data: catData } = await supabase.from('ecosystem_categories').select('*').order('order', { ascending: true });
             if (catData) setCategories(catData);
 
+            let loadedVipPlans: any[] = [];
             data?.forEach(item => {
                 if (item.key === 'hero' || item.key === 'details' || item.key === 'faq') {
                     newContent[item.key] = item.value;
@@ -216,7 +217,7 @@ export const SettingsTab: React.FC = () => {
                 } else if (item.key === 'sponsorship_plans') {
                     setSponsorshipPlans(item.value);
                 } else if (item.key === 'vip_plans') {
-                    setVipPlans(item.value);
+                    loadedVipPlans = Array.isArray(item.value) ? item.value : [];
                 }
             });
 
@@ -257,11 +258,10 @@ export const SettingsTab: React.FC = () => {
                     };
                 });
 
-                const savedVipPlans = data?.find(item => item.key === 'vip_plans')?.value;
-                if (savedVipPlans && Array.isArray(savedVipPlans)) {
+                if (loadedVipPlans.length > 0) {
                     // Merge saved content_db with products (keep db_id and price in sync)
-                    const merged = savedVipPlans.map(savedPlan => {
-                        const productMatch = mappedFromProducts.find(mp => mp.id === savedPlan.id);
+                    const merged = loadedVipPlans.map(savedPlan => {
+                        const productMatch = mappedFromProducts.find(mp => mp.id === savedPlan.id || mp.db_id === savedPlan.db_id);
                         if (productMatch) {
                             return {
                                 ...savedPlan,
@@ -274,9 +274,18 @@ export const SettingsTab: React.FC = () => {
                         }
                         return savedPlan;
                     });
-                    setVipPlans(merged);
+
+                    // Add any products that are in the database but NOT in content_db
+                    const missingProducts = mappedFromProducts.filter(mp => !merged.find(m => m.db_id === mp.db_id || m.id === mp.id));
+                    setVipPlans([...merged, ...missingProducts]);
                 } else {
                     setVipPlans(mappedFromProducts);
+                }
+            } else {
+                if (loadedVipPlans.length > 0) {
+                    setVipPlans(loadedVipPlans);
+                } else {
+                    setVipPlans([...(appConfig.vip.plans as any[])]);
                 }
             }
 
@@ -316,18 +325,36 @@ export const SettingsTab: React.FC = () => {
 
             // 2. Sync with Products table (Price, Name, Description)
             for (const plan of vipPlans) {
-                if (plan.db_id) {
-                    const cleanPrice = parseFloat(plan.price.replace(',', '.'));
-                    const featuresTxt = plan.features.join('\n');
+                const priceStr = plan.price.toString().replace(/\./g, '').replace(',', '.');
+                const cleanPrice = parseFloat(priceStr);
+                const featuresTxt = plan.features.join('\n');
 
+                if (plan.db_id) {
                     await supabase.from('products').update({
                         name: plan.title,
                         price: cleanPrice,
                         price_unit: plan.period,
                         description: featuresTxt
                     }).eq('id', plan.db_id);
+                } else {
+                    const { data: newProd, error: insertErr } = await supabase.from('products').insert({
+                        name: plan.title,
+                        category: 'vip',
+                        price: cleanPrice,
+                        price_unit: plan.period,
+                        description: featuresTxt,
+                        active: true
+                    }).select().single();
+                    if (!insertErr && newProd) {
+                        plan.db_id = newProd.id;
+                    }
                 }
             }
+
+            // Re-save to content_db to update with the new db_ids
+            await supabase
+                .from('content_db')
+                .upsert({ key: 'vip_plans', value: vipPlans }, { onConflict: 'key' });
 
             alert('✅ Planos VIP sincronizados e publicados com sucesso!');
         } catch (err: any) {
@@ -1551,7 +1578,7 @@ export const SettingsTab: React.FC = () => {
                                                 disabled={isSavingContent}
                                                 className="bg-primary hover:bg-primary/90 text-white px-8 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-neon-pink"
                                             >
-                                                {isSavingContent ? 'Salvando...' : 'Salvar Alterações'}
+                                                {isSavingContent ? 'Salvando...' : 'Salvar Plano de Patrocínio'}
                                             </button>
                                         </div>
                                     </div>
@@ -1566,7 +1593,7 @@ export const SettingsTab: React.FC = () => {
                                 className="btn-save shadow-neon-blue w-full max-w-md py-6 h-auto"
                             >
                                 <span className="material-icons-outlined text-sm">cloud_sync</span>
-                                {isSavingContent ? 'Sincronizando...' : 'Publicar Alterações de Patrocínio'}
+                                {isSavingContent ? 'Salvando...' : 'Salvar Todos Planos de Patrocínio'}
                             </button>
                         </div>
                     </div>
@@ -1655,7 +1682,7 @@ export const SettingsTab: React.FC = () => {
                                             disabled={isSavingContent}
                                             className="bg-primary hover:bg-primary/90 text-white px-8 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-neon-pink"
                                         >
-                                            {isSavingContent ? 'Sincronizando...' : 'Salvar Todos'}
+                                            {isSavingContent ? 'Salvando...' : 'Salvar Plano VIP'}
                                         </button>
                                     </div>
                                 </div>
@@ -1669,7 +1696,7 @@ export const SettingsTab: React.FC = () => {
                                 className="btn-save shadow-neon-pink w-full max-w-md py-6 h-auto"
                             >
                                 <span className="material-icons-outlined text-sm">auto_awesome</span>
-                                {isSavingContent ? 'Publicando...' : 'Atualizar Todos Planos VIP'}
+                                {isSavingContent ? 'Salvando...' : 'Salvar Todos Planos VIP'}
                             </button>
                         </div>
                     </div>

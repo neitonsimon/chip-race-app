@@ -50,7 +50,7 @@ export function useOperations({
     };
 
     const fetchCommandItems = async (commandId: string) => {
-        const { data } = await supabase.from('command_items').select('*, products(name, category)').eq('command_id', commandId).order('created_at', { ascending: true });
+        const { data } = await supabase.from('command_items').select('*, products(name, category, price)').eq('command_id', commandId).order('created_at', { ascending: true });
         if (data) setCommandItems(data);
     };
 
@@ -200,6 +200,7 @@ export function useOperations({
     // Compute which one-time keys are already used in this command
     const getOneTimeKey = (product: any): string | null => {
         if (!product?.category) return null;
+        if (product.category === 'bar') return null;
         if (product.category === 'cash_game') return null;
         if (product.category === 'torneio' && !product.name.toLowerCase().includes('buy in') && !product.name.toLowerCase().includes('staff')) return null;
         return `${product.category}_${product.name}`.toLowerCase();
@@ -530,6 +531,7 @@ export function useOperations({
         handleAddManualCash,
         handleAddManualOnline,
         isProductDisabled,
-        isTourItemDisabled
+        isTourItemDisabled,
+        getVipPrice
     };
 }

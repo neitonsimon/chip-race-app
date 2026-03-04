@@ -12,7 +12,7 @@ interface TournamentCategoriesProps {
 
 // Mapeamento dos Regulamentos (Cópia fiel do conteúdo de TheChosenDetails para consistência)
 const REGULATIONS_DATA: Record<string, { title: string; icon: string; color: string; rules: string }> = {
-  'rankings': {
+  'rank': {
     title: 'Rankings 2026',
     icon: 'leaderboard',
     color: 'text-primary',
@@ -47,7 +47,7 @@ Pontos = (Total Jogadores / 4) + (Buy-in Gasto / 6) + (30 se Mesa Final) + (Prem
 4. Vagas ganhas via Jackpot são acumulativas para o sistema de Bônus de Stack.
         `
   },
-  'get-up': {
+  'get_up': {
     title: 'Get Up',
     icon: 'psychology',
     color: 'text-secondary',
@@ -57,7 +57,7 @@ Pontos = (Total Jogadores / 4) + (Buy-in Gasto / 6) + (30 se Mesa Final) + (Prem
 3. A lista de torneios Major é divulgada no início de cada mês no calendário oficial.
         `
   },
-  'sit-n-go': {
+  'sitngo': {
     title: 'Sit & Go Satélite',
     icon: 'satellite_alt',
     color: 'text-primary',
@@ -67,7 +67,7 @@ Pontos = (Total Jogadores / 4) + (Buy-in Gasto / 6) + (30 se Mesa Final) + (Prem
 3. A estrutura destes satélites é Turbo ou Hyper-Turbo.
         `
   },
-  'red-omaha': { // ID mapeado para "Last Longer" conforme App.tsx
+  'll': { // ID mapeado para "Last Longer" conforme App.tsx
     title: 'Last Longer',
     icon: 'timer',
     color: 'text-secondary',
@@ -77,7 +77,7 @@ Pontos = (Total Jogadores / 4) + (Buy-in Gasto / 6) + (30 se Mesa Final) + (Prem
 3. Válido apenas para quem se inscrever no Last Longer antes do início do torneio.
         `
   },
-  'ladies-league': { // ID mapeado para "Vip's" conforme App.tsx
+  'vip': { // ID mapeado para "Vip's" conforme App.tsx
     title: "Vip's",
     icon: 'diamond',
     color: 'text-primary',
@@ -97,7 +97,7 @@ Pontos = (Total Jogadores / 4) + (Buy-in Gasto / 6) + (30 se Mesa Final) + (Prem
 3. Regras específicas são divulgadas a cada campanha "Bet & Win".
         `
   },
-  'quests': {
+  'quest': {
     title: 'Quests',
     icon: 'explore',
     color: 'text-primary',
@@ -105,6 +105,16 @@ Pontos = (Total Jogadores / 4) + (Buy-in Gasto / 6) + (30 se Mesa Final) + (Prem
 1. Complete missões diárias no App (ex: Jogue 50 mãos, Ganhe com AA, etc) para ganhar fragmentos.
 2. Junte fragmentos suficientes para trocar por um Ticket The Chosen na loja do clube.
 3. Existem "Quests Secretas" presenciais que são reveladas apenas durante os eventos ao vivo.
+        `
+  },
+  'sat': {
+    title: 'Satélite',
+    icon: 'confirmation_number',
+    color: 'text-red-500',
+    rules: `
+1. Torneios Satélites ocorrem regularmente para diversos eventos do calendário.
+2. Cada satélite garante um número específico de vagas para o evento alvo.
+3. Siga a estrutura de blinds e premiações definida para cada satélite individualmente.
         `
   }
 };
@@ -343,10 +353,11 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
           {(showAll ? categories : categories.slice(0, 12))
-            .filter(cat => !cat.is_hidden)
+            .filter(cat => !cat.is_hidden || isAdmin) // Admins can always see hidden, and we will handle user visibility below
             .map((cat, index) => {
               const styles = getColors(cat.color);
-              const isMystery = cat.is_mystery && !isAdmin;
+              const isBlocked = (cat.is_mystery || cat.is_hidden) && !isAdmin;
+              const isMystery = cat.is_mystery; // Keep track if it's specifically mystery
 
               return (
                 <div
@@ -356,27 +367,24 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
                   <div className={`absolute inset-0 bg-gradient-to-br ${styles.glow} to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
 
                   {/* Vagas (Slots) Badge */}
-                  {(cat.slots > 0 || cat.is_mystery) && (
-                    <div className={`absolute top-3 right-3 text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${isMystery ? 'bg-gray-800 border-white/10 text-gray-500' : `${styles.badge}`} z-20 flex items-center gap-1 shadow-lg`}>
-                      {isAdmin && cat.is_mystery ? (
+                  {(cat.slots > 0 || isBlocked) && (
+                    <div className={`absolute top-3 right-3 text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${isBlocked ? 'bg-black/40 border-white/10 text-gray-500' : `${styles.badge}`} z-20 flex items-center gap-1 shadow-lg`}>
+                      {isBlocked ? (
                         <span className="flex items-center gap-1">
-                          <span className="text-white/80">?</span>
-                          <span className="opacity-50 font-bold">({cat.slots})</span>
+                          <span className="material-icons-outlined text-[10px]">lock</span>
+                          {isAdmin && <span>({cat.slots})</span>}
                         </span>
-                      ) : isMystery ? (
-                        <span className="text-gray-500">?</span>
                       ) : (
-                        String(cat.slots)
+                        <span>{cat.slots} Vagas</span>
                       )}
-                      {(!isMystery || (isAdmin && cat.is_mystery)) && <span>Vagas</span>}
                     </div>
                   )}
 
                   <div className="relative z-10 flex flex-col items-center text-center mt-2">
                     {/* Ícone — sempre visível, mas com estilo de mistério se ativado */}
-                    <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-b from-gray-800 to-black flex items-center justify-center mb-3 sm:mb-4 shadow-lg ${isMystery ? '' : styles.shadow} transition-shadow duration-300 border border-white/10`}>
-                      <span className={`material-icons-outlined text-2xl sm:text-3xl ${isMystery ? 'text-gray-600 animate-pulse' : styles.icon}`}>
-                        {isMystery ? 'help_outline' : cat.icon}
+                    <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-b from-gray-800 to-black flex items-center justify-center mb-3 sm:mb-4 shadow-lg ${isBlocked ? '' : styles.shadow} transition-shadow duration-300 border border-white/10`}>
+                      <span className={`material-icons-outlined text-2xl sm:text-3xl ${isBlocked ? 'opacity-50 ' + styles.icon : styles.icon}`}>
+                        {isBlocked ? 'lock' : cat.icon}
                       </span>
                     </div>
 
@@ -393,13 +401,13 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
                     </p>
 
                     <button
-                      onClick={(e) => !isMystery && handleOpenRegulation(e, cat.id)}
-                      className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1 sm:gap-2 bg-white/5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border shadow-sm ${isMystery
+                      onClick={(e) => !isBlocked && handleOpenRegulation(e, cat.id)}
+                      className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1 sm:gap-2 bg-white/5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border shadow-sm ${isBlocked
                         ? 'text-gray-700 border-white/5 cursor-default'
                         : `${styles.btn} hover:scale-105 cursor-pointer border-white/10 hover:border-white/30 group-hover:bg-white/10`
                         }`}
                     >
-                      {isMystery ? (
+                      {isBlocked ? (
                         <><span className="material-icons-outlined text-xs sm:text-sm">lock</span> Em Breve</>
                       ) : (
                         <>Ver <span className="hidden sm:inline">Mais</span> <span className="material-icons-outlined text-xs sm:text-sm">add_circle</span></>

@@ -159,6 +159,8 @@ export interface RankingPlayer {
   badges?: Badge[];
   suprema_nickname?: string;
   suprema_user_id?: string;
+  lockedBalanceBrl?: number;
+  balanceUnlockDate?: string;
 }
 
 export interface OnlineCreditRequest {
@@ -222,6 +224,7 @@ export interface RankingInstance {
   chipzReward?: number;
   badgeTemplateId?: string;
   positionPrizes?: Record<number, string>; // Rank-based manual prizes
+  order: number;
 }
 
 export interface TournamentResult {

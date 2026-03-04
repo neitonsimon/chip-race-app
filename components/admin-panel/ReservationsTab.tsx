@@ -9,7 +9,7 @@ interface ReservationsTabProps {
 
 export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
     const { currentUser } = useApp();
-    const [activeSubTab, setActiveSubTab] = useState<'tournaments' | 'credits' | 'merge'>('tournaments');
+    const [activeSubTab, setActiveSubTab] = useState<'tournaments' | 'credits' | 'merge' | 'withdrawals'>('tournaments');
 
     // Merge State
     const [ghostAccount, setGhostAccount] = useState<any | null>(null);
@@ -29,13 +29,65 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
     const [creditRequests, setCreditRequests] = useState<(OnlineCreditRequest & { profiles?: { name: string, avatar_url: string } })[]>([]);
     const [creditStatusFilter, setCreditStatusFilter] = useState<'pending' | 'completed' | 'cancelled'>('pending');
 
+    // Withdrawals State
+    const [withdrawals, setWithdrawals] = useState<any[]>([]);
+    const [withdrawalStatusFilter, setWithdrawalStatusFilter] = useState<'pending' | 'completed' | 'rejected'>('pending');
+
     useEffect(() => {
         if (activeSubTab === 'tournaments') {
             fetchReservations();
-        } else {
+        } else if (activeSubTab === 'credits') {
             fetchCreditRequests();
+        } else if (activeSubTab === 'withdrawals') {
+            fetchWithdrawals();
         }
     }, [activeSubTab]);
+
+    const fetchWithdrawals = async () => {
+        setIsLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('withdrawal_requests')
+                .select('*, profiles(name, avatar_url, numeric_id)')
+                .order('created_at', { ascending: false });
+            if (error) throw error;
+            setWithdrawals(data || []);
+        } catch (err) {
+            console.error("Erro ao buscar saques:", err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleProcessWithdrawal = async (id: string, action: 'completed' | 'rejected', amount?: number, userId?: string) => {
+        const actionLabel = action === 'completed' ? 'MARCAR COMO FEITO (Aprovar)' : 'DECLINAR (Recusar e Estornar)';
+        if (!window.confirm(`Tem certeza que deseja ${actionLabel} este saque?`)) return;
+
+        setIsLoading(true);
+        try {
+            if (action === 'rejected') {
+                // Devolver o saldo via RPC
+                const { error: rpcErr } = await supabase.rpc('secure_balance_transaction', {
+                    p_user_id: userId,
+                    p_brl_amount: amount,
+                    p_description: `Estorno de Saque Recusado`,
+                    p_category: 'wallet_deposit'
+                });
+                if (rpcErr) throw rpcErr;
+            }
+
+            const { error } = await supabase.from('withdrawal_requests').update({ status: action }).eq('id', id);
+            if (error) throw error;
+
+            alert(`Saque ${action === 'completed' ? 'Aprovado' : 'Recusado/Estornado'} com sucesso!`);
+            fetchWithdrawals();
+        } catch (err: any) {
+            console.error("Erro ao processar saque:", err);
+            alert("Erro: " + (err.message || "Falha ao processar solicitação."));
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const fetchReservations = async () => {
         setIsLoading(true);
@@ -232,6 +284,17 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
                         )}
                     </button>
                     <button
+                        onClick={() => setActiveSubTab('withdrawals')}
+                        className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeSubTab === 'withdrawals' ? 'bg-white dark:bg-white/10 text-primary shadow-sm' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-white/5'}`}
+                    >
+                        Saques
+                        {withdrawals.filter(w => w.status === 'pending').length > 0 && (
+                            <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                                {withdrawals.filter(w => w.status === 'pending').length}
+                            </span>
+                        )}
+                    </button>
+                    <button
                         onClick={() => setActiveSubTab('merge')}
                         className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeSubTab === 'merge' ? 'bg-white dark:bg-white/10 text-primary shadow-sm' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-white/5'}`}
                     >
@@ -288,6 +351,24 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
                             <option value="cancelled">Estornados / Editados</option>
                         </select>
                         <button onClick={fetchCreditRequests} className="p-2 bg-gray-100 dark:bg-white/5 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400">
+                        </button>
+                    </div>
+                </>
+            ) : activeSubTab === 'withdrawals' ? (
+                <>
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                        <select
+                            value={withdrawalStatusFilter}
+                            onChange={(e) => setWithdrawalStatusFilter(e.target.value as any)}
+                            className="bg-gray-50 dark:bg-black border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-primary flex-1 sm:w-48 appearance-none bg-no-repeat bg-[right_0.5rem_center] bg-[length:1.2em_1.2em]"
+                            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")` }}
+                        >
+                            <option value="pending">Pendentes</option>
+                            <option value="completed">Concluídos</option>
+                            <option value="rejected">Recusados (Estornados)</option>
+                        </select>
+                        <button onClick={fetchWithdrawals} className="p-2 bg-gray-100 dark:bg-white/5 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400">
+                            <span className="material-icons-outlined text-sm">refresh</span>
                         </button>
                     </div>
                 </>
@@ -444,6 +525,91 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
                                                     <span className="inline-flex items-center gap-1 bg-red-500/10 text-red-500 px-3 py-1.5 rounded-lg text-xs font-bold">
                                                         <span className="material-icons-outlined text-sm">cancel</span>
                                                         Cancelado
+                                                    </span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    ) : activeSubTab === 'withdrawals' ? (
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-gray-50 dark:bg-white/[0.02] border-b border-gray-200 dark:border-white/10">
+                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Jogador</th>
+                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Chave PIX</th>
+                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Valor Saque</th>
+                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Data</th>
+                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Ação do Admin</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-white/5">
+                                {isLoading ? (
+                                    <tr>
+                                        <td colSpan={5} className="p-8 text-center text-gray-500">Carregando...</td>
+                                    </tr>
+                                ) : withdrawals.filter(w => w.status === withdrawalStatusFilter).length === 0 ? (
+                                    <tr>
+                                        <td colSpan={5} className="p-8 text-center text-gray-500">Nenhum saque encontrado.</td>
+                                    </tr>
+                                ) : (
+                                    withdrawals.filter(w => w.status === withdrawalStatusFilter).map(req => (
+                                        <tr key={req.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
+                                            <td className="p-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-white/10 overflow-hidden shrink-0">
+                                                        {req.profiles?.avatar_url ? (
+                                                            <img src={req.profiles.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <span className="material-icons-outlined text-gray-400 w-full h-full flex items-center justify-center text-sm">person</span>
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-sm font-bold text-gray-900 dark:text-white">{req.profiles?.name || 'Desconhecido'}</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="p-4">
+                                                <div className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{req.pix_key}</div>
+                                                <div className="text-xs text-gray-500 uppercase">{req.pix_type}</div>
+                                                <div className="text-[10px] text-gray-400 mt-1">ID: {req.profiles?.numeric_id}</div>
+                                            </td>
+                                            <td className="p-4">
+                                                <span className="text-sm font-black text-gray-900 dark:text-white">R$ {req.amount.toFixed(2)}</span>
+                                            </td>
+                                            <td className="p-4 text-sm text-gray-500">
+                                                {new Date(req.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                            </td>
+                                            <td className="p-4 text-right">
+                                                {req.status === 'pending' ? (
+                                                    <div className="flex justify-end gap-2">
+                                                        <button
+                                                            onClick={() => handleProcessWithdrawal(req.id, 'completed', req.amount, req.user_id)}
+                                                            className="flex items-center gap-1 bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm"
+                                                            title="Marcar como enviado"
+                                                        >
+                                                            <span className="material-icons-outlined text-sm">check</span>
+                                                            Já Enviei
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleProcessWithdrawal(req.id, 'rejected', req.amount, req.user_id)}
+                                                            className="flex items-center gap-1 bg-gray-200 hover:bg-red-500 text-gray-700 hover:text-white dark:bg-white/10 dark:text-gray-300 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm"
+                                                            title="Recusar Saque e Estornar BRL"
+                                                        >
+                                                            <span className="material-icons-outlined text-sm">close</span>
+                                                            Recusar / Estornar
+                                                        </button>
+                                                    </div>
+                                                ) : req.status === 'completed' ? (
+                                                    <span className="inline-flex items-center gap-1 bg-green-500/10 text-green-500 px-3 py-1.5 rounded-lg text-xs font-bold">
+                                                        <span className="material-icons-outlined text-sm">check_circle</span>
+                                                        Processado
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1 bg-red-500/10 text-red-500 px-3 py-1.5 rounded-lg text-xs font-bold">
+                                                        <span className="material-icons-outlined text-sm">cancel</span>
+                                                        Estornado
                                                     </span>
                                                 )}
                                             </td>

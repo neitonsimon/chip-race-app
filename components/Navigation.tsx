@@ -123,7 +123,7 @@ export const Navigation: React.FC<NavigationProps> = ({
 
                                     {/* Dropdown Menu Desktop */}
                                     <div className="absolute top-full left-0 mt-2 w-56 bg-[#0a061d] border border-white/10 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform origin-top-left -translate-y-2 group-hover:translate-y-0 z-50 p-2 grid grid-cols-1 gap-1">
-                                        {categories.filter(c => !c.is_hidden || isAdmin).map(cat => (
+                                        {categories.filter(c => (!c.is_hidden && !c.is_mystery) || isAdmin).map(cat => (
                                             <button
                                                 key={cat.id}
                                                 onClick={() => handleCategoryClick(cat)}
@@ -131,10 +131,17 @@ export const Navigation: React.FC<NavigationProps> = ({
                                             >
                                                 <span className={`material-icons-outlined text-sm ${cat.color === 'primary' ? 'text-primary' :
                                                     cat.color === 'secondary' ? 'text-secondary' :
-                                                        cat.color === 'cyan' ? 'text-cyan-400' : 'text-pink-400'
+                                                        cat.color === 'cyan' ? 'text-cyan-400' :
+                                                            cat.color === 'pink' ? 'text-pink-400' :
+                                                                cat.color === 'amber' ? 'text-amber-400' :
+                                                                    cat.color === 'orange' ? 'text-orange-400' :
+                                                                        cat.color === 'emerald' ? 'text-emerald-400' :
+                                                                            cat.color === 'blue' ? 'text-blue-400' :
+                                                                                cat.color === 'purple' ? 'text-purple-400' :
+                                                                                    cat.color === 'red' ? 'text-red-400' : 'text-primary'
                                                     }`}>{cat.icon}</span>
                                                 <span className="text-gray-300 group-hover/item:text-white truncate font-medium">{cat.title}</span>
-                                                {cat.is_mystery && !isAdmin && (
+                                                {cat.is_mystery && isAdmin && (
                                                     <span className="material-icons-outlined text-[10px] text-gray-500 ml-auto flex-shrink-0">lock</span>
                                                 )}
                                             </button>
@@ -360,7 +367,7 @@ export const Navigation: React.FC<NavigationProps> = ({
 
                 {/* Mobile Menu */}
                 {mobileMenuOpen && (
-                    <div className="md:hidden bg-background-dark/95 backdrop-blur-xl border-b border-white/10">
+                    <div className="md:hidden bg-background-dark/95 backdrop-blur-xl border-b border-white/10 max-h-[calc(100vh-5rem)] overflow-y-auto custom-scrollbar">
                         <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
                             <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase tracking-widest bg-black/50 mx-2 rounded-md mb-2">
                                 Menu Principal
@@ -388,7 +395,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                                     Ecossistema
                                 </div>
                                 <div className="grid grid-cols-2 gap-2 px-2 pb-2">
-                                    {categories.filter(c => !c.is_hidden || isAdmin).map(cat => (
+                                    {categories.filter(c => (!c.is_hidden && !c.is_mystery) || isAdmin).map(cat => (
                                         <button
                                             key={`mob-${cat.id}`}
                                             onClick={() => handleCategoryClick(cat)}
@@ -396,7 +403,14 @@ export const Navigation: React.FC<NavigationProps> = ({
                                         >
                                             <span className={`material-icons-outlined text-sm ${cat.color === 'primary' ? 'text-primary' :
                                                 cat.color === 'secondary' ? 'text-secondary' :
-                                                    cat.color === 'cyan' ? 'text-cyan-400' : 'text-pink-400'
+                                                    cat.color === 'cyan' ? 'text-cyan-400' :
+                                                        cat.color === 'pink' ? 'text-pink-400' :
+                                                            cat.color === 'amber' ? 'text-amber-400' :
+                                                                cat.color === 'orange' ? 'text-orange-400' :
+                                                                    cat.color === 'emerald' ? 'text-emerald-400' :
+                                                                        cat.color === 'blue' ? 'text-blue-400' :
+                                                                            cat.color === 'purple' ? 'text-purple-400' :
+                                                                                cat.color === 'red' ? 'text-red-400' : 'text-primary'
                                                 }`}>{cat.icon}</span>
                                             <span className="text-gray-300 text-xs font-medium truncate w-full">{cat.title}</span>
                                         </button>

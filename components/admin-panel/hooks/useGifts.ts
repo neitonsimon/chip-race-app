@@ -157,7 +157,8 @@ export function useGifts({ isAdmin, currentUser, badgeTemplates, updatePlayerBal
                             p_chipz_amount: giftType === 'chipz' ? finalAmount : 0,
                             p_description: finalDescription,
                             p_category: 'gift',
-                            p_metadata: { admin_id: currentUser.id }
+                            p_metadata: { admin_id: currentUser.id },
+                            p_lock_balance: true
                         });
                         updatePlayerBalanceLocally(uid, finalAmount, giftType);
 

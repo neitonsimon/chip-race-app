@@ -238,20 +238,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                     {canClaimDaily ? 'Recompensa Disponível!' : 'Volte amanhã'}
                                 </h4>
                                 <p className="text-sm text-gray-500 mb-4 max-w-[200px]">
-                                    {canClaimDaily
-                                        ? 'Resgate agora seu bônus diário de XP e itens exclusivos.'
-                                        : 'Você já resgatou seu bônus de hoje. O reset ocorre às 21:00.'}
+                                    Esta funcionalidade estará disponível em breve com recompensas exclusivas!
                                 </p>
 
                                 <button
-                                    onClick={() => setShowClaimModal(true)}
-                                    disabled={!canClaimDaily}
-                                    className={`w-full py-3 rounded-xl font-bold uppercase tracking-widest transition-all ${canClaimDaily
-                                        ? 'bg-gradient-to-r from-primary to-accent text-white hover:shadow-neon-pink hover:scale-105'
-                                        : 'bg-white/5 text-gray-600 cursor-not-allowed'
-                                        }`}
+                                    disabled={true}
+                                    className="w-full py-3 rounded-xl font-bold uppercase tracking-widest transition-all bg-white/5 text-gray-600 cursor-not-allowed"
                                 >
-                                    {canClaimDaily ? 'RESGATAR BÔNUS' : 'JÁ RESGATADO'}
+                                    EM BREVE
                                 </button>
                             </>
                         ) : (

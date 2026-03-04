@@ -37,7 +37,8 @@ export function useTopUp({ selectedCommand, currentUser, isAdmin, updatePlayerBa
                 p_chipz_amount: chipzBonus,
                 p_description: `Recarga de crédito via Admin`,
                 p_category: 'wallet_deposit',
-                p_metadata: { admin_id: currentUser.id, exp_bonus: expBonus }
+                p_metadata: { admin_id: currentUser.id, exp_bonus: expBonus },
+                p_lock_balance: true
             });
             if (topUpErr) { alert('Erro ao processar recarga: ' + topUpErr.message); return; }
 

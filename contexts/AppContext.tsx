@@ -150,7 +150,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             ]);
 
             if (rankingsData) {
-                setRankings(rankingsData.map(r => ({
+                const mappedRankings = rankingsData.map(r => ({
                     id: r.id,
                     label: r.label,
                     description: r.description,
@@ -165,8 +165,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     chipzReward: r.chipz_reward,
                     badgeTemplateId: r.badge_template_id,
                     positionPrizes: r.position_prizes || {},
+                    order: r.order || 0,
                     players: []
-                })));
+                }));
+                // Sort by order ascending
+                setRankings(mappedRankings.sort((a, b) => a.order - b.order));
             }
 
             if (templatesData) setBadgeTemplates(templatesData);
@@ -290,7 +293,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const fetchProfile = async (userId: string) => {
         try {
-            const { data, error } = await supabase.from('profiles').select('*, total_pending_debt').eq('id', userId).single();
+            const { data, error } = await supabase.from('profiles').select('*, total_pending_debt, locked_balance_brl, balance_unlock_date').eq('id', userId).single();
             if (error) throw error;
             if (data) {
                 const userIsAdmin = data.role === 'admin' || data.role === 'staff';
@@ -315,6 +318,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     vipExpiresAt: data.vip_expires_at || null,
                     balanceBrl: data.balance_brl ? Number(data.balance_brl) : 0,
                     balanceChipz: data.balance_chipz || 0,
+                    lockedBalanceBrl: data.locked_balance_brl ? Number(data.locked_balance_brl) : 0,
+                    balanceUnlockDate: data.balance_unlock_date || null,
                     totalPendingDebt: data.total_pending_debt || 0,
                     debtLimitBrl: data.debt_limit_brl || 0,
                     isVerified: data.is_verified || false,
@@ -936,7 +941,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const ranking = rankings.find(r => r.id === rankingId);
         if (!ranking) return;
         const fullRanking = { ...ranking, ...updates };
-        setRankings(prev => prev.map(r => r.id === rankingId ? fullRanking : r));
+        setRankings(prev =>
+            prev.map(r => r.id === rankingId ? fullRanking : r)
+                .sort((a, b) => (a.order || 0) - (b.order || 0))
+        );
         if (isAdmin) {
             const dbData: any = {
                 label: fullRanking.label,
@@ -951,7 +959,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 brl_reward: fullRanking.brlReward,
                 chipz_reward: fullRanking.chipzReward,
                 badge_template_id: fullRanking.badgeTemplateId,
-                position_prizes: fullRanking.positionPrizes
+                position_prizes: fullRanking.positionPrizes,
+                order: fullRanking.order || 0
             };
             await supabase.from('rankings').upsert({ id: rankingId, ...dbData }, { onConflict: 'id' });
         }
@@ -982,15 +991,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     const handleAddRanking = async () => {
-        const newR: RankingInstance = { id: `custom-${Date.now()}`, label: 'Novo Ranking', description: '', rules: '', players: [] };
+        const newR: RankingInstance = { id: `custom-${Date.now()}`, label: 'Novo Ranking', description: '', rules: '', order: 0, players: [] };
         setRankings(prev => [...prev, newR]);
         if (isAdmin) handleUpdateRankingMeta(newR.id, newR);
     };
 
     const handleDeleteRanking = async (id: string) => {
-        if (!window.confirm('Excluir ranking?')) return;
+        if (!window.confirm('Excluir ranking permanentemente? Esta ação não pode ser desfeita.')) return;
         setRankings(prev => prev.filter(r => r.id !== id));
-        if (isAdmin && !id.startsWith('custom-')) await supabase.from('rankings').delete().eq('id', id);
+        if (isAdmin) {
+            const { error } = await supabase.from('rankings').delete().eq('id', id);
+            if (error) {
+                console.error('Error deleting ranking:', error);
+                alert('Erro ao excluir ranking do banco de dados.');
+            }
+        }
     };
 
     const handleAwardBadge = async (badge: { user_id: string; badge_template_id?: string; title: string; description?: string; icon?: string; color?: string }) => {
