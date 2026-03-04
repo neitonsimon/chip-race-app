@@ -76,7 +76,8 @@ export const Navigation: React.FC<NavigationProps> = ({
 
     const handleCategoryClick = (cat: any) => {
         setMobileMenuOpen(false);
-        if (cat.id === 'rankings') return onNavigate('ranking');
+        if (cat.id === 'bar') return; // Link do bar não deve levar a lugar algum
+        if (cat.id === 'ranking' || cat.id === 'rankings') return onNavigate('ranking');
         if (cat.id === 'ladies-league' || cat.id === 'vip') return onNavigate('vip');
         if (cat.id === 'online' || cat.id === 'online-credits') return onNavigate('online-credits');
         onNavigate('category-' + cat.id);
@@ -123,11 +124,11 @@ export const Navigation: React.FC<NavigationProps> = ({
 
                                     {/* Dropdown Menu Desktop */}
                                     <div className="absolute top-full left-0 mt-2 w-56 bg-[#0a061d] border border-white/10 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform origin-top-left -translate-y-2 group-hover:translate-y-0 z-50 p-2 grid grid-cols-1 gap-1">
-                                        {categories.filter(c => (!c.is_hidden && !c.is_mystery) || isAdmin).map(cat => (
+                                        {categories.filter(c => (!c.is_hidden && !c.is_mystery)).map(cat => (
                                             <button
                                                 key={cat.id}
                                                 onClick={() => handleCategoryClick(cat)}
-                                                className="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-white/10 transition-colors flex items-center gap-2 group/item"
+                                                className={`w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-white/10 transition-colors flex items-center gap-2 group/item ${cat.id === 'bar' ? 'cursor-default' : 'cursor-pointer'}`}
                                             >
                                                 <span className={`material-icons-outlined text-sm ${cat.color === 'primary' ? 'text-primary' :
                                                     cat.color === 'secondary' ? 'text-secondary' :
@@ -141,9 +142,6 @@ export const Navigation: React.FC<NavigationProps> = ({
                                                                                     cat.color === 'red' ? 'text-red-400' : 'text-primary'
                                                     }`}>{cat.icon}</span>
                                                 <span className="text-gray-300 group-hover/item:text-white truncate font-medium">{cat.title}</span>
-                                                {cat.is_mystery && isAdmin && (
-                                                    <span className="material-icons-outlined text-[10px] text-gray-500 ml-auto flex-shrink-0">lock</span>
-                                                )}
                                             </button>
                                         ))}
                                     </div>
@@ -395,11 +393,11 @@ export const Navigation: React.FC<NavigationProps> = ({
                                     Ecossistema
                                 </div>
                                 <div className="grid grid-cols-2 gap-2 px-2 pb-2">
-                                    {categories.filter(c => (!c.is_hidden && !c.is_mystery) || isAdmin).map(cat => (
+                                    {categories.filter(c => (!c.is_hidden && !c.is_mystery)).map(cat => (
                                         <button
                                             key={`mob-${cat.id}`}
                                             onClick={() => handleCategoryClick(cat)}
-                                            className="w-full text-left px-3 py-3 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 transition-colors flex flex-col gap-1 items-start"
+                                            className={`w-full text-left px-3 py-3 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 transition-colors flex flex-col gap-1 items-start ${cat.id === 'bar' ? 'cursor-default' : 'cursor-pointer'}`}
                                         >
                                             <span className={`material-icons-outlined text-sm ${cat.color === 'primary' ? 'text-primary' :
                                                 cat.color === 'secondary' ? 'text-secondary' :
