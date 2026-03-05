@@ -135,7 +135,7 @@ export function useOperations({
                 p_brl_amount: refundAmount,
                 p_chipz_amount: 0,
                 p_description: `Estorno/Reembolso por reabertura de comanda ${cmd.id.slice(0, 8)}`,
-                p_category: 'wallet_deposit',
+                p_category: 'refund',
                 p_metadata: { command_id: cmd.id, event_id: cmd.event_id }
             });
             if (error) { alert('Erro ao processar estorno/reembolso: ' + error.message); return; }
