@@ -71,7 +71,7 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
                     p_user_id: userId,
                     p_brl_amount: amount,
                     p_description: `Estorno de Saque Recusado`,
-                    p_category: 'wallet_deposit'
+                    p_category: 'refund'
                 });
                 if (rpcErr) throw rpcErr;
             }

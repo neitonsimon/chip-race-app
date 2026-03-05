@@ -108,7 +108,7 @@ export function useCheckout({
                         p_brl_amount: profitCredit,
                         p_chipz_amount: 0,
                         p_description: `Lucro Cash Game — Comanda encerrada${profitCash > 0 ? ` (R$ ${profitCash.toFixed(2)} pago em mãos)` : ''}`,
-                        p_category: 'wallet_deposit',
+                        p_category: 'command_profit',
                         p_metadata: {
                             command_id: selectedCommand.id,
                             event_id: selectedCommand.event_id,
