@@ -576,7 +576,7 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
                                                 <div className="text-[10px] text-gray-400 mt-1">ID: {req.profiles?.numeric_id}</div>
                                             </td>
                                             <td className="p-4">
-                                                <span className="text-sm font-black text-gray-900 dark:text-white">R$ {req.amount.toFixed(2)}</span>
+                                                <span className="text-sm font-black text-gray-900 dark:text-white">R$ {(req.amount_brl || 0).toFixed(2)}</span>
                                             </td>
                                             <td className="p-4 text-sm text-gray-500">
                                                 {new Date(req.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
@@ -585,7 +585,7 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
                                                 {req.status === 'pending' ? (
                                                     <div className="flex justify-end gap-2">
                                                         <button
-                                                            onClick={() => handleProcessWithdrawal(req.id, 'completed', req.amount, req.user_id)}
+                                                            onClick={() => handleProcessWithdrawal(req.id, 'completed', req.amount_brl, req.user_id)}
                                                             className="flex items-center gap-1 bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm"
                                                             title="Marcar como enviado"
                                                         >
@@ -593,7 +593,7 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
                                                             Já Enviei
                                                         </button>
                                                         <button
-                                                            onClick={() => handleProcessWithdrawal(req.id, 'rejected', req.amount, req.user_id)}
+                                                            onClick={() => handleProcessWithdrawal(req.id, 'rejected', req.amount_brl, req.user_id)}
                                                             className="flex items-center gap-1 bg-gray-200 hover:bg-red-500 text-gray-700 hover:text-white dark:bg-white/10 dark:text-gray-300 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm"
                                                             title="Recusar Saque e Estornar BRL"
                                                         >
