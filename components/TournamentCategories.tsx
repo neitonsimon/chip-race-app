@@ -352,8 +352,16 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
-          {(showAll ? categories : categories.slice(0, 12))
-            .filter(cat => !cat.is_hidden || isAdmin) // Admins can always see hidden, and we will handle user visibility below
+          {categories
+            .filter(cat => !cat.is_hidden || isAdmin)
+            .sort((a, b) => {
+              const aBlocked = a.is_mystery || a.is_hidden;
+              const bBlocked = b.is_mystery || b.is_hidden;
+              if (aBlocked && !bBlocked) return 1;
+              if (!aBlocked && bBlocked) return -1;
+              return 0;
+            })
+            .slice(0, showAll ? categories.length : 12)
             .map((cat, index) => {
               const styles = getColors(cat.color);
               const isBlocked = (cat.is_mystery || cat.is_hidden) && !isAdmin;
