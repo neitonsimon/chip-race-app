@@ -219,6 +219,14 @@ export function useCheckout({
             });
 
             // 5. Audit logs for sensitive ops
+            await supabase.from('audit_logs').insert({
+                admin_id: currentUser.id,
+                action_type: 'COMMAND_CHECKOUT',
+                description: `Admin fechou a comanda ${selectedCommand.id.slice(0, 8)}. Total consumido: R$ ${total.toFixed(2)}.`,
+                target_user_id: selectedCommand.user_id,
+                details: { total, discount, debt, chips, cashOut, profit, command_id: selectedCommand.id }
+            });
+
             if (discount > 0) {
                 await supabase.from('audit_logs').insert({
                     admin_id: currentUser.id,

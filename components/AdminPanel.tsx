@@ -958,6 +958,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                 setEditingClosedCommand={setEditingClosedCommand}
                 handleUpdateCommandTotal={async (id, newTotal) => {
                     await supabase.from('commands').update({ total_brl: newTotal }).eq('id', id);
+                    await supabase.from('audit_logs').insert({
+                        admin_id: currentUser.id,
+                        action_type: 'COMMAND_EDIT',
+                        description: `Admin editou o total da comanda ${id.slice(0, 8)} fechada para R$ ${newTotal.toFixed(2)}`,
+                        target_user_id: editingClosedCommand?.user_id,
+                        details: { command_id: id, newTotal }
+                    });
                     if (selectedEvent) { fetchClosedCommands(selectedEvent.id); fetchReport(selectedEvent.id); }
                 }}
             />

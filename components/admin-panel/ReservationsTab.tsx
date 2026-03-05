@@ -79,6 +79,14 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
             const { error } = await supabase.from('withdrawal_requests').update({ status: action }).eq('id', id);
             if (error) throw error;
 
+            await supabase.from('audit_logs').insert({
+                admin_id: currentUser.id,
+                action_type: action === 'completed' ? 'WITHDRAWAL_APPROVED' : 'WITHDRAWAL_REJECTED',
+                description: `Admin ${action === 'completed' ? 'aprovou' : 'recusou'} saque de R$ ${(amount || 0).toFixed(2)}`,
+                target_user_id: userId,
+                details: { request_id: id, amount }
+            });
+
             alert(`Saque ${action === 'completed' ? 'Aprovado' : 'Recusado/Estornado'} com sucesso!`);
             fetchWithdrawals();
         } catch (err: any) {
@@ -182,6 +190,15 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
             if (error) throw error;
 
             if (data && data.success) {
+                const req = creditRequests.find(r => r.id === id);
+                await supabase.from('audit_logs').insert({
+                    admin_id: currentUser.id,
+                    action_type: action === 'complete' ? 'ONLINE_CREDIT_APPROVED' : 'ONLINE_CREDIT_REJECTED',
+                    description: `Admin ${action === 'complete' ? 'aprovou' : 'recusou e estornou'} pedido de crédito online de R$ ${(req?.amount_brl || 0).toFixed(2)}`,
+                    target_user_id: req?.user_id || null,
+                    details: { request_id: id, action: action }
+                });
+
                 alert(`Pedido ${action === 'complete' ? 'Aprovado' : 'Cancelado (Estornado)'} com sucesso!`);
                 fetchCreditRequests(); // Refresh data
             } else {
@@ -236,6 +253,14 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
                 if (data.error) throw new Error(data.error);
                 throw new Error('Erro desconhecido ao mesclar contas. Verifique se a conta não é a sua ou um admin.');
             }
+
+            await supabase.from('audit_logs').insert({
+                admin_id: currentUser.id,
+                action_type: 'ACCOUNT_MERGE',
+                description: `Admin uniu a conta fantasma "${ghostAccount.name}" (ID: ${ghostAccount.numeric_id}) -> conta real "${realAccount.name}" (ID: ${realAccount.numeric_id})`,
+                target_user_id: realAccount.id,
+                details: { ghost_id: ghostAccount.id, real_id: realAccount.id }
+            });
 
             alert('✅ Contas mescladas com sucesso!');
             setGhostAccount(null);

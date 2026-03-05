@@ -78,6 +78,14 @@ export function useOperations({
             const { error: updErr } = await supabase.from('commands').update({ total_brl: newTotal }).eq('id', currentCmd.id);
             if (updErr) throw updErr;
 
+            await supabase.from('audit_logs').insert({
+                admin_id: currentUser.id,
+                action_type: 'COMMAND_ITEM_DELETED',
+                description: `Admin cancelou/deletou o item "${item.products?.name || item.notes || 'Item'}" (R$ ${itemPrice.toFixed(2)}) da comanda ${currentCmd.id.slice(0, 8)}.`,
+                target_user_id: currentCmd.user_id,
+                details: { item_id: item.id, item_price: itemPrice, command_id: currentCmd.id }
+            });
+
             // 3. Atualizar estado local
             if (selectedCommand?.id === currentCmd.id) {
                 const updItems = commandItems.filter(i => i.id !== item.id);
@@ -170,6 +178,14 @@ export function useOperations({
             content: msg,
             category: 'system',
             is_read: false
+        });
+
+        await supabase.from('audit_logs').insert({
+            admin_id: currentUser.id,
+            action_type: 'COMMAND_REOPENED',
+            description: `Admin reabriu a comanda ${cmd.id.slice(0, 8)} de ${cmd.profiles?.name} (Estorno/Reembolso de R$ ${refundAmount.toFixed(2)})`,
+            target_user_id: cmd.user_id,
+            details: { command_id: cmd.id, refundAmount }
         });
 
         if (selectedEvent) { fetchOpenCommands(selectedEvent.id); fetchClosedCommands(selectedEvent.id); }
@@ -428,6 +444,14 @@ export function useOperations({
             const newTotal = Number(selectedCommand.total_brl) + amount;
             await supabase.from('commands').update({ total_brl: newTotal }).eq('id', selectedCommand.id);
 
+            await supabase.from('audit_logs').insert({
+                admin_id: currentUser.id,
+                action_type: 'MANUAL_SALE_CASH_GAME',
+                description: `Admin adicionou R$ ${amount.toFixed(2)} de Cash Manual na comanda ${selectedCommand.id.slice(0, 8)}`,
+                target_user_id: selectedCommand.user_id,
+                details: { amount, command_id: selectedCommand.id }
+            });
+
             const upd = openCommands.map(c => c.id === selectedCommand.id ? { ...c, total_brl: newTotal } : c);
             setOpenCommands(upd);
             setSelectedCommand({ ...selectedCommand, total_brl: newTotal });
@@ -464,6 +488,14 @@ export function useOperations({
 
             const newTotal = Number(selectedCommand.total_brl) + amount;
             await supabase.from('commands').update({ total_brl: newTotal }).eq('id', selectedCommand.id);
+
+            await supabase.from('audit_logs').insert({
+                admin_id: currentUser.id,
+                action_type: 'MANUAL_SALE_ONLINE_CREDIT',
+                description: `Admin adicionou R$ ${amount.toFixed(2)} de Fichas Online Manual na comanda ${selectedCommand.id.slice(0, 8)}`,
+                target_user_id: selectedCommand.user_id,
+                details: { amount, command_id: selectedCommand.id }
+            });
 
             const upd = openCommands.map(c => c.id === selectedCommand.id ? { ...c, total_brl: newTotal } : c);
             setOpenCommands(upd);
