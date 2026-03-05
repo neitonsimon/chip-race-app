@@ -199,7 +199,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
 
                 <div className="text-center mb-10 group relative">
                     <h2 className="text-2xl sm:text-4xl font-display font-black text-gray-900 dark:text-white tracking-wider uppercase">
-                        Soberano <span className="text-primary text-shadow-glow">Ranking</span>
+                        <span className="text-primary text-shadow-glow">RANKING</span>
                     </h2>
                     <div className="h-1 w-24 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full mt-4"></div>
                     <p className="text-gray-500 dark:text-gray-400 mt-4 font-light tracking-wide uppercase text-sm">

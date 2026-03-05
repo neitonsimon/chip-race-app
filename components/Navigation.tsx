@@ -76,8 +76,8 @@ export const Navigation: React.FC<NavigationProps> = ({
 
     const handleCategoryClick = (cat: any) => {
         setMobileMenuOpen(false);
-        if (cat.id === 'bar') return; // Link do bar não deve levar a lugar algum
-        if (cat.id === 'ranking' || cat.id === 'rankings') return onNavigate('ranking');
+        if (cat.id === 'bar' || cat.title.toLowerCase() === 'bar') return; // Link do bar não deve levar a lugar algum
+        if (cat.id === 'ranking' || cat.id === 'rankings' || cat.title.toLowerCase().includes('ranking')) return onNavigate('ranking');
         if (cat.id === 'ladies-league' || cat.id === 'vip') return onNavigate('vip');
         if (cat.id === 'online' || cat.id === 'online-credits') return onNavigate('online-credits');
         onNavigate('category-' + cat.id);
