@@ -199,7 +199,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
 
                 <div className="text-center mb-10 group relative">
                     <h2 className="text-2xl sm:text-4xl font-display font-black text-gray-900 dark:text-white tracking-wider uppercase">
-                        <span className="text-primary text-shadow-glow">RANKING</span>
+                        <span className="text-primary text-shadow-glow">{activeRanking?.label || 'RANKING'}</span>
                     </h2>
                     <div className="h-1 w-24 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full mt-4"></div>
                     <p className="text-gray-500 dark:text-gray-400 mt-4 font-light tracking-wide uppercase text-sm">
@@ -744,42 +744,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                 />
                             </div>
 
-                            <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-4">
-                                <h4 className="text-sm font-bold text-secondary mb-1 uppercase tracking-wider">Recompensas de 1º Lugar</h4>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Prêmio em R$</label>
-                                        <input
-                                            type="number"
-                                            value={editingRanking.brlReward || 0}
-                                            onChange={e => setEditingRanking({ ...editingRanking, brlReward: parseFloat(e.target.value) || 0 })}
-                                            className="w-full bg-black/30 border border-white/10 rounded p-2 text-white focus:border-secondary outline-none"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Prêmio em Chipz</label>
-                                        <input
-                                            type="number"
-                                            value={editingRanking.chipzReward || 0}
-                                            onChange={e => setEditingRanking({ ...editingRanking, chipzReward: parseInt(e.target.value) || 0 })}
-                                            className="w-full bg-black/30 border border-white/10 rounded p-2 text-white focus:border-secondary outline-none"
-                                        />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Medalha Automática</label>
-                                    <select
-                                        value={editingRanking.badgeTemplateId || ''}
-                                        onChange={e => setEditingRanking({ ...editingRanking, badgeTemplateId: e.target.value })}
-                                        className="w-full bg-black/30 border border-white/10 rounded p-2 text-white focus:border-secondary outline-none"
-                                    >
-                                        <option value="">Nenhuma</option>
-                                        {badgeTemplates.map(b => (
-                                            <option key={b.id} value={b.id}>{b.title}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
+
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
