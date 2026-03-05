@@ -22,6 +22,16 @@ interface RankingTableProps {
 
 type SimType = 'weekly' | 'monthly' | 'special';
 
+const getRankingStyle = (label: string) => {
+    const uLabel = label.toUpperCase();
+    if (uLabel.includes('ALPHA')) return { gradient: 'from-[#00E5FF] via-[#00A2FF] to-[#00E5FF]', shadow: 'text-shadow-cyan' };
+    if (uLabel.includes('ANUAL') || uLabel.includes('ANNUAL')) return { gradient: 'from-[#FFD700] via-[#FDB931] to-[#FFD700]', shadow: 'text-shadow-gold' };
+    if (uLabel.includes('MENSAL') || uLabel.includes('MONTHLY')) return { gradient: 'from-[#A855F7] via-[#D8B4FE] to-[#A855F7]', shadow: 'text-shadow-purple' };
+    if (uLabel.includes('SEMANAL') || uLabel.includes('WEEKLY')) return { gradient: 'from-[#22C55E] via-[#4ADE80] to-[#22C55E]', shadow: 'text-shadow-green' };
+    if (uLabel.includes('ESPECIAL') || uLabel.includes('SPECIAL')) return { gradient: 'from-[#EF4444] via-[#F87171] to-[#EF4444]', shadow: 'text-shadow-red' };
+    return { gradient: 'from-primary via-accent to-primary', shadow: 'text-shadow-cyan' };
+};
+
 export const RankingTable: React.FC<RankingTableProps> = ({
     isAdmin,
     onSelectPlayer,
@@ -49,6 +59,8 @@ export const RankingTable: React.FC<RankingTableProps> = ({
     const [editingRanking, setEditingRanking] = useState<RankingInstance | null>(null);
     const [justification, setJustification] = useState('');
 
+
+
     // --- SIMULATOR STATE ---
     const [simType, setSimType] = useState<string>('weekly');
     const [simPlayers, setSimPlayers] = useState<number>(0);
@@ -68,6 +80,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
     }, [rankings, activeRankingId]);
 
     const activeRanking = rankings.find(r => r.id === activeRankingId) || rankings[0];
+    const rankingStyle = getRankingStyle(activeRanking?.label || 'RANKING');
 
     // Reset simulator type based on ranking category
     useEffect(() => {
@@ -198,10 +211,12 @@ export const RankingTable: React.FC<RankingTableProps> = ({
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
 
                 <div className="text-center mb-10 group relative">
-                    <h2 className="text-2xl sm:text-4xl font-display font-black text-gray-900 dark:text-white tracking-wider uppercase">
-                        <span className="text-primary text-shadow-glow">{activeRanking?.label || 'RANKING'}</span>
+                    <h2 className="text-3xl sm:text-5xl font-display font-black tracking-[0.1em] uppercase">
+                        <span className={`title-shimmer bg-gradient-to-r ${rankingStyle.gradient} ${rankingStyle.shadow}`}>
+                            {activeRanking?.label || 'RANKING'}
+                        </span>
                     </h2>
-                    <div className="h-1 w-24 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full mt-4"></div>
+                    <div className={`h-1.5 w-32 mx-auto rounded-full mt-4 bg-gradient-to-r ${rankingStyle.gradient} bar-shimmer shadow-lg shadow-black/20`}></div>
                     <p className="text-gray-500 dark:text-gray-400 mt-4 font-light tracking-wide uppercase text-sm">
                         {activeRanking?.description}
                     </p>
