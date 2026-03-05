@@ -968,26 +968,66 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const handleUpdateGlobalSchemas = async (schemas: ScoringSchema[]) => {
         setGlobalScoringSchemas(schemas);
-        if (!isAdmin || schemas.length === 0) return;
+        if (!isAdmin || !schemas) return;
+
         try {
-            const { data: dbSchemas } = await supabase.from('scoring_schemas').select('id');
-            if (dbSchemas && dbSchemas.length > 0) {
-                const currentIds = schemas.map(s => s.id);
-                const idsToDelete = dbSchemas.map(d => d.id).filter(id => !currentIds.includes(id) && !id.startsWith('temp-'));
-                if (idsToDelete.length > 0) {
-                    await supabase.from('scoring_schemas').delete().in('id', idsToDelete);
+            // 1. Identificar e remover schemas excluídos
+            const { data: dbSchemas, error: fetchError } = await supabase.from('scoring_schemas').select('id');
+            if (fetchError) throw fetchError;
+
+            const currentIdsInDB = schemas.map(s => s.id).filter(id => !id.startsWith('schema-') && id !== 'default');
+            const idsToDelete = (dbSchemas || [])
+                .map(d => d.id)
+                .filter(id => !currentIdsInDB.includes(id));
+
+            if (idsToDelete.length > 0) {
+                const { error: delError } = await supabase.from('scoring_schemas').delete().in('id', idsToDelete);
+                if (delError) throw delError;
+            }
+
+            // 2. Salvar ou atualizar cada schema
+            const updatedSchemas = [...schemas];
+            for (let i = 0; i < updatedSchemas.length; i++) {
+                const s = updatedSchemas[i];
+                const isNew = s.id.startsWith('schema-') || s.id === 'default';
+
+                const dbData: any = {
+                    name: s.name,
+                    criteria: s.criteria || [],
+                    position_points: s.positionPoints || {}
+                };
+
+                if (isNew) {
+                    const { data: inserted, error: insError } = await supabase
+                        .from('scoring_schemas')
+                        .insert([dbData])
+                        .select()
+                        .single();
+
+                    if (insError) throw insError;
+                    if (inserted) {
+                        updatedSchemas[i] = {
+                            ...s,
+                            id: inserted.id
+                        };
+                    }
+                } else {
+                    const { error: upsError } = await supabase
+                        .from('scoring_schemas')
+                        .upsert({ id: s.id, ...dbData }, { onConflict: 'id' });
+
+                    if (upsError) throw upsError;
                 }
             }
-            for (const s of schemas) {
-                const isTemp = s.id.startsWith('schema-') || s.id === 'default';
-                const data: any = { name: s.name, criteria: s.criteria, position_points: s.positionPoints };
-                if (!isTemp) await supabase.from('scoring_schemas').upsert({ id: s.id, ...data });
-                else {
-                    const { data: inserted } = await supabase.from('scoring_schemas').insert([data]).select();
-                    if (inserted) setGlobalScoringSchemas(prev => prev.map(p => p.id === s.id ? { ...p, id: inserted[0].id } : p));
-                }
-            }
-        } catch (e) { console.error('Error updating schemas:', e); }
+
+            // Atualiza o estado global com os IDs finais resolvidos do banco
+            setGlobalScoringSchemas(updatedSchemas);
+
+        } catch (e) {
+            console.error('Error updating schemas:', e);
+            // feedback visual para o admin em caso de erro crítico
+            window.alert('Erro ao sincronizar fórmulas com o banco de dados. Verifique sua conexão.');
+        }
     };
 
     const handleAddRanking = async () => {
