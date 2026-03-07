@@ -408,19 +408,14 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
                       </span>
                     </p>
 
-                    <button
-                      onClick={(e) => !isBlocked && handleOpenRegulation(e, cat.id)}
-                      className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1 sm:gap-2 bg-white/5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border shadow-sm ${isBlocked
-                        ? 'text-gray-700 border-white/5 cursor-default'
-                        : `${styles.btn} hover:scale-105 cursor-pointer border-white/10 hover:border-white/30 group-hover:bg-white/10`
-                        }`}
-                    >
-                      {isBlocked ? (
-                        <><span className="material-icons-outlined text-xs sm:text-sm">lock</span> Em Breve</>
-                      ) : (
+                    {(!isBlocked && !isMystery) && (
+                      <button
+                        onClick={(e) => handleOpenRegulation(e, cat.id)}
+                        className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1 sm:gap-2 bg-white/5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border shadow-sm ${styles.btn} hover:scale-105 cursor-pointer border-white/10 hover:border-white/30 group-hover:bg-white/10`}
+                      >
                         <>Ver <span className="hidden sm:inline">Mais</span> <span className="material-icons-outlined text-xs sm:text-sm">add_circle</span></>
-                      )}
-                    </button>
+                      </button>
+                    )}
                   </div>
                 </div>
               );

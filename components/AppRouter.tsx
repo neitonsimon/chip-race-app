@@ -63,6 +63,7 @@ export const AppRouter: React.FC = () => {
                     rankings={rankings}
                     scoringSchemas={globalScoringSchemas}
                     isLoading={isLoading}
+                    onSelectPlayerByName={handleNavigateToPlayerByName}
                 />;
             case 'ranking':
                 return <RankingTable

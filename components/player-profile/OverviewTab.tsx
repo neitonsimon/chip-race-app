@@ -81,6 +81,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                 <span className="material-icons-outlined text-[10px] md:text-xs">diamond</span>
                                 VIP BRONZE
                             </div>
+                        ) : (player.vipStatus === 'honorario') ? (
+                            <div className="absolute bottom-2 right-[-5px] md:right-[-10px] bg-emerald-500 text-white text-[10px] md:text-xs font-black px-3 py-1 rounded-full border-2 border-surface-dark z-20 shadow-[0_0_15px_rgba(16,185,129,0.5)] flex items-center gap-1">
+                                <span className="material-icons-outlined text-[10px] md:text-xs">star</span>
+                                VIP HONORÁRIO
+                            </div>
                         ) : (player.isVip) ? (
                             <div className="absolute bottom-2 right-2 bg-primary text-white text-[10px] md:text-xs font-black px-2 md:px-3 py-1 rounded-full border-2 border-surface-dark z-20 shadow-neon-blue flex items-center gap-1">
                                 <span className="material-icons-outlined text-[10px] md:text-xs">diamond</span>
@@ -125,28 +130,16 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                 </svg>
                             </a>
                         )}
-                        {player.social?.twitter && (
+                        {player.social?.whatsapp && (
                             <a
-                                href={`https://twitter.com/${player.social.twitter.replace('@', '')}`}
+                                href={`https://wa.me/${player.social.whatsapp.replace(/\D/g, '').startsWith('55') ? player.social.whatsapp.replace(/\D/g, '') : '55' + player.social.whatsapp.replace(/\D/g, '')}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="w-10 h-10 rounded-full bg-white/5 hover:bg-blue-400/20 hover:text-blue-400 flex items-center justify-center transition-colors"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"></path>
-                                </svg>
-                            </a>
-                        )}
-                        {player.social?.discord && (
-                            <a
-                                href="https://discord.com/app"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="w-10 h-10 rounded-full bg-white/5 hover:bg-[#5865F2]/20 hover:text-[#5865F2] flex items-center justify-center transition-colors"
-                                title={`ID: ${player.social.discord}`}
+                                className="w-10 h-10 rounded-full bg-white/5 hover:bg-emerald-600/20 hover:text-emerald-500 flex items-center justify-center transition-colors"
+                                title="Enviar mensagem no WhatsApp"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z" />
+                                    <path d="M12.011 2c-5.518 0-9.998 4.476-9.998 9.985 0 2.22.724 4.261 1.94 5.907L3 22l4.287-1.372c1.448.869 3.125 1.372 4.904 1.372 5.518 0 9.998-4.476 9.998-9.985 0-5.509-4.48-9.985-9.998-9.985zm0 17.5c-1.688 0-3.26-.523-4.593-1.42l-.3-.213-2.6.833.826-2.583-.242-.358C3.899 14.544 3.3 12.83 3.3 11.002c0-4.809 3.916-8.724 8.711-8.724s8.711 3.916 8.711 8.724-3.917 8.724-8.711 8.724zm4.846-6.65c-.266-.134-1.574-.775-1.817-.863-.24-.088-.415-.133-.59.133s-.678.863-.83 1.04c-.15.178-.302.199-.567.066s-1.121-.413-2.133-1.317c-.788-.702-1.319-1.569-1.474-1.835-.154-.266-.017-.41.117-.543.12-.12.266-.31.399-.466.13-.155.175-.266.264-.442.088-.178.044-.333-.022-.466s-.59-1.42-.808-1.947c-.21-.512-.423-.42-.59-.42-.15 0-.324-.012-.497-.012s-.46.066-.7.31c-.24.244-.913.887-.913 2.162s.931 2.506 1.062 2.684c.13.178 1.83 2.793 4.432 3.918.62.267 1.103.427 1.48.547.621.198 1.185.17 1.63.104.498-.073 1.574-.643 1.795-1.264.223-.62.223-1.151.155-1.264-.066-.11-.243-.177-.508-.31z" />
                                 </svg>
                             </a>
                         )}
@@ -312,8 +305,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
                                 <span className="material-icons-outlined text-4xl">payments</span>
                             </div>
-                            <div className="text-xl font-display font-black text-secondary">{player.winnings}</div>
+                            <div className="text-xl font-display font-black text-secondary truncate">{player.winnings}</div>
                             <div className="text-sm text-gray-500 uppercase tracking-wider">Ganhos Totais</div>
+                            <div className="text-[10px] mt-1 invisible h-[15px]">spacer</div>
                         </div>
                         <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-cyan-500/50 transition-colors">
                             <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -321,6 +315,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             </div>
                             <div className="text-3xl font-display font-black text-cyan-500">{player.titles}</div>
                             <div className="text-sm text-gray-500 uppercase tracking-wider">Títulos</div>
+                            <div className="text-[10px] mt-1 invisible h-[15px]">spacer</div>
                         </div>
                         <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-pink-500/50 transition-colors">
                             <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -328,6 +323,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             </div>
                             <div className="text-3xl font-display font-black text-pink-500">{player.itm}</div>
                             <div className="text-sm text-gray-500 uppercase tracking-wider">ITM %</div>
+                            <div className="text-[10px] mt-1 invisible h-[15px]">spacer</div>
                         </div>
                         {/* NEW: CREDIT LIMIT CARD - HIDDEN AS REQUESTED */}
                         {/* 
@@ -402,17 +398,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                             )}
                                         </div>
 
-                                        {/* Tooltip enhanced - Fixed visibility and clipping */}
-                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-56 bg-[#0c0920] text-white p-4 rounded-2xl border border-white/10 invisible opacity-0 group-hover:visible group-hover:opacity-100 pointer-events-none transition-all z-[100] shadow-[0_10px_40px_rgba(0,0,0,0.8)] scale-90 group-hover:scale-100">
+                                        {/* Tooltip enhanced - Fixed visibility and clipping on mobile */}
+                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-48 md:w-64 bg-[#0c0920] text-white p-4 rounded-2xl border border-white/10 invisible opacity-0 group-hover:visible group-hover:opacity-100 pointer-events-none transition-all z-[100] shadow-[0_10px_40px_rgba(0,0,0,0.8)] scale-90 group-hover:scale-100 font-sans">
                                             <div className="flex items-center gap-2 mb-2">
                                                 <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: badgeColor, boxShadow: `0 0 10px ${badgeColor}` }}></div>
                                                 <p className="font-black text-xs uppercase tracking-widest leading-none" style={{ color: badgeColor }}>{badge.title}</p>
                                             </div>
                                             <p className="text-gray-400 text-[11px] leading-relaxed font-medium">{originalDesc || badge.description}</p>
-                                            <div className="mt-2 pt-2 border-t border-white/5 text-[9px] text-gray-600 font-bold uppercase tracking-wider">
+                                            <div className="mt-2 pt-2 border-t border-white/5 text-[9px] text-gray-600 font-black uppercase tracking-wider">
                                                 Ganha em: {new Date(badge.awarded_at).toLocaleDateString()}
                                             </div>
-                                            {/* Arrow */}
+                                            {/* Arrow properly aligned */}
                                             <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#0c0920] border-b border-r border-white/10 transform rotate-45" />
                                         </div>
                                     </div>
@@ -497,11 +493,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                             {style}
                                         </span>
                                         {/* Tooltip */}
-                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-3 bg-surface-dark border border-white/20 rounded-xl text-xs text-white shadow-2xl invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all z-[100] pointer-events-none">
-                                            <div className="font-bold mb-1 text-primary">{style}</div>
-                                            <div className="text-gray-300 leading-snug">{PLAY_STYLE_DEFINITIONS[style] || "Sem descrição."}</div>
+                                        <div className="absolute bottom-full left-1/2 -translate-x-[40%] md:-translate-x-1/2 mb-2 w-44 md:w-48 p-3 bg-surface-dark border border-white/20 rounded-xl text-xs text-white shadow-2xl invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all z-[100] pointer-events-none">
+                                            <div className="font-black mb-1 text-primary uppercase tracking-wider text-[10px]">{style}</div>
+                                            <div className="text-gray-400 leading-snug text-[11px] font-medium">{PLAY_STYLE_DEFINITIONS[style] || "Sem descrição."}</div>
                                             {/* Arrow */}
-                                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-white/20"></div>
+                                            <div className="absolute top-full left-[40%] md:left-1/2 -translate-x-1/2 border-8 border-transparent border-t-white/20"></div>
                                         </div>
                                     </div>
                                 );
@@ -561,7 +557,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             </button>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto custom-scrollbar pr-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 grid grid-cols-1 md:grid-cols-2 gap-4">
                             {badgeTemplates.map((template) => {
                                 const isUnlocked = player.badges?.some((b: any) => b.badge_template_id === template.id);
                                 const badgeColor = template.color || '#00E5FF';
@@ -569,23 +565,23 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                 return (
                                     <div
                                         key={template.id}
-                                        className={`p-6 rounded-3xl border transition-all flex items-center gap-5 relative overflow-hidden group ${isUnlocked ? 'bg-white/5 border-white/10' : 'bg-black/40 border-white/5 opacity-40 grayscale'}`}
+                                        className={`p-5 rounded-3xl border transition-all flex items-start gap-4 relative overflow-hidden group ${isUnlocked ? 'bg-white/5 border-white/10' : 'bg-black/40 border-white/5 opacity-40 grayscale'}`}
                                     >
                                         {isUnlocked && (
-                                            <div className="absolute top-2 right-2">
+                                            <div className="absolute top-3 right-3">
                                                 <span className="material-icons text-primary text-sm">verified</span>
                                             </div>
                                         )}
 
-                                        <div className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 border-2" style={{ backgroundColor: `${badgeColor}11`, borderColor: `${badgeColor}33` }}>
-                                            <span className="material-icons-outlined text-3xl" style={{ color: badgeColor }}>{template.icon || 'stars'}</span>
+                                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border-2 mt-1" style={{ backgroundColor: `${badgeColor}11`, borderColor: `${badgeColor}33` }}>
+                                            <span className="material-icons-outlined text-2xl" style={{ color: badgeColor }}>{template.icon || 'stars'}</span>
                                         </div>
 
-                                        <div className="min-w-0">
-                                            <h4 className="text-sm font-black text-white uppercase tracking-wider mb-1 truncate" style={{ color: isUnlocked ? badgeColor : '#999' }}>
+                                        <div className="flex-1">
+                                            <h4 className="text-sm font-black text-white uppercase tracking-wider mb-1" style={{ color: isUnlocked ? badgeColor : '#999' }}>
                                                 {template.title}
                                             </h4>
-                                            <p className="text-[10px] text-gray-500 leading-relaxed font-bold uppercase tracking-tighter italic">
+                                            <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-relaxed font-medium">
                                                 {template.description}
                                             </p>
                                         </div>

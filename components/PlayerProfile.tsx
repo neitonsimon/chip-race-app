@@ -18,7 +18,7 @@ interface PlayerProfileProps {
         bio?: string;
         playStyles?: string[];
         gallery?: string[];
-        social?: { instagram?: string; twitter?: string; discord?: string; };
+        social?: { instagram?: string; whatsapp?: string; };
         level?: number;
         currentExp?: number;
         nextLevelExp?: number;
@@ -212,7 +212,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         itm: '0%',
         gallery: [],
         playStyles: [],
-        social: { instagram: "", twitter: "", discord: "" },
+        social: { instagram: "", whatsapp: "" },
         tournamentLog: [],
         level: 1,
         currentExp: 0,
@@ -252,8 +252,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                 playStyles: initialData.playStyles || [],
                 social: initialData.social || {
                     instagram: "",
-                    twitter: "",
-                    discord: ""
+                    whatsapp: ""
                 },
                 level: initialData.level || Math.floor(Math.random() * 20) + 1,
                 currentExp: initialData.currentExp || 500,
@@ -363,8 +362,15 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
     // Comprovantes state
     const [playerCommands, setPlayerCommands] = useState<any[]>([]);
+    const [playerTransactions, setPlayerTransactions] = useState<any[]>([]);
     const [viewingReceipt, setViewingReceipt] = useState<any | null>(null);
     const [receiptItems, setReceiptItems] = useState<any[]>([]);
+    const [lastSeenRecibos, setLastSeenRecibos] = useState<number>(() => {
+        try { return parseInt(localStorage.getItem(`cr_recibos_seen_${currentUser?.id}`) || '0', 10); } catch { return 0; }
+    });
+    // Lightweight commands list just for the badge (loaded independently of the tab)
+    const [commandsForBadge, setCommandsForBadge] = useState<{ closed_at: string | null }[]>([]);
+
 
     // Debt State
     const [userDebts, setUserDebts] = useState<any[]>([]);
@@ -402,6 +408,37 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         };
     }, [activeTab, player.id]);
 
+    // Load minimal commands data for badge \u2014 runs independently of active tab
+    useEffect(() => {
+        if (!isOwnProfile || !player.id) return;
+        const userId = targetIdRef.current || player.id;
+        if (!userId) return;
+
+        const fetchForBadge = async () => {
+            const { data } = await supabase
+                .from('commands')
+                .select('closed_at')
+                .eq('user_id', userId)
+                .eq('status', 'closed')
+                .order('closed_at', { ascending: false });
+            if (data) setCommandsForBadge(data);
+        };
+        fetchForBadge();
+
+        // Realtime: update badge instantly when a new command is inserted/updated
+        const badgeChannel = supabase
+            .channel('commands_badge_' + userId)
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'commands', filter: `user_id=eq.${userId}` }, () => {
+                fetchForBadge();
+            })
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'commands', filter: `user_id=eq.${userId}` }, () => {
+                fetchForBadge();
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(badgeChannel); };
+    }, [player.id, isOwnProfile]);
+
     useEffect(() => {
         if (activeTab === 'pendencias' && targetIdRef.current) {
             fetchUserDebts();
@@ -437,6 +474,14 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             .in('status', ['open', 'closed'])
             .order('created_at', { ascending: false });
         if (data) setPlayerCommands(data);
+
+        // Fetch user financial transactions for receipts
+        const { data: txData } = await supabase.from('transactions')
+            .select('*')
+            .eq('user_id', targetIdRef.current)
+            .in('category', ['wallet_deposit', 'recharge', 'online_credit', 'wallet_withdrawal', 'command_profit'])
+            .order('created_at', { ascending: false });
+        if (txData) setPlayerTransactions(txData);
     };
 
     const fetchUserDebts = async () => {
@@ -1089,18 +1134,32 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                         </button>
                     )}
 
-                    {isOwnProfile && (
-                        <button
-                            onClick={() => setActiveTab('comprovantes')}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-[0.15em] transition-all whitespace-nowrap ${activeTab === 'comprovantes'
-                                ? 'bg-green-500 text-white shadow-[0_0_20px_rgba(34,197,94,0.3)]'
-                                : 'bg-white/5 text-gray-500 hover:bg-white/10 hover:text-white'
-                                }`}
-                        >
-                            <span className="material-icons-outlined text-sm md:text-lg">receipt_long</span>
-                            <span>Recibos</span>
-                        </button>
-                    )}
+                    {isOwnProfile && (() => {
+                        const hasUnseenRecibos = commandsForBadge.some(cmd => {
+                            const closedAt = cmd.closed_at ? new Date(cmd.closed_at).getTime() : 0;
+                            return closedAt > lastSeenRecibos;
+                        });
+                        return (
+                            <button
+                                onClick={() => {
+                                    setActiveTab('comprovantes');
+                                    const now = Date.now();
+                                    setLastSeenRecibos(now);
+                                    try { localStorage.setItem(`cr_recibos_seen_${currentUser?.id}`, String(now)); } catch { }
+                                }}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-[0.15em] transition-all whitespace-nowrap relative ${activeTab === 'comprovantes'
+                                    ? 'bg-green-500 text-white shadow-[0_0_20px_rgba(34,197,94,0.3)]'
+                                    : 'bg-white/5 text-gray-500 hover:bg-white/10 hover:text-white'
+                                    }`}
+                            >
+                                <span className="material-icons-outlined text-sm md:text-lg">receipt_long</span>
+                                <span>Recibos</span>
+                                {hasUnseenRecibos && activeTab !== 'comprovantes' && (
+                                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 text-white text-[9px] flex items-center justify-center rounded-full animate-pulse border-2 border-surface-dark font-black">!</span>
+                                )}
+                            </button>
+                        );
+                    })()}
 
                     {isOwnProfile && (
                         <button
@@ -1180,6 +1239,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                     activeTab === 'comprovantes' && isOwnProfile && (
                         <ComprovantesTab
                             playerCommands={playerCommands}
+                            playerTransactions={playerTransactions}
                             handleViewReceipt={handleViewReceipt}
                             isVip={player.isVip}
                             onActivateVip={handleActivateVipVoucher}
@@ -1413,18 +1473,26 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                                 <div className="flex gap-4">
                                                     <button onClick={() => setReplyMode(false)} className="px-6 py-2 text-gray-500 font-bold hover:text-white transition-colors">Cancelar</button>
                                                     <button
-                                                        onClick={() => {
+                                                        onClick={async () => {
                                                             if (onReply && replyContent.trim()) {
-                                                                onReply(viewedMessage.id, replyContent);
-                                                                setReplyContent('');
-                                                                setReplyMode(false);
-                                                                setViewedMessage(null);
-                                                                alert('Resposta enviada!');
+                                                                try {
+                                                                    setIsSavingExp(true);
+                                                                    await onReply(viewedMessage.id, replyContent);
+                                                                    setReplyContent('');
+                                                                    setReplyMode(false);
+                                                                    setViewedMessage(null);
+                                                                    alert('Resposta enviada!');
+                                                                } catch (err: any) {
+                                                                    alert('Erro ao enviar resposta: ' + err.message);
+                                                                } finally {
+                                                                    setIsSavingExp(false);
+                                                                }
                                                             }
                                                         }}
-                                                        className="flex-grow bg-secondary hover:bg-white text-black font-bold py-2 rounded-xl transition-all shadow-neon-blue"
+                                                        disabled={isSavingExp}
+                                                        className={`flex-grow bg-secondary hover:bg-white text-black font-bold py-2 rounded-xl transition-all shadow-neon-blue ${isSavingExp ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                     >
-                                                        Enviar Resposta
+                                                        {isSavingExp ? 'Enviando...' : 'Enviar Resposta'}
                                                     </button>
                                                 </div>
                                             </div>
@@ -1866,7 +1934,12 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                                     </div>
                                                 )}
                                                 <div className="text-xl font-display font-bold text-secondary mt-2 bg-secondary/10 px-4 py-1 rounded-full inline-block border border-secondary/30">
-                                                    {winner.calculatedPoints} PTS
+                                                    {(() => {
+                                                        const mainRankingId = viewClosedEvent.includedRankings?.[0];
+                                                        return mainRankingId
+                                                            ? (winner.pointsPerRanking?.[mainRankingId] ?? winner.calculatedPoints)
+                                                            : winner.calculatedPoints;
+                                                    })()} PTS
                                                 </div>
                                             </div>
                                         </div>
@@ -1933,7 +2006,12 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                                             {result.prize > 0 ? `R$ ${result.prize.toLocaleString('pt-BR')}` : '-'}
                                                         </td>
                                                         <td className="px-4 py-4 text-center font-display font-black text-secondary">
-                                                            {result.calculatedPoints}
+                                                            {(() => {
+                                                                const mainRankingId = viewClosedEvent.includedRankings?.[0];
+                                                                return mainRankingId
+                                                                    ? (result.pointsPerRanking?.[mainRankingId] ?? result.calculatedPoints)
+                                                                    : result.calculatedPoints;
+                                                            })()}
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -2056,46 +2134,69 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                     </span>
                                 </div>
 
-                                {viewingReceipt.status === 'closed' && viewingReceipt.metadata?.is_vip_voucher && !viewingReceipt.metadata?.activated && isOwnProfile && (
-                                    <div className="mt-4 bg-primary/10 border border-primary/30 rounded-2xl p-4 space-y-4 animate-in slide-in-from-bottom-2">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
-                                                <span className="material-icons-outlined text-primary text-xl">stars</span>
+                                {viewingReceipt.status === 'closed' && viewingReceipt.metadata?.is_vip_voucher && !viewingReceipt.metadata?.activated && isOwnProfile && (() => {
+                                    const vipType = viewingReceipt.metadata?.vip_type;
+                                    const isHonorario = vipType === 'honorario';
+                                    return (
+                                        <div className="mt-4 bg-primary/10 border border-primary/30 rounded-2xl p-4 space-y-4 animate-in slide-in-from-bottom-2">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                                                    <span className="material-icons-outlined text-primary text-xl">stars</span>
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-white font-bold text-xs uppercase tracking-widest">
+                                                        {isHonorario ? 'VIP Honorário Disponível' : 'Voucher VIP Disponível'}
+                                                    </h4>
+                                                    <p className="text-gray-400 text-[9px] uppercase font-bold">
+                                                        {isHonorario ? 'Resgate via Conquista' : `Plano: ${vipType?.toUpperCase() || 'VIP'}`}
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h4 className="text-white font-bold text-xs uppercase tracking-widest">VIP Honorário Disponível</h4>
-                                                <p className="text-gray-400 text-[9px] uppercase font-bold">Resgate via Conquista</p>
+                                            <div className="grid grid-cols-1 gap-2">
+                                                {isHonorario ? (
+                                                    // Honorário: apenas 30 dias
+                                                    <button
+                                                        onClick={() => handleActivateVipVoucher(viewingReceipt.id, 'honorario')}
+                                                        disabled={isSavingExp}
+                                                        className="w-full bg-gradient-to-r from-primary to-accent hover:from-white hover:to-white text-white hover:text-black border border-primary/40 text-[11px] font-black py-4 rounded-2xl transition-all uppercase tracking-[0.2em] shadow-neon-pink active:scale-[0.98] flex items-center justify-center gap-2"
+                                                    >
+                                                        <span className="material-icons-outlined text-sm">workspace_premium</span>
+                                                        Ativar VIP Honorário (30 dias)
+                                                    </button>
+                                                ) : (
+                                                    // Outros tipos: opções de duração
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleActivateVipVoucher(viewingReceipt.id, '1month')}
+                                                            disabled={isSavingExp}
+                                                            className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white text-[10px] font-black py-2.5 rounded-xl transition-all uppercase tracking-widest flex items-center justify-center gap-2"
+                                                        >
+                                                            <span className="material-icons-outlined text-sm">event</span>
+                                                            Ativar por 1 Mês
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleActivateVipVoucher(viewingReceipt.id, '3months')}
+                                                            disabled={isSavingExp}
+                                                            className="w-full bg-secondary/20 hover:bg-secondary/30 border border-secondary/40 text-secondary text-[10px] font-black py-2.5 rounded-xl transition-all uppercase tracking-widest flex items-center justify-center gap-2"
+                                                        >
+                                                            <span className="material-icons-outlined text-sm">history</span>
+                                                            Ativar por 3 Meses
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleActivateVipVoucher(viewingReceipt.id, 'december')}
+                                                            disabled={isSavingExp}
+                                                            className="w-full bg-primary/20 hover:bg-primary/30 border border-primary/40 text-primary text-[10px] font-black py-3 rounded-xl transition-all uppercase tracking-widest flex items-center justify-center gap-2 shadow-neon-pink"
+                                                        >
+                                                            <span className="material-icons-outlined text-sm">workspace_premium</span>
+                                                            Ativar até Dezembro
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
+                                            <p className="text-[8px] text-gray-500 text-center italic">*Após ativado, este receipt será marcado como utilizado.</p>
                                         </div>
-                                        <div className="grid grid-cols-1 gap-2">
-                                            <button
-                                                onClick={() => handleActivateVipVoucher(viewingReceipt.id, '1month')}
-                                                disabled={isSavingExp}
-                                                className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white text-[10px] font-black py-2.5 rounded-xl transition-all uppercase tracking-widest flex items-center justify-center gap-2"
-                                            >
-                                                <span className="material-icons-outlined text-sm">event</span>
-                                                Ativar por 1 Mês
-                                            </button>
-                                            <button
-                                                onClick={() => handleActivateVipVoucher(viewingReceipt.id, '3months')}
-                                                disabled={isSavingExp}
-                                                className="w-full bg-secondary/20 hover:bg-secondary/30 border border-secondary/40 text-secondary text-[10px] font-black py-2.5 rounded-xl transition-all uppercase tracking-widest flex items-center justify-center gap-2"
-                                            >
-                                                <span className="material-icons-outlined text-sm">history</span>
-                                                Ativar por 3 Meses
-                                            </button>
-                                            <button
-                                                onClick={() => handleActivateVipVoucher(viewingReceipt.id, 'december')}
-                                                disabled={isSavingExp}
-                                                className="w-full bg-primary/20 hover:bg-primary/30 border border-primary/40 text-primary text-[10px] font-black py-3 rounded-xl transition-all uppercase tracking-widest flex items-center justify-center gap-2 shadow-neon-pink"
-                                            >
-                                                <span className="material-icons-outlined text-sm">workspace_premium</span>
-                                                Ativar até Dezembro
-                                            </button>
-                                        </div>
-                                        <p className="text-[8px] text-gray-500 text-center italic">*Após ativado, este receipt será marcado como utilizado.</p>
-                                    </div>
-                                )}
+                                    );
+                                })()}
 
                                 {viewingReceipt.status === 'closed' && viewingReceipt.metadata?.is_vip_voucher && viewingReceipt.metadata?.activated && (
                                     <div className="mt-4 bg-green-500/10 border border-green-500/30 rounded-2xl p-4 flex items-center gap-3">

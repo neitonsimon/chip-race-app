@@ -230,7 +230,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     cashGameNotes: e.cash_game_notes,
                     staffExpensesBrl: e.staff_expenses_brl || 0,
                     prizePayoutBrl: e.prize_payout_brl || 0,
-                    is_hidden: e.is_hidden
+                    is_hidden: e.is_hidden,
+                    isMultiDay: e.is_multi_day,
+                    isStartingDay: e.is_starting_day,
+                    isFinalDay: e.is_final_day,
+                    finalEventId: e.final_event_id,
+                    stackAggregation: e.stack_aggregation
                 })));
             }
 
@@ -547,17 +552,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const canClaim = !lastClaim || new Date(lastClaim) < currentGamingDayStart;
 
             if (canClaim) {
-                // Check if we already sent the notification for this gaming day
-                const { data: existingMsg } = await supabase.from('messages')
-                    .select('id')
-                    .eq('user_id', userId)
-                    .eq('subject', '⚙️ Sistema')
-                    .ilike('content', '%Bônus de login diário disponível%')
-                    .gte('created_at', dateStr + 'T21:00:00')
-                    .limit(1);
+                // We use a session-based flag to avoid re-sending the message in the same session
+                // if the user deletes it. 
+                const notificationKey = `notified_daily_${userId}_${dateStr}`;
+                const alreadyNotified = localStorage.getItem(notificationKey);
 
-                if (!existingMsg || existingMsg.length === 0) {
+                if (!alreadyNotified) {
                     await sendTemplatedMessage('daily_login', userId);
+                    localStorage.setItem(notificationKey, 'true');
                 }
             }
         } catch (e) {
@@ -572,25 +574,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         fetchUserPollVotes(currentUserId);
 
         const msgChannel = supabase.channel('realtime-messages')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
-                const m = payload.new as any;
-                const isSupportToAdmin = m.category === 'support' && !m.user_id;
-                const isTargetedToMe = m.user_id === currentUserId;
-                const isGlobalNonSupport = !m.user_id && m.category !== 'support';
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, (payload) => {
+                if (payload.eventType === 'INSERT') {
+                    const m = payload.new as any;
+                    const isSupportToAdmin = m.category === 'support' && !m.user_id;
+                    const isTargetedToMe = m.user_id === currentUserId;
+                    const isGlobalNonSupport = !m.user_id && m.category !== 'support';
 
-                if (isTargetedToMe || isGlobalNonSupport || (isSupportToAdmin && isAdmin)) {
-                    const newMsg: Message = {
-                        id: m.id, from: m.sender || 'Chip Race', senderId: m.sender_id, subject: m.subject || 'Notificação',
-                        content: m.content || '', date: new Date(m.created_at || Date.now()).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }),
-                        read: false, category: m.category || 'system', pollId: m.poll_id
-                    };
-                    if (notificationTimer.current) clearTimeout(notificationTimer.current);
-                    setNewNotification(newMsg);
-                    notificationTimer.current = setTimeout(() => setNewNotification(null), 8000);
-                    fetchMessages(currentUserId);
+                    if (isTargetedToMe || isGlobalNonSupport || (isAdmin && isSupportToAdmin)) {
+                        const newMsg: Message = {
+                            id: m.id, from: m.sender || 'Chip Race', senderId: m.sender_id, subject: m.subject || 'Notificação',
+                            content: m.content || '', date: new Date(m.created_at || Date.now()).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }),
+                            read: false, category: m.category || 'system', pollId: m.poll_id
+                        };
+                        if (notificationTimer.current) clearTimeout(notificationTimer.current);
+                        setNewNotification(newMsg);
+                        notificationTimer.current = setTimeout(() => setNewNotification(null), 8000);
+                    }
                 }
+                // Refresh local list for ALL events (INSERT, UPDATE, DELETE)
+                fetchMessages(currentUserId);
             })
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, () => fetchMessages(currentUserId))
             .subscribe();
 
 
@@ -637,7 +641,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const playerMap = new Map<string, RankingPlayer>();
             events.forEach(ev => {
                 const included = ev.includedRankings || ['annual', 'quarterly', 'legacy'];
-                if (ev.status === 'closed' && ev.results && included.includes(ranking.id)) {
+                if (ev.status === 'closed' && ev.results && included.includes(ranking.id) && !ev.isStartingDay) {
                     const mappedSchemaId = (ev.rankingType && ranking.scoringSchemaMap) ? ranking.scoringSchemaMap[ev.rankingType] : ev.scoringSchemaId;
                     ev.results.forEach((r: any) => {
                         const profile = (r.userId ? metadataByIdMap.get(r.userId) : null) || metadataMap.get(r.name.toLowerCase().trim());
@@ -655,7 +659,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                             });
                         }
                         const p = playerMap.get(playerKey)!;
-                        p.points += calculatePoints(ev.rankingType || 'weekly', ev.results?.length || 0, Number((ev.buyin?.toString() || '0').replace(/[^0-9]/g, '')) || 0, r.position, r.prize, r.isVip, mappedSchemaId, globalScoringSchemas);
+                        // Prioritize the pre-saved per-ranking points (calculated at event closure with correct schema)
+                        // Only fall back to re-calculation if no saved value exists (legacy events)
+                        const savedPoints = r.pointsPerRanking?.[ranking.id];
+                        const pointsToAdd = (savedPoints !== undefined && savedPoints !== null)
+                            ? savedPoints
+                            : calculatePoints(ev.rankingType || 'weekly', ev.results?.length || 0, Number((ev.buyin?.toString() || '0').replace(/[^0-9]/g, '')) || 0, r.position, r.prize, r.isVip, mappedSchemaId, globalScoringSchemas);
+                        p.points += pointsToAdd;
                     });
                 }
             });
@@ -809,19 +819,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             cash_game_open_bar: event.cashGameOpenBar || false,
             cash_game_notes: event.cashGameNotes || '',
             staff_expenses_brl: event.staffExpensesBrl || 0,
-            prize_payout_brl: event.prizePayoutBrl || 0
+            prize_payout_brl: event.prizePayoutBrl || 0,
+            is_multi_day: event.isMultiDay,
+            is_starting_day: event.isStartingDay,
+            is_final_day: event.isFinalDay,
+            final_event_id: event.finalEventId,
+            stack_aggregation: event.stackAggregation
         };
 
         try {
             if (isNew) {
                 const { data, error } = await supabase.from('events').insert([dbData]).select();
                 if (error) throw error;
-                const finalEvent = data && data[0] ? { ...event, id: data[0].id } : event;
-                setEvents(prev => [...prev.filter(e => e.id !== event.id), finalEvent]);
+                const savedEvent = data && data[0] ? { ...event, id: data[0].id } : event;
+                setEvents(prev => [...prev.filter(e => e.id !== event.id), savedEvent]);
+                return savedEvent;
             } else {
                 const { error } = await supabase.from('events').update(dbData).eq('id', event.id);
                 if (error) throw error;
                 setEvents(prev => prev.map(e => e.id === event.id ? event : e));
+                return event;
             }
         } catch (e) {
             console.error('Error saving event:', e);
@@ -858,7 +875,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     console.error('Error closing event:', e);
                 }
             }
-            if (results) {
+            if (results && !eventToUpdate.isStartingDay) {
                 for (const r of results) {
                     if (r.userId) {
                         let slug = 'tournament_result';
@@ -1144,18 +1161,55 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (currentUserId) fetchMessages(currentUserId);
     };
 
-    const handleSendMessage = async (toPlayerName: string, content: string) => {
-        if (!currentUserId || !currentUser.name) return;
-        const { data: recipient } = await supabase.from('profiles').select('id').ilike('name', toPlayerName.trim()).single();
-        if (recipient) {
-            await supabase.from('messages').insert([{ sender: currentUser.name, sender_id: currentUserId, subject: `De ${currentUser.name}`, content, category: 'private', user_id: recipient.id, is_read: false }]);
+    const handleSendMessage = async (toPlayerName: string, content: string, targetUserId?: string) => {
+        if (!currentUserId) return;
+        const senderName = currentUser.name || 'Jogador';
+
+        let recipientId = targetUserId;
+        if (!recipientId) {
+            const { data: recipient, error: lookupError } = await supabase
+                .from('profiles')
+                .select('id')
+                .ilike('name', toPlayerName.trim())
+                .limit(1)
+                .maybeSingle();
+
+            if (lookupError) {
+                console.error('Error looking up recipient:', lookupError);
+                return;
+            }
+            recipientId = recipient?.id;
+        }
+
+        if (recipientId) {
+            const { error: insertError } = await supabase.from('messages').insert([{
+                sender: senderName,
+                sender_id: currentUserId,
+                subject: `De ${senderName}`,
+                content,
+                category: 'private',
+                user_id: recipientId,
+                is_read: false
+            }]);
+
+            if (insertError) {
+                console.error('Error sending message:', insertError);
+                throw insertError;
+            }
+
             fetchMessages(currentUserId);
+        } else {
+            console.error('Recipient not found:', toPlayerName);
+            throw new Error('Destinatário não encontrado.');
         }
     };
 
-    const handleReplyMessage = (messageId: string, replyText: string) => {
+    const handleReplyMessage = async (messageId: string, replyText: string) => {
         const orig = messages.find(m => m.id === messageId);
-        if (orig?.from) handleSendMessage(orig.from, replyText);
+        if (orig) {
+            // Priority to senderId if available, otherwise fallback to name lookup
+            await handleSendMessage(orig.from, replyText, orig.senderId);
+        }
     };
 
     const handleMarkAsRead = async (id: string) => {

@@ -130,16 +130,8 @@ export function useDebts({ isAdmin, currentUser, updatePlayerDebtLocally, update
                 }
             }
 
-            // Log transaction for manual settlement
-            if (type === 'manual') {
-                await supabase.from('transactions').insert({
-                    user_id: debt.user_id,
-                    amount_brl: -payAmount,
-                    description: `Baixa PIX Pendura${isPartial ? ' (Parcial)' : ''} — Ref: ${debt.events?.title || debt.description || 'S/ Ref'}`,
-                    category: 'debt_payment',
-                    type: 'debit'
-                });
-            }
+            // NOTE: Manual (PIX/cash) debt settlements are real money — no virtual transaction record.
+            // Only audit_logs is used for traceability (see below).
 
             // Trigger will handle total_pending_debt update in database
             updatePlayerDebtLocally(debt.user_id, -payAmount);

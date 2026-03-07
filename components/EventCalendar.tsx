@@ -23,6 +23,7 @@ interface EventCalendarProps {
     rankings: RankingInstance[]; // Rankings dinâmicos passados pelo App
     scoringSchemas: ScoringSchema[]; // Global scoring formulas
     isLoading?: boolean;
+    onSelectPlayerByName?: (name: string) => void;
 }
 
 // Tipos auxiliares para o Closing
@@ -42,7 +43,8 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
     rankingPlayers,
     rankings,
     scoringSchemas,
-    isLoading
+    isLoading,
+    onSelectPlayerByName
 }) => {
     const [editingEvent, setEditingEvent] = useState<Event | null>(null);
     const [viewEvent, setViewEvent] = useState<Event | null>(null); // Modal de Flyer (Eventos Abertos)
@@ -69,7 +71,12 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
     const [playerResults, setPlayerResults] = useState<PlayerResult[]>([]);
 
-
+    // NOVO: States para Criação de Eventos Multi-dia
+    const [isMultiDayForm, setIsMultiDayForm] = useState(false);
+    const [startingDays, setStartingDays] = useState<{ name: string; date: string; time: string }[]>([{ name: '1A', date: '', time: '' }]);
+    const [finalDayDate, setFinalDayDate] = useState('');
+    const [finalDayTime, setFinalDayTime] = useState('');
+    const [stackAggregation, setStackAggregation] = useState<'sum' | 'max'>('max');
     // Autocomplete States
     const [newPlayerName, setNewPlayerName] = useState('');
     const [selectedUserId, setSelectedUserId] = useState<string | undefined>(undefined);
@@ -187,11 +194,42 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
             setTotalPrizeValue(event.totalPrize || 0);
         } else {
             // MODO NOVO ENCERRAMENTO: Reseta
-            setTotalPlayers(0);
             setRebuysCount(0);
             setAddonsCount(0);
             setTotalPrizeValue(0);
-            setPlayerResults([]);
+
+            let initialResults: PlayerResult[] = [];
+
+            if (event.isFinalDay) {
+                const startingDays = events.filter(e => e.finalEventId === event.id && e.isStartingDay && e.status === 'closed');
+                const qualifierMap = new Map<string, PlayerResult>();
+
+                startingDays.forEach(sd => {
+                    if (sd.results) {
+                        sd.results.forEach(pr => {
+                            if (pr.qualifierChips && pr.qualifierChips > 0) {
+                                const key = pr.userId || pr.name.toLowerCase().trim();
+                                if (qualifierMap.has(key)) {
+                                    const existing = qualifierMap.get(key)!;
+                                    if (event.stackAggregation === 'sum') {
+                                        existing.qualifierChips = (existing.qualifierChips || 0) + pr.qualifierChips;
+                                    } else {
+                                        existing.qualifierChips = Math.max(existing.qualifierChips || 0, pr.qualifierChips);
+                                    }
+                                } else {
+                                    // Deep copy to prevent mutating the original starting day result
+                                    qualifierMap.set(key, { ...pr, id: Date.now().toString() + Math.random(), position: 1, prize: 0, calculatedPoints: 0 });
+                                }
+                            }
+                        });
+                    }
+                });
+
+                initialResults = Array.from(qualifierMap.values()).sort((a, b) => (b.qualifierChips || 0) - (a.qualifierChips || 0)).map((p, idx) => ({ ...p, position: idx + 1 }));
+            }
+
+            setTotalPlayers(initialResults.length);
+            setPlayerResults(initialResults);
         }
 
         setNewPlayerName('');
@@ -222,6 +260,11 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
             addonChips: '',
             parallelProducts: []
         };
+        setIsMultiDayForm(false);
+        setStartingDays([{ name: '1A', date: '', time: '' }]);
+        setFinalDayDate('');
+        setFinalDayTime('');
+        setStackAggregation('max');
         setEditingEvent(newEvent);
     };
 
@@ -267,29 +310,88 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
         }
     };
 
-    const handleSaveEvent = (e: React.FormEvent) => {
+    const handleSaveEvent = async (e: React.FormEvent) => {
         e.preventDefault();
         if (editingEvent) {
-            if (onSaveEvent) {
-                // Basic validation before saving to cloud
-                if (!editingEvent.title || !editingEvent.date || !editingEvent.time) {
-                    alert('Por favor, preencha o título, data e hora do evento.');
+            if (isMultiDayForm) {
+                // Validación Básica
+                if (!editingEvent.title) {
+                    alert('Por favor, preencha o título do evento.');
                     return;
                 }
-                onSaveEvent(editingEvent);
+                if (!finalDayDate || !finalDayTime) {
+                    alert('Preencha a data e hora do dia final.');
+                    return;
+                }
+                for (const sd of startingDays) {
+                    if (!sd.name || !sd.date || !sd.time) {
+                        alert(`Preencha todos os campos do dia classificatório ${sd.name || ''}`);
+                        return;
+                    }
+                }
+
+                const baseId = Date.now().toString();
+                const finalEventId = `${baseId}-final`;
+
+                const finalEvent: Event = {
+                    ...editingEvent,
+                    id: finalEventId,
+                    title: `${editingEvent.title} (Dia Final)`,
+                    date: finalDayDate,
+                    time: finalDayTime,
+                    isMultiDay: true,
+                    isFinalDay: true,
+                    stackAggregation: stackAggregation
+                };
+
+                const startingEvents: Event[] = startingDays.map((sd, index) => ({
+                    ...editingEvent,
+                    id: `${baseId}-${index}`,
+                    title: `${editingEvent.title} (Dia ${sd.name})`,
+                    date: sd.date,
+                    time: sd.time,
+                    isMultiDay: true,
+                    isStartingDay: true,
+                    finalEventId: finalEventId
+                }));
+
+                if (onSaveEvent) {
+                    // Save final day FIRST to get the real DB UUID
+                    const savedFinalEvent = await onSaveEvent(finalEvent);
+                    const realFinalId = (savedFinalEvent as any)?.id || finalEvent.id;
+
+                    // Now save all starting days pointing to the real final day UUID
+                    for (const ev of startingEvents) {
+                        await onSaveEvent({ ...ev, finalEventId: realFinalId });
+                    }
+                } else {
+                    const allEvents = [...startingEvents, finalEvent];
+                    setEvents(currentEvents => [...currentEvents, ...allEvents]);
+                }
+
+            } else {
+                if (onSaveEvent) {
+                    // Basic validation before saving to cloud
+                    if (!editingEvent.title || !editingEvent.date || !editingEvent.time) {
+                        alert('Por favor, preencha o título, data e hora do evento.');
+                        return;
+                    }
+                    await onSaveEvent(editingEvent);
+                } else {
+                    // Sempre atualizar o estado local para garantir exibição imediata (Optimistic Update)
+                    setEvents(currentEvents => {
+                        const existingIndex = currentEvents.findIndex(ev => ev.id === editingEvent.id);
+                        if (existingIndex >= 0) {
+                            return currentEvents.map(ev => ev.id === editingEvent.id ? editingEvent : ev);
+                        } else {
+                            return [...currentEvents, editingEvent];
+                        }
+                    });
+                }
             }
 
-            // Sempre atualizar o estado local para garantir exibição imediata (Optimistic Update)
-            setEvents(currentEvents => {
-                const existingIndex = currentEvents.findIndex(ev => ev.id === editingEvent.id);
-                if (existingIndex >= 0) {
-                    return currentEvents.map(ev => ev.id === editingEvent.id ? editingEvent : ev);
-                } else {
-                    return [...currentEvents, editingEvent];
-                }
-            });
-
             setEditingEvent(null);
+            setIsMultiDayForm(false);
         }
     };
 
@@ -460,7 +562,9 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
         };
 
         const updatedList = [...playerResults, newResult];
-        const refreshedList = refreshAllPoints(formulaType, newTotalPlayers, buyinValue, updatedList);
+        const refreshedList = closingEvent?.isStartingDay
+            ? updatedList
+            : refreshAllPoints(formulaType, newTotalPlayers, buyinValue, updatedList);
 
         setPlayerResults(refreshedList);
         setNewPlayerName('');
@@ -472,7 +576,9 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
         const updatedList = playerResults.filter(p => p.id !== id);
         const newTotalPlayers = Math.max(0, totalPlayers - 1);
         setTotalPlayers(newTotalPlayers);
-        const refreshedList = refreshAllPoints(formulaType, newTotalPlayers, buyinValue, updatedList);
+        const refreshedList = closingEvent?.isStartingDay
+            ? updatedList
+            : refreshAllPoints(formulaType, newTotalPlayers, buyinValue, updatedList);
         setPlayerResults(refreshedList);
     };
 
@@ -480,18 +586,22 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
         const updatedResults = playerResults.map(p => {
             if (p.id === id) {
                 const updatedP = { ...p, [field]: value };
-                updatedP.calculatedPoints = calculatePoints(
-                    formulaType,
-                    totalPlayers,
-                    buyinValue,
-                    updatedP.position,
-                    updatedP.prize,
-                    updatedP.isVip,
-                    closingEvent?.scoringSchemaId,
-                    scoringSchemas,
-                    updatedP.rake || 0,
-                    updatedP.profitLoss || 0
-                );
+                if (!closingEvent?.isStartingDay) {
+                    updatedP.calculatedPoints = calculatePoints(
+                        formulaType,
+                        totalPlayers,
+                        buyinValue,
+                        updatedP.position,
+                        updatedP.prize,
+                        updatedP.isVip,
+                        closingEvent?.scoringSchemaId,
+                        scoringSchemas,
+                        updatedP.rake || 0,
+                        updatedP.profitLoss || 0
+                    );
+                } else {
+                    updatedP.calculatedPoints = 0;
+                }
                 return updatedP;
             }
             return p;
@@ -508,7 +618,9 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
         if (type === 'players') { p = Number(val); setTotalPlayers(p); }
         if (type === 'buyin') { b = Number(val); setBuyinValue(b); }
 
-        const refreshed = refreshAllPoints(t, p, b, playerResults, closingEvent?.scoringSchemaId);
+        const refreshed = closingEvent?.isStartingDay
+            ? playerResults
+            : refreshAllPoints(t, p, b, playerResults, closingEvent?.scoringSchemaId);
         setPlayerResults(refreshed);
     };
 
@@ -516,13 +628,15 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
         if (!closingEvent) return;
 
         // Final points recalculation before closure to ensure everything is correct
-        const finalResults = refreshAllPoints(
-            formulaType,
-            totalPlayers,
-            buyinValue,
-            playerResults,
-            closingEvent.scoringSchemaId
-        );
+        const finalResults = closingEvent.isStartingDay
+            ? playerResults.map(p => ({ ...p, calculatedPoints: 0, position: 1 }))
+            : refreshAllPoints(
+                formulaType,
+                totalPlayers,
+                buyinValue,
+                playerResults,
+                closingEvent.scoringSchemaId
+            );
 
         onCloseEvent(closingEvent.id, finalResults, {
             totalRebuys: rebuysCount,
@@ -674,6 +788,25 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                 }`}>
                                                 {event.status === 'closed' ? 'ENCERRADO' : event.type === 'live' ? 'AO VIVO' : 'ONLINE'}
                                             </span>
+
+                                            {/* Game Mode Badge */}
+                                            <span className={`text-xs px-2 py-0.5 rounded uppercase font-black tracking-widest ${event.gameMode === 'cash_game'
+                                                ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/30 shadow-[0_0_10px_rgba(234,179,8,0.2)]'
+                                                : 'bg-primary/10 text-primary border border-primary/30 shadow-[0_0_10px_rgba(217,0,255,0.1)]'
+                                                }`}>
+                                                {event.gameMode === 'cash_game' ? 'CASH GAME' : 'TORNEIO'}
+                                            </span>
+
+                                            {event.isStartingDay && (
+                                                <span className="text-[10px] px-2 py-0.5 rounded uppercase font-black tracking-widest bg-gradient-to-r from-primary to-accent text-white shadow-neon-pink">
+                                                    DIA CLASSIFICATÓRIO
+                                                </span>
+                                            )}
+                                            {event.isFinalDay && (
+                                                <span className="text-[10px] px-2 py-0.5 rounded uppercase font-black tracking-widest bg-gradient-to-r from-[#FFD700] via-[#FDB931] to-[#FFD700] text-black shadow-gold">
+                                                    DIA FINAL
+                                                </span>
+                                            )}
                                         </div>
 
                                         {event.location && (
@@ -837,7 +970,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                         </div>
 
                                         {/* Botão de Reservar (Para todos os usuários em eventos abertos) */}
-                                        {event.status !== 'closed' && event.gameMode === 'tournament' && (
+                                        {event.status !== 'closed' && event.gameMode === 'tournament' && event.type !== 'online' && (
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); handleReserveSeat(event); }}
                                                 className="px-6 py-2 w-full mt-2 rounded-full font-bold text-xs uppercase tracking-widest transition-all bg-green-600/20 text-green-500 border border-green-600/50 hover:bg-green-600 hover:text-white flex items-center gap-2 md:w-auto justify-center"
@@ -889,6 +1022,8 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                 {/* 1. Header Section */}
                                 <div className="pt-6 pb-2 px-6 text-center shrink-0 flex flex-col items-center">
                                     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-md mb-3 shadow-lg">
+                                        <span className={`text-[10px] sm:text-xs font-black uppercase tracking-widest ${viewEvent.gameMode === 'cash_game' ? 'text-yellow-400' : 'text-secondary'}`}>{viewEvent.gameMode === 'cash_game' ? 'CASH GAME' : 'TORNEIO'}</span>
+                                        <span className="text-gray-600 text-xs">|</span>
                                         <span className="text-xs font-black uppercase tracking-widest text-secondary">{viewEvent.type === 'live' ? 'AO VIVO' : 'ONLINE'}</span>
                                         <span className="text-gray-600 text-xs">|</span>
                                         <span className="text-xs font-bold text-gray-300 tracking-wider">{(viewEvent.date || '').split('-').reverse().join('/')}</span>
@@ -905,7 +1040,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                             </p>
                                         </div>
                                     )}
-                                    {viewEvent.gameMode !== 'cash_game' && (
+                                    {viewEvent.gameMode !== 'cash_game' && !viewEvent.isFinalDay && (
                                         <div className="flex justify-center items-center gap-6 w-full">
                                             <div className="flex flex-col items-center">
                                                 <span className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Buy-in</span>
@@ -929,72 +1064,136 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
                                 {/* 2. Body Section */}
                                 <div className="flex-1 flex flex-col px-6 pb-4 overflow-hidden gap-4">
-                                    <div className={`grid ${viewEvent.gameMode === 'cash_game' ? 'grid-cols-3' : (viewEvent.modality ? 'grid-cols-4' : 'grid-cols-3')} bg-white/[0.03] rounded-xl border border-white/5 divide-x divide-white/5 p-2 md:p-3 shrink-0`}>
-                                        {viewEvent.gameMode === 'cash_game' ? (
-                                            <>
-                                                <div className="flex flex-col items-center justify-center p-1">
-                                                    <span className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mb-1">Modalidade</span>
-                                                    <span className="text-xs font-bold text-white text-center">{viewEvent.cashGameType === 'omaha4' ? 'Omaha 4' : viewEvent.cashGameType === 'omaha5' ? 'Omaha 5' : 'Texas'}</span>
-                                                </div>
-                                                <div className="flex flex-col items-center justify-center p-1">
-                                                    <span className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mb-1 text-center">Blinds</span>
-                                                    <span className="text-xs font-bold text-white text-center">{viewEvent.cashGameBlinds || '-'}</span>
-                                                </div>
-                                                <div className="flex flex-col items-center justify-center p-1">
-                                                    <span className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mb-1 text-center">Lugares</span>
-                                                    <span className="text-xs font-bold text-white text-center">{viewEvent.cashGameCapacity || '-'}</span>
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <>
-                                                {viewEvent.modality && (
-                                                    <div className="flex flex-col items-center justify-center p-1">
-                                                        <span className="text-[9px] md:text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1 text-center truncate w-full px-1" title={viewEvent.modality}>Mod.</span>
-                                                        <span className="text-xs md:text-sm font-bold text-white uppercase text-center truncate w-full px-1">{viewEvent.modality}</span>
-                                                    </div>
-                                                )}
-                                                <div className="flex flex-col items-center justify-center p-1">
-                                                    <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Stack</span>
-                                                    <span className="text-sm font-bold text-white">{viewEvent.stack || '-'}</span>
-                                                </div>
-                                                <div className="flex flex-col items-center justify-center p-1">
-                                                    <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Blinds</span>
-                                                    <span className="text-sm font-bold text-white">{viewEvent.blinds || '-'}</span>
-                                                </div>
-                                                <div className="flex flex-col items-center justify-center p-1">
-                                                    <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Late Reg</span>
-                                                    <span className="text-sm font-bold text-white">{viewEvent.lateReg || '-'}</span>
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
-
-                                    <div className="flex flex-col gap-2 min-h-0">
-                                        <div className="flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-1">
+                                    {!viewEvent.isFinalDay && (
+                                        <div className={`grid ${viewEvent.gameMode === 'cash_game' ? 'grid-cols-3' : (viewEvent.modality ? 'grid-cols-4' : 'grid-cols-3')} bg-white/[0.03] rounded-xl border border-white/5 divide-x divide-white/5 p-2 md:p-3 shrink-0`}>
                                             {viewEvent.gameMode === 'cash_game' ? (
                                                 <>
-                                                    {renderStructureRow("Mínimo / Máximo", viewEvent.cashGameMinMax, undefined, "text-yellow-400", "payments")}
-                                                    {viewEvent.cashGameDinner && renderStructureRow("Jantar Cortesia", "Incluso", "Cortesia da Casa", "text-green-400", "restaurant")}
-                                                    {viewEvent.cashGameOpenBar && renderStructureRow("Open Bar", "Incluso", "Cortesia da Casa", "text-local_bar", "local_bar")}
-                                                    {viewEvent.parallelProducts?.includes('jackpot') && renderStructureRow("Jackpot", "Ativo", "Participe", "text-secondary", "trending_up")}
-                                                    {viewEvent.cashGameNotes && (
-                                                        <div className="bg-white/5 p-3 rounded-lg border border-white/10 mt-2">
-                                                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1">Regras / Observações</span>
-                                                            <p className="text-xs text-gray-400 leading-relaxed italic">"{viewEvent.cashGameNotes}"</p>
-                                                        </div>
-                                                    )}
+                                                    <div className="flex flex-col items-center justify-center p-1">
+                                                        <span className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mb-1">Modalidade</span>
+                                                        <span className="text-xs font-bold text-white text-center">{viewEvent.cashGameType === 'omaha4' ? 'Omaha 4' : viewEvent.cashGameType === 'omaha5' ? 'Omaha 5' : 'Texas'}</span>
+                                                    </div>
+                                                    <div className="flex flex-col items-center justify-center p-1">
+                                                        <span className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mb-1 text-center">Blinds</span>
+                                                        <span className="text-xs font-bold text-white text-center">{viewEvent.cashGameBlinds || '-'}</span>
+                                                    </div>
+                                                    <div className="flex flex-col items-center justify-center p-1">
+                                                        <span className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mb-1 text-center">Lugares</span>
+                                                        <span className="text-xs font-bold text-white text-center">{viewEvent.cashGameCapacity || '-'}</span>
+                                                    </div>
                                                 </>
                                             ) : (
                                                 <>
-                                                    {renderStructureRow("Rebuy", viewEvent.rebuyValue, viewEvent.rebuyChips, "text-primary", "add_circle_outline")}
-                                                    {renderStructureRow("Rebuy Duplo", viewEvent.doubleRebuyValue, viewEvent.doubleRebuyChips, "text-primary", "control_point_duplicate")}
-                                                    {renderStructureRow("Add-on", viewEvent.addonValue, viewEvent.addonChips, "text-secondary", "shopping_basket")}
-                                                    {renderStructureRow("Add-on Duplo", viewEvent.doubleAddonValue, viewEvent.doubleAddonChips, "text-secondary", "auto_awesome_motion")}
-                                                    {/* Staff Bonus moved to buy-in row */}
-                                                    {renderStructureRow("Time Chip", viewEvent.timeChipValue, viewEvent.timeChipChips, "text-green-500", "schedule")}
+                                                    {viewEvent.modality && (
+                                                        <div className="flex flex-col items-center justify-center p-1">
+                                                            <span className="text-[9px] md:text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1 text-center truncate w-full px-1" title={viewEvent.modality}>Mod.</span>
+                                                            <span className="text-xs md:text-sm font-bold text-white uppercase text-center truncate w-full px-1">{viewEvent.modality}</span>
+                                                        </div>
+                                                    )}
+                                                    <div className="flex flex-col items-center justify-center p-1">
+                                                        <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Stack</span>
+                                                        <span className="text-sm font-bold text-white">{viewEvent.stack || '-'}</span>
+                                                    </div>
+                                                    <div className="flex flex-col items-center justify-center p-1">
+                                                        <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Blinds</span>
+                                                        <span className="text-sm font-bold text-white">{viewEvent.blinds || '-'}</span>
+                                                    </div>
+                                                    <div className="flex flex-col items-center justify-center p-1">
+                                                        <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Late Reg</span>
+                                                        <span className="text-sm font-bold text-white">{viewEvent.lateReg || '-'}</span>
+                                                    </div>
                                                 </>
                                             )}
                                         </div>
+                                    )}
+
+                                    <div className="flex flex-col gap-2 min-h-0 h-full">
+                                        {!viewEvent.isFinalDay && (
+                                            <div className="flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-1">
+                                                {viewEvent.gameMode === 'cash_game' ? (
+                                                    <>
+                                                        {renderStructureRow("Mínimo / Máximo", viewEvent.cashGameMinMax, undefined, "text-yellow-400", "payments")}
+                                                        {viewEvent.cashGameDinner && renderStructureRow("Jantar Cortesia", "Incluso", "Cortesia da Casa", "text-green-400", "restaurant")}
+                                                        {viewEvent.cashGameOpenBar && renderStructureRow("Open Bar", "Incluso", "Cortesia da Casa", "text-local_bar", "local_bar")}
+                                                        {viewEvent.parallelProducts?.includes('jackpot') && renderStructureRow("Jackpot", "Ativo", "Participe", "text-secondary", "trending_up")}
+                                                        {viewEvent.cashGameNotes && (
+                                                            <div className="bg-white/5 p-3 rounded-lg border border-white/10 mt-2">
+                                                                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1">Regras / Observações</span>
+                                                                <p className="text-xs text-gray-400 leading-relaxed italic">"{viewEvent.cashGameNotes}"</p>
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        {renderStructureRow("Rebuy", viewEvent.rebuyValue, viewEvent.rebuyChips, "text-primary", "add_circle_outline")}
+                                                        {renderStructureRow("Rebuy Duplo", viewEvent.doubleRebuyValue, viewEvent.doubleRebuyChips, "text-primary", "control_point_duplicate")}
+                                                        {renderStructureRow("Add-on", viewEvent.addonValue, viewEvent.addonChips, "text-secondary", "shopping_basket")}
+                                                        {renderStructureRow("Add-on Duplo", viewEvent.doubleAddonValue, viewEvent.doubleAddonChips, "text-secondary", "auto_awesome_motion")}
+                                                        {/* Staff Bonus moved to buy-in row */}
+                                                        {renderStructureRow("Time Chip", viewEvent.timeChipValue, viewEvent.timeChipChips, "text-green-500", "schedule")}
+                                                    </>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {viewEvent.isFinalDay && (() => {
+                                            const startingDays = events.filter(e => e.finalEventId === viewEvent.id && e.isStartingDay && e.status === 'closed');
+                                            const qualifierMap = new Map<string, PlayerResult>();
+
+                                            startingDays.forEach(sd => {
+                                                if (sd.results) {
+                                                    sd.results.forEach(pr => {
+                                                        if (pr.qualifierChips && pr.qualifierChips > 0) {
+                                                            const key = pr.userId || pr.name.toLowerCase().trim();
+                                                            if (qualifierMap.has(key)) {
+                                                                const existing = qualifierMap.get(key)!;
+                                                                if (viewEvent.stackAggregation === 'sum') {
+                                                                    existing.qualifierChips = (existing.qualifierChips || 0) + pr.qualifierChips;
+                                                                } else {
+                                                                    existing.qualifierChips = Math.max(existing.qualifierChips || 0, pr.qualifierChips);
+                                                                }
+                                                            } else {
+                                                                qualifierMap.set(key, { ...pr, id: Date.now().toString() + Math.random() });
+                                                            }
+                                                        }
+                                                    });
+                                                }
+                                            });
+
+                                            const qualifiedPlayers = Array.from(qualifierMap.values()).sort((a, b) => (b.qualifierChips || 0) - (a.qualifierChips || 0));
+
+                                            return (
+                                                <div className="mt-2 flex flex-col flex-1 overflow-hidden">
+                                                    <div className="text-[10px] uppercase font-bold text-secondary mb-2 border-b border-secondary/20 pb-1 flex items-center gap-1">
+                                                        <span className="material-icons-outlined text-xs">emoji_events</span>
+                                                        Classificados para a Final
+                                                        {qualifiedPlayers.length > 0 && <span className="ml-auto text-gray-500 normal-case font-normal">({qualifiedPlayers.length} jogadores)</span>}
+                                                    </div>
+                                                    {qualifiedPlayers.length === 0 ? (
+                                                        <div className="flex flex-col items-center justify-center flex-1 py-6 text-center text-gray-600">
+                                                            <span className="material-icons-outlined text-3xl mb-2 opacity-30">hourglass_empty</span>
+                                                            <p className="text-xs">Aguardando encerramento dos dias classificatórios...</p>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex flex-col gap-1 overflow-y-auto custom-scrollbar pr-1 flex-1">
+                                                            {qualifiedPlayers.map((p, idx) => (
+                                                                <div
+                                                                    key={idx}
+                                                                    onClick={() => onSelectPlayerByName?.(p.name)}
+                                                                    className="flex justify-between items-center text-xs text-gray-300 py-1.5 border-b border-white/5 px-2 bg-white/5 rounded cursor-pointer hover:bg-white/10 transition-colors"
+                                                                >
+                                                                    <span className="truncate flex-1">
+                                                                        <span className={`font-bold mr-2 w-5 inline-block ${idx === 0 ? 'text-yellow-400' : idx === 1 ? 'text-gray-300' : idx === 2 ? 'text-orange-600' : 'text-gray-500'}`}>{idx + 1}º</span>
+                                                                        {p.name}
+                                                                    </span>
+                                                                    <span className="font-bold text-secondary ml-2 shrink-0">{formatChips(p.qualifierChips?.toString() || '0')} fichas</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })()}
+
                                     </div>
                                 </div>
                             </div>
@@ -1055,7 +1254,13 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
                             {/* 1. Header & Champion Section */}
                             <div className="pt-4 pb-1 px-6 text-center shrink-0 flex flex-col items-center">
-                                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">{viewClosedEvent.date.split('-').reverse().join('/')}</div>
+                                <div className="flex items-center gap-2 mb-1">
+                                    <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full border ${viewClosedEvent.gameMode === 'cash_game' ? 'border-yellow-500/30 text-yellow-400 bg-yellow-500/5' : 'border-secondary/30 text-secondary bg-secondary/5'}`}>
+                                        {viewClosedEvent.gameMode === 'cash_game' ? 'CASH GAME' : 'TORNEIO'}
+                                    </span>
+                                    <span className="text-gray-700 text-[10px]">•</span>
+                                    <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{viewClosedEvent.date.split('-').reverse().join('/')}</div>
+                                </div>
                                 <h3 className="text-lg md:text-xl font-bold text-white mb-2 uppercase tracking-wider">{viewClosedEvent.title}</h3>
                                 {viewClosedEvent.description && (
                                     <div className="mb-4 px-4 py-2 bg-white/5 rounded-xl border border-white/10 backdrop-blur-sm max-w-[90%] mx-auto">
@@ -1067,7 +1272,15 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
                                 {/* CHAMPION DISPLAY - FIXED SPACING */}
                                 {(() => {
-                                    const winner = viewClosedEvent.results?.find(r => r.position === 1);
+                                    let winner;
+                                    let sortedResults = viewClosedEvent.results || [];
+                                    if (viewClosedEvent.isStartingDay) {
+                                        sortedResults = [...sortedResults].sort((a, b) => (b.qualifierChips || 0) - (a.qualifierChips || 0));
+                                        winner = sortedResults[0];
+                                    } else {
+                                        winner = sortedResults.find(r => r.position === 1);
+                                    }
+
                                     return winner ? (
                                         <div className="flex flex-col items-center mb-2">
                                             {/* Image Container */}
@@ -1075,27 +1288,44 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                 <div className="absolute -inset-4 bg-gradient-to-t from-secondary/20 to-transparent rounded-full blur-xl"></div>
                                                 <img
                                                     src={getPlayerAvatar(winner.name)}
-                                                    alt="Campeão"
+                                                    alt={viewClosedEvent.isStartingDay ? "Chip Leader" : "Campeão"}
                                                     className="w-24 h-24 rounded-full border-4 border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.5)] object-cover relative z-10"
                                                 />
                                                 <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-yellow-400 text-black font-black text-[9px] px-3 py-0.5 rounded-full shadow-lg z-20 border-2 border-black">
-                                                    CAMPEÃO
+                                                    {viewClosedEvent.isStartingDay ? 'CHIP LEADER' : 'CAMPEÃO'}
                                                 </div>
                                             </div>
 
                                             {/* Name and Prize - Separated with margin */}
                                             <div className="text-center mt-1">
-                                                <h2 className="text-2xl sm:text-3xl font-display font-black text-white leading-tight">{winner.name}</h2>
-                                                {winner.prize > 0 && (
-                                                    <div className="text-lg sm:text-xl font-bold text-green-400 mt-1">
-                                                        R$ {winner.prize.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                <h2
+                                                    onClick={() => onSelectPlayerByName?.(winner.name)}
+                                                    className="text-2xl sm:text-3xl font-display font-black text-white leading-tight cursor-pointer hover:text-primary transition-colors"
+                                                >
+                                                    {winner.name}
+                                                </h2>
+                                                {viewClosedEvent.isStartingDay ? (
+                                                    <div className="text-lg sm:text-xl font-bold text-secondary mt-1">
+                                                        {formatChips(winner.qualifierChips?.toString() || '0')} FICHAS
                                                     </div>
-                                                )}
-                                                {/* POINTS ADDED HERE - Conditional */}
-                                                {viewClosedEvent.includedRankings && viewClosedEvent.includedRankings.length > 0 && (
-                                                    <div className="text-lg font-display font-bold text-secondary mt-1 bg-secondary/10 px-3 py-0.5 rounded-full inline-block border border-secondary/30">
-                                                        {winner.calculatedPoints} PTS
-                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        {winner.prize > 0 && (
+                                                            <div className="text-lg sm:text-xl font-bold text-green-400 mt-1">
+                                                                R$ {winner.prize.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                            </div>
+                                                        )}
+                                                        {/* POINTS ADDED HERE - Conditional */}
+                                                        {viewClosedEvent.includedRankings && viewClosedEvent.includedRankings.length > 0 && (() => {
+                                                            const mainRankingId = viewClosedEvent.includedRankings[0];
+                                                            const savedPts = winner.pointsPerRanking?.[mainRankingId] ?? winner.calculatedPoints;
+                                                            return (
+                                                                <div className="text-lg font-display font-bold text-secondary mt-1 bg-secondary/10 px-3 py-0.5 rounded-full inline-block border border-secondary/30">
+                                                                    {savedPts} PTS
+                                                                </div>
+                                                            );
+                                                        })()}
+                                                    </>
                                                 )}
                                             </div>
                                         </div>
@@ -1137,39 +1367,68 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                             <tr>
                                                 <th className="px-4 py-3 text-center w-10">#</th>
                                                 <th className="px-4 py-3">Jogador</th>
-                                                <th className="px-4 py-3 text-right">Prêmio</th>
-                                                {viewClosedEvent.includedRankings && viewClosedEvent.includedRankings.length > 0 && (
-                                                    <th className="px-4 py-3 text-center">Pts</th>
+                                                {viewClosedEvent.isStartingDay ? (
+                                                    <th className="px-4 py-3 text-right">Fichas</th>
+                                                ) : (
+                                                    <>
+                                                        <th className="px-4 py-3 text-right">Prêmio</th>
+                                                        {viewClosedEvent.includedRankings && viewClosedEvent.includedRankings.length > 0 && (
+                                                            <th className="px-4 py-3 text-center">Pts</th>
+                                                        )}
+                                                    </>
                                                 )}
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-white/5">
-                                            {viewClosedEvent.results
-                                                ?.filter(r => r.position > 1)
-                                                .sort((a, b) => a.position - b.position)
-                                                .map((result) => (
-                                                    <tr key={result.id} className="hover:bg-white/5 transition-colors">
-                                                        <td className="px-4 py-3 text-center">
-                                                            <span className={`inline-block w-6 h-6 leading-6 rounded-full font-bold text-[10px] ${result.position === 2 ? 'bg-gray-400 text-black' :
-                                                                result.position === 3 ? 'bg-orange-700 text-white' :
-                                                                    'bg-white/5 text-gray-500'
-                                                                }`}>
-                                                                {result.position}º
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-4 py-3 font-bold text-gray-300 truncate max-w-[120px]">
-                                                            {result.name}
-                                                        </td>
-                                                        <td className="px-4 py-3 text-right text-green-500 font-bold">
-                                                            {result.prize > 0 ? `R$ ${result.prize.toLocaleString('pt-BR')}` : '-'}
-                                                        </td>
-                                                        {viewClosedEvent.includedRankings && viewClosedEvent.includedRankings.length > 0 && (
-                                                            <td className="px-4 py-3 text-center font-display font-black text-secondary">
-                                                                {result.calculatedPoints}
-                                                            </td>
-                                                        )}
-                                                    </tr>
-                                                ))}
+                                            {(() => {
+                                                const sortedResults = viewClosedEvent.isStartingDay
+                                                    ? [...(viewClosedEvent.results || [])].sort((a, b) => (b.qualifierChips || 0) - (a.qualifierChips || 0))
+                                                    : [...(viewClosedEvent.results || [])].sort((a, b) => a.position - b.position);
+
+                                                return sortedResults
+                                                    .filter((r, idx) => viewClosedEvent.isStartingDay ? idx > 0 : r.position > 1)
+                                                    .map((result, idx) => {
+                                                        const displayPosition = viewClosedEvent.isStartingDay ? idx + 2 : result.position;
+                                                        return (
+                                                            <tr key={result.id} className="hover:bg-white/5 transition-colors">
+                                                                <td className="px-4 py-3 text-center">
+                                                                    <span className={`inline-block w-6 h-6 leading-6 rounded-full font-bold text-[10px] ${displayPosition === 2 ? 'bg-gray-400 text-black' :
+                                                                        displayPosition === 3 ? 'bg-orange-700 text-white' :
+                                                                            'bg-white/5 text-gray-500'
+                                                                        }`}>
+                                                                        {displayPosition}º
+                                                                    </span>
+                                                                </td>
+                                                                <td
+                                                                    onClick={() => onSelectPlayerByName?.(result.name)}
+                                                                    className="px-4 py-3 font-bold text-gray-300 truncate max-w-[120px] cursor-pointer hover:text-white transition-colors"
+                                                                >
+                                                                    {result.name}
+                                                                </td>
+                                                                {viewClosedEvent.isStartingDay ? (
+                                                                    <td className="px-4 py-3 text-right text-secondary font-bold">
+                                                                        {formatChips(result.qualifierChips?.toString() || '0')}
+                                                                    </td>
+                                                                ) : (
+                                                                    <>
+                                                                        <td className="px-4 py-3 text-right text-green-500 font-bold">
+                                                                            {result.prize > 0 ? `R$ ${result.prize.toLocaleString('pt-BR')}` : '-'}
+                                                                        </td>
+                                                                        {viewClosedEvent.includedRankings && viewClosedEvent.includedRankings.length > 0 && (() => {
+                                                                            const mainRankingId = viewClosedEvent.includedRankings![0];
+                                                                            const savedPts = result.pointsPerRanking?.[mainRankingId] ?? result.calculatedPoints;
+                                                                            return (
+                                                                                <td className="px-4 py-3 text-center font-display font-black text-secondary">
+                                                                                    {savedPts}
+                                                                                </td>
+                                                                            );
+                                                                        })()}
+                                                                    </>
+                                                                )}
+                                                            </tr>
+                                                        );
+                                                    });
+                                            })()}
                                         </tbody>
                                     </table>
                                 </div>
@@ -1271,17 +1530,29 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                 <div className="lg:col-span-2 flex flex-col h-[400px]">
                                     <div className="flex gap-2 mb-4 relative">
                                         <input type="text" value={newPlayerName} onChange={handleNameChange} placeholder="Nome do Jogador..." className="flex-1 bg-black/30 border border-white/20 rounded-lg px-4 py-2 text-white outline-none" onKeyDown={(e) => e.key === 'Enter' && addPlayerResult()} />
-                                        {showSuggestions && suggestions.length > 0 && (
-                                            <ul className="absolute z-50 top-10 left-0 w-full bg-surface-dark border border-white/20 rounded-lg shadow-xl max-h-48 overflow-y-auto custom-scrollbar">
-                                                {suggestions.map((p, i) => (
+                                        {newPlayerName && (
+                                            <ul className="absolute z-50 top-10 left-0 w-full bg-surface-dark border border-white/20 rounded-lg shadow-xl overflow-hidden mt-1 max-h-60 overflow-y-auto custom-scrollbar">
+                                                {/* Always show Add Ghost Option first if typing */}
+                                                <li
+                                                    onClick={() => {
+                                                        addPlayerResult();
+                                                    }}
+                                                    className="px-4 py-3 bg-secondary/10 hover:bg-secondary/20 cursor-pointer text-sm font-bold border-b border-white/5 flex items-center gap-3 transition-colors text-white group"
+                                                >
+                                                    <span className="material-icons-outlined text-secondary group-hover:scale-110 transition-transform">person_add</span>
+                                                    <span>Criar Fantasma: <span className="text-secondary">"{newPlayerName}"</span></span>
+                                                </li>
+
+                                                {/* Then show suggestions if any */}
+                                                {showSuggestions && suggestions.length > 0 && suggestions.map((p, i) => (
                                                     <li
                                                         key={i}
                                                         onClick={() => selectSuggestion(p)}
-                                                        className="px-4 py-2 hover:bg-white/10 text-white cursor-pointer flex items-center gap-2"
+                                                        className="px-4 py-2 hover:bg-white/10 text-gray-300 cursor-pointer text-sm border-b border-white/5 flex items-center gap-3 transition-colors"
                                                     >
                                                         <img src={p.avatar} alt="" className="w-6 h-6 rounded-full border border-white/10" />
                                                         <div className="flex flex-col">
-                                                            <span className="font-bold">{p.name}</span>
+                                                            <span className="font-bold text-white">{p.name}</span>
                                                             <span className="text-[10px] text-gray-500">{p.city}</span>
                                                         </div>
                                                     </li>
@@ -1292,7 +1563,18 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                     </div>
 
                                     {/* HEADER DA TABELA DE JOGADORES NA MODAL */}
+                                    {/* HEADER DA TABELA DE JOGADORES NA MODAL */}
                                     {(() => {
+                                        if (closingEvent?.isStartingDay) {
+                                            return (
+                                                <div className="flex justify-between px-2 pb-2 text-[10px] font-bold text-gray-500 uppercase gap-2">
+                                                    <span className="w-1/4">Nome Classificado</span>
+                                                    <span className="w-24 text-center">Stack (Fichas)</span>
+                                                    <span className="w-6"></span>
+                                                </div>
+                                            );
+                                        }
+
                                         const currentSchema = scoringSchemas.find(s => s.id === closingEvent?.scoringSchemaId);
                                         const isCashLayout = formulaType === 'cash_online' || currentSchema?.criteria.some(c => c.type === 'rake' || c.type === 'profit_loss');
 
@@ -1323,6 +1605,25 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                 <span className="text-white w-1/4 truncate font-bold">{p.name}</span>
 
                                                 {(() => {
+                                                    if (closingEvent?.isStartingDay) {
+                                                        return (
+                                                            <input
+                                                                type="text"
+                                                                inputMode="numeric"
+                                                                placeholder="Fichas"
+                                                                value={p.qualifierChips || ''}
+                                                                onChange={(e) => {
+                                                                    const val = parseInt(e.target.value.replace(/\D/g, '')) || 0;
+                                                                    const prs = [...playerResults];
+                                                                    const idx = prs.findIndex(pr => pr.id === p.id);
+                                                                    prs[idx] = { ...prs[idx], qualifierChips: val, position: 1, calculatedPoints: 0 };
+                                                                    setPlayerResults(prs);
+                                                                }}
+                                                                className="w-24 bg-black/50 text-center font-black text-secondary rounded border border-secondary/30 outline-none px-2"
+                                                            />
+                                                        );
+                                                    }
+
                                                     const currentSchema = scoringSchemas.find(s => s.id === closingEvent?.scoringSchemaId);
                                                     const isCashLayout = formulaType === 'cash_online' || currentSchema?.criteria.some(c => c.type === 'rake' || c.type === 'profit_loss');
 
@@ -1384,34 +1685,38 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                     );
                                                 })()}
 
-                                                <button onClick={() => updatePlayerResult(p.id, 'isVip', !p.isVip)} className={`px-2 rounded text-[10px] h-6 flex items-center justify-center shrink-0 ${p.isVip ? 'bg-primary text-white' : 'bg-gray-700 text-gray-400'}`}>VIP</button>
+                                                {!closingEvent?.isStartingDay && (
+                                                    <button onClick={() => updatePlayerResult(p.id, 'isVip', !p.isVip)} className={`px-2 rounded text-[10px] h-6 flex items-center justify-center shrink-0 ${p.isVip ? 'bg-primary text-white' : 'bg-gray-700 text-gray-400'}`}>VIP</button>
+                                                )}
 
-                                                <div className="w-12 text-center flex flex-col items-center shrink-0">
-                                                    {(() => {
-                                                        try {
-                                                            const pointsEntries = Object.entries(p.pointsPerRanking || {});
-                                                            if (pointsEntries.length > 0) {
-                                                                return pointsEntries.map(([rId, pts], i) => {
-                                                                    const ranking = rankings.find(r => r.id === rId);
-                                                                    const label = ranking?.label || ranking?.id || '---';
-                                                                    return (
-                                                                        <div key={rId} className="flex flex-col leading-tight">
-                                                                            <span className="text-primary font-black">{pts}</span>
-                                                                            {pointsEntries.length > 1 && (
-                                                                                <span className="text-[8px] text-gray-500 font-bold uppercase">{label}</span>
-                                                                            )}
-                                                                        </div>
-                                                                    );
-                                                                });
-                                                            } else {
-                                                                return <span className="text-primary font-black">{p.calculatedPoints || 0}</span>;
+                                                {!closingEvent?.isStartingDay && (
+                                                    <div className="w-12 text-center flex flex-col items-center shrink-0">
+                                                        {(() => {
+                                                            try {
+                                                                const pointsEntries = Object.entries(p.pointsPerRanking || {});
+                                                                if (pointsEntries.length > 0) {
+                                                                    return pointsEntries.map(([rId, pts], i) => {
+                                                                        const ranking = rankings.find(r => r.id === rId);
+                                                                        const label = ranking?.label || ranking?.id || '---';
+                                                                        return (
+                                                                            <div key={rId} className="flex flex-col leading-tight">
+                                                                                <span className="text-primary font-black">{pts}</span>
+                                                                                {pointsEntries.length > 1 && (
+                                                                                    <span className="text-[8px] text-gray-500 font-bold uppercase">{label}</span>
+                                                                                )}
+                                                                            </div>
+                                                                        );
+                                                                    });
+                                                                } else {
+                                                                    return <span className="text-primary font-black">{p.calculatedPoints || 0}</span>;
+                                                                }
+                                                            } catch (e) {
+                                                                console.error("Error rendering points for player:", p.name, e);
+                                                                return <span className="text-primary font-black">--</span>;
                                                             }
-                                                        } catch (e) {
-                                                            console.error("Error rendering points for player:", p.name, e);
-                                                            return <span className="text-primary font-black">--</span>;
-                                                        }
-                                                    })()}
-                                                </div>
+                                                        })()}
+                                                    </div>
+                                                )}
                                                 <button onClick={() => removePlayerResult(p.id)} className="text-red-500 hover:text-red-400 w-6 flex justify-end">x</button>
                                             </div>
                                         ))}
@@ -1464,14 +1769,35 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                             <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Título do Evento</label>
                                             <input type="text" value={editingEvent.title} onChange={(e) => handleInputChange('title', e.target.value)} className="w-full bg-black/20 border border-white/10 rounded p-3 text-white focus:border-primary outline-none" />
                                         </div>
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Data</label>
-                                            <input type="date" value={editingEvent.date} onChange={(e) => handleInputChange('date', e.target.value)} className="w-full bg-black/20 border border-white/10 rounded p-3 text-white focus:border-primary outline-none" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Horário</label>
-                                            <input type="time" value={editingEvent.time} onChange={(e) => handleInputChange('time', e.target.value)} className="w-full bg-black/20 border border-white/10 rounded p-3 text-white focus:border-primary outline-none" />
-                                        </div>
+                                        {/* NOVO: Torneio de Dias Classificatórios */}
+                                        {editingEvent.gameMode === 'tournament' && (!editingEvent.id || editingEvent.id.length < 20) && (
+                                            <div className="md:col-span-2 mt-2 bg-primary/10 border border-primary/30 p-4 rounded-lg mb-2">
+                                                <label className="flex items-center gap-3 cursor-pointer group">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isMultiDayForm}
+                                                        onChange={(e) => setIsMultiDayForm(e.target.checked)}
+                                                        className="w-5 h-5 rounded border-white/20 bg-black/50 text-primary focus:ring-primary focus:ring-offset-black"
+                                                    />
+                                                    <span className="text-white font-bold uppercase tracking-wider text-sm group-hover:text-primary transition-colors">
+                                                        Torneio com Dias Classificatórios (Múltiplos Dias)
+                                                    </span>
+                                                </label>
+                                            </div>
+                                        )}
+
+                                        {!isMultiDayForm && (
+                                            <>
+                                                <div>
+                                                    <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Data</label>
+                                                    <input type="date" value={editingEvent.date} onChange={(e) => handleInputChange('date', e.target.value)} className="w-full bg-black/20 border border-white/10 rounded p-3 text-white focus:border-primary outline-none" />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Horário</label>
+                                                    <input type="time" value={editingEvent.time} onChange={(e) => handleInputChange('time', e.target.value)} className="w-full bg-black/20 border border-white/10 rounded p-3 text-white focus:border-primary outline-none" />
+                                                </div>
+                                            </>
+                                        )}
                                         <div>
                                             <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Local</label>
                                             <input type="text" value={editingEvent.location || ''} onChange={(e) => handleInputChange('location', e.target.value)} className="w-full bg-black/20 border border-white/10 rounded p-3 text-white focus:border-primary outline-none" placeholder="Ex: QG Venâncio" />
@@ -1532,6 +1858,84 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* NOVO: Secção de Datas do Multi-Day */}
+                                {isMultiDayForm && (
+                                    <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 animate-in fade-in zoom-in duration-300">
+                                        <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/5">
+                                            <h4 className="text-white font-bold text-sm uppercase tracking-widest text-primary">Dias Classificatórios</h4>
+                                            <button
+                                                type="button"
+                                                onClick={() => setStartingDays([...startingDays, { name: `${startingDays.length + 1}A`, date: '', time: '' }])}
+                                                className="text-xs font-bold bg-primary/20 text-primary px-3 py-1 rounded-lg hover:bg-primary hover:text-white transition-colors"
+                                            >
+                                                + ADICIONAR DIA
+                                            </button>
+                                        </div>
+
+                                        <div className="space-y-3 mb-6">
+                                            {startingDays.map((sd, i) => (
+                                                <div key={i} className="flex gap-4 items-center bg-black/40 p-3 rounded-lg border border-white/5 flex-wrap md:flex-nowrap">
+                                                    <div className="w-full md:w-1/4">
+                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nome do Dia</label>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Ex: 1A"
+                                                            value={sd.name}
+                                                            onChange={(e) => { const newDays = [...startingDays]; newDays[i].name = e.target.value; setStartingDays(newDays); }}
+                                                            className="w-full bg-black/50 text-white p-2 border border-white/10 rounded focus:border-primary outline-none"
+                                                        />
+                                                    </div>
+                                                    <div className="w-full md:w-2/4">
+                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Data</label>
+                                                        <input
+                                                            type="date"
+                                                            value={sd.date}
+                                                            onChange={(e) => { const newDays = [...startingDays]; newDays[i].date = e.target.value; setStartingDays(newDays); }}
+                                                            className="w-full bg-black/50 text-white p-2 border border-white/10 rounded focus:border-primary outline-none"
+                                                        />
+                                                    </div>
+                                                    <div className="w-full md:w-1/4">
+                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Horário</label>
+                                                        <div className="flex gap-2 items-center">
+                                                            <input
+                                                                type="time"
+                                                                value={sd.time}
+                                                                onChange={(e) => { const newDays = [...startingDays]; newDays[i].time = e.target.value; setStartingDays(newDays); }}
+                                                                className="w-full bg-black/50 text-white p-2 border border-white/10 rounded focus:border-primary outline-none"
+                                                            />
+                                                            {startingDays.length > 1 && (
+                                                                <button type="button" onClick={() => setStartingDays(startingDays.filter((_, idx) => idx !== i))} className="text-red-500 hover:text-red-400 p-2 bg-red-500/10 rounded border border-red-500/20">
+                                                                    <span className="material-icons-outlined text-sm">delete</span>
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <h4 className="text-white font-bold mb-4 text-sm uppercase tracking-widest text-secondary pt-4 border-t border-white/5">Final do Torneio</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Data da Final</label>
+                                                <input type="date" value={finalDayDate} onChange={(e) => setFinalDayDate(e.target.value)} className="w-full bg-black/20 border border-white/10 rounded p-3 text-white focus:border-secondary outline-none" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Horário da Final</label>
+                                                <input type="time" value={finalDayTime} onChange={(e) => setFinalDayTime(e.target.value)} className="w-full bg-black/20 border border-white/10 rounded p-3 text-white focus:border-secondary outline-none" />
+                                            </div>
+                                            <div className="md:col-span-2">
+                                                <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Classificação Múltipla (Mesmo Jogador)</label>
+                                                <select value={stackAggregation} onChange={(e) => setStackAggregation(e.target.value as 'sum' | 'max')} className="w-full bg-black border border-white/10 rounded p-3 text-white focus:border-secondary outline-none">
+                                                    <option value="max" className="bg-black text-white">Usar Maior Stack (Max)</option>
+                                                    <option value="sum" className="bg-black text-white">Somar Stacks (Sum)</option>
+                                                </select>
+                                                <p className="text-[10px] text-gray-500 mt-2 uppercase">Decide como as fichas são agrupadas se um jogador classificar em mais de um dia inicial.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Nova Seção: Ranking Selection Box (DYNAMIC) */}
                                 <div className="bg-black/20 p-4 rounded-xl border border-white/5">

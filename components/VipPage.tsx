@@ -101,16 +101,35 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate, currentUser, onUpd
     const isCurrentlyVip = currentUser.isVip && currentUser.vipExpiresAt && new Date(currentUser.vipExpiresAt) > new Date();
 
     if (isCurrentlyVip && currentUser.vipStatus) {
-      const userPlanKey = currentUser.vipStatus === 'master' ? 'master' : (currentUser.vipStatus === 'anual' ? 'annual' : 'quarterly');
+      const userPlanKey = currentUser.vipStatus === 'master' ? 'master' :
+        (currentUser.vipStatus === 'anual' ? 'annual' :
+          (currentUser.vipStatus === 'trimestral' ? 'quarterly' : 'honorario'));
+
       const userPlanCost = currentPlansPrices[userPlanKey] || 0;
       const targetPlanCost = plan.rawPrice || 0;
 
-      // Don't allow downgrade or buying same
-      if (targetPlanCost <= userPlanCost) {
-        alert('Você já possui este plano ou um plano com mais benefícios ativos.');
-        return;
+      // Se for honorário, o "userPlanCost" no DB é zero, mas queremos dar um desconto fixo de R$ 50 no upgrade
+      if (currentUser.vipStatus === 'honorario') {
+        if (plan.id === 'quarterly') {
+          // Bloqueia upgrade de honorário para trimestral
+          alert('Upgrades de plano Honorário não estão disponíveis para o plano VIP Bronze (Trimestral). Escolha VIP Gold (Anual) ou VIP Master.');
+          return;
+        }
+        const expiresAt = new Date(currentUser.vipExpiresAt);
+        const now = new Date();
+        const diffDays = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (diffDays > 15) {
+          discount = 50;
+        }
+      } else {
+        // Lógica de upgrade padrão para outros planos
+        if (targetPlanCost <= userPlanCost) {
+          alert('Você já possui este plano ou um plano com mais benefícios ativos.');
+          return;
+        }
+        discount = userPlanCost;
       }
-      discount = userPlanCost;
     }
 
     const costToCharge = plan.rawPrice - discount;
@@ -300,12 +319,14 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate, currentUser, onUpd
 
                 const isCurrentPlan = isCurrentlyVip && currentUser?.vipStatus === (plan.id === 'quarterly' ? 'trimestral' : (plan.id === 'annual' ? 'anual' : plan.id));
                 const isDowngrade = isCurrentlyVip && targetPlanCost < userPlanCost;
-                const isUpgrade = isCurrentlyVip && targetPlanCost > userPlanCost;
+                const isHonorarioBlocked = isCurrentlyVip && currentUser?.vipStatus === 'honorario' && plan.id === 'quarterly';
+                const isUpgrade = isCurrentlyVip && targetPlanCost > userPlanCost && !isHonorarioBlocked;
 
-                const isDisabled = isProcessing || isCurrentPlan || isDowngrade;
+                const isDisabled = isProcessing || isCurrentPlan || isDowngrade || isHonorarioBlocked;
 
                 let btnText = `Quero ser ${plan.title}`;
                 if (isCurrentPlan) btnText = 'Seu Plano Atual';
+                else if (isHonorarioBlocked) btnText = 'Upgrade Indisponível';
                 else if (isDowngrade) btnText = 'Plano Superior Ativo';
                 else if (isUpgrade) btnText = 'Fazer Upgrade';
                 if (isProcessing) btnText = 'Processando...';

@@ -54,6 +54,8 @@ export const RankingTable: React.FC<RankingTableProps> = ({
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [showSimulator, setShowSimulator] = useState(false);
     const [showFormulaEditor, setShowFormulaEditor] = useState(false);
+    const [rankingView, setRankingView] = useState<'active' | 'finalized'>('active');
+
 
     // Admin Editing State
     const [editingRanking, setEditingRanking] = useState<RankingInstance | null>(null);
@@ -72,15 +74,18 @@ export const RankingTable: React.FC<RankingTableProps> = ({
     const [simProfitLoss, setSimProfitLoss] = useState<number>(0);
     const [simResult, setSimResult] = useState<number>(0);
 
-    // Ensure activeRankingId is valid (fallback to first available if deleted)
+    // Ensure activeRankingId is valid (fallback to first available if deleted or filtered)
     useEffect(() => {
-        if (rankings.length > 0 && !rankings.find(r => r.id === activeRankingId)) {
-            setActiveRankingId(rankings[0].id);
+        const availableInCurrentView = rankings.filter(r => (rankingView === 'active' ? r.isActive !== false : r.isActive === false));
+        if (availableInCurrentView.length > 0 && !availableInCurrentView.find(r => r.id === activeRankingId)) {
+            setActiveRankingId(availableInCurrentView[0].id);
         }
-    }, [rankings, activeRankingId]);
+    }, [rankings, activeRankingId, rankingView]);
 
-    const activeRanking = rankings.find(r => r.id === activeRankingId) || rankings[0];
+    const availableRankings = rankings.filter(r => (rankingView === 'active' ? r.isActive !== false : r.isActive === false));
+    const activeRanking = rankings.find(r => r.id === activeRankingId) || availableRankings[0] || rankings[0];
     const rankingStyle = getRankingStyle(activeRanking?.label || 'RANKING');
+
 
     // Reset simulator type based on ranking category
     useEffect(() => {
@@ -211,57 +216,100 @@ export const RankingTable: React.FC<RankingTableProps> = ({
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
 
                 <div className="text-center mb-10 group relative">
-                    <h2 className="text-3xl sm:text-5xl font-display font-black tracking-[0.1em] uppercase">
-                        <span className={`title-shimmer bg-gradient-to-r ${rankingStyle.gradient} ${rankingStyle.shadow}`}>
-                            {activeRanking?.label || 'RANKING'}
-                        </span>
-                    </h2>
-                    <div className={`h-1.5 w-32 mx-auto rounded-full mt-4 bg-gradient-to-r ${rankingStyle.gradient} bar-shimmer shadow-lg shadow-black/20`}></div>
-                    <p className="text-gray-500 dark:text-gray-400 mt-4 font-light tracking-wide uppercase text-sm">
-                        {activeRanking?.description}
-                    </p>
-                    {activeRanking?.startDate && activeRanking?.endDate && (
-                        <div className="mt-2 text-[10px] md:text-xs font-bold text-primary/60 uppercase tracking-[0.3em]">
-                            {activeRanking.startDate.split('-').reverse().slice(0, 2).join('/')} - {activeRanking.endDate.split('-').reverse().slice(0, 2).join('/')}
-                        </div>
-                    )}
+                    {availableRankings.length > 0 ? (
+                        <>
+                            <h2 className="text-3xl sm:text-5xl font-display font-black tracking-[0.1em] uppercase">
+                                <span className={`title-shimmer bg-gradient-to-r ${rankingStyle.gradient} ${rankingStyle.shadow}`}>
+                                    {activeRanking?.label || 'RANKING'}
+                                </span>
+                            </h2>
+                            <div className={`h-1.5 w-32 mx-auto rounded-full mt-4 bg-gradient-to-r ${rankingStyle.gradient} bar-shimmer shadow-lg shadow-black/20`}></div>
 
-                    {/* ADMIN EDIT BUTTON FOR CURRENT RANKING */}
-                    {isAdmin && activeRanking && (
-                        <div className="absolute top-0 right-0 lg:right-[-50px] flex flex-col gap-2">
-                            <button
-                                onClick={() => setEditingRanking(activeRanking)}
-                                className="bg-white/5 p-2 rounded-full hover:bg-primary hover:text-white text-gray-400 transition-colors"
-                                title="Editar Detalhes do Ranking"
-                            >
-                                <span className="material-icons-outlined">edit</span>
-                            </button>
-                            <button
-                                onClick={() => setShowFormulaEditor(true)}
-                                className="bg-white/5 p-2 rounded-full hover:bg-secondary hover:text-white text-gray-400 transition-colors"
-                                title="Editar Fórmulas de Pontuação"
-                            >
-                                <span className="material-icons-outlined">functions</span>
-                            </button>
+                            <p className="text-gray-500 dark:text-gray-400 mt-4 font-light tracking-wide uppercase text-sm">
+                                {activeRanking?.description}
+                            </p>
+                            {activeRanking?.startDate && activeRanking?.endDate && (
+                                <div className="mt-2 text-[10px] md:text-xs font-bold text-primary/60 uppercase tracking-[0.3em]">
+                                    {activeRanking.startDate.split('-').reverse().slice(0, 2).join('/')} - {activeRanking.endDate.split('-').reverse().slice(0, 2).join('/')}
+                                </div>
+                            )}
+
+                            {/* ADMIN EDIT BUTTONS FOR CURRENT RANKING */}
+                            {isAdmin && (
+                                <div className="absolute top-0 right-0 lg:right-[-50px] flex flex-col gap-2">
+                                    <button
+                                        onClick={() => setEditingRanking(activeRanking)}
+                                        className="bg-white/5 p-2 rounded-full hover:bg-primary hover:text-white text-gray-400 transition-colors"
+                                        title="Editar Detalhes do Ranking"
+                                    >
+                                        <span className="material-icons-outlined">edit</span>
+                                    </button>
+                                    <button
+                                        onClick={() => setShowFormulaEditor(true)}
+                                        className="bg-white/5 p-2 rounded-full hover:bg-secondary hover:text-white text-gray-400 transition-colors"
+                                        title="Editar Fórmulas de Pontuação"
+                                    >
+                                        <span className="material-icons-outlined">functions</span>
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            const action = activeRanking.isActive !== false ? 'finalizar' : 'reativar';
+                                            if (window.confirm(`Deseja realmente ${action} o ranking "${activeRanking.label}"?`)) {
+                                                onUpdateRankingMeta?.(activeRanking.id, { isActive: activeRanking.isActive === false });
+                                            }
+                                        }}
+                                        className={`bg-white/5 p-2 rounded-full transition-colors ${activeRanking.isActive !== false ? 'hover:bg-red-500' : 'hover:bg-emerald-500'} hover:text-white text-gray-400`}
+                                        title={activeRanking.isActive !== false ? "Finalizar Ranking" : "Reativar Ranking"}
+                                    >
+                                        <span className="material-icons-outlined">{activeRanking.isActive !== false ? 'lock' : 'lock_open'}</span>
+                                    </button>
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        <div className="pt-10">
+                            <span className="material-icons-outlined text-gray-700 text-6xl mb-4">history</span>
+                            <h2 className="text-xl font-bold text-gray-500 uppercase">Nenhum ranking {rankingView === 'active' ? 'em andamento' : 'encerrado'}</h2>
                         </div>
                     )}
+                </div>
+
+                {/* Switch Active/Finalized */}
+                <div className="flex justify-center mb-6">
+                    <div className="flex bg-gray-200 dark:bg-surface-dark/50 p-1 rounded-xl border border-gray-300 dark:border-white/5 shadow-inner">
+                        <button
+                            onClick={() => setRankingView('active')}
+                            className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${rankingView === 'active' ? 'bg-primary text-white shadow-lg' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                        >
+                            Em Andamento
+                        </button>
+                        <button
+                            onClick={() => setRankingView('finalized')}
+                            className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${rankingView === 'finalized' ? 'bg-secondary text-white shadow-lg' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                        >
+                            Encerrados
+                        </button>
+                    </div>
                 </div>
 
                 {/* Dynamic Tabs + Rules Button */}
                 <div className="flex flex-col items-center justify-center mb-12 gap-4">
                     <div className="bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/10 p-1 rounded-full flex flex-wrap justify-center backdrop-blur-md shadow-lg max-w-full overflow-x-auto">
-                        {[...rankings].sort((a, b) => (a.order || 0) - (b.order || 0)).map(ranking => (
-                            <button
-                                key={ranking.id}
-                                onClick={() => setActiveRankingId(ranking.id)}
-                                className={`px-4 sm:px-8 py-2 rounded-full text-sm sm:text-base font-bold uppercase tracking-widest transition-all duration-300 whitespace-nowrap ${activeRankingId === ranking.id
-                                    ? 'bg-gradient-to-r from-primary to-accent text-white shadow-neon-pink'
-                                    : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
-                                    }`}
-                            >
-                                {ranking.label}
-                            </button>
-                        ))}
+                        {availableRankings
+                            .sort((a, b) => (a.order || 0) - (b.order || 0))
+                            .map(ranking => (
+                                <button
+                                    key={ranking.id}
+                                    onClick={() => setActiveRankingId(ranking.id)}
+                                    className={`px-4 sm:px-8 py-2 rounded-full text-sm sm:text-base font-bold uppercase tracking-widest transition-all duration-300 whitespace-nowrap ${activeRankingId === ranking.id
+                                        ? 'bg-gradient-to-r from-primary to-accent text-white shadow-neon-pink'
+                                        : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+                                        }`}
+                                >
+                                    {ranking.label}
+                                </button>
+                            ))}
+
 
                         {/* ADMIN ADD BUTTON */}
                         {isAdmin && onAddRanking && (
@@ -293,379 +341,385 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                     </div>
                 </div>
 
-                {/* --- SIMULADOR DE PONTOS --- */}
-                {showSimulator && (
-                    <div className="mb-8 bg-surface-dark border border-secondary/30 rounded-2xl p-6 shadow-[0_0_30px_rgba(0,224,255,0.1)] animate-in slide-in-from-top-4 duration-300">
-                        <div className="flex items-center gap-2 mb-6 pb-2 border-b border-white/5">
-                            <span className="material-icons-outlined text-secondary">calculate</span>
-                            <h3 className="text-lg font-bold text-white uppercase tracking-widest">Simulador de Pontos</h3>
-                        </div>
+                {availableRankings.length > 0 && (
+                    <>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-end">
-                            {/* Inputs */}
-                            <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Tipo de Torneio</label>
-                                    <select
-                                        value={simType}
-                                        onChange={(e) => setSimType(e.target.value)}
-                                        className="w-full bg-[#050214] border border-white/10 rounded-lg p-2 text-white text-sm focus:border-secondary outline-none"
-                                    >
-                                        {activeRanking?.scoringSchemas && activeRanking.scoringSchemas.length > 0 ? (
-                                            activeRanking.scoringSchemas.map(s => (
-                                                <option key={s.id} value={s.id}>{s.name}</option>
-                                            ))
+
+                        {/* --- SIMULADOR DE PONTOS --- */}
+                        {showSimulator && (
+                            <div className="mb-8 bg-surface-dark border border-secondary/30 rounded-2xl p-6 shadow-[0_0_30px_rgba(0,224,255,0.1)] animate-in slide-in-from-top-4 duration-300">
+                                <div className="flex items-center gap-2 mb-6 pb-2 border-b border-white/5">
+                                    <span className="material-icons-outlined text-secondary">calculate</span>
+                                    <h3 className="text-lg font-bold text-white uppercase tracking-widest">Simulador de Pontos</h3>
+                                </div>
+
+                                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-end">
+                                    {/* Inputs */}
+                                    <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Tipo de Torneio</label>
+                                            <select
+                                                value={simType}
+                                                onChange={(e) => setSimType(e.target.value)}
+                                                className="w-full bg-[#050214] border border-white/10 rounded-lg p-2 text-white text-sm focus:border-secondary outline-none"
+                                            >
+                                                {activeRanking?.scoringSchemas && activeRanking.scoringSchemas.length > 0 ? (
+                                                    activeRanking.scoringSchemas.map(s => (
+                                                        <option key={s.id} value={s.id}>{s.name}</option>
+                                                    ))
+                                                ) : activeRanking?.label.toLowerCase().includes('legado') ? (
+                                                    <>
+                                                        <option value="legacy_weekly">Legado Padrão</option>
+                                                        <option value="legacy_monthly">Legado Mensal</option>
+                                                        <option value="legacy_special">Legado Especial</option>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <option value="weekly">Semanal (Padrão)</option>
+                                                        <option value="monthly">Mensal (Padrão)</option>
+                                                        <option value="special">Especial (Padrão)</option>
+                                                        <option value="cash_online">Cash Game</option>
+                                                        <option value="mtt_online">MTT Online</option>
+                                                        <option value="sit_n_go">Sit & Go</option>
+                                                        <option value="satellite">Satélite</option>
+                                                    </>
+                                                )}
+                                            </select>
+                                        </div>
+
+                                        {isCashSim ? (
+                                            <>
+                                                <div>
+                                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Rake Gerado (R$)</label>
+                                                    <input
+                                                        type="number"
+                                                        value={simRake || ''}
+                                                        onChange={(e) => setSimRake(parseInt(e.target.value) || 0)}
+                                                        className="w-full bg-black/30 border border-white/10 rounded-lg p-2 text-white text-sm focus:border-secondary outline-none"
+                                                        placeholder="0"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Lucro / Perda (R$)</label>
+                                                    <input
+                                                        type="number"
+                                                        value={simProfitLoss || ''}
+                                                        onChange={(e) => setSimProfitLoss(parseInt(e.target.value) || 0)}
+                                                        className="w-full bg-black/30 border border-white/10 rounded-lg p-2 text-white text-sm focus:border-secondary outline-none"
+                                                        placeholder="0"
+                                                    />
+                                                </div>
+                                                <div className="hidden md:block"></div>
+                                            </>
                                         ) : activeRanking?.label.toLowerCase().includes('legado') ? (
                                             <>
-                                                <option value="legacy_weekly">Legado Padrão</option>
-                                                <option value="legacy_monthly">Legado Mensal</option>
-                                                <option value="legacy_special">Legado Especial</option>
+                                                <div className="hidden md:block"></div>
+                                                <div className="hidden md:block"></div>
+                                                <div className="hidden md:block"></div>
                                             </>
                                         ) : (
                                             <>
-                                                <option value="weekly">Semanal (Padrão)</option>
-                                                <option value="monthly">Mensal (Padrão)</option>
-                                                <option value="special">Especial (Padrão)</option>
-                                                <option value="cash_online">Cash Game</option>
-                                                <option value="mtt_online">MTT Online</option>
-                                                <option value="sit_n_go">Sit & Go</option>
-                                                <option value="satellite">Satélite</option>
+                                                <div>
+                                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Participantes</label>
+                                                    <input
+                                                        type="number"
+                                                        value={simPlayers || ''}
+                                                        onChange={(e) => setSimPlayers(parseInt(e.target.value) || 0)}
+                                                        className="w-full bg-black/30 border border-white/10 rounded-lg p-2 text-white text-sm focus:border-secondary outline-none"
+                                                        placeholder="0"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Buy-in (R$)</label>
+                                                    <input
+                                                        type="number"
+                                                        value={simBuyin || ''}
+                                                        onChange={(e) => setSimBuyin(parseInt(e.target.value) || 0)}
+                                                        className="w-full bg-black/30 border border-white/10 rounded-lg p-2 text-white text-sm focus:border-secondary outline-none"
+                                                        placeholder="0"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Premiação (ITM)</label>
+                                                    <input
+                                                        type="number"
+                                                        value={simPrize || ''}
+                                                        onChange={(e) => setSimPrize(parseInt(e.target.value) || 0)}
+                                                        className="w-full bg-black/30 border border-white/10 rounded-lg p-2 text-white text-sm focus:border-secondary outline-none"
+                                                        placeholder="0"
+                                                    />
+                                                </div>
                                             </>
                                         )}
-                                    </select>
-                                </div>
+                                    </div>
 
-                                {isCashSim ? (
-                                    <>
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Rake Gerado (R$)</label>
-                                            <input
-                                                type="number"
-                                                value={simRake || ''}
-                                                onChange={(e) => setSimRake(parseInt(e.target.value) || 0)}
-                                                className="w-full bg-black/30 border border-white/10 rounded-lg p-2 text-white text-sm focus:border-secondary outline-none"
-                                                placeholder="0"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Lucro / Perda (R$)</label>
-                                            <input
-                                                type="number"
-                                                value={simProfitLoss || ''}
-                                                onChange={(e) => setSimProfitLoss(parseInt(e.target.value) || 0)}
-                                                className="w-full bg-black/30 border border-white/10 rounded-lg p-2 text-white text-sm focus:border-secondary outline-none"
-                                                placeholder="0"
-                                            />
-                                        </div>
-                                        <div className="hidden md:block"></div>
-                                    </>
-                                ) : activeRanking?.label.toLowerCase().includes('legado') ? (
-                                    <>
-                                        <div className="hidden md:block"></div>
-                                        <div className="hidden md:block"></div>
-                                        <div className="hidden md:block"></div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Participantes</label>
-                                            <input
-                                                type="number"
-                                                value={simPlayers || ''}
-                                                onChange={(e) => setSimPlayers(parseInt(e.target.value) || 0)}
-                                                className="w-full bg-black/30 border border-white/10 rounded-lg p-2 text-white text-sm focus:border-secondary outline-none"
-                                                placeholder="0"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Buy-in (R$)</label>
-                                            <input
-                                                type="number"
-                                                value={simBuyin || ''}
-                                                onChange={(e) => setSimBuyin(parseInt(e.target.value) || 0)}
-                                                className="w-full bg-black/30 border border-white/10 rounded-lg p-2 text-white text-sm focus:border-secondary outline-none"
-                                                placeholder="0"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Premiação (ITM)</label>
-                                            <input
-                                                type="number"
-                                                value={simPrize || ''}
-                                                onChange={(e) => setSimPrize(parseInt(e.target.value) || 0)}
-                                                className="w-full bg-black/30 border border-white/10 rounded-lg p-2 text-white text-sm focus:border-secondary outline-none"
-                                                placeholder="0"
-                                            />
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-
-                            {/* Checkboxes & Result */}
-                            <div className="lg:col-span-1 flex flex-col justify-between h-full gap-4">
-                                <div className="flex gap-4">
-                                    {!isCashSim && (
-                                        <div className="flex flex-col gap-1 w-24 md:w-32">
-                                            <label className="text-[10px] font-bold text-gray-400 uppercase">Posição Final</label>
-                                            {simType.includes('legacy') || activeRanking?.label.toLowerCase().includes('legado') ? (
-                                                <select
-                                                    value={simPosition || 1}
-                                                    onChange={(e) => setSimPosition(parseInt(e.target.value) || 1)}
-                                                    className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-white text-sm focus:border-secondary outline-none text-center"
-                                                >
-                                                    <option value="1">Campeão</option>
-                                                    <option value="2">Vice</option>
-                                                    <option value="3">3º Lugar</option>
-                                                </select>
-                                            ) : (
-                                                <input
-                                                    type="number"
-                                                    value={simPosition || ''}
-                                                    onChange={(e) => setSimPosition(parseInt(e.target.value) || 1)}
-                                                    min="1"
-                                                    className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-white text-sm focus:border-secondary outline-none text-center"
-                                                />
+                                    {/* Checkboxes & Result */}
+                                    <div className="lg:col-span-1 flex flex-col justify-between h-full gap-4">
+                                        <div className="flex gap-4">
+                                            {!isCashSim && (
+                                                <div className="flex flex-col gap-1 w-24 md:w-32">
+                                                    <label className="text-[10px] font-bold text-gray-400 uppercase">Posição Final</label>
+                                                    {simType.includes('legacy') || activeRanking?.label.toLowerCase().includes('legado') ? (
+                                                        <select
+                                                            value={simPosition || 1}
+                                                            onChange={(e) => setSimPosition(parseInt(e.target.value) || 1)}
+                                                            className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-white text-sm focus:border-secondary outline-none text-center"
+                                                        >
+                                                            <option value="1">Campeão</option>
+                                                            <option value="2">Vice</option>
+                                                            <option value="3">3º Lugar</option>
+                                                        </select>
+                                                    ) : (
+                                                        <input
+                                                            type="number"
+                                                            value={simPosition || ''}
+                                                            onChange={(e) => setSimPosition(parseInt(e.target.value) || 1)}
+                                                            min="1"
+                                                            className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-white text-sm focus:border-secondary outline-none text-center"
+                                                        />
+                                                    )}
+                                                </div>
                                             )}
+                                            <label className="flex items-center gap-2 cursor-pointer group">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={simIsVip}
+                                                    onChange={(e) => setSimIsVip(e.target.checked)}
+                                                    className="w-4 h-4 accent-primary bg-black border-white/20 rounded"
+                                                />
+                                                <span className="text-xs font-bold text-gray-400 group-hover:text-white transition-colors">VIP?</span>
+                                            </label>
                                         </div>
-                                    )}
-                                    <label className="flex items-center gap-2 cursor-pointer group">
-                                        <input
-                                            type="checkbox"
-                                            checked={simIsVip}
-                                            onChange={(e) => setSimIsVip(e.target.checked)}
-                                            className="w-4 h-4 accent-primary bg-black border-white/20 rounded"
-                                        />
-                                        <span className="text-xs font-bold text-gray-400 group-hover:text-white transition-colors">VIP?</span>
-                                    </label>
+
+                                        <div className="bg-black/40 rounded-lg p-3 border border-white/5 flex items-center justify-between">
+                                            <span className="text-xs uppercase font-bold text-gray-500">Resultado</span>
+                                            <span className="text-2xl font-display font-black text-secondary text-glow-blue">{simResult} pts</span>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <div className="bg-black/40 rounded-lg p-3 border border-white/5 flex items-center justify-between">
-                                    <span className="text-xs uppercase font-bold text-gray-500">Resultado</span>
-                                    <span className="text-2xl font-display font-black text-secondary text-glow-blue">{simResult} pts</span>
+                                {/* Example / Projection Table */}
+                                <div className="mt-8 border-t border-white/10 pt-6">
+                                    <h4 className="text-xs font-bold text-gray-400 uppercase mb-4 flex items-center gap-2">
+                                        <span className="material-icons-outlined text-sm">trending_up</span>
+                                        Projeção de Impacto: <span className="text-white">{currentUser?.name || 'Visitante'}</span>
+                                    </h4>
+                                    <div className="bg-black/20 rounded-xl overflow-hidden border border-white/5">
+                                        <table className="w-full text-left text-sm">
+                                            <thead className="bg-white/5 text-gray-400 font-bold uppercase text-[10px] tracking-wider">
+                                                <tr>
+                                                    <th className="px-4 py-3">Ranking Atual</th>
+                                                    <th className="px-4 py-3 text-right">Pontuação Atual</th>
+                                                    <th className="px-4 py-3 text-right text-secondary">+ Simulação</th>
+                                                    <th className="px-4 py-3 text-right text-white">Total Projetado</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-white/5">
+                                                <tr className="hover:bg-white/5 transition-colors">
+                                                    <td className="px-4 py-3 font-bold text-primary">{activeRanking?.label}</td>
+                                                    <td className="px-4 py-3 text-right text-gray-300">{userCurrentPoints.toLocaleString()}</td>
+                                                    <td className="px-4 py-3 text-right text-secondary font-bold">+{simResult}</td>
+                                                    <td className="px-4 py-3 text-right text-white font-black font-display text-lg">{(userCurrentPoints + simResult).toLocaleString()}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
+                            </div>
+                        )}
+
+                        {/* Custom Prize/Highlight Box */}
+                        {activeRanking?.prizeInfoTitle && (
+                            <div className="max-w-3xl mx-auto mb-8">
+                                <h3 className="text-primary font-bold text-xl sm:text-2xl mb-6 flex items-center justify-center gap-2">
+                                    <span className="material-icons-outlined">emoji_events</span> Ranking Geral 2026
+                                </h3>
+                                <div className="bg-gradient-to-r from-primary/10 to-accent/10 p-6 rounded-2xl border border-primary/20 backdrop-blur-sm flex flex-col md:flex-row items-center justify-between gap-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400 to-orange-600 flex items-center justify-center shadow-lg text-black font-black text-2xl">
+                                            3
+                                        </div>
+                                        <div className="text-left">
+                                            <div className="text-white font-black text-xl uppercase italic">{activeRanking.prizeInfoTitle}</div>
+                                            <div className="text-primary font-bold">THE CHOSEN 2026</div>
+                                        </div>
+                                    </div>
+                                    <div className="h-px w-full md:w-px md:h-12 bg-white/10"></div>
+                                    <div className="text-left md:text-right">
+                                        <p className="text-gray-300 text-sm leading-relaxed">
+                                            {activeRanking.prizeInfoDetail || "Premiação especial para os líderes."}
+                                        </p>
+                                    </div>
+                                </div>
+                                <p className="text-[10px] text-gray-600 mt-4 uppercase tracking-widest text-center">* Premiações de patrocinadores poderão ser acrescentadas.</p>
+                            </div>
+                        )}
+
+                        {/* Search & Filter */}
+                        <div className="flex justify-between items-center mb-6 relative z-30">
+                            <div className="relative w-full max-w-md mx-auto">
+                                <input
+                                    type="text"
+                                    placeholder="Buscar jogador..."
+                                    value={searchTerm}
+                                    onChange={handleSearchChange}
+                                    onFocus={() => setShowSuggestions(true)}
+                                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                                    className="w-full bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/10 rounded-full py-3 px-12 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:border-primary focus:shadow-[0_0_15px_rgba(217,0,255,0.2)] transition-all"
+                                />
+                                <span className="material-icons-outlined absolute left-4 top-3 text-gray-400">search</span>
+
+                                {/* Search Dropdown */}
+                                {showSuggestions && searchTerm && suggestions.length > 0 && (
+                                    <ul className="absolute top-full left-0 w-full mt-2 bg-surface-dark border border-white/20 rounded-xl shadow-2xl max-h-60 overflow-y-auto custom-scrollbar z-50">
+                                        {suggestions.map((player) => (
+                                            <li
+                                                key={player.name}
+                                                onClick={() => handleSuggestionClick(player.name)}
+                                                className="px-4 py-3 hover:bg-white/10 cursor-pointer text-gray-300 text-sm border-b border-white/5 last:border-0 flex items-center gap-3"
+                                            >
+                                                <img src={player.avatar || `https://ui-avatars.com/api/?name=${player.name}&background=random`} className="w-6 h-6 rounded-full" alt="" />
+                                                {player.name}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
                             </div>
                         </div>
 
-                        {/* Example / Projection Table */}
-                        <div className="mt-8 border-t border-white/10 pt-6">
-                            <h4 className="text-xs font-bold text-gray-400 uppercase mb-4 flex items-center gap-2">
-                                <span className="material-icons-outlined text-sm">trending_up</span>
-                                Projeção de Impacto: <span className="text-white">{currentUser?.name || 'Visitante'}</span>
-                            </h4>
-                            <div className="bg-black/20 rounded-xl overflow-hidden border border-white/5">
-                                <table className="w-full text-left text-sm">
-                                    <thead className="bg-white/5 text-gray-400 font-bold uppercase text-[10px] tracking-wider">
+                        {/* Noble Table */}
+                        <div className="bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden shadow-2xl relative z-10">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-secondary"></div>
+
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left">
+                                    <thead className="bg-gray-5 dark:bg-white/5">
                                         <tr>
-                                            <th className="px-4 py-3">Ranking Atual</th>
-                                            <th className="px-4 py-3 text-right">Pontuação Atual</th>
-                                            <th className="px-4 py-3 text-right text-secondary">+ Simulação</th>
-                                            <th className="px-4 py-3 text-right text-white">Total Projetado</th>
+                                            <th className="px-3 md:px-6 py-3 md:py-5 text-xs md:text-sm font-black text-primary uppercase tracking-wider md:tracking-[0.2em] w-12 md:w-auto text-center md:text-left">Rank</th>
+                                            <th className="px-3 md:px-6 py-3 md:py-5 text-xs md:text-sm font-black text-primary uppercase tracking-wider md:tracking-[0.2em]">Competidor</th>
+                                            <th className="px-6 py-5 text-sm font-black text-primary uppercase tracking-[0.2em] hidden md:table-cell">Últimas Pontuações</th>
+                                            <th className="px-3 md:px-6 py-3 md:py-5 text-xs md:text-sm font-black text-primary uppercase tracking-wider md:tracking-[0.2em] text-right">Score</th>
+                                            <th className="px-3 md:px-6 py-3 md:py-5 text-xs md:text-sm font-black text-secondary uppercase tracking-wider md:tracking-[0.2em] text-center">Prêmio</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-white/5">
-                                        <tr className="hover:bg-white/5 transition-colors">
-                                            <td className="px-4 py-3 font-bold text-primary">{activeRanking?.label}</td>
-                                            <td className="px-4 py-3 text-right text-gray-300">{userCurrentPoints.toLocaleString()}</td>
-                                            <td className="px-4 py-3 text-right text-secondary font-bold">+{simResult}</td>
-                                            <td className="px-4 py-3 text-right text-white font-black font-display text-lg">{(userCurrentPoints + simResult).toLocaleString()}</td>
-                                        </tr>
+                                    <tbody className="divide-y divide-gray-200 dark:divide-white/5">
+                                        {isLoading ? (
+                                            <tr>
+                                                <td colSpan={5} className="p-4">
+                                                    <div className="space-y-4">
+                                                        {[1, 2, 3, 4, 5].map(i => (
+                                                            <RankingSkeleton key={i} />
+                                                        ))}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            filteredRanking.map((player) => (
+                                                <tr
+                                                    key={player.name + player.rank} // Key composta para evitar erros
+                                                    className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group cursor-pointer"
+                                                    onClick={() => onSelectPlayer && onSelectPlayer(player)}
+                                                >
+                                                    <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-center md:text-left">
+                                                        <div className="flex items-center justify-center md:justify-start gap-2">
+                                                            <div className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-lg font-display font-bold text-sm md:text-lg shadow-lg group-hover:scale-110 transition-transform ${player.rank === 1 ? 'bg-gradient-to-br from-primary to-cyan-700 text-white border border-primary/50' :
+                                                                player.rank === 2 ? 'bg-gradient-to-br from-secondary to-cyan-700 text-black border border-secondary/50' :
+                                                                    player.rank === 3 ? 'bg-gradient-to-br from-gray-600 to-gray-800 text-white border border-gray-500/50' :
+                                                                        'bg-gray-100 dark:bg-white/5 text-gray-500 border border-gray-200 dark:border-white/5'
+                                                                }`}>
+                                                                {player.rank}
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap">
+                                                        <div className="flex items-center gap-3 md:gap-4">
+                                                            <div className="relative shrink-0">
+                                                                <img
+                                                                    src={player.avatar || `https://ui-avatars.com/api/?name=${player.name.replace(' ', '+')}&background=random`}
+                                                                    alt={player.name}
+                                                                    className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border-2 border-gray-200 dark:border-white/10 group-hover:border-primary transition-colors"
+                                                                />
+                                                                {player.change === 'up' && <div className="absolute -top-1 -right-1 w-3 h-3 md:w-4 md:h-4 bg-green-500 rounded-full border-2 border-white dark:border-surface-dark flex items-center justify-center"><span className="material-icons-outlined text-[8px] md:text-[10px] text-white">arrow_drop_up</span></div>}
+                                                                {player.change === 'down' && <div className="absolute -top-1 -right-1 w-3 h-3 md:w-4 md:h-4 bg-red-500 rounded-full border-2 border-white dark:border-surface-dark flex items-center justify-center"><span className="material-icons-outlined text-[8px] md:text-[10px] text-white">arrow_drop_down</span></div>}
+                                                            </div>
+                                                            <div className="min-w-0">
+                                                                <span className="block font-bold text-gray-900 dark:text-gray-200 group-hover:text-primary transition-colors text-sm md:text-lg truncate max-w-[120px] sm:max-w-none">
+                                                                    {player.name}
+                                                                </span>
+                                                                <span className="text-[10px] md:text-xs uppercase tracking-wider text-gray-500 block truncate max-w-[120px]">
+                                                                    {player.numericId ? `CR#${String(player.numericId).padStart(3, '0')}` : 'CR#INV'} · {player.city}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+
+                                                    {/* Latest Scores Column (Replaces Origem) */}
+                                                    <td className="px-6 py-4 whitespace-nowrap hidden md:table-cell">
+                                                        <div className="flex items-center gap-2">
+                                                            {getLastScores(player.name).length > 0 ? (
+                                                                getLastScores(player.name).map((score, idx) => (
+                                                                    <div key={idx} className="flex flex-col items-center">
+                                                                        <span className="bg-white/5 border border-white/10 px-2 py-1 rounded text-xs font-bold text-secondary group-hover:bg-secondary group-hover:text-black transition-colors min-w-[32px] text-center">
+                                                                            {score?.points}
+                                                                        </span>
+                                                                    </div>
+                                                                ))
+                                                            ) : (
+                                                                <span className="text-gray-600 text-xs italic">-</span>
+                                                            )}
+                                                        </div>
+                                                    </td>
+
+                                                    <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-right">
+                                                        <span className="font-display font-black text-base md:text-xl text-primary text-glow">
+                                                            {player.points.toLocaleString()}
+                                                        </span>
+                                                        <span className="text-[10px] md:text-xs uppercase text-gray-500 ml-1">pts</span>
+                                                    </td>
+                                                    <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-center">
+                                                        {isAdmin ? (
+                                                            <input
+                                                                type="text"
+                                                                value={activeRanking.positionPrizes?.[player.rank] || ''}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                onChange={(e) => onUpdatePrize && onUpdatePrize(activeRankingId, player.rank, e.target.value)}
+                                                                placeholder="-"
+                                                                className="bg-black/30 border border-white/10 rounded px-2 py-1 text-center text-xs md:text-sm text-secondary font-bold w-16 md:w-24 focus:border-secondary outline-none"
+                                                            />
+                                                        ) : (
+                                                            <span className="text-xs md:text-base font-bold text-gray-500 dark:text-gray-400">
+                                                                {activeRanking.positionPrizes?.[player.rank] || '-'}
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Custom Prize/Highlight Box */}
-                {activeRanking?.prizeInfoTitle && (
-                    <div className="max-w-3xl mx-auto mb-8">
-                        <h3 className="text-primary font-bold text-xl sm:text-2xl mb-6 flex items-center justify-center gap-2">
-                            <span className="material-icons-outlined">emoji_events</span> Ranking Geral 2026
-                        </h3>
-                        <div className="bg-gradient-to-r from-primary/10 to-accent/10 p-6 rounded-2xl border border-primary/20 backdrop-blur-sm flex flex-col md:flex-row items-center justify-between gap-6">
-                            <div className="flex items-center gap-4">
-                                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400 to-orange-600 flex items-center justify-center shadow-lg text-black font-black text-2xl">
-                                    3
+                            {filteredRanking.length === 0 && (
+                                <div className="p-8 text-center text-gray-500 italic">
+                                    Nenhum jogador encontrado com este nome.
                                 </div>
-                                <div className="text-left">
-                                    <div className="text-white font-black text-xl uppercase italic">{activeRanking.prizeInfoTitle}</div>
-                                    <div className="text-primary font-bold">THE CHOSEN 2026</div>
-                                </div>
-                            </div>
-                            <div className="h-px w-full md:w-px md:h-12 bg-white/10"></div>
-                            <div className="text-left md:text-right">
-                                <p className="text-gray-300 text-sm leading-relaxed">
-                                    {activeRanking.prizeInfoDetail || "Premiação especial para os líderes."}
-                                </p>
-                            </div>
+                            )}
                         </div>
-                        <p className="text-[10px] text-gray-600 mt-4 uppercase tracking-widest text-center">* Premiações de patrocinadores poderão ser acrescentadas.</p>
-                    </div>
+
+                        {/* Footer Button - Next Events */}
+                        <div className="mt-12 text-center">
+                            <button
+                                onClick={() => onNavigate && onNavigate('calendar')}
+                                className="group bg-surface-dark border border-white/10 hover:border-primary/50 text-white font-bold py-4 px-8 rounded-full shadow-lg transition-all duration-300 flex items-center gap-3 mx-auto hover:-translate-y-1"
+                            >
+                                <span className="bg-primary/20 p-2 rounded-full text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                                    <span className="material-icons-outlined">event</span>
+                                </span>
+                                VER PRÓXIMOS EVENTOS DO RANK
+                                <span className="material-icons-outlined text-gray-500 group-hover:text-white transition-colors">arrow_forward</span>
+                            </button>
+                        </div>
+                    </>
                 )}
-
-                {/* Search & Filter */}
-                <div className="flex justify-between items-center mb-6 relative z-30">
-                    <div className="relative w-full max-w-md mx-auto">
-                        <input
-                            type="text"
-                            placeholder="Buscar jogador..."
-                            value={searchTerm}
-                            onChange={handleSearchChange}
-                            onFocus={() => setShowSuggestions(true)}
-                            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                            className="w-full bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/10 rounded-full py-3 px-12 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:border-primary focus:shadow-[0_0_15px_rgba(217,0,255,0.2)] transition-all"
-                        />
-                        <span className="material-icons-outlined absolute left-4 top-3 text-gray-400">search</span>
-
-                        {/* Search Dropdown */}
-                        {showSuggestions && searchTerm && suggestions.length > 0 && (
-                            <ul className="absolute top-full left-0 w-full mt-2 bg-surface-dark border border-white/20 rounded-xl shadow-2xl max-h-60 overflow-y-auto custom-scrollbar z-50">
-                                {suggestions.map((player) => (
-                                    <li
-                                        key={player.name}
-                                        onClick={() => handleSuggestionClick(player.name)}
-                                        className="px-4 py-3 hover:bg-white/10 cursor-pointer text-gray-300 text-sm border-b border-white/5 last:border-0 flex items-center gap-3"
-                                    >
-                                        <img src={player.avatar || `https://ui-avatars.com/api/?name=${player.name}&background=random`} className="w-6 h-6 rounded-full" alt="" />
-                                        {player.name}
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </div>
-                </div>
-
-                {/* Noble Table */}
-                <div className="bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden shadow-2xl relative z-10">
-                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-secondary"></div>
-
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead className="bg-gray-5 dark:bg-white/5">
-                                <tr>
-                                    <th className="px-3 md:px-6 py-3 md:py-5 text-xs md:text-sm font-black text-primary uppercase tracking-wider md:tracking-[0.2em] w-12 md:w-auto text-center md:text-left">Rank</th>
-                                    <th className="px-3 md:px-6 py-3 md:py-5 text-xs md:text-sm font-black text-primary uppercase tracking-wider md:tracking-[0.2em]">Competidor</th>
-                                    <th className="px-6 py-5 text-sm font-black text-primary uppercase tracking-[0.2em] hidden md:table-cell">Últimas Pontuações</th>
-                                    <th className="px-3 md:px-6 py-3 md:py-5 text-xs md:text-sm font-black text-primary uppercase tracking-wider md:tracking-[0.2em] text-right">Score</th>
-                                    <th className="px-3 md:px-6 py-3 md:py-5 text-xs md:text-sm font-black text-secondary uppercase tracking-wider md:tracking-[0.2em] text-center">Prêmio</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200 dark:divide-white/5">
-                                {isLoading ? (
-                                    <tr>
-                                        <td colSpan={5} className="p-4">
-                                            <div className="space-y-4">
-                                                {[1, 2, 3, 4, 5].map(i => (
-                                                    <RankingSkeleton key={i} />
-                                                ))}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    filteredRanking.map((player) => (
-                                        <tr
-                                            key={player.name + player.rank} // Key composta para evitar erros
-                                            className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group cursor-pointer"
-                                            onClick={() => onSelectPlayer && onSelectPlayer(player)}
-                                        >
-                                            <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-center md:text-left">
-                                                <div className="flex items-center justify-center md:justify-start gap-2">
-                                                    <div className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-lg font-display font-bold text-sm md:text-lg shadow-lg group-hover:scale-110 transition-transform ${player.rank === 1 ? 'bg-gradient-to-br from-primary to-cyan-700 text-white border border-primary/50' :
-                                                        player.rank === 2 ? 'bg-gradient-to-br from-secondary to-cyan-700 text-black border border-secondary/50' :
-                                                            player.rank === 3 ? 'bg-gradient-to-br from-gray-600 to-gray-800 text-white border border-gray-500/50' :
-                                                                'bg-gray-100 dark:bg-white/5 text-gray-500 border border-gray-200 dark:border-white/5'
-                                                        }`}>
-                                                        {player.rank}
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap">
-                                                <div className="flex items-center gap-3 md:gap-4">
-                                                    <div className="relative shrink-0">
-                                                        <img
-                                                            src={player.avatar || `https://ui-avatars.com/api/?name=${player.name.replace(' ', '+')}&background=random`}
-                                                            alt={player.name}
-                                                            className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border-2 border-gray-200 dark:border-white/10 group-hover:border-primary transition-colors"
-                                                        />
-                                                        {player.change === 'up' && <div className="absolute -top-1 -right-1 w-3 h-3 md:w-4 md:h-4 bg-green-500 rounded-full border-2 border-white dark:border-surface-dark flex items-center justify-center"><span className="material-icons-outlined text-[8px] md:text-[10px] text-white">arrow_drop_up</span></div>}
-                                                        {player.change === 'down' && <div className="absolute -top-1 -right-1 w-3 h-3 md:w-4 md:h-4 bg-red-500 rounded-full border-2 border-white dark:border-surface-dark flex items-center justify-center"><span className="material-icons-outlined text-[8px] md:text-[10px] text-white">arrow_drop_down</span></div>}
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <span className="block font-bold text-gray-900 dark:text-gray-200 group-hover:text-primary transition-colors text-sm md:text-lg truncate max-w-[120px] sm:max-w-none">
-                                                            {player.name}
-                                                        </span>
-                                                        <span className="text-[10px] md:text-xs uppercase tracking-wider text-gray-500 block truncate max-w-[120px]">
-                                                            {player.numericId ? `CR#${String(player.numericId).padStart(3, '0')}` : 'CR#INV'} · {player.city}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </td>
-
-                                            {/* Latest Scores Column (Replaces Origem) */}
-                                            <td className="px-6 py-4 whitespace-nowrap hidden md:table-cell">
-                                                <div className="flex items-center gap-2">
-                                                    {getLastScores(player.name).length > 0 ? (
-                                                        getLastScores(player.name).map((score, idx) => (
-                                                            <div key={idx} className="flex flex-col items-center">
-                                                                <span className="bg-white/5 border border-white/10 px-2 py-1 rounded text-xs font-bold text-secondary group-hover:bg-secondary group-hover:text-black transition-colors min-w-[32px] text-center">
-                                                                    {score?.points}
-                                                                </span>
-                                                            </div>
-                                                        ))
-                                                    ) : (
-                                                        <span className="text-gray-600 text-xs italic">-</span>
-                                                    )}
-                                                </div>
-                                            </td>
-
-                                            <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-right">
-                                                <span className="font-display font-black text-base md:text-xl text-primary text-glow">
-                                                    {player.points.toLocaleString()}
-                                                </span>
-                                                <span className="text-[10px] md:text-xs uppercase text-gray-500 ml-1">pts</span>
-                                            </td>
-                                            <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-center">
-                                                {isAdmin ? (
-                                                    <input
-                                                        type="text"
-                                                        value={activeRanking.positionPrizes?.[player.rank] || ''}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        onChange={(e) => onUpdatePrize && onUpdatePrize(activeRankingId, player.rank, e.target.value)}
-                                                        placeholder="-"
-                                                        className="bg-black/30 border border-white/10 rounded px-2 py-1 text-center text-xs md:text-sm text-secondary font-bold w-16 md:w-24 focus:border-secondary outline-none"
-                                                    />
-                                                ) : (
-                                                    <span className="text-xs md:text-base font-bold text-gray-500 dark:text-gray-400">
-                                                        {activeRanking.positionPrizes?.[player.rank] || '-'}
-                                                    </span>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                    {filteredRanking.length === 0 && (
-                        <div className="p-8 text-center text-gray-500 italic">
-                            Nenhum jogador encontrado com este nome.
-                        </div>
-                    )}
-                </div>
-
-                {/* Footer Button - Next Events */}
-                <div className="mt-12 text-center">
-                    <button
-                        onClick={() => onNavigate && onNavigate('calendar')}
-                        className="group bg-surface-dark border border-white/10 hover:border-primary/50 text-white font-bold py-4 px-8 rounded-full shadow-lg transition-all duration-300 flex items-center gap-3 mx-auto hover:-translate-y-1"
-                    >
-                        <span className="bg-primary/20 p-2 rounded-full text-primary group-hover:bg-primary group-hover:text-white transition-colors">
-                            <span className="material-icons-outlined">event</span>
-                        </span>
-                        VER PRÓXIMOS EVENTOS DO RANK
-                        <span className="material-icons-outlined text-gray-500 group-hover:text-white transition-colors">arrow_forward</span>
-                    </button>
-                </div>
             </div>
 
             {/* RULES MODAL */}
@@ -759,8 +813,6 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                 />
                             </div>
 
-
-
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Data Início</label>
@@ -781,8 +833,6 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                     />
                                 </div>
                             </div>
-
-
 
                             <div className="bg-white/5 p-4 rounded-xl border border-white/5">
                                 <h4 className="text-sm font-bold text-primary mb-3 uppercase tracking-wider">Mapeamento de Fórmulas</h4>
@@ -843,11 +893,8 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                             </div>
                         </form>
                     </div>
-                </div >
+                </div>
             )}
-
-
-
-        </div >
+        </div>
     );
 };

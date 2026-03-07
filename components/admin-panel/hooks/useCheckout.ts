@@ -124,8 +124,10 @@ export function useCheckout({
                     // Recompensa Padronizada: 1 EXP a cada R$ 50 (Lucro para o app conta como recarga)
                     const expBonus = Math.floor(profitCredit / 50);
                     if (expBonus > 0) {
-                        const { data: profData } = await supabase.from('profiles').select('current_exp').eq('id', selectedCommand.user_id).single();
-                        await supabase.from('profiles').update({ current_exp: (Number(profData?.current_exp) || 0) + expBonus }).eq('id', selectedCommand.user_id);
+                        await supabase.rpc('bulk_add_event_exp', {
+                            p_user_ids: [selectedCommand.user_id],
+                            p_exp_amount: expBonus
+                        });
                     }
                 }
 

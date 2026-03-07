@@ -55,6 +55,7 @@ export interface PlayerResult {
   pointsPerRanking?: Record<string, number>; // Points specific to each ranking
   rake?: number; // For Cash Games
   profitLoss?: number; // For Cash Games
+  qualifierChips?: number; // Qualify chips for multi-day events
 }
 
 export interface TournamentReservation {
@@ -122,6 +123,12 @@ export interface Event {
   staffExpensesBrl?: number;
   prizePayoutBrl?: number;
   is_hidden?: boolean;
+  // Multi-day Event Fields
+  isMultiDay?: boolean;
+  isStartingDay?: boolean;
+  isFinalDay?: boolean;
+  finalEventId?: string; // Link starting day to final day
+  stackAggregation?: 'sum' | 'max'; // How to combine chips if user qualifies multiple times
 }
 
 export interface RankingPlayer {
@@ -138,8 +145,7 @@ export interface RankingPlayer {
   bio?: string;
   social?: {
     instagram?: string;
-    twitter?: string;
-    discord?: string;
+    whatsapp?: string;
   };
   playStyles?: string[];
   gallery?: string[];
@@ -149,7 +155,7 @@ export interface RankingPlayer {
   nextLevelExp?: number;
   lastDailyClaim?: string; // ISO Date String
   isVip?: boolean; // Legacy
-  vipStatus?: 'nao_vip' | 'trimestral' | 'anual' | 'master';
+  vipStatus?: 'nao_vip' | 'trimestral' | 'anual' | 'master' | 'honorario';
   vipExpiresAt?: string;
   balanceBrl?: number;
   balanceChipz?: number;
@@ -251,8 +257,7 @@ export interface PlayerStats {
   playStyles: string[];
   social: {
     instagram?: string;
-    twitter?: string;
-    discord?: string;
+    whatsapp?: string;
   };
   tournamentLog: TournamentResult[];
   // Gamification Fields
@@ -262,7 +267,7 @@ export interface PlayerStats {
   lastDailyClaim: string | null; // ISO timestamp do último resgate
   dailyStreak: number;
   isVip: boolean; // Legacy
-  vipStatus: 'nao_vip' | 'trimestral' | 'anual' | 'master';
+  vipStatus: 'nao_vip' | 'trimestral' | 'anual' | 'master' | 'honorario';
   vipExpiresAt: string | null;
   balanceBrl: number;
   balanceChipz: number;
@@ -270,6 +275,8 @@ export interface PlayerStats {
   debtLimitBrl?: number;
   totalPendingDebt?: number;
   badges?: Badge[];
+  lockedBalanceBrl?: number;
+  balanceUnlockDate?: string;
 }
 
 export interface MonthData {

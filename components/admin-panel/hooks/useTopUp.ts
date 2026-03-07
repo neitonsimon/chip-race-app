@@ -43,10 +43,13 @@ export function useTopUp({ selectedCommand, currentUser, isAdmin, updatePlayerBa
 
             updatePlayerBalanceLocally(userId, amount);
 
-            // 2. Award EXP (Keep separate as it's not a financial currency in transactions table yet)
+            // 2. Award EXP (using secure RPC)
             if (expBonus > 0) {
-                const { data: profData } = await supabase.from('profiles').select('current_exp').eq('id', userId).single();
-                await supabase.from('profiles').update({ current_exp: (Number(profData?.current_exp) || 0) + expBonus }).eq('id', userId);
+                const { error: expErr } = await supabase.rpc('bulk_add_event_exp', {
+                    p_user_ids: [userId],
+                    p_exp_amount: expBonus
+                });
+                if (expErr) console.error("Failed to award EXP in TopUp:", expErr);
             }
 
             // 3. Send Push Notification
@@ -63,24 +66,26 @@ export function useTopUp({ selectedCommand, currentUser, isAdmin, updatePlayerBa
             }
 
             // 4. Notify user (inbox)
-            await supabase.from('messages').insert({
+            const { error: msgErr } = await supabase.from('messages').insert({
                 user_id: userId,
                 sender: 'Admin',
-                sender_id: currentUser.id,
+                sender_id: currentUser?.id,
                 subject: 'Recarga de Saldo 💸',
                 content: `Uma recarga manual via Clube de R$ ${amount.toFixed(2)} foi adicionada à sua conta.${expBonus > 0 ? ` Você também ganhou ${expBonus} EXP!` : ''}`,
                 category: 'system',
                 is_read: false
             });
+            if (msgErr) console.error("Failed to send message in TopUp:", msgErr);
 
             // 5. Log de Auditoria
-            await supabase.from('audit_logs').insert({
-                admin_id: currentUser.id,
+            const { error: auditErr } = await supabase.from('audit_logs').insert({
+                admin_id: currentUser?.id,
                 action_type: 'MANUAL_TOP_UP',
                 description: `Admin adicionou R$ ${amount.toFixed(2)} manualmente (Balcão).`,
                 target_user_id: userId,
                 details: { amount, command_id: selectedCommand.id }
             });
+            if (auditErr) console.error("Failed to log audit in TopUp:", auditErr);
 
             alert('Recarga concluída e saldo atualizado!');
             setShowTopUp(false);

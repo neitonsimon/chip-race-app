@@ -2,6 +2,7 @@ import React from 'react';
 
 interface ComprovantesTabProps {
     playerCommands: any[];
+    playerTransactions?: any[];
     handleViewReceipt: (cmd: any) => void;
     isVip?: boolean;
     onActivateVip?: (cmdId: string, duration: string) => void;
@@ -10,6 +11,7 @@ interface ComprovantesTabProps {
 
 export const ComprovantesTab: React.FC<ComprovantesTabProps> = ({
     playerCommands,
+    playerTransactions = [],
     handleViewReceipt,
     isVip,
     onActivateVip,
@@ -112,48 +114,75 @@ export const ComprovantesTab: React.FC<ComprovantesTabProps> = ({
                                                         ID: #{cmd.id.slice(0, 8).toUpperCase()}
                                                     </div>
 
-                                                    {!isActivated && !isVip && onActivateVip && (
+                                                    {!isActivated && onActivateVip && (
                                                         <div className="grid grid-cols-1 gap-3 pt-2">
-                                                            <div className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1 ml-1 flex items-center gap-2">
-                                                                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-                                                                Escolha a duração para ativar:
-                                                            </div>
-                                                            <div className="flex gap-2">
-                                                                <button
-                                                                    onClick={(e) => { e.stopPropagation(); onActivateVip(cmd.id, '1 month'); }}
-                                                                    disabled={isProcessing}
-                                                                    className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-[9px] font-black py-2.5 rounded-xl transition-all uppercase"
-                                                                >
-                                                                    1 Mês
-                                                                </button>
-                                                                <button
-                                                                    onClick={(e) => { e.stopPropagation(); onActivateVip(cmd.id, '3 months'); }}
-                                                                    disabled={isProcessing}
-                                                                    className="flex-1 bg-secondary/10 hover:bg-secondary/20 border border-secondary/30 text-secondary text-[9px] font-black py-2.5 rounded-xl transition-all uppercase"
-                                                                >
-                                                                    3 Meses
-                                                                </button>
-                                                                <button
-                                                                    onClick={(e) => { e.stopPropagation(); onActivateVip(cmd.id, 'december'); }}
-                                                                    disabled={isProcessing}
-                                                                    className="flex-1 bg-primary/20 hover:bg-primary/30 border border-primary/40 text-primary text-[9px] font-black py-2.5 rounded-xl transition-all uppercase shadow-neon-pink"
-                                                                >
-                                                                    Até Dez
-                                                                </button>
-                                                            </div>
-                                                            <button
-                                                                onClick={(e) => { e.stopPropagation(); onActivateVip(cmd.id, 'forever'); }}
-                                                                disabled={isProcessing}
-                                                                className="w-full bg-gradient-to-r from-primary to-accent hover:from-white hover:to-white text-white hover:text-black border border-primary/40 text-[11px] font-black py-4 rounded-2xl transition-all uppercase tracking-[0.2em] shadow-neon-pink active:scale-[0.98]"
-                                                            >
-                                                                Ativar Vitalício (MASTER)
-                                                            </button>
-                                                        </div>
-                                                    )}
-
-                                                    {!isActivated && isVip && (
-                                                        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
-                                                            <p className="text-xs text-gray-400 italic">Você já possui um VIP ativo. Guarde este voucher para quando o atual expirar.</p>
+                                                            {cmd.metadata?.vip_type === 'honorario' ? (
+                                                                // Honorário: activate directly without duration options
+                                                                isVip ? (
+                                                                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
+                                                                        <p className="text-xs text-gray-400 italic">Você já possui um VIP ativo. Guarde este voucher para quando o atual expirar.</p>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div>
+                                                                        <div className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-2 ml-1 flex items-center gap-2">
+                                                                            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                                                                            Voucher VIP Honorário — Resgate exclusivo:
+                                                                        </div>
+                                                                        <button
+                                                                            onClick={(e) => { e.stopPropagation(); onActivateVip(cmd.id, 'honorario'); }}
+                                                                            disabled={isProcessing}
+                                                                            className="w-full bg-gradient-to-r from-primary to-accent hover:from-white hover:to-white text-white hover:text-black border border-primary/40 text-[11px] font-black py-4 rounded-2xl transition-all uppercase tracking-[0.2em] shadow-neon-pink active:scale-[0.98]"
+                                                                        >
+                                                                            <span className="material-icons-outlined text-sm align-middle mr-1">workspace_premium</span>
+                                                                            Ativar VIP Honorário
+                                                                        </button>
+                                                                    </div>
+                                                                )
+                                                            ) : (
+                                                                // Other VIP types: show duration options
+                                                                isVip ? (
+                                                                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
+                                                                        <p className="text-xs text-gray-400 italic">Você já possui um VIP ativo. Guarde este voucher para quando o atual expirar.</p>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="grid grid-cols-1 gap-3">
+                                                                        <div className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1 ml-1 flex items-center gap-2">
+                                                                            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                                                                            Escolha a duração para ativar:
+                                                                        </div>
+                                                                        <div className="flex gap-2">
+                                                                            <button
+                                                                                onClick={(e) => { e.stopPropagation(); onActivateVip(cmd.id, '1 month'); }}
+                                                                                disabled={isProcessing}
+                                                                                className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-[9px] font-black py-2.5 rounded-xl transition-all uppercase"
+                                                                            >
+                                                                                1 Mês
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={(e) => { e.stopPropagation(); onActivateVip(cmd.id, '3 months'); }}
+                                                                                disabled={isProcessing}
+                                                                                className="flex-1 bg-secondary/10 hover:bg-secondary/20 border border-secondary/30 text-secondary text-[9px] font-black py-2.5 rounded-xl transition-all uppercase"
+                                                                            >
+                                                                                3 Meses
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={(e) => { e.stopPropagation(); onActivateVip(cmd.id, 'december'); }}
+                                                                                disabled={isProcessing}
+                                                                                className="flex-1 bg-primary/20 hover:bg-primary/30 border border-primary/40 text-primary text-[9px] font-black py-2.5 rounded-xl transition-all uppercase shadow-neon-pink"
+                                                                            >
+                                                                                Até Dez
+                                                                            </button>
+                                                                        </div>
+                                                                        <button
+                                                                            onClick={(e) => { e.stopPropagation(); onActivateVip(cmd.id, 'forever'); }}
+                                                                            disabled={isProcessing}
+                                                                            className="w-full bg-gradient-to-r from-primary to-accent hover:from-white hover:to-white text-white hover:text-black border border-primary/40 text-[11px] font-black py-4 rounded-2xl transition-all uppercase tracking-[0.2em] shadow-neon-pink active:scale-[0.98]"
+                                                                        >
+                                                                            Ativar Vitalício (MASTER)
+                                                                        </button>
+                                                                    </div>
+                                                                )
+                                                            )}
                                                         </div>
                                                     )}
 
@@ -211,13 +240,87 @@ export const ComprovantesTab: React.FC<ComprovantesTabProps> = ({
                     </div>
                 )}
 
-                {playerCommands.length === 0 && (
+                {/* SEÇÃO MOVIMENTAÇÃO FINANCEIRA */}
+                {playerTransactions.length > 0 && (
+                    <div>
+                        <h4 className="text-sm font-bold text-blue-400 uppercase tracking-widest mb-4">
+                            Movimentação Financeira (Carteira)
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {playerTransactions.map((tx: any) => {
+                                const isCredit = tx.type === 'credit';
+                                const isWithdrawal = tx.category === 'wallet_withdrawal';
+                                const isOnlineCredit = tx.category === 'online_credit';
+                                const isDeposit = tx.category === 'wallet_deposit';
+                                const isCashOutProfit = tx.category === 'command_profit';
+
+                                let title = 'Transação';
+                                if (isWithdrawal) title = 'Saque Aprovado';
+                                else if (isCashOutProfit) title = 'Lucro Cash Out';
+                                else if (isDeposit) title = 'Depósito';
+                                else if (isOnlineCredit) title = 'Créditos Online (Fichas)';
+                                else if (tx.category === 'recharge') title = 'Recarga Manual';
+
+                                const icon = isWithdrawal ? 'account_balance' : isCashOutProfit ? 'emoji_events' : 'savings';
+                                const color = isCredit ? 'text-green-400' : 'text-red-400';
+                                const bgColor = isCashOutProfit
+                                    ? 'bg-yellow-500/10 border-yellow-500/30'
+                                    : isCredit ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20';
+                                const iconColor = isCashOutProfit ? 'text-yellow-400' : color;
+
+                                return (
+                                    <div key={tx.id} className={`border rounded-2xl overflow-hidden px-5 py-4 flex flex-col justify-center ${isCashOutProfit ? 'bg-yellow-500/5 border-yellow-500/20' : 'bg-white/5 border-white/10'}`}>
+                                        {isCashOutProfit && (
+                                            <div className="flex items-center gap-1.5 mb-3">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse"></span>
+                                                <span className="text-[9px] font-black text-yellow-400 uppercase tracking-[0.2em]">Cash Out • Resultado Positivo</span>
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between items-center mb-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${bgColor} ${iconColor}`}>
+                                                    <span className="material-icons-outlined text-lg">{icon}</span>
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-sm font-bold text-white leading-tight">{title}</h4>
+                                                    <span className="text-[10px] text-gray-400 font-bold uppercase truncate max-w-[150px] block" title={tx.description}>
+                                                        {isCashOutProfit && tx.metadata?.cash_payment > 0
+                                                            ? `R$ ${Number(tx.metadata.cash_payment).toFixed(2)} pago em mãos`
+                                                            : tx.description || 'Movimentação no saldo'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className={`text-xl font-display font-black ${isCashOutProfit ? 'text-yellow-400' : color}`}>
+                                                    {isCredit ? '+' : '-'}R$ {Math.abs(Number(tx.amount_brl)).toFixed(2)}
+                                                </div>
+                                                {isCashOutProfit && tx.metadata?.profit_total > 0 && (
+                                                    <div className="text-[9px] text-gray-500 font-bold uppercase">
+                                                        Total: R$ {Number(tx.metadata.profit_total).toFixed(2)}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-[10px] text-gray-500 font-bold tracking-widest uppercase">
+                                            <span className="material-icons-outlined text-[10px]">calendar_today</span>
+                                            {new Date(tx.created_at).toLocaleDateString('pt-BR')}
+                                            <span className="w-1 h-1 rounded-full bg-gray-600"></span>
+                                            {new Date(tx.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {playerCommands.length === 0 && playerTransactions.length === 0 && (
                     <div className="bg-white/5 border border-white/10 rounded-3xl p-12 text-center flex flex-col items-center justify-center mt-8">
                         <div className="w-20 h-20 bg-gray-500/10 rounded-full flex items-center justify-center mb-4">
                             <span className="material-icons-outlined text-4xl text-gray-500 block">receipt_long</span>
                         </div>
-                        <h4 className="text-xl font-bold text-white mb-2">Nenhum comprovante</h4>
-                        <p className="text-gray-400 max-w-sm">Você ainda não possui comandas registradas em eventos do Chip Race.</p>
+                        <h4 className="text-xl font-bold text-white mb-2">Nenhum registro</h4>
+                        <p className="text-gray-400 max-w-sm">Você ainda não possui comandas ou transações no aplicativo.</p>
                     </div>
                 )}
             </div>

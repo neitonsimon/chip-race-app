@@ -452,8 +452,8 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                             .sort((aId: string, bId: string) => {
                                 const aCat = (categories || []).find(c => c.id === aId);
                                 const bCat = (categories || []).find(c => c.id === bId);
-                                const aBlocked = (!aCat || aCat.is_hidden || aCat.is_mystery) && !isAdmin;
-                                const bBlocked = (!bCat || bCat.is_hidden || bCat.is_mystery) && !isAdmin;
+                                const aBlocked = !aCat || aCat.is_hidden || aCat.is_mystery;
+                                const bBlocked = !bCat || bCat.is_hidden || bCat.is_mystery;
                                 if (aBlocked && !bBlocked) return 1;
                                 if (!aBlocked && bBlocked) return -1;
                                 return 0;
@@ -522,30 +522,32 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                                                 </p>
                                             </div>
                                             <div className="mt-auto flex gap-2">
-                                                <button
-                                                    onClick={() => {
-                                                        if (isBlocked) return;
-                                                        if (cat.id === 'vip' && onNavigate) {
-                                                            onNavigate('vip');
-                                                        } else if ((cat.id === 'rankings' || cat.id === 'ranking' || cat.id === 'rank') && onNavigate) {
-                                                            onNavigate('ranking');
-                                                        } else if ((cat.id === 'online' || cat.id === 'online-credits') && onNavigate) {
-                                                            onNavigate('online-credits');
-                                                        } else {
-                                                            setActiveRegulation(cat.id);
-                                                        }
-                                                    }}
-                                                    className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${isBlocked
-                                                        ? 'bg-white/5 border-white/5 text-gray-700 cursor-default'
-                                                        : `bg-white/5 border-white/10 hover:border-white/30 ${styles.btn}`
-                                                        }`}
-                                                >
-                                                    {isBlocked ? (
-                                                        <><span className="material-icons-outlined text-xs">lock</span> EM BREVE</>
-                                                    ) : (
-                                                        <>VER MAIS <span className="material-icons-outlined text-xs">add_circle</span></>
-                                                    )}
-                                                </button>
+                                                {(!isBlocked && !isMystery) && (
+                                                    <button
+                                                        onClick={() => {
+                                                            if (isBlocked) return;
+                                                            if (cat.id === 'vip' && onNavigate) {
+                                                                onNavigate('vip');
+                                                            } else if ((cat.id === 'rankings' || cat.id === 'ranking' || cat.id === 'rank') && onNavigate) {
+                                                                onNavigate('ranking');
+                                                            } else if ((cat.id === 'online' || cat.id === 'online-credits') && onNavigate) {
+                                                                onNavigate('online-credits');
+                                                            } else {
+                                                                setActiveRegulation(cat.id);
+                                                            }
+                                                        }}
+                                                        className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${isBlocked
+                                                            ? 'bg-white/5 border-white/5 text-gray-700 cursor-default'
+                                                            : `bg-white/5 border-white/10 hover:border-white/30 ${styles.btn}`
+                                                            }`}
+                                                    >
+                                                        {isBlocked ? (
+                                                            <><span className="material-icons-outlined text-xs">lock</span> EM BREVE</>
+                                                        ) : (
+                                                            <>VER MAIS <span className="material-icons-outlined text-xs">add_circle</span></>
+                                                        )}
+                                                    </button>
+                                                )}
                                                 {isAdmin && (
                                                     <button
                                                         onClick={async (e) => {

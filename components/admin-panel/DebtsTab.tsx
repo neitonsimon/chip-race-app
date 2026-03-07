@@ -156,22 +156,52 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
             if (txError) throw txError;
             if (!txSuccess) throw new Error('Falha ao processar transação atômica.');
 
-            // 3. Award EXP (Direct call remains for now)
+            // 3. Award EXP
             if (expBonus > 0) {
-                await supabase.rpc('bulk_add_event_exp', {
+                const { error: expErr } = await supabase.rpc('bulk_add_event_exp', {
                     p_user_ids: [creditUser.id],
                     p_exp_amount: expBonus
                 });
+                if (expErr) {
+                    console.error("Failed to award EXP:", expErr);
+                    // We don't throw here to not block the whole process, but we log it
+                }
             }
 
-            // 6. Notify user — base message
-            await supabase.from('messages').insert({
+            // 4. Log Admin Action (Audit)
+            const { error: auditErr } = await supabase.from('audit_logs').insert({
+                admin_id: currentUser?.id,
+                action_type: 'MANUAL_CREDIT_SEND',
+                description: `Admin enviou R$ ${amount.toFixed(2)} de crédito para ${creditUser.name}.`,
+                target_user_id: creditUser.id,
+                details: { amount, note: creditNote, exp_awarded: expBonus }
+            });
+            if (auditErr) console.error("Failed to log audit:", auditErr);
+
+            // 5. Notify user — base message
+            const { error: msgErr } = await supabase.from('messages').insert({
                 user_id: creditUser.id,
-                sender_id: currentUser.id,
+                sender: 'Admin',
+                sender_id: currentUser?.id,
+                subject: 'Crédito Adicionado 💰',
                 content: `R$ ${amount.toFixed(2)} adicionados ao seu saldo pelo admin.${creditNote ? ` Ref: ${creditNote}` : ''}`,
                 category: 'system',
                 is_read: false
             });
+            if (msgErr) console.error("Failed to send message:", msgErr);
+
+            // 6.1. Push Notification
+            try {
+                await supabase.functions.invoke('send-push-notification', {
+                    body: {
+                        userIds: [creditUser.id],
+                        title: '💰 Crédito Adicionado!',
+                        message: `R$ ${amount.toFixed(2)} foram adicionados ao seu saldo.`
+                    }
+                });
+            } catch (pErr) {
+                console.error("Push notification failed", pErr);
+            }
 
             // 7. Bonus notification in Gift inbox (only if bonuses were earned)
             const rewardLines = expBonus > 0 ? `⭐ ${expBonus} EXP` : '';

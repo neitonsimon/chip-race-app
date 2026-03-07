@@ -109,7 +109,7 @@ export const EditTab: React.FC<EditTabProps> = ({
                     </div>
 
                     {/* Socials */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-bold text-pink-500 uppercase mb-1">Instagram</label>
                             <div className="flex items-center bg-black/30 border border-white/10 rounded px-3">
@@ -123,25 +123,24 @@ export const EditTab: React.FC<EditTabProps> = ({
                             </div>
                         </div>
                         <div>
-                            <label className="block text-sm font-bold text-blue-400 uppercase mb-1">Twitter / X</label>
-                            <div className="flex items-center bg-black/30 border border-white/10 rounded px-3">
-                                <span className="text-gray-500 select-none">@</span>
+                            <label className="block text-sm font-bold text-emerald-500 uppercase mb-1">WhatsApp</label>
+                            <div className="flex items-center bg-black/30 border border-white/10 rounded overflow-hidden">
+                                <div className="bg-white/5 px-3 py-3 border-r border-white/10 flex items-center gap-1.5 select-none">
+                                    <span className="material-icons-outlined text-emerald-500 text-sm">phone</span>
+                                    <span className="text-gray-400 font-bold text-sm">+55</span>
+                                </div>
                                 <input
                                     type="text"
-                                    value={player.social.twitter?.replace('@', '') || ''}
-                                    onChange={(e) => handleSocialUpdate('twitter', '@' + e.target.value)}
+                                    value={player.social.whatsapp?.replace(/^55/, '') || ''}
+                                    onChange={(e) => {
+                                        const val = e.target.value.replace(/\D/g, '');
+                                        handleSocialUpdate('whatsapp', val ? '55' + val : '');
+                                    }}
                                     className="w-full bg-transparent p-3 text-white outline-none"
+                                    placeholder="(DDD) 99999-9999"
                                 />
                             </div>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-bold text-green-500 uppercase mb-1">Discord ID</label>
-                            <input
-                                type="text"
-                                value={player.social.discord || ''}
-                                onChange={(e) => handleSocialUpdate('discord', e.target.value)}
-                                className="w-full bg-black/30 border border-white/10 rounded p-3 text-white focus:border-secondary outline-none"
-                            />
+                            <p className="text-[10px] text-gray-500 mt-1 uppercase font-bold tracking-tight">Insira apenas o DDD e o seu número</p>
                         </div>
                     </div>
 

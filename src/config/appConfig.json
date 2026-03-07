@@ -27,17 +27,7 @@
             {
                 "name": "instagram",
                 "icon": "camera_alt",
-                "url": "https://instagram.com/chiprace"
-            },
-            {
-                "name": "whatsapp",
-                "icon": "chat",
-                "url": "#"
-            },
-            {
-                "name": "youtube",
-                "icon": "play_circle",
-                "url": "#"
+                "url": "https://www.instagram.com/chip.race/"
             }
         ],
         "menuPrincipal": [

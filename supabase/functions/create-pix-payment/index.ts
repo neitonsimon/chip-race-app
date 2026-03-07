@@ -39,11 +39,22 @@ serve(async (req: Request) => {
         }
 
         // Step 1: Create a pending payment intent in the DB using the Service Role Key
-        // Service role is needed to bypass RLS if necessary
         const supabaseAdmin = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
         );
+
+        // Fetch user profile to get the name
+        const { data: profile } = await supabaseAdmin
+            .from('profiles')
+            .select('name, email')
+            .eq('id', user.id)
+            .single();
+
+        const fullName = profile?.name || user.user_metadata?.full_name || 'Jogador';
+        const nameParts = fullName.trim().split(/\s+/);
+        const firstName = nameParts[0];
+        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : firstName;
 
         const { data: dbIntent, error: insertError } = await supabaseAdmin
             .from('payment_intents')
@@ -80,7 +91,9 @@ serve(async (req: Request) => {
                 description: description || 'Recarga de Saldo - Chip Race',
                 payment_method_id: 'pix',
                 payer: {
-                    email: user.email || 'jogador@chiprace.com.br'
+                    email: profile?.email || user.email || 'jogador@chiprace.com.br',
+                    first_name: firstName,
+                    last_name: lastName
                 },
                 metadata: {
                     ...metadata,
@@ -94,7 +107,15 @@ serve(async (req: Request) => {
 
         if (!mpResponse.ok) {
             console.error("MP Error:", mpData);
-            throw new Error(`Mercado Pago error: ${mpData.message || 'Unknown error'}`);
+            // Update intent with error
+            await supabaseAdmin
+                .from('payment_intents')
+                .update({
+                    status: 'error',
+                    gateway_id: mpData.message?.substring(0, 255)
+                })
+                .eq('id', dbIntent.id);
+            throw new Error(`Mercado Pago error: ${mpData.message || mpData.error?.message || 'Unknown error'}`);
         }
 
         // Extract Pix Codes

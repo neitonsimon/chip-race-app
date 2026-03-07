@@ -134,21 +134,22 @@ export function useGifts({ isAdmin, currentUser, badgeTemplates, updatePlayerBal
                         }
                     } else if (giftType === 'vip') {
                         // Create a VIP Voucher command
-                        await supabase.from('commands').insert({
+                        const { error: vipCmdErr } = await supabase.from('commands').insert({
                             user_id: uid,
                             total_brl: 0,
                             status: 'closed',
                             opened_by: currentUser.id,
-                            description: `Presente Admin: Voucher VIP ${selectedVipType.toUpperCase()}`,
                             closed_at: new Date().toISOString(),
                             metadata: {
                                 is_gift: true,
                                 is_vip_voucher: true,
                                 activated: false,
                                 vip_type: selectedVipType,
-                                admin_id: currentUser.id
+                                admin_id: currentUser.id,
+                                note: `Presente Admin: Voucher VIP ${selectedVipType.toUpperCase()}`
                             }
                         });
+                        if (vipCmdErr) throw new Error(`Erro ao criar voucher VIP: ${vipCmdErr.message}`);
                     } else {
                         // Use secure_balance_transaction for logging and safety
                         await supabase.rpc('secure_balance_transaction', {
@@ -165,8 +166,10 @@ export function useGifts({ isAdmin, currentUser, badgeTemplates, updatePlayerBal
                         if (giftType === 'brl') {
                             const expBonus = Math.floor(finalAmount / 50);
                             if (expBonus > 0) {
-                                const { data: profData } = await supabase.from('profiles').select('current_exp').eq('id', uid).single();
-                                await supabase.from('profiles').update({ current_exp: (Number(profData?.current_exp) || 0) + expBonus }).eq('id', uid);
+                                await supabase.rpc('bulk_add_event_exp', {
+                                    p_user_ids: [uid],
+                                    p_exp_amount: expBonus
+                                });
                             }
                         }
                     }
