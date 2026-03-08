@@ -146,9 +146,12 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                     return getGuaranteedValue(b.guaranteed) - getGuaranteedValue(a.guaranteed);
                 case 'date':
                 default:
-                    // Date Sort (Ascending for upcoming, Descending for completed maybe? Let's keep Ascending as default standard)
+                    // Date Sort: Ascending for upcoming (soonest first), Descending for completed (most recent first)
                     const dateA = new Date(`${a.date}T${a.time}`);
                     const dateB = new Date(`${b.date}T${b.time}`);
+                    if (activeTab === 'completed') {
+                        return dateB.getTime() - dateA.getTime();
+                    }
                     return dateA.getTime() - dateB.getTime();
             }
         });
@@ -545,19 +548,50 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
         setShowSuggestions(false);
     };
 
-    const addPlayerResult = () => {
+    const addPlayerResult = async () => {
         if (!newPlayerName.trim()) return;
+
+        let finalUserId = selectedUserId;
+        let isPlayerVip = false;
+        let finalName = newPlayerName.trim();
+
+        if (!finalUserId) {
+            // Tenta encontrar o usuário pelo nome se for digitado manualmente
+            const manualPlayer = rankingPlayers.find(p => p.name.toLowerCase() === finalName.toLowerCase());
+            if (manualPlayer) {
+                finalUserId = manualPlayer.id;
+            }
+        }
+
+        if (finalUserId) {
+            const playerInfo = rankingPlayers.find(p => p.id === finalUserId);
+            if (playerInfo) {
+                isPlayerVip = playerInfo.isVip || (playerInfo.vipStatus && playerInfo.vipStatus !== 'nao_vip') || false;
+                finalName = playerInfo.name; // Garante o nome correto
+            }
+        }
+
+        if (!finalUserId) {
+            try {
+                const { data, error } = await supabase.rpc('create_ghost_user', { p_name: finalName });
+                if (error) throw error;
+                finalUserId = data;
+            } catch (err: any) {
+                alert('Erro ao criar jogador fantasma: ' + err.message);
+                return;
+            }
+        }
 
         const newTotalPlayers = totalPlayers + 1;
         setTotalPlayers(newTotalPlayers);
 
         const newResult: PlayerResult = {
             id: Date.now().toString(),
-            userId: selectedUserId,
-            name: newPlayerName,
+            userId: finalUserId,
+            name: finalName,
             position: playerResults.length + 1,
             prize: 0,
-            isVip: false,
+            isVip: isPlayerVip,
             calculatedPoints: 0
         };
 
@@ -733,7 +767,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                 onChange={(e) => setSortOption(e.target.value)}
                                 className="appearance-none bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/10 rounded-lg pl-4 pr-10 py-2 text-sm font-bold text-gray-700 dark:text-white focus:border-primary outline-none cursor-pointer shadow-sm"
                             >
-                                <option value="date">Data (Próximos)</option>
+                                <option value="date">{activeTab === 'upcoming' ? 'Data (Próximos)' : 'Mais Recentes'}</option>
                                 <option value="buyin_asc">Buy-in (Menor)</option>
                                 <option value="buyin_desc">Buy-in (Maior)</option>
                                 <option value="gtd_desc">Maior Garantido</option>

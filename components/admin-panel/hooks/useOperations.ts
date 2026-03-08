@@ -255,7 +255,7 @@ export function useOperations({
         const isNumeric = /^\d+$/.test(query);
         let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, is_vip, vip_status, vip_expires_at, balance_brl, debt_limit_brl, total_pending_debt');
         q = isNumeric ? q.eq('numeric_id', parseInt(query)) : q.ilike('name', `%${query}%`);
-        const { data } = await q.limit(5);
+        const { data } = await q.order('name', { ascending: true }).limit(5);
         setSearchResults(data || []);
     };
 

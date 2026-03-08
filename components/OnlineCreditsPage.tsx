@@ -50,6 +50,11 @@ export const OnlineCreditsPage: React.FC<OnlineCreditsPageProps> = ({ onNavigate
 
             if (data && data.success) {
                 setSuccess(`Solicitação de R$ ${amount.toFixed(2)} enviada com sucesso! Aguarde o envio das fichas.`);
+
+                // Redireciona para o WhatsApp para confirmar os dados
+                const text = encodeURIComponent(`Olá! Fiz uma solicitação de fichas pelo app e gostaria de confirmar:\n\n*Nome:* ${currentUser.name || 'Jogador'}\n*Nick Suprema:* ${supremaNickname.trim()}\n*Quantidade:* ${amount} Fichas\n\nAguardo o envio!`);
+                window.open(`https://wa.me/555197170223?text=${text}`, '_blank');
+
                 setAmount('');
 
                 // Atualiza os states locais para refletirem a Suprema (o BD já atualizou)

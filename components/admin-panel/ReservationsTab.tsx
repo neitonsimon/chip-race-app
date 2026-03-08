@@ -219,9 +219,10 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
         setMergeSearchQuery1(query);
         if (query.length < 2) { setMergeSearchResults1([]); return; }
         const isNumeric = /^\d+$/.test(query);
-        let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, role');
+        let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, role, email');
         q = isNumeric ? q.eq('numeric_id', parseInt(query)) : q.ilike('name', `%${query}%`);
-        const { data } = await q.limit(5);
+        q = q.ilike('email', 'ghost_%@chiprace.com.br');
+        const { data } = await q.order('name', { ascending: true }).limit(5);
         setMergeSearchResults1(data || []);
     };
 
@@ -229,9 +230,10 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
         setMergeSearchQuery2(query);
         if (query.length < 2) { setMergeSearchResults2([]); return; }
         const isNumeric = /^\d+$/.test(query);
-        let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, role');
+        let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, role, email');
         q = isNumeric ? q.eq('numeric_id', parseInt(query)) : q.ilike('name', `%${query}%`);
-        const { data } = await q.limit(5);
+        q = q.not('email', 'ilike', 'ghost_%@chiprace.com.br');
+        const { data } = await q.order('name', { ascending: true }).limit(5);
         setMergeSearchResults2(data || []);
     };
 

@@ -67,6 +67,8 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
     const [pixData, setPixData] = useState<{ qr_code: string, qr_code_base64: string, payment_id: string } | null>(null);
 
     const handlePurchase = async (id: string, type: 'brl' | 'chipz') => {
+        if (isProcessing) return;
+
         if (type === 'chipz') {
             alert('A venda de Chipz ainda não está disponível.');
             return;
@@ -81,8 +83,8 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                 return;
             }
 
-            // Refresh session to ensure JWT is valid before calling Edge Function
-            const { data: sessionData, error: sessionError } = await supabase.auth.refreshSession();
+            // Get current session (will auto-refresh if expired)
+            const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
             if (sessionError || !sessionData?.session) {
                 throw new Error('Sessão expirada. Por favor, faça login novamente para continuar.');
             }
@@ -158,6 +160,7 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
     const availableToWithdraw = Math.max(0, (currentUser.balanceBrl || 0) - lockedAmount);
 
     const handleCashOut = async () => {
+        if (isProcessing) return;
         setIsProcessing(true);
         try {
             const amountToWithdraw = parseFloat(cashOutAmount);
@@ -249,20 +252,20 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
 
                     {/* Current Balances Display - Optimized for Mobile */}
                     <div className="flex gap-2 sm:gap-4 overflow-x-hidden">
-                        <div className="bg-surface-dark border border-white/10 rounded-2xl p-3 sm:p-4 flex flex-col flex-1 min-w-0 relative overflow-hidden group hover:border-green-500/50 transition-colors">
+                        <div className="bg-surface-dark border border-white/10 rounded-2xl p-3 sm:p-4 flex flex-col flex-1 min-w-[140px] relative overflow-hidden group hover:border-green-500/50 transition-colors">
                             <div className="absolute top-0 right-0 w-16 h-16 bg-green-500/10 blur-xl rounded-full group-hover:bg-green-500/20 transition-colors"></div>
                             <span className="text-gray-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-1">
-                                <span className="material-icons-outlined text-[12px] sm:text-[14px] text-green-500">account_balance_wallet</span> Reais
+                                <span className="material-icons-outlined text-[12px] sm:text-[14px] text-green-500">account_balance_wallet</span> REAIS
                             </span>
-                            <span className="text-lg sm:text-2xl font-black text-white truncate">R$ {(currentUser.balanceBrl || 0).toFixed(2)}</span>
+                            <span className="text-lg sm:text-2xl font-black text-white">R$ {(currentUser.balanceBrl || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                         </div>
 
-                        <div className="bg-surface-dark border border-white/10 rounded-2xl p-3 sm:p-4 flex flex-col flex-1 min-w-0 relative overflow-hidden group hover:border-primary/50 transition-colors">
+                        <div className="bg-surface-dark border border-white/10 rounded-2xl p-3 sm:p-4 flex flex-col flex-1 min-w-[120px] relative overflow-hidden group hover:border-primary/50 transition-colors">
                             <div className="absolute top-0 right-0 w-16 h-16 bg-primary/10 blur-xl rounded-full group-hover:bg-primary/20 transition-colors"></div>
                             <span className="text-gray-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-1">
-                                <span className="material-icons-outlined text-[12px] sm:text-[14px] text-primary bg-primary/20 rounded-full p-[2px]">token</span> Chipz
+                                <span className="material-icons-outlined text-[12px] sm:text-[14px] text-primary bg-primary/20 rounded-full p-[2px]">token</span> CHIPZ
                             </span>
-                            <span className="text-lg sm:text-2xl font-black text-primary truncate">{(currentUser.balanceChipz || 0)}</span>
+                            <span className="text-lg sm:text-2xl font-black text-primary">{(currentUser.balanceChipz || 0)}</span>
                         </div>
                     </div>
                 </div>
@@ -405,11 +408,12 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
 
                                 <div className="mt-auto pt-6 border-t border-white/10">
                                     <button
-                                        disabled={!customBrlAmount || Number(customBrlAmount) <= 0}
+                                        disabled={isProcessing || !customBrlAmount || Number(customBrlAmount) <= 0}
                                         onClick={() => handlePurchase(customBrlAmount, 'brl')}
                                         className="w-full bg-green-500 hover:bg-green-400 disabled:bg-white/5 disabled:text-gray-500 text-black font-black py-4 rounded-xl transition-colors uppercase tracking-widest flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(34,197,94,0.2)] hover:shadow-[0_0_30px_rgba(34,197,94,0.4)] disabled:shadow-none cursor-pointer"
                                     >
-                                        <span className="material-icons-outlined">payments</span> Pagar com PIX
+                                        <span className="material-icons-outlined">{isProcessing ? 'hourglass_empty' : 'payments'}</span>
+                                        {isProcessing ? 'Gerando PIX...' : 'Pagar com PIX'}
                                     </button>
                                 </div>
                             </div>
@@ -511,11 +515,12 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
 
                                 <div className="mt-auto pt-6 border-t border-white/10">
                                     <button
-                                        disabled={!cashOutAmount || Number(cashOutAmount) <= 0 || Number(cashOutAmount) > availableToWithdraw}
+                                        disabled={isProcessing || !cashOutAmount || Number(cashOutAmount) <= 0 || Number(cashOutAmount) > availableToWithdraw}
                                         onClick={handleCashOut}
                                         className="w-full bg-accent hover:bg-yellow-400 disabled:bg-white/5 disabled:text-gray-500 text-black font-black py-4 rounded-xl transition-colors uppercase tracking-widest flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(234,179,8,0.2)] hover:shadow-[0_0_30px_rgba(234,179,8,0.4)] disabled:shadow-none cursor-pointer"
                                     >
-                                        <span className="material-icons-outlined">send</span> Solicitar Saque
+                                        <span className="material-icons-outlined">{isProcessing ? 'hourglass_empty' : 'send'}</span>
+                                        {isProcessing ? 'Solicitando...' : 'Solicitar Saque'}
                                     </button>
                                 </div>
                             </div>

@@ -110,11 +110,6 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate, currentUser, onUpd
 
       // Se for honorário, o "userPlanCost" no DB é zero, mas queremos dar um desconto fixo de R$ 50 no upgrade
       if (currentUser.vipStatus === 'honorario') {
-        if (plan.id === 'quarterly') {
-          // Bloqueia upgrade de honorário para trimestral
-          alert('Upgrades de plano Honorário não estão disponíveis para o plano VIP Bronze (Trimestral). Escolha VIP Gold (Anual) ou VIP Master.');
-          return;
-        }
         const expiresAt = new Date(currentUser.vipExpiresAt);
         const now = new Date();
         const diffDays = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
@@ -319,14 +314,12 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate, currentUser, onUpd
 
                 const isCurrentPlan = isCurrentlyVip && currentUser?.vipStatus === (plan.id === 'quarterly' ? 'trimestral' : (plan.id === 'annual' ? 'anual' : plan.id));
                 const isDowngrade = isCurrentlyVip && targetPlanCost < userPlanCost;
-                const isHonorarioBlocked = isCurrentlyVip && currentUser?.vipStatus === 'honorario' && plan.id === 'quarterly';
-                const isUpgrade = isCurrentlyVip && targetPlanCost > userPlanCost && !isHonorarioBlocked;
+                const isUpgrade = isCurrentlyVip && targetPlanCost > userPlanCost;
 
-                const isDisabled = isProcessing || isCurrentPlan || isDowngrade || isHonorarioBlocked;
+                const isDisabled = isProcessing || isCurrentPlan || isDowngrade;
 
                 let btnText = `Quero ser ${plan.title}`;
                 if (isCurrentPlan) btnText = 'Seu Plano Atual';
-                else if (isHonorarioBlocked) btnText = 'Upgrade Indisponível';
                 else if (isDowngrade) btnText = 'Plano Superior Ativo';
                 else if (isUpgrade) btnText = 'Fazer Upgrade';
                 if (isProcessing) btnText = 'Processando...';

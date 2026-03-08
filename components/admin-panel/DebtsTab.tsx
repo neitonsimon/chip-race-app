@@ -120,13 +120,14 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
     const [saleLoading, setSaleLoading] = useState(false);
     const [saleSuccess, setSaleSuccess] = useState('');
     const [saleIsAnonymous, setSaleIsAnonymous] = useState(false);
+    const [onlineCreditAmount, setOnlineCreditAmount] = useState('');
 
     const searchPlayers = useCallback(async (query: string, setResults: (r: any[]) => void) => {
         if (query.length < 2) { setResults([]); return; }
         const isNum = /^\d+$/.test(query);
         let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, balance_brl, debt_limit_brl, total_pending_debt');
         q = isNum ? q.eq('numeric_id', parseInt(query)) : q.ilike('name', `%${query}%`);
-        const { data } = await q.limit(6);
+        const { data } = await q.order('name', { ascending: true }).limit(6);
         setResults(data || []);
     }, []);
 
@@ -324,16 +325,20 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
             }).select('id').single();
             if (cmdErr) throw cmdErr;
 
+            // Determine if it's a fake/custom product (like Créditos Online)
+            const isCustomProduct = saleProduct.id.startsWith('online-') || saleProduct.id === 'custom-cash';
+            const dbProductId = isCustomProduct ? null : saleProduct.id;
+
             // Add command item
             await supabase.from('command_items').insert({
                 command_id: cmd.id,
-                product_id: saleProduct.id,
+                product_id: dbProductId,
                 quantity: qty,
                 unit_price_brl: Number(saleProduct.price),
                 unit_price_chipz: 0,
                 total_price_brl: total,
                 total_price_chipz: 0,
-                notes: `Venda Direta — ${saleIsAnonymous ? 'Anônimo' : (salePayMethod === 'balance' ? 'Saldo R$' : 'Dinheiro')}`,
+                notes: `${isCustomProduct ? saleProduct.name : ''} Venda Direta — ${saleIsAnonymous ? 'Anônimo' : (salePayMethod === 'balance' ? 'Saldo R$' : 'Dinheiro')}`.trim(),
                 created_by: currentUser.id
             });
 
@@ -348,7 +353,7 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                     type: 'debit',
                     metadata: {
                         payment_method: salePayMethod,
-                        product_id: saleProduct.id,
+                        product_id: dbProductId,
                         is_direct_sale: true
                     }
                 });
@@ -372,6 +377,7 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
             setSaleProduct(null);
             setSaleCategory('');
             setSaleQuantity('1');
+            setOnlineCreditAmount('');
 
             // Sync local profile state (UI Refresh) ONLY if NOT anonymous
             if (!saleIsAnonymous && onUpdateProfile) {
@@ -807,7 +813,7 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                                 <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Categoria</label>
                                 <select
                                     value={saleCategory}
-                                    onChange={e => { setSaleCategory(e.target.value); setSaleProduct(null); }}
+                                    onChange={e => { setSaleCategory(e.target.value); setSaleProduct(null); setOnlineCreditAmount(''); }}
                                     className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-bold focus:border-blue-500/50 outline-none transition-colors"
                                 >
                                     <option value="">Todas as categorias</option>
@@ -831,37 +837,92 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                             </div>
                         </div>
 
-                        {/* Product grid */}
-                        <div>
-                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-3 ml-1">
-                                Produto {filteredProductsByCategory.length > 0 && <span className="text-gray-700">({filteredProductsByCategory.length})</span>}
-                            </label>
-                            {filteredProductsByCategory.length === 0 ? (
-                                <div className="text-center py-10 text-gray-600 border border-dashed border-white/10 rounded-2xl">
-                                    <span className="material-icons-outlined text-3xl opacity-20 block mb-1">inventory_2</span>
-                                    <p className="text-xs">Nenhum produto disponível.</p>
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-64 overflow-y-auto custom-scrollbar pr-1">
-                                    {filteredProductsByCategory.map((p: any) => (
+                        {/* Custom Input for Créditos Online */}
+                        {(saleCategory === 'Créditos Online' || saleCategory === 'creditos_online' || productCategories?.find((c: any) => c.name === saleCategory)?.label === 'Créditos Online') && (
+                            <div className="bg-black/20 border border-white/5 rounded-2xl p-4">
+                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-3 ml-1">Fichas Online</label>
+                                <div className="flex flex-wrap gap-2 mb-4">
+                                    {[20, 30, 50, 100, 200].map(amount => (
                                         <button
-                                            key={p.id}
-                                            onClick={() => setSaleProduct(saleProduct?.id === p.id ? null : p)}
-                                            className={`flex flex-col items-start p-3 rounded-xl border text-left transition-all ${saleProduct?.id === p.id
-                                                ? 'bg-blue-500/20 border-blue-500/60 shadow-[0_0_15px_rgba(59,130,246,0.2)]'
-                                                : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
+                                            key={amount}
+                                            onClick={() => {
+                                                setOnlineCreditAmount(amount.toString());
+                                                setSaleProduct({
+                                                    id: `online-${amount}`,
+                                                    name: 'Fichas Online',
+                                                    price: amount,
+                                                    category: 'Créditos Online'
+                                                });
+                                            }}
+                                            className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all ${parseFloat(onlineCreditAmount) === amount && saleProduct?.id === `online-${amount}`
+                                                ? 'bg-blue-500 text-white border-blue-500'
+                                                : 'bg-white/5 text-gray-300 border-white/10 hover:bg-white/10'
                                                 }`}
                                         >
-                                            <span className="text-xs font-bold text-white truncate w-full">{p.name}</span>
-                                            <span className="text-[9px] text-gray-500 uppercase mt-0.5">{p.category}</span>
-                                            <span className={`text-sm font-display font-black mt-1 ${saleProduct?.id === p.id ? 'text-blue-400' : 'text-primary'}`}>
-                                                R$ {Number(p.price).toFixed(2)}
-                                            </span>
+                                            R$ {amount}
                                         </button>
                                     ))}
                                 </div>
-                            )}
-                        </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Outro Valor</label>
+                                    <input
+                                        type="number"
+                                        placeholder="Ex: 75.00"
+                                        value={onlineCreditAmount}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setOnlineCreditAmount(val);
+                                            const num = parseFloat(val);
+                                            if (!isNaN(num) && num > 0) {
+                                                setSaleProduct({
+                                                    id: `online-custom`,
+                                                    name: 'Fichas Online',
+                                                    price: num,
+                                                    category: 'Créditos Online'
+                                                });
+                                            } else {
+                                                setSaleProduct(null);
+                                            }
+                                        }}
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-bold focus:border-blue-500/50 outline-none"
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Product grid */}
+                        {!(saleCategory === 'Créditos Online' || saleCategory === 'creditos_online' || productCategories?.find((c: any) => c.name === saleCategory)?.label === 'Créditos Online') && (
+                            <div>
+                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-3 ml-1">
+                                    Produto {filteredProductsByCategory.length > 0 && <span className="text-gray-700">({filteredProductsByCategory.length})</span>}
+                                </label>
+                                {filteredProductsByCategory.length === 0 ? (
+                                    <div className="text-center py-10 text-gray-600 border border-dashed border-white/10 rounded-2xl">
+                                        <span className="material-icons-outlined text-3xl opacity-20 block mb-1">inventory_2</span>
+                                        <p className="text-xs">Nenhum produto disponível.</p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-64 overflow-y-auto custom-scrollbar pr-1">
+                                        {filteredProductsByCategory.map((p: any) => (
+                                            <button
+                                                key={p.id}
+                                                onClick={() => setSaleProduct(saleProduct?.id === p.id ? null : p)}
+                                                className={`flex flex-col items-start p-3 rounded-xl border text-left transition-all ${saleProduct?.id === p.id
+                                                    ? 'bg-blue-500/20 border-blue-500/60 shadow-[0_0_15px_rgba(59,130,246,0.2)]'
+                                                    : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
+                                                    }`}
+                                            >
+                                                <span className="text-xs font-bold text-white truncate w-full">{p.name}</span>
+                                                <span className="text-[9px] text-gray-500 uppercase mt-0.5">{p.category}</span>
+                                                <span className={`text-sm font-display font-black mt-1 ${saleProduct?.id === p.id ? 'text-blue-400' : 'text-primary'}`}>
+                                                    R$ {Number(p.price).toFixed(2)}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         {/* Payment method */}
                         <div>

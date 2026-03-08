@@ -137,8 +137,8 @@ serve(async (req: Request) => {
                         })
                     }
 
-                    // Also add EXP BONUS
-                    const expBonus = Math.floor(intent.amount / 50);
+                    // Also add EXP BONUS: R$ 1 = 1 EXP
+                    const expBonus = Math.floor(intent.amount);
                     if (expBonus > 0) {
                         await supabaseAdmin.rpc("bulk_add_event_exp", {
                             p_user_ids: [intent.user_id],
