@@ -232,7 +232,7 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
         const isNumeric = /^\d+$/.test(query);
         let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, role, email');
         q = isNumeric ? q.eq('numeric_id', parseInt(query)) : q.ilike('name', `%${query}%`);
-        q = q.not('email', 'ilike', 'ghost_%@chiprace.com.br');
+        q = q.or('email.is.null,email.not.ilike.ghost_%');
         const { data } = await q.order('name', { ascending: true }).limit(5);
         setMergeSearchResults2(data || []);
     };
