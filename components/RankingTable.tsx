@@ -3,6 +3,7 @@ import { RankingPlayer, Event, RankingInstance, ScoringSchema, RankingFormula, B
 import { ScoringFormulaEditor } from './ScoringFormulaEditor';
 import { calculatePoints } from '../utils/scoring';
 import { RankingSkeleton } from './Skeleton';
+import { RankingStages } from './RankingStages';
 
 interface RankingTableProps {
     isAdmin?: boolean;
@@ -54,6 +55,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [showSimulator, setShowSimulator] = useState(false);
     const [showFormulaEditor, setShowFormulaEditor] = useState(false);
+    const [showStages, setShowStages] = useState(false);
     const [rankingView, setRankingView] = useState<'active' | 'finalized'>('active');
 
 
@@ -338,12 +340,30 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                             <span className="material-icons-outlined text-base">calculate</span>
                             Simulador de Pontos
                         </button>
+                        <button
+                            onClick={() => setShowStages(!showStages)}
+                            className={`text-sm font-bold uppercase hover:underline flex items-center gap-1 mt-2 transition-colors ${showStages ? 'text-primary' : 'text-gray-500 hover:text-primary'}`}
+                        >
+                            <span className="material-icons-outlined text-base">calendar_month</span>
+                            Calendário de Etapas
+                        </button>
                     </div>
                 </div>
 
                 {availableRankings.length > 0 && (
                     <>
 
+
+                        {/* --- CALENDÁRIO DE ETAPAS --- */}
+                        {showStages && activeRanking && (
+                            <div className="animate-in slide-in-from-top-4 duration-300">
+                                <RankingStages
+                                    rankingId={activeRankingId}
+                                    rankingLabel={activeRanking.label}
+                                    events={events}
+                                />
+                            </div>
+                        )}
 
                         {/* --- SIMULADOR DE PONTOS --- */}
                         {showSimulator && (
