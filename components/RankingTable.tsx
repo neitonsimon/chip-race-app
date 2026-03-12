@@ -179,13 +179,22 @@ export const RankingTable: React.FC<RankingTableProps> = ({
     const userCurrentPoints = currentUser?.name ? (activeRanking?.players.find(p => p.name === currentUser.name)?.points || 0) : 0;
 
     // Helper function to get last 3 scores
-    const getLastScores = (playerName: string) => {
+    const getLastScores = (player: RankingPlayer) => {
         if (!events) return [];
+
+        const normalize = (name: string) => name.toLowerCase().replace(/\s*\(ghost\)\s*/g, '').trim();
+        const playerNormName = normalize(player.name);
 
         const scores = events
             .filter(e => e.status === 'closed' && e.results && !e.is_hidden && (!e.includedRankings || e.includedRankings.includes(activeRankingId)))
             .map(e => {
-                const res = e.results?.find(r => r.name.toLowerCase() === playerName.toLowerCase());
+                const res = e.results?.find(r => {
+                    // 1. Try matching by ID first (most robust)
+                    if (player.id && r.userId && player.id === r.userId) return true;
+                    // 2. Try normalized name matching
+                    return normalize(r.name) === playerNormName;
+                });
+
                 if (!res) return null;
 
                 // Prioritize ranking-specific points, fallback to generic calculatedPoints
@@ -676,8 +685,8 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                                     {/* Latest Scores Column (Replaces Origem) */}
                                                     <td className="px-6 py-4 whitespace-nowrap hidden md:table-cell">
                                                         <div className="flex items-center gap-2">
-                                                            {getLastScores(player.name).length > 0 ? (
-                                                                getLastScores(player.name).map((score, idx) => (
+                                                            {getLastScores(player).length > 0 ? (
+                                                                getLastScores(player).map((score, idx) => (
                                                                     <div key={idx} className="flex flex-col items-center">
                                                                         <span className="bg-white/5 border border-white/10 px-2 py-1 rounded text-xs font-bold text-secondary group-hover:bg-secondary group-hover:text-black transition-colors min-w-[32px] text-center">
                                                                             {score?.points}
