@@ -511,56 +511,76 @@ export const Navigation: React.FC<NavigationProps> = ({
                         </div>
                     </div>
                 )}
-            </nav >
+            </nav>
+
+            {/* Banner Mobile de Cadastro para não logados */}
+            <div className={`md:hidden fixed z-[45] left-0 w-full transition-all duration-300 ${(!isLoggedIn && currentView !== 'login' && currentView !== 'register') ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'}`}
+                style={{ top: '5rem' }}>
+                <div className="mx-4 mt-2 bg-gradient-to-r from-primary/20 via-primary/10 to-accent/20 backdrop-blur-md border border-primary/30 rounded-2xl p-3 flex items-center justify-between shadow-2xl animate-in slide-in-from-top-4 duration-500">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0 border border-primary/30">
+                            <span className="material-icons text-primary text-xl animate-pulse">star</span>
+                        </div>
+                        <div>
+                            <p className="text-white text-xs font-black uppercase tracking-widest leading-none mb-0.5">Cadastre-se agora</p>
+                            <p className="text-gray-400 text-[10px] font-medium leading-none">E ganhe recompensas exclusivas!</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => onNavigate('login')}
+                        className="bg-primary text-black text-[10px] font-black px-4 py-2 rounded-xl border border-white/20 hover:scale-105 active:scale-95 transition-all shadow-neon-pink uppercase tracking-widest"
+                    >
+                        Entrar
+                    </button>
+                </div>
+            </div>
 
             {/* MESSAGE DETAIL MODAL — read-only, no reply box */}
-            {
-                selectedMessage && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-                        <div className="bg-surface-dark border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl relative animate-float flex flex-col max-h-[90vh]">
-                            <div className="p-6">
-                                <div className="flex justify-between items-start mb-6 border-b border-white/10 pb-4">
-                                    <div>
-                                        <h3 className="text-xl font-bold text-white mb-1">{selectedMessage.subject}</h3>
-                                        <p className="text-sm text-gray-400 flex items-center gap-2">
-                                            <span className="material-icons-outlined text-sm">person</span>
-                                            {selectedMessage.from}
-                                            <span className="mx-1">•</span>
-                                            {selectedMessage.date}
-                                        </p>
-                                    </div>
-                                    <button
-                                        onClick={() => setSelectedMessage(null)}
-                                        className="text-gray-400 hover:text-white transition-colors"
-                                    >
-                                        <span className="material-icons-outlined">close</span>
-                                    </button>
+            {selectedMessage && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+                    <div className="bg-surface-dark border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl relative animate-float flex flex-col max-h-[90vh]">
+                        <div className="p-6">
+                            <div className="flex justify-between items-start mb-6 border-b border-white/10 pb-4">
+                                <div>
+                                    <h3 className="text-xl font-bold text-white mb-1">{selectedMessage.subject}</h3>
+                                    <p className="text-sm text-gray-400 flex items-center gap-2">
+                                        <span className="material-icons-outlined text-sm">person</span>
+                                        {selectedMessage.from}
+                                        <span className="mx-1">•</span>
+                                        {selectedMessage.date}
+                                    </p>
                                 </div>
+                                <button
+                                    onClick={() => setSelectedMessage(null)}
+                                    className="text-gray-400 hover:text-white transition-colors"
+                                >
+                                    <span className="material-icons-outlined">close</span>
+                                </button>
+                            </div>
 
-                                <div className="bg-black/20 p-4 rounded-xl border border-white/5 text-gray-300 text-sm leading-relaxed max-h-64 overflow-y-auto custom-scrollbar">
-                                    {selectedMessage.content}
+                            <div className="bg-black/20 p-4 rounded-xl border border-white/5 text-gray-300 text-sm leading-relaxed max-h-64 overflow-y-auto custom-scrollbar">
+                                {selectedMessage.content}
+                            </div>
+
+                            {selectedMessage.category === 'poll' && (
+                                <div className="mt-4 flex items-center gap-2 text-yellow-400 text-xs font-bold bg-yellow-400/10 border border-yellow-400/20 rounded-xl px-4 py-2">
+                                    <span className="material-icons-outlined text-sm">how_to_vote</span>
+                                    Acesse a aba Mensagens no seu perfil para votar nesta enquete.
                                 </div>
+                            )}
 
-                                {selectedMessage.category === 'poll' && (
-                                    <div className="mt-4 flex items-center gap-2 text-yellow-400 text-xs font-bold bg-yellow-400/10 border border-yellow-400/20 rounded-xl px-4 py-2">
-                                        <span className="material-icons-outlined text-sm">how_to_vote</span>
-                                        Acesse a aba Mensagens no seu perfil para votar nesta enquete.
-                                    </div>
-                                )}
-
-                                <div className="mt-6 flex justify-end">
-                                    <button
-                                        onClick={() => setSelectedMessage(null)}
-                                        className="px-6 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold rounded-xl transition-colors"
-                                    >
-                                        Fechar
-                                    </button>
-                                </div>
+                            <div className="mt-6 flex justify-end">
+                                <button
+                                    onClick={() => setSelectedMessage(null)}
+                                    className="px-6 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold rounded-xl transition-colors"
+                                >
+                                    Fechar
+                                </button>
                             </div>
                         </div>
                     </div>
-                )
-            }
+                </div>
+            )}
         </>
     );
 };

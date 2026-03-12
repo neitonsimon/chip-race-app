@@ -399,17 +399,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                         </div>
 
                                         {/* Tooltip enhanced - Fixed visibility and clipping on mobile */}
-                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-48 md:w-64 bg-[#0c0920] text-white p-4 rounded-2xl border border-white/10 invisible opacity-0 group-hover:visible group-hover:opacity-100 pointer-events-none transition-all z-[100] shadow-[0_10px_40px_rgba(0,0,0,0.8)] scale-90 group-hover:scale-100 font-sans">
+                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 max-sm:-translate-x-[40%] mb-4 w-48 md:w-64 bg-[#0c0920] text-white p-4 rounded-2xl border border-white/10 invisible opacity-0 group-hover:visible group-hover:opacity-100 pointer-events-none transition-all z-[100] shadow-[0_10px_40px_rgba(0,0,0,0.8)] scale-90 group-hover:scale-100 font-sans">
                                             <div className="flex items-center gap-2 mb-2">
                                                 <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: badgeColor, boxShadow: `0 0 10px ${badgeColor}` }}></div>
                                                 <p className="font-black text-xs uppercase tracking-widest leading-none" style={{ color: badgeColor }}>{badge.title}</p>
                                             </div>
-                                            <p className="text-gray-400 text-[11px] leading-relaxed font-medium">{originalDesc || badge.description}</p>
+                                            <p className="text-gray-400 text-[11px] leading-relaxed font-medium break-words">{originalDesc || badge.description}</p>
                                             <div className="mt-2 pt-2 border-t border-white/5 text-[9px] text-gray-600 font-black uppercase tracking-wider">
                                                 Ganha em: {new Date(badge.awarded_at).toLocaleDateString()}
                                             </div>
                                             {/* Arrow properly aligned */}
-                                            <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#0c0920] border-b border-r border-white/10 transform rotate-45" />
+                                            <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 max-sm:left-[40%] w-3 h-3 bg-[#0c0920] border-b border-r border-white/10 transform rotate-45" />
                                         </div>
                                     </div>
                                 );
@@ -565,10 +565,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                 return (
                                     <div
                                         key={template.id}
-                                        className={`p-5 rounded-3xl border transition-all flex items-start gap-4 relative overflow-hidden group ${isUnlocked ? 'bg-white/5 border-white/10' : 'bg-black/40 border-white/5 opacity-40 grayscale'}`}
+                                        className={`p-4 md:p-5 rounded-3xl border transition-all flex items-start gap-4 relative group ${isUnlocked ? 'bg-white/5 border-white/10' : 'bg-black/40 border-white/5 opacity-40 grayscale'}`}
                                     >
                                         {isUnlocked && (
-                                            <div className="absolute top-3 right-3">
+                                            <div className="absolute top-3 right-3 shrink-0">
                                                 <span className="material-icons text-primary text-sm">verified</span>
                                             </div>
                                         )}
@@ -577,11 +577,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                             <span className="material-icons-outlined text-2xl" style={{ color: badgeColor }}>{template.icon || 'stars'}</span>
                                         </div>
 
-                                        <div className="flex-1">
-                                            <h4 className="text-sm font-black text-white uppercase tracking-wider mb-1" style={{ color: isUnlocked ? badgeColor : '#999' }}>
+                                        <div className="flex-1 min-w-0 pr-6 md:pr-0">
+                                            <h4 className="text-sm font-black text-white uppercase tracking-wider mb-1 truncate md:whitespace-normal" style={{ color: isUnlocked ? badgeColor : '#999' }}>
                                                 {template.title}
                                             </h4>
-                                            <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-relaxed font-medium">
+                                            <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-relaxed font-medium break-words">
                                                 {template.description}
                                             </p>
                                         </div>

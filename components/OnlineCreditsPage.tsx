@@ -53,7 +53,7 @@ export const OnlineCreditsPage: React.FC<OnlineCreditsPageProps> = ({ onNavigate
 
                 // Redireciona para o WhatsApp para confirmar os dados
                 const text = encodeURIComponent(`Olá! Fiz uma solicitação de fichas pelo app e gostaria de confirmar:\n\n*Nome:* ${currentUser.name || 'Jogador'}\n*Nick Suprema:* ${supremaNickname.trim()}\n*Quantidade:* ${amount} Fichas\n\nAguardo o envio!`);
-                window.open(`https://wa.me/555197170223?text=${text}`, '_blank');
+                window.open(`https://wa.me/5551992425186?text=${text}`, '_blank');
 
                 setAmount('');
 

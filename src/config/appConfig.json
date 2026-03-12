@@ -28,6 +28,11 @@
                 "name": "instagram",
                 "icon": "camera_alt",
                 "url": "https://www.instagram.com/chip.race/"
+            },
+            {
+                "name": "youtube",
+                "icon": "play_circle",
+                "url": "https://www.youtube.com/@ChipRacetv"
             }
         ],
         "menuPrincipal": [

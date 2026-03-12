@@ -205,7 +205,7 @@ export const AppRouter: React.FC = () => {
     };
 
     return (
-        <main className="flex-grow pt-20 pb-20">
+        <main className={`flex-grow pb-20 transition-all duration-300 ${(!isLoggedIn && currentView !== 'login' && currentView !== 'register') ? 'pt-40 md:pt-20' : 'pt-20'}`}>
             {renderContent()}
         </main>
     );

@@ -218,23 +218,47 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
     const handleMergeSearch1 = async (query: string) => {
         setMergeSearchQuery1(query);
         if (query.length < 2) { setMergeSearchResults1([]); return; }
-        const isNumeric = /^\d+$/.test(query);
-        let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, role, email');
-        q = isNumeric ? q.eq('numeric_id', parseInt(query)) : q.ilike('name', `%${query}%`);
-        q = q.ilike('email', 'ghost_%@chiprace.com.br');
-        const { data } = await q.order('name', { ascending: true }).limit(5);
-        setMergeSearchResults1(data || []);
+
+        try {
+            const { data, error } = await supabase.rpc('search_profiles_extended', {
+                search_query: query,
+                filter_type: 'ghost'
+            });
+            if (error) throw error;
+            setMergeSearchResults1(data || []);
+        } catch (err) {
+            console.error("Error searching ghost profiles:", err);
+            // Fallback to basic search if RPC fails
+            const isNumeric = /^\d+$/.test(query);
+            let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, role, email');
+            q = isNumeric ? q.eq('numeric_id', parseInt(query)) : q.ilike('name', `%${query}%`);
+            q = q.ilike('email', 'ghost_%@chiprace.com.br');
+            const { data } = await q.order('name', { ascending: true }).limit(5);
+            setMergeSearchResults1(data || []);
+        }
     };
 
     const handleMergeSearch2 = async (query: string) => {
         setMergeSearchQuery2(query);
         if (query.length < 2) { setMergeSearchResults2([]); return; }
-        const isNumeric = /^\d+$/.test(query);
-        let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, role, email');
-        q = isNumeric ? q.eq('numeric_id', parseInt(query)) : q.ilike('name', `%${query}%`);
-        q = q.or('email.is.null,email.not.ilike.ghost_%');
-        const { data } = await q.order('name', { ascending: true }).limit(5);
-        setMergeSearchResults2(data || []);
+
+        try {
+            const { data, error } = await supabase.rpc('search_profiles_extended', {
+                search_query: query,
+                filter_type: 'real'
+            });
+            if (error) throw error;
+            setMergeSearchResults2(data || []);
+        } catch (err) {
+            console.error("Error searching real profiles:", err);
+            // Fallback
+            const isNumeric = /^\d+$/.test(query);
+            let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, role, email');
+            q = isNumeric ? q.eq('numeric_id', parseInt(query)) : q.ilike('name', `%${query}%`);
+            q = q.or('email.is.null,email.not.ilike.ghost_%');
+            const { data } = await q.order('name', { ascending: true }).limit(5);
+            setMergeSearchResults2(data || []);
+        }
     };
 
     const handleMergeAccounts = async () => {

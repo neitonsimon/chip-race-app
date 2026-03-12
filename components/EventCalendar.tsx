@@ -210,25 +210,35 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                 startingDays.forEach(sd => {
                     if (sd.results) {
                         sd.results.forEach(pr => {
-                            if (pr.qualifierChips && pr.qualifierChips > 0) {
-                                const key = pr.userId || pr.name.toLowerCase().trim();
-                                if (qualifierMap.has(key)) {
-                                    const existing = qualifierMap.get(key)!;
+                            const key = pr.userId || pr.name.toLowerCase().trim();
+                            if (qualifierMap.has(key)) {
+                                const existing = qualifierMap.get(key)!;
+                                // Se o jogador passou em outro dia inicial, pegamos o maior stack ou somamos (conforme config do evento)
+                                if (pr.qualifierChips && pr.qualifierChips > 0) {
                                     if (event.stackAggregation === 'sum') {
                                         existing.qualifierChips = (existing.qualifierChips || 0) + pr.qualifierChips;
                                     } else {
                                         existing.qualifierChips = Math.max(existing.qualifierChips || 0, pr.qualifierChips);
                                     }
-                                } else {
-                                    // Deep copy to prevent mutating the original starting day result
-                                    qualifierMap.set(key, { ...pr, id: Date.now().toString() + Math.random(), position: 1, prize: 0, calculatedPoints: 0 });
                                 }
+                            } else {
+                                // Adiciona o jogador (mesmo que não tenha fichas, para calcular participação)
+                                qualifierMap.set(key, {
+                                    ...pr,
+                                    id: Date.now().toString() + Math.random(),
+                                    position: 1,
+                                    prize: 0,
+                                    calculatedPoints: 0,
+                                    qualifierChips: pr.qualifierChips || 0
+                                });
                             }
                         });
                     }
                 });
 
-                initialResults = Array.from(qualifierMap.values()).sort((a, b) => (b.qualifierChips || 0) - (a.qualifierChips || 0)).map((p, idx) => ({ ...p, position: idx + 1 }));
+                initialResults = Array.from(qualifierMap.values())
+                    .sort((a, b) => (b.qualifierChips || 0) - (a.qualifierChips || 0))
+                    .map((p, idx) => ({ ...p, position: idx + 1 }));
             }
 
             setTotalPlayers(initialResults.length);
