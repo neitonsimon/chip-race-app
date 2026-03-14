@@ -109,7 +109,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                     <div className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-4 bg-primary/10 inline-block px-3 py-1 rounded-full border border-primary/20">
                         ID: {player.numericId ? `CR#${String(player.numericId).padStart(3, '0')}` : 'CR#GUEST'}
                     </div>
-                    <p className="text-gray-500 dark:text-gray-400 text-base mb-6">{player.city}</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-base mb-2">{player.city}</p>
+                    {player.suprema_nickname && (
+                        <div className="flex items-center justify-center gap-1.5 text-[10px] font-black text-blue-400 mb-6 bg-blue-500/10 py-1.5 px-3 rounded-xl border border-blue-500/20 inline-flex uppercase tracking-widest">
+                            <span className="material-icons-outlined text-sm">poker</span>
+                            <span className="opacity-60 text-gray-500 ml-1">Nick Suprema:</span> {player.suprema_nickname}
+                        </div>
+                    )}
 
 
 
@@ -452,10 +458,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                                 </div>
                                             </td>
                                             <td className="px-2 md:px-6 py-4 text-center">
-                                                <span className={`px-2 py-1 rounded text-[10px] md:text-sm font-bold ${log.position === 1 ? 'bg-yellow-500/20 text-yellow-500' :
-                                                    log.position <= 3 ? 'bg-gray-500/20 text-gray-300' : 'text-gray-500'
+                                                <span className={`px-2 py-1 rounded text-[10px] md:text-sm font-bold whitespace-nowrap ${log.position === 1 ? (log.isStartingDay ? 'bg-primary/20 text-primary border border-primary/20' : 'bg-yellow-500/20 text-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.2)]') :
+                                                    log.position === 0 ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
+                                                        log.position <= 3 ? 'bg-gray-500/20 text-gray-300' : 'text-gray-500'
                                                     }`}>
-                                                    {log.position}º
+                                                    {log.position === 0 ? 'Não Classif.' : (log.isStartingDay && log.position === 1) ? 'CLASSIF.' : `${log.position}º`}
                                                 </span>
                                             </td>
                                             <td className="px-3 md:px-6 py-4 text-right text-white text-xs md:text-base">{log.prize}</td>

@@ -16,6 +16,12 @@ export const OnlineCreditsPage: React.FC<OnlineCreditsPageProps> = ({ onNavigate
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
+    useEffect(() => {
+        if (currentUser?.suprema_nickname) {
+            setSupremaNickname(currentUser.suprema_nickname);
+        }
+    }, [currentUser?.suprema_nickname]);
+
     const currentBalance = currentUser?.balanceBrl || 0;
 
     const handleSubmit = async (e: React.FormEvent) => {

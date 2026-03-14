@@ -757,6 +757,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 if (updatedData.gallery !== undefined) dbUpdate.gallery = updatedData.gallery;
                 if (updatedData.level !== undefined) dbUpdate.level = updatedData.level;
                 if (updatedData.currentExp !== undefined) dbUpdate.current_exp = updatedData.currentExp;
+                if (updatedData.suprema_nickname !== undefined) dbUpdate.suprema_nickname = updatedData.suprema_nickname;
+                if (updatedData.suprema_user_id !== undefined) dbUpdate.suprema_user_id = updatedData.suprema_user_id;
 
                 // Campos Financeiros e de Status
                 if (updatedData.debtLimitBrl !== undefined) dbUpdate.debt_limit_brl = updatedData.debtLimitBrl;

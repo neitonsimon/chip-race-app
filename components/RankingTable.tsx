@@ -607,8 +607,11 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                                 onClick={() => handleSuggestionClick(player.name)}
                                                 className="px-4 py-3 hover:bg-white/10 cursor-pointer text-gray-300 text-sm border-b border-white/5 last:border-0 flex items-center gap-3"
                                             >
-                                                <img src={player.avatar || `https://ui-avatars.com/api/?name=${player.name}&background=random`} className="w-6 h-6 rounded-full" alt="" />
-                                                {player.name}
+                                                <img src={player.avatar || `https://ui-avatars.com/api/?name=${player.name}&background=random`} className="w-6 h-6 rounded-full shrink-0" alt="" />
+                                                <span className="flex-1 truncate">{player.name}</span>
+                                                {player.isVerified && (
+                                                    <span className="material-icons text-[#00E5FF] text-[14px] shrink-0">verified</span>
+                                                )}
                                             </li>
                                         ))}
                                     </ul>
@@ -672,8 +675,11 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                                                 {player.change === 'down' && <div className="absolute -top-1 -right-1 w-3 h-3 md:w-4 md:h-4 bg-red-500 rounded-full border-2 border-white dark:border-surface-dark flex items-center justify-center"><span className="material-icons-outlined text-[8px] md:text-[10px] text-white">arrow_drop_down</span></div>}
                                                             </div>
                                                             <div className="min-w-0">
-                                                                <span className="block font-bold text-gray-900 dark:text-gray-200 group-hover:text-primary transition-colors text-sm md:text-lg truncate max-w-[120px] sm:max-w-none">
-                                                                    {player.name}
+                                                                <span className="flex items-center gap-1 font-bold text-gray-900 dark:text-gray-200 group-hover:text-primary transition-colors text-sm md:text-lg">
+                                                                    <span className="truncate max-w-[120px] sm:max-w-none">{player.name}</span>
+                                                                    {player.isVerified && (
+                                                                        <span className="material-icons text-[#00E5FF] text-sm md:text-base shrink-0" title="Perfil Verificado">verified</span>
+                                                                    )}
                                                                 </span>
                                                                 <span className="text-[10px] md:text-xs uppercase tracking-wider text-gray-500 block truncate max-w-[120px]">
                                                                     {player.numericId ? `CR#${String(player.numericId).padStart(3, '0')}` : 'CR#INV'} · {player.city}

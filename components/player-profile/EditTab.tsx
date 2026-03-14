@@ -92,6 +92,18 @@ export const EditTab: React.FC<EditTabProps> = ({
                                 className="w-full bg-black/20 border border-white/5 rounded p-3 text-primary font-bold cursor-not-allowed"
                             />
                         </div>
+                        <div>
+                            <label className="block text-sm font-bold text-blue-400 uppercase mb-1 flex items-center gap-2">
+                                <span className="material-icons-outlined text-sm">poker</span> Nick Suprema
+                            </label>
+                            <input
+                                type="text"
+                                value={player.suprema_nickname || ''}
+                                onChange={(e) => handleUpdate('suprema_nickname', e.target.value)}
+                                className="w-full bg-black/30 border border-white/10 rounded p-3 text-white focus:border-secondary outline-none"
+                                placeholder="Seu nickname no App Suprema"
+                            />
+                        </div>
                     </div>
                 </div>
 

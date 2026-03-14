@@ -239,6 +239,7 @@ export interface TournamentResult {
   position: number;
   points: number;
   prize: string;
+  isStartingDay?: boolean;
 }
 
 export interface PlayerStats {
@@ -277,6 +278,8 @@ export interface PlayerStats {
   badges?: Badge[];
   lockedBalanceBrl?: number;
   balanceUnlockDate?: string;
+  suprema_nickname?: string;
+  suprema_user_id?: string;
 }
 
 export interface MonthData {

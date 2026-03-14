@@ -100,6 +100,13 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     const [replyMode, setReplyMode] = useState(false);
     const [replyContent, setReplyContent] = useState('');
 
+    // Encontrar nick na suprema do remetente se for conversa privada
+    const senderProfile = viewedMessage?.category === 'private'
+        ? (viewedMessage.senderId
+            ? rankingPlayers.find(p => p.id === viewedMessage.senderId)
+            : rankingPlayers.find(p => p.name === viewedMessage.from))
+        : null;
+
 
 
     const handleOpenFlyer = (log: TournamentResult) => {
@@ -311,10 +318,11 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                         return {
                             date: e.date.split('-').reverse().join('/'), // Convert YYYY-MM-DD to DD/MM/YYYY
                             eventName: e.title,
-                            position: res.position,
+                            position: e.isStartingDay ? (res.qualifierChips && res.qualifierChips > 0 ? 1 : 0) : res.position,
                             points: res.calculatedPoints,
-                            prize: res.prize > 0 ? `R$ ${res.prize.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-'
-                        };
+                            prize: res.prize > 0 ? `R$ ${res.prize.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-',
+                            isStartingDay: e.isStartingDay
+                        } as TournamentResult;
                     }
                     return null;
                 })
@@ -345,7 +353,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             }, 0);
             baseData.winnings = totalPrize > 0 ? `R$ ${totalPrize.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'R$ 0,00';
 
-            baseData.titles = realLogs.filter(l => l.position === 1).length;
+            baseData.titles = realLogs.filter(l => l.position === 1 && !l.isStartingDay).length;
 
             const itmCount = realLogs.filter(l => l.prize !== '-').length;
             const itmPercent = realLogs.length > 0 ? Math.round((itmCount / realLogs.length) * 100) : 0;
@@ -995,7 +1003,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                     bio: player.bio,
                     social: player.social,
                     playStyles: player.playStyles,
-                    gallery: player.gallery
+                    gallery: player.gallery,
+                    suprema_nickname: player.suprema_nickname
                 };
                 await onUpdateProfile(targetIdRef.current, editableData as any);
                 // Atualiza a ref para o novo nome caso tenha mudado
@@ -1310,7 +1319,14 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                     </span>
                                     <div>
                                         <h3 className="text-xl sm:text-2xl font-black text-white leading-tight">{viewedMessage.subject}</h3>
-                                        <p className="text-gray-400 text-sm font-bold uppercase tracking-widest">{viewedMessage.from} • {viewedMessage.date}</p>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <p className="text-gray-400 text-sm font-bold uppercase tracking-widest">{viewedMessage.from} • {viewedMessage.date}</p>
+                                            {senderProfile?.suprema_nickname && (
+                                                <span className="bg-blue-500/10 text-blue-400 text-[10px] font-black px-2 py-0.5 rounded-lg border border-blue-500/20 uppercase tracking-tighter">
+                                                    Nick Suprema: {senderProfile.suprema_nickname}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                                 <button onClick={() => { setViewedMessage(null); setReplyMode(false); }} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-white">
