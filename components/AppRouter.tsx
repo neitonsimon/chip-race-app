@@ -108,7 +108,7 @@ export const AppRouter: React.FC = () => {
                     isLoading={isLoading}
                 />;
             case 'register':
-                return isLoggedIn ? <EventRegistration isAdmin={isAdmin} /> : <Auth onLogin={handleLogin} onCancel={() => handleNavigate('home')} />;
+                return isLoggedIn ? <EventRegistration isAdmin={isAdmin} /> : <Auth initialMode="signup" onLogin={handleLogin} onCancel={() => handleNavigate('home')} />;
             case 'login':
                 return <Auth onLogin={handleLogin} onCancel={() => handleNavigate('home')} />;
             case 'the-chosen-details':

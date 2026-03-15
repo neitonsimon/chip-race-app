@@ -527,10 +527,10 @@ export const Navigation: React.FC<NavigationProps> = ({
                         </div>
                     </div>
                     <button
-                        onClick={() => onNavigate('login')}
+                        onClick={() => onNavigate('register')}
                         className="bg-primary text-black text-[10px] font-black px-4 py-2 rounded-xl border border-white/20 hover:scale-105 active:scale-95 transition-all shadow-neon-pink uppercase tracking-widest"
                     >
-                        Entrar
+                        CADASTRAR
                     </button>
                 </div>
             </div>
