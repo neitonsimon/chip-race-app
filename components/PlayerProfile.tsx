@@ -268,7 +268,9 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                 vipStatus: initialData.vipStatus || 'nao_vip',
                 vipExpiresAt: initialData.vipExpiresAt || null,
                 isVerified: initialData.isVerified || false,
-                badges: (initialData as any).badges || []
+                badges: (initialData as any).badges || [],
+                suprema_nickname: (initialData as any).suprema_nickname,
+                suprema_user_id: (initialData as any).suprema_user_id
             };
             setActiveTab('overview');
         } else if (currentUser) {
@@ -296,6 +298,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             baseData.vipExpiresAt = currentUser.vipExpiresAt || null;
             baseData.isVerified = (currentUser as any).isVerified || false;
             baseData.badges = currentUser.badges || [];
+            baseData.suprema_nickname = (currentUser as any).suprema_nickname;
+            baseData.suprema_user_id = (currentUser as any).suprema_user_id;
 
             originalNameRef.current = baseData.name;
 

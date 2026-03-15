@@ -94,7 +94,7 @@ export const EditTab: React.FC<EditTabProps> = ({
                         </div>
                         <div>
                             <label className="block text-sm font-bold text-blue-400 uppercase mb-1 flex items-center gap-2">
-                                <span className="material-icons-outlined text-sm">poker</span> Nick Suprema
+                                <span className="material-icons-outlined text-sm">casino</span> Nick Suprema
                             </label>
                             <input
                                 type="text"

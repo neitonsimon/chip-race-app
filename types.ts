@@ -360,12 +360,19 @@ export interface Command {
   user_id: string;
   status: 'open' | 'closed';
   total_brl: number;
+  total_chipz?: number;
   discount_brl?: number;
   unpaid_amount_brl?: number;
   chips_payment_brl?: number;
+  service_fee_brl?: number;
+  tip_brl?: number;
+  payment_method?: string;
+  payment_details?: any;
   opened_by?: string;
+  closed_by?: string;
   opened_at: string;
   closed_at?: string;
+  internal_notes?: string;
   profiles?: any;
 }
 

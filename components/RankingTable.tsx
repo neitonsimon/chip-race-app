@@ -170,10 +170,17 @@ export const RankingTable: React.FC<RankingTableProps> = ({
         setShowSuggestions(false);
     };
 
-    const filteredRanking = activeRanking?.players.filter(player =>
-        player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        player.city.toLowerCase().includes(searchTerm.toLowerCase())
-    ) || [];
+    const filteredRanking = activeRanking?.players.filter(player => {
+        const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            player.city.toLowerCase().includes(searchTerm.toLowerCase());
+
+        // Para o ranking Legado, mostrar apenas jogadores com pontuação
+        if (activeRanking?.label.toLowerCase().includes('legado')) {
+            return matchesSearch && player.points > 0;
+        }
+
+        return matchesSearch;
+    }) || [];
 
     // Get current user points for projection
     const userCurrentPoints = currentUser?.name ? (activeRanking?.players.find(p => p.name === currentUser.name)?.points || 0) : 0;

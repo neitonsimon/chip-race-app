@@ -111,9 +111,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                     </div>
                     <p className="text-gray-500 dark:text-gray-400 text-base mb-2">{player.city}</p>
                     {player.suprema_nickname && (
-                        <div className="flex items-center justify-center gap-1.5 text-[10px] font-black text-blue-400 mb-6 bg-blue-500/10 py-1.5 px-3 rounded-xl border border-blue-500/20 inline-flex uppercase tracking-widest">
-                            <span className="material-icons-outlined text-sm">poker</span>
-                            <span className="opacity-60 text-gray-500 ml-1">Nick Suprema:</span> {player.suprema_nickname}
+                        <div className="flex items-center justify-center gap-2 text-[10px] font-black text-blue-400 mb-6 bg-blue-500/10 py-2 px-4 rounded-xl border border-blue-500/20 mx-auto w-fit uppercase tracking-widest">
+                            <span className="material-icons-outlined text-sm">casino</span>
+                            <span className="opacity-60 text-gray-500">Nick Suprema:</span>
+                            <span className="ml-1">{player.suprema_nickname}</span>
                         </div>
                     )}
 
