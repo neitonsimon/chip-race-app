@@ -57,6 +57,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
     const [showFormulaEditor, setShowFormulaEditor] = useState(false);
     const [showStages, setShowStages] = useState(false);
     const [rankingView, setRankingView] = useState<'active' | 'finalized'>('active');
+    const [isRetracted, setIsRetracted] = useState(false);
 
 
     // Admin Editing State
@@ -270,6 +271,13 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                         <span className="material-icons-outlined">functions</span>
                                     </button>
                                     <button
+                                        onClick={() => setIsRetracted(!isRetracted)}
+                                        className={`bg-white/5 p-2 rounded-full transition-colors ${isRetracted ? 'bg-primary text-white' : 'hover:bg-primary hover:text-white text-gray-400'}`}
+                                        title={isRetracted ? "Mostrar todos os campos" : "Ocultar campos secundários (Modo TV)"}
+                                    >
+                                        <span className="material-icons-outlined">{isRetracted ? 'expand' : 'compress'}</span>
+                                    </button>
+                                    <button
                                         onClick={() => {
                                             const action = activeRanking.isActive !== false ? 'finalizar' : 'reativar';
                                             if (window.confirm(`Deseja realmente ${action} o ranking "${activeRanking.label}"?`)) {
@@ -293,85 +301,89 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                 </div>
 
                 {/* Switch Active/Finalized */}
-                <div className="flex justify-center mb-6">
-                    <div className="flex bg-gray-200 dark:bg-surface-dark/50 p-1 rounded-xl border border-gray-300 dark:border-white/5 shadow-inner">
-                        <button
-                            onClick={() => setRankingView('active')}
-                            className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${rankingView === 'active' ? 'bg-primary text-white shadow-lg' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                        >
-                            Em Andamento
-                        </button>
-                        <button
-                            onClick={() => setRankingView('finalized')}
-                            className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${rankingView === 'finalized' ? 'bg-secondary text-white shadow-lg' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                        >
-                            Encerrados
-                        </button>
+                {!isRetracted && (
+                    <div className="flex justify-center mb-6">
+                        <div className="flex bg-gray-200 dark:bg-surface-dark/50 p-1 rounded-xl border border-gray-300 dark:border-white/5 shadow-inner">
+                            <button
+                                onClick={() => setRankingView('active')}
+                                className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${rankingView === 'active' ? 'bg-primary text-white shadow-lg' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                            >
+                                Em Andamento
+                            </button>
+                            <button
+                                onClick={() => setRankingView('finalized')}
+                                className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${rankingView === 'finalized' ? 'bg-secondary text-white shadow-lg' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                            >
+                                Encerrados
+                            </button>
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* Dynamic Tabs + Rules Button */}
-                <div className="flex flex-col items-center justify-center mb-12 gap-4">
-                    <div className="bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/10 p-1 rounded-full flex flex-wrap justify-center backdrop-blur-md shadow-lg max-w-full overflow-x-auto">
-                        {availableRankings
-                            .sort((a, b) => (a.order || 0) - (b.order || 0))
-                            .map(ranking => (
+                {!isRetracted && (
+                    <div className="flex flex-col items-center justify-center mb-12 gap-4">
+                        <div className="bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/10 p-1 rounded-full flex flex-wrap justify-center backdrop-blur-md shadow-lg max-w-full overflow-x-auto">
+                            {availableRankings
+                                .sort((a, b) => (a.order || 0) - (b.order || 0))
+                                .map(ranking => (
+                                    <button
+                                        key={ranking.id}
+                                        onClick={() => setActiveRankingId(ranking.id)}
+                                        className={`px-4 sm:px-8 py-2 rounded-full text-sm sm:text-base font-bold uppercase tracking-widest transition-all duration-300 whitespace-nowrap ${activeRankingId === ranking.id
+                                            ? 'bg-gradient-to-r from-primary to-accent text-white shadow-neon-pink'
+                                            : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+                                            }`}
+                                    >
+                                        {ranking.label}
+                                    </button>
+                                ))}
+
+
+                            {/* ADMIN ADD BUTTON */}
+                            {isAdmin && onAddRanking && (
                                 <button
-                                    key={ranking.id}
-                                    onClick={() => setActiveRankingId(ranking.id)}
-                                    className={`px-4 sm:px-8 py-2 rounded-full text-sm sm:text-base font-bold uppercase tracking-widest transition-all duration-300 whitespace-nowrap ${activeRankingId === ranking.id
-                                        ? 'bg-gradient-to-r from-primary to-accent text-white shadow-neon-pink'
-                                        : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
-                                        }`}
+                                    onClick={onAddRanking}
+                                    className="px-4 py-2 rounded-full text-sm font-bold uppercase tracking-widest transition-all duration-300 bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white border border-green-500/20 ml-2"
+                                    title="Adicionar Novo Ranking"
                                 >
-                                    {ranking.label}
+                                    +
                                 </button>
-                            ))}
+                            )}
+                        </div>
 
-
-                        {/* ADMIN ADD BUTTON */}
-                        {isAdmin && onAddRanking && (
+                        <div className="flex gap-4">
                             <button
-                                onClick={onAddRanking}
-                                className="px-4 py-2 rounded-full text-sm font-bold uppercase tracking-widest transition-all duration-300 bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white border border-green-500/20 ml-2"
-                                title="Adicionar Novo Ranking"
+                                onClick={() => setShowRules(true)}
+                                className="text-sm text-gray-500 hover:text-primary font-bold uppercase hover:underline flex items-center gap-1 mt-2 transition-colors"
                             >
-                                +
+                                <span className="material-icons-outlined text-base">info</span>
+                                Regulamento
                             </button>
-                        )}
+                            <button
+                                onClick={() => setShowSimulator(!showSimulator)}
+                                className={`text-sm font-bold uppercase hover:underline flex items-center gap-1 mt-2 transition-colors ${showSimulator ? 'text-secondary' : 'text-gray-500 hover:text-secondary'}`}
+                            >
+                                <span className="material-icons-outlined text-base">calculate</span>
+                                Simulador de Pontos
+                            </button>
+                            <button
+                                onClick={() => setShowStages(!showStages)}
+                                className={`text-sm font-bold uppercase hover:underline flex items-center gap-1 mt-2 transition-colors ${showStages ? 'text-primary' : 'text-gray-500 hover:text-primary'}`}
+                            >
+                                <span className="material-icons-outlined text-base">calendar_month</span>
+                                Calendário de Etapas
+                            </button>
+                        </div>
                     </div>
-
-                    <div className="flex gap-4">
-                        <button
-                            onClick={() => setShowRules(true)}
-                            className="text-sm text-gray-500 hover:text-primary font-bold uppercase hover:underline flex items-center gap-1 mt-2 transition-colors"
-                        >
-                            <span className="material-icons-outlined text-base">info</span>
-                            Regulamento
-                        </button>
-                        <button
-                            onClick={() => setShowSimulator(!showSimulator)}
-                            className={`text-sm font-bold uppercase hover:underline flex items-center gap-1 mt-2 transition-colors ${showSimulator ? 'text-secondary' : 'text-gray-500 hover:text-secondary'}`}
-                        >
-                            <span className="material-icons-outlined text-base">calculate</span>
-                            Simulador de Pontos
-                        </button>
-                        <button
-                            onClick={() => setShowStages(!showStages)}
-                            className={`text-sm font-bold uppercase hover:underline flex items-center gap-1 mt-2 transition-colors ${showStages ? 'text-primary' : 'text-gray-500 hover:text-primary'}`}
-                        >
-                            <span className="material-icons-outlined text-base">calendar_month</span>
-                            Calendário de Etapas
-                        </button>
-                    </div>
-                </div>
+                )}
 
                 {availableRankings.length > 0 && (
                     <>
 
 
                         {/* --- CALENDÁRIO DE ETAPAS --- */}
-                        {showStages && activeRanking && (
+                        {showStages && activeRanking && !isRetracted && (
                             <div className="animate-in slide-in-from-top-4 duration-300">
                                 <RankingStages
                                     rankingId={activeRankingId}
@@ -382,7 +394,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                         )}
 
                         {/* --- SIMULADOR DE PONTOS --- */}
-                        {showSimulator && (
+                        {showSimulator && !isRetracted && (
                             <div className="mb-8 bg-surface-dark border border-secondary/30 rounded-2xl p-6 shadow-[0_0_30px_rgba(0,224,255,0.1)] animate-in slide-in-from-top-4 duration-300">
                                 <div className="flex items-center gap-2 mb-6 pb-2 border-b border-white/5">
                                     <span className="material-icons-outlined text-secondary">calculate</span>
@@ -565,7 +577,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                         )}
 
                         {/* Custom Prize/Highlight Box */}
-                        {activeRanking?.prizeInfoTitle && (
+                        {activeRanking?.prizeInfoTitle && !isRetracted && (
                             <div className="max-w-3xl mx-auto mb-8">
                                 <h3 className="text-primary font-bold text-xl sm:text-2xl mb-6 flex items-center justify-center gap-2">
                                     <span className="material-icons-outlined">emoji_events</span> Ranking Geral 2026
@@ -592,39 +604,41 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                         )}
 
                         {/* Search & Filter */}
-                        <div className="flex justify-between items-center mb-6 relative z-30">
-                            <div className="relative w-full max-w-md mx-auto">
-                                <input
-                                    type="text"
-                                    placeholder="Buscar jogador..."
-                                    value={searchTerm}
-                                    onChange={handleSearchChange}
-                                    onFocus={() => setShowSuggestions(true)}
-                                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                                    className="w-full bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/10 rounded-full py-3 px-12 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:border-primary focus:shadow-[0_0_15px_rgba(217,0,255,0.2)] transition-all"
-                                />
-                                <span className="material-icons-outlined absolute left-4 top-3 text-gray-400">search</span>
+                        {!isRetracted && (
+                            <div className="flex justify-between items-center mb-6 relative z-30">
+                                <div className="relative w-full max-w-md mx-auto">
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar jogador..."
+                                        value={searchTerm}
+                                        onChange={handleSearchChange}
+                                        onFocus={() => setShowSuggestions(true)}
+                                        onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                                        className="w-full bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/10 rounded-full py-3 px-12 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:border-primary focus:shadow-[0_0_15px_rgba(217,0,255,0.2)] transition-all"
+                                    />
+                                    <span className="material-icons-outlined absolute left-4 top-3 text-gray-400">search</span>
 
-                                {/* Search Dropdown */}
-                                {showSuggestions && searchTerm && suggestions.length > 0 && (
-                                    <ul className="absolute top-full left-0 w-full mt-2 bg-surface-dark border border-white/20 rounded-xl shadow-2xl max-h-60 overflow-y-auto custom-scrollbar z-50">
-                                        {suggestions.map((player) => (
-                                            <li
-                                                key={player.name}
-                                                onClick={() => handleSuggestionClick(player.name)}
-                                                className="px-4 py-3 hover:bg-white/10 cursor-pointer text-gray-300 text-sm border-b border-white/5 last:border-0 flex items-center gap-3"
-                                            >
-                                                <img src={player.avatar || `https://ui-avatars.com/api/?name=${player.name}&background=random`} className="w-6 h-6 rounded-full shrink-0" alt="" />
-                                                <span className="flex-1 truncate">{player.name}</span>
-                                                {player.isVerified && (
-                                                    <span className="material-icons text-[#00E5FF] text-[14px] shrink-0">verified</span>
-                                                )}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
+                                    {/* Search Dropdown */}
+                                    {showSuggestions && searchTerm && suggestions.length > 0 && (
+                                        <ul className="absolute top-full left-0 w-full mt-2 bg-surface-dark border border-white/20 rounded-xl shadow-2xl max-h-60 overflow-y-auto custom-scrollbar z-50">
+                                            {suggestions.map((player) => (
+                                                <li
+                                                    key={player.name}
+                                                    onClick={() => handleSuggestionClick(player.name)}
+                                                    className="px-4 py-3 hover:bg-white/10 cursor-pointer text-gray-300 text-sm border-b border-white/5 last:border-0 flex items-center gap-3"
+                                                >
+                                                    <img src={player.avatar || `https://ui-avatars.com/api/?name=${player.name}&background=random`} className="w-6 h-6 rounded-full shrink-0" alt="" />
+                                                    <span className="flex-1 truncate">{player.name}</span>
+                                                    {player.isVerified && (
+                                                        <span className="material-icons text-[#00E5FF] text-[14px] shrink-0">verified</span>
+                                                    )}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         {/* Noble Table */}
                         <div className="bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden shadow-2xl relative z-10">
@@ -653,7 +667,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredRanking.map((player) => (
+                                            (isRetracted ? filteredRanking.slice(0, 10) : filteredRanking).map((player) => (
                                                 <tr
                                                     key={player.name + player.rank} // Key composta para evitar erros
                                                     className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group cursor-pointer"
@@ -748,18 +762,20 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                         </div>
 
                         {/* Footer Button - Next Events */}
-                        <div className="mt-12 text-center">
-                            <button
-                                onClick={() => onNavigate && onNavigate('calendar')}
-                                className="group bg-surface-dark border border-white/10 hover:border-primary/50 text-white font-bold py-4 px-8 rounded-full shadow-lg transition-all duration-300 flex items-center gap-3 mx-auto hover:-translate-y-1"
-                            >
-                                <span className="bg-primary/20 p-2 rounded-full text-primary group-hover:bg-primary group-hover:text-white transition-colors">
-                                    <span className="material-icons-outlined">event</span>
-                                </span>
-                                VER PRÓXIMOS EVENTOS DO RANK
-                                <span className="material-icons-outlined text-gray-500 group-hover:text-white transition-colors">arrow_forward</span>
-                            </button>
-                        </div>
+                        {!isRetracted && (
+                            <div className="mt-12 text-center">
+                                <button
+                                    onClick={() => onNavigate && onNavigate('calendar')}
+                                    className="group bg-surface-dark border border-white/10 hover:border-primary/50 text-white font-bold py-4 px-8 rounded-full shadow-lg transition-all duration-300 flex items-center gap-3 mx-auto hover:-translate-y-1"
+                                >
+                                    <span className="bg-primary/20 p-2 rounded-full text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                                        <span className="material-icons-outlined">event</span>
+                                    </span>
+                                    VER PRÓXIMOS EVENTOS DO RANK
+                                    <span className="material-icons-outlined text-gray-500 group-hover:text-white transition-colors">arrow_forward</span>
+                                </button>
+                            </div>
+                        )}
                     </>
                 )}
             </div>
