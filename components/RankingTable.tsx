@@ -256,20 +256,24 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                             {/* ADMIN EDIT BUTTONS FOR CURRENT RANKING */}
                             {isAdmin && (
                                 <div className="absolute top-0 right-0 lg:right-[-50px] flex flex-col gap-2">
-                                    <button
-                                        onClick={() => setEditingRanking(activeRanking)}
-                                        className="bg-white/5 p-2 rounded-full hover:bg-primary hover:text-white text-gray-400 transition-colors"
-                                        title="Editar Detalhes do Ranking"
-                                    >
-                                        <span className="material-icons-outlined">edit</span>
-                                    </button>
-                                    <button
-                                        onClick={() => setShowFormulaEditor(true)}
-                                        className="bg-white/5 p-2 rounded-full hover:bg-secondary hover:text-white text-gray-400 transition-colors"
-                                        title="Editar Fórmulas de Pontuação"
-                                    >
-                                        <span className="material-icons-outlined">functions</span>
-                                    </button>
+                                    {!isRetracted && (
+                                        <>
+                                            <button
+                                                onClick={() => setEditingRanking(activeRanking)}
+                                                className="bg-white/5 p-2 rounded-full hover:bg-primary hover:text-white text-gray-400 transition-colors"
+                                                title="Editar Detalhes do Ranking"
+                                            >
+                                                <span className="material-icons-outlined">edit</span>
+                                            </button>
+                                            <button
+                                                onClick={() => setShowFormulaEditor(true)}
+                                                className="bg-white/5 p-2 rounded-full hover:bg-secondary hover:text-white text-gray-400 transition-colors"
+                                                title="Editar Fórmulas de Pontuação"
+                                            >
+                                                <span className="material-icons-outlined">functions</span>
+                                            </button>
+                                        </>
+                                    )}
                                     <button
                                         onClick={() => setIsRetracted(!isRetracted)}
                                         className={`bg-white/5 p-2 rounded-full transition-colors ${isRetracted ? 'bg-primary text-white' : 'hover:bg-primary hover:text-white text-gray-400'}`}
@@ -277,18 +281,20 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                     >
                                         <span className="material-icons-outlined">{isRetracted ? 'expand' : 'compress'}</span>
                                     </button>
-                                    <button
-                                        onClick={() => {
-                                            const action = activeRanking.isActive !== false ? 'finalizar' : 'reativar';
-                                            if (window.confirm(`Deseja realmente ${action} o ranking "${activeRanking.label}"?`)) {
-                                                onUpdateRankingMeta?.(activeRanking.id, { isActive: activeRanking.isActive === false });
-                                            }
-                                        }}
-                                        className={`bg-white/5 p-2 rounded-full transition-colors ${activeRanking.isActive !== false ? 'hover:bg-red-500' : 'hover:bg-emerald-500'} hover:text-white text-gray-400`}
-                                        title={activeRanking.isActive !== false ? "Finalizar Ranking" : "Reativar Ranking"}
-                                    >
-                                        <span className="material-icons-outlined">{activeRanking.isActive !== false ? 'lock' : 'lock_open'}</span>
-                                    </button>
+                                    {!isRetracted && (
+                                        <button
+                                            onClick={() => {
+                                                const action = activeRanking.isActive !== false ? 'finalizar' : 'reativar';
+                                                if (window.confirm(`Deseja realmente ${action} o ranking "${activeRanking.label}"?`)) {
+                                                    onUpdateRankingMeta?.(activeRanking.id, { isActive: activeRanking.isActive === false });
+                                                }
+                                            }}
+                                            className={`bg-white/5 p-2 rounded-full transition-colors ${activeRanking.isActive !== false ? 'hover:bg-red-500' : 'hover:bg-emerald-500'} hover:text-white text-gray-400`}
+                                            title={activeRanking.isActive !== false ? "Finalizar Ranking" : "Reativar Ranking"}
+                                        >
+                                            <span className="material-icons-outlined">{activeRanking.isActive !== false ? 'lock' : 'lock_open'}</span>
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </>
@@ -733,7 +739,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                                         <span className="text-[10px] md:text-xs uppercase text-gray-500 ml-1">pts</span>
                                                     </td>
                                                     <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-center">
-                                                        {isAdmin ? (
+                                                        {isAdmin && !isRetracted ? (
                                                             <input
                                                                 type="text"
                                                                 value={activeRanking.positionPrizes?.[player.rank] || ''}
