@@ -54,6 +54,7 @@ interface OperationalTabProps {
     searchQuery?: string;
     handleCreateGhostUser?: (name: string) => Promise<void>;
     getVipPrice?: (price: number, category: string, name: string) => number;
+    handleDeleteCommand: (cmd: any) => Promise<void>;
 }
 
 export const OperationalTab: React.FC<OperationalTabProps> = ({
@@ -69,7 +70,8 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
     isProductDisabled, isTourItemDisabled, productCategories = [],
     pastEventsList, handleFinalizeEvent, handleCreateQuickEvent,
     searchQuery, handleCreateGhostUser,
-    getVipPrice
+    getVipPrice,
+    handleDeleteCommand
 }) => {
     const [eventFilterTab, setEventFilterTab] = React.useState<'proximos' | 'concluidos'>('proximos');
     const [selectedSubCategory, setSelectedSubCategory] = React.useState<string | null>(null);
@@ -407,6 +409,15 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                         }}
                                         className={`bg-surface-dark border rounded-2xl p-2.5 sm:p-3 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden flex flex-col items-center text-center ${selectedCommand?.id === cmd.id ? 'border-primary shadow-neon-pink ring-1 ring-primary' : 'border-white/5'}`}
                                     >
+                                        {cmd.status === 'open' && (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleDeleteCommand(cmd); }}
+                                                className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-10"
+                                                title="Excluir Comanda"
+                                            >
+                                                <span className="material-icons text-xs">close</span>
+                                            </button>
+                                        )}
                                         <div className="relative mb-2 shrink-0">
                                             <img src={cmd.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${cmd.profiles?.name}&background=random`} className="w-10 h-10 rounded-xl border border-white/10" />
                                             {selectedCommand?.id === cmd.id && (

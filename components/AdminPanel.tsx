@@ -335,6 +335,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         fetchClosedCommands,
         fetchCommandItems,
         handleDeleteCommandItem,
+        handleDeleteCommand,
         reopenCommand,
         openClosedCommandView,
         handleSearchPlayers,
@@ -786,6 +787,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             searchQuery={searchQuery}
                             handleCreateGhostUser={handleCreateGhostUser}
                             getVipPrice={getVipPrice}
+                            handleDeleteCommand={handleDeleteCommand}
                         />
                     )}
 

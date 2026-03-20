@@ -108,6 +108,56 @@ export function useOperations({
         }
     };
 
+    const handleDeleteCommand = async (cmd: any) => {
+        if (cmd.status !== 'open') {
+            alert('Apenas comandas abertas podem ser excluídas.');
+            return;
+        }
+
+        const itemsCount = openCommands.find(c => c.id === cmd.id)?.item_count || 0; // Assuming we might have count or we check items
+        // We can check local commandItems if cmd is the selected one, otherwise we don't know for sure without fetching.
+        // But for "accidental" additions, usually it's 0.
+        
+        const confirmMsg = Number(cmd.total_brl) > 0 
+            ? `⚠️ Esta comanda possui R$ ${Number(cmd.total_brl).toFixed(2)} em consumo. Deseja REALMENTE excluir permanentemente?`
+            : `Deseja remover a comanda de ${cmd.profiles?.name}?`;
+
+        if (!window.confirm(confirmMsg)) return;
+
+        setIsLoading(true);
+        try {
+            // 1. Delete items first (foreign key constraints)
+            const { error: itemsErr } = await supabase.from('command_items').delete().eq('command_id', cmd.id);
+            if (itemsErr) throw itemsErr;
+
+            // 2. Delete the command
+            const { error: cmdErr } = await supabase.from('commands').delete().eq('id', cmd.id);
+            if (cmdErr) throw cmdErr;
+
+            // 3. Audit log
+            await supabase.from('audit_logs').insert({
+                admin_id: currentUser.id,
+                action_type: 'COMMAND_DELETED',
+                description: `Admin excluiu a comanda ${cmd.id.slice(0, 8)} de ${cmd.profiles?.name}. Total era R$ ${Number(cmd.total_brl).toFixed(2)}.`,
+                target_user_id: cmd.user_id,
+                details: { command_id: cmd.id, total: cmd.total_brl }
+            });
+
+            // 4. Update local state
+            setOpenCommands(prev => prev.filter(c => c.id !== cmd.id));
+            if (selectedCommand?.id === cmd.id) {
+                setSelectedCommand(null);
+                setCommandItems([]);
+            }
+
+            alert('✅ Comanda removida com sucesso.');
+        } catch (err: any) {
+            alert('Erro ao excluir comanda: ' + err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const reopenCommand = async (cmd: any) => {
         const total = Number(cmd.total_brl || 0);
         const discount = Number(cmd.discount_brl || 0);
@@ -550,6 +600,7 @@ export function useOperations({
         fetchClosedCommands,
         fetchCommandItems,
         handleDeleteCommandItem,
+        handleDeleteCommand,
         reopenCommand,
         openClosedCommandView,
         handleSearchPlayers,

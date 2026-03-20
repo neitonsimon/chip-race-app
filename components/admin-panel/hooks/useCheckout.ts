@@ -17,7 +17,7 @@ export function useCheckout({
     updatePlayerDebtLocally,
     onSuccess
 }: UseCheckoutProps) {
-    const [showCheckout, setShowCheckout] = useState(false);
+    const [showCheckout, _setShowCheckout] = useState(false);
     const [checkoutDiscount, setCheckoutDiscount] = useState('');
     const [checkoutDebt, setCheckoutDebt] = useState('');
     const [checkoutChips, setCheckoutChips] = useState('');
@@ -26,19 +26,29 @@ export function useCheckout({
     const [confirmingCheckout, setConfirmingCheckout] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
-    const openCheckout = () => {
+    const clearFields = () => {
         setCheckoutDiscount('');
         setCheckoutDebt('');
         setCheckoutChips('');
         setCheckoutCashOut('');
         setCheckoutProfitCash('');
+    };
+
+    const openCheckout = () => {
+        clearFields();
         setConfirmingCheckout(false);
-        setShowCheckout(true);
+        _setShowCheckout(true);
     };
 
     const closeCheckout = () => {
-        setShowCheckout(false);
+        _setShowCheckout(false);
         setConfirmingCheckout(false);
+        clearFields();
+    };
+
+    const setShowCheckout = (v: boolean) => {
+        if (v) openCheckout();
+        else closeCheckout();
     };
 
     const handleCloseCommand = async () => {

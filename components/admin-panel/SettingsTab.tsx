@@ -98,7 +98,8 @@ export const SettingsTab: React.FC = () => {
         totalPrizeDistributed: 0,
         theChosenQualifiers: 0,
         totalChipz: 0,
-        totalDebt: 0
+        totalDebt: 0,
+        verifiedUsers: 0
     });
     const [pageViews, setPageViews] = useState<{ view_name: string, count: number }[]>([]);
     const [isLoadingStats, setIsLoadingStats] = useState(false);
@@ -128,7 +129,7 @@ export const SettingsTab: React.FC = () => {
                 supabase.from('events').select('id', { count: 'exact', head: true }).eq('status', 'closed'),
                 supabase.from('events').select('total_prize, details').eq('status', 'closed'),
                 supabase.from('the_chosen_qualifiers').select('id', { count: 'exact', head: true }),
-                supabase.from('profiles').select('id, balance_chipz, total_pending_debt')
+                supabase.from('profiles').select('id, balance_chipz, total_pending_debt, is_verified')
             ]);
 
             const sumPrizes = (eventsData || []).reduce((acc: number, e: any) => {
@@ -137,6 +138,7 @@ export const SettingsTab: React.FC = () => {
             }, 0);
 
             const activePlayers = (profilesData || []).filter(p => p.balance_chipz > 0 || p.total_pending_debt > 0).length;
+            const verifiedCount = (profilesData || []).filter(p => p.is_verified === true).length;
             const totalChipzDb = (profilesData || []).reduce((s, p) => s + (Number(p.balance_chipz) || 0), 0);
             const totalDebtDb = (profilesData || []).reduce((s, p) => s + (Number(p.total_pending_debt) || 0), 0);
 
@@ -147,7 +149,8 @@ export const SettingsTab: React.FC = () => {
                 totalPrizeDistributed: sumPrizes,
                 theChosenQualifiers: chosenCount || 0,
                 totalChipz: totalChipzDb,
-                totalDebt: totalDebtDb
+                totalDebt: totalDebtDb,
+                verifiedUsers: verifiedCount
             });
 
             // Fetch Page Views simplified from page_stats (Counter table)
@@ -1140,8 +1143,12 @@ export const SettingsTab: React.FC = () => {
 
                                 <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col justify-center items-center text-center gap-2 hover:bg-white/10 transition-colors group">
                                     <span className="material-icons-outlined text-blue-400 text-3xl mb-1 group-hover:scale-110 transition-transform duration-300">verified</span>
-                                    <div className="text-3xl font-display font-black text-white">100%</div>
-                                    <div className="text-[9px] uppercase font-black tracking-widest text-gray-500">Usuários Verificados</div>
+                                    <div className="text-3xl font-display font-black text-white">
+                                        {stats.totalUsers > 0 ? Math.round((stats.verifiedUsers / stats.totalUsers) * 100) : 0}%
+                                    </div>
+                                    <div className="text-[9px] uppercase font-black tracking-widest text-gray-500">
+                                        {stats.verifiedUsers} de {stats.totalUsers} Verificados
+                                    </div>
                                 </div>
 
                                 <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col justify-center items-center text-center gap-2 hover:bg-white/10 transition-colors group">
