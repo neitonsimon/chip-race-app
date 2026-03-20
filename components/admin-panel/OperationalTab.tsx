@@ -104,9 +104,9 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
         return commandItems.filter(item => item.product_id === p.id).reduce((sum, item) => sum + (item.quantity || 1), 0);
     };
     return (
-        <div className="flex flex-col lg:flex-row h-full overflow-hidden">
+        <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden">
             {/* Sidebar: Event Selection & Player Search */}
-            <div className={`w-full lg:w-80 border-b lg:border-r border-white/5 bg-black/40 flex flex-col ${selectedEvent ? 'hidden lg:flex' : 'flex'}`}>
+            <div className={`w-full lg:w-80 flex-1 lg:flex-none border-b lg:border-r border-white/5 bg-black/40 flex flex-col ${selectedEvent ? 'hidden lg:flex' : 'flex'}`}>
                 <div className="p-4 space-y-4">
                     <div>
                         <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Evento Ativo</label>
@@ -335,7 +335,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
             </div>
 
             {/* Main Content: Command Lists & Actions */}
-            <div className={`flex-1 flex flex-col bg-background-dark/50 ${(selectedEvent && !selectedCommand) ? 'flex' : 'hidden lg:flex'}`}>
+            <div className={`flex-1 min-h-0 flex flex-col bg-background-dark/50 ${(selectedEvent && !selectedCommand) ? 'flex' : 'hidden lg:flex'}`}>
                 <div className="p-4 sm:p-6 border-b border-white/5 bg-black/20 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div className="flex items-center gap-3 w-full sm:w-auto">
                         <button onClick={() => setSelectedEvent(null)} className="lg:hidden w-8 h-8 rounded-full bg-white/5 flex items-center justify-center">
@@ -460,7 +460,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
             </div>
 
             {/* Right Panel: Selected Command Details */}
-            <div className={`w-full lg:w-96 border-t lg:border-l border-white/5 bg-black/40 flex flex-col ${selectedCommand ? 'flex' : 'hidden lg:flex'}`}>
+            <div className={`w-full lg:w-96 flex-1 lg:flex-none border-t lg:border-l border-white/5 bg-black/40 flex flex-col ${selectedCommand ? 'flex' : 'hidden lg:flex'}`}>
                 {selectedCommand ? (
                     <>
                         <div className="p-4 sm:p-6 border-b border-white/10">

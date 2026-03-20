@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../src/lib/supabase';
 import { PlayerName } from './PlayerName';
 import { ReportsTab } from './admin-panel/ReportsTab';
@@ -725,7 +725,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                     </div>
                 </aside>
 
-                <main className="flex-1 overflow-y-auto custom-scrollbar bg-[#050214]">
+                <main className={`flex-1 custom-scrollbar bg-[#050214] ${activeTab === 'operational' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'}`}>
                     {activeTab === 'operational' && (
                         <OperationalTab
                             selectedEvent={selectedEvent}
