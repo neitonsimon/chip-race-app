@@ -8,7 +8,7 @@ interface ReservationsTabProps {
 }
 
 export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
-    const { currentUser } = useApp();
+    const { currentUser, refreshSupabaseData } = useApp();
     const [activeSubTab, setActiveSubTab] = useState<'tournaments' | 'credits' | 'merge' | 'withdrawals'>('tournaments');
 
     // Merge State
@@ -289,6 +289,7 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
             });
 
             alert('✅ Contas mescladas com sucesso!');
+            await refreshSupabaseData();
             setGhostAccount(null);
             setRealAccount(null);
             setMergeSearchQuery1('');

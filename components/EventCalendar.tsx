@@ -110,9 +110,22 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
         return isNaN(num) ? 0 : num;
     };
 
+    // Helper para buscar Nome atualizado (pelo ID se disponível)
+    const getPlayerName = (userId?: string, fallbackName: string = '—') => {
+        if (!userId) return fallbackName;
+        const player = rankingPlayers.find(p => p.id === userId);
+        return player?.name || fallbackName;
+    };
+
     // Helper para buscar Avatar
-    const getPlayerAvatar = (name: string) => {
-        const player = rankingPlayers.find(p => p.name.toLowerCase() === name.toLowerCase());
+    const getPlayerAvatar = (name: string, userId?: string) => {
+        let player;
+        if (userId) {
+            player = rankingPlayers.find(p => p.id === userId);
+        }
+        if (!player) {
+            player = rankingPlayers.find(p => p.name.toLowerCase() === name.toLowerCase());
+        }
         return player?.avatar || `https://ui-avatars.com/api/?name=${name.replace(' ', '+')}&background=random`;
     };
 
@@ -1331,7 +1344,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                             <div className="relative mb-4">
                                                 <div className="absolute -inset-4 bg-gradient-to-t from-secondary/20 to-transparent rounded-full blur-xl"></div>
                                                 <img
-                                                    src={getPlayerAvatar(winner.name)}
+                                                    src={getPlayerAvatar(winner.name, winner.userId)}
                                                     alt={viewClosedEvent.isStartingDay ? "Chip Leader" : "Campeão"}
                                                     className="w-24 h-24 rounded-full border-4 border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.5)] object-cover relative z-10"
                                                 />
@@ -1343,10 +1356,10 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                             {/* Name and Prize - Separated with margin */}
                                             <div className="text-center mt-1">
                                                 <h2
-                                                    onClick={() => onSelectPlayerByName?.(winner.name)}
+                                                    onClick={() => onSelectPlayerByName?.(winner.userId ? getPlayerName(winner.userId, winner.name) : winner.name)}
                                                     className="text-2xl sm:text-3xl font-display font-black text-white leading-tight cursor-pointer hover:text-primary transition-colors"
                                                 >
-                                                    {winner.name}
+                                                    {getPlayerName(winner.userId, winner.name)}
                                                 </h2>
                                                 {viewClosedEvent.isStartingDay ? (
                                                     <div className="text-lg sm:text-xl font-bold text-secondary mt-1">
@@ -1444,10 +1457,10 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                                     </span>
                                                                 </td>
                                                                 <td
-                                                                    onClick={() => onSelectPlayerByName?.(result.name)}
+                                                                    onClick={() => onSelectPlayerByName?.(result.userId ? getPlayerName(result.userId, result.name) : result.name)}
                                                                     className="px-4 py-3 font-bold text-gray-300 truncate max-w-[120px] cursor-pointer hover:text-white transition-colors"
                                                                 >
-                                                                    {result.name}
+                                                                    {getPlayerName(result.userId, result.name)}
                                                                 </td>
                                                                 {viewClosedEvent.isStartingDay ? (
                                                                     <td className="px-4 py-3 text-right text-secondary font-bold">
@@ -1646,7 +1659,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                     <div className="flex-1 bg-black/20 rounded-xl border border-white/10 overflow-y-auto p-2">
                                         {playerResults.map(p => (
                                             <div key={p.id} className="flex justify-between items-center p-2 border-b border-white/5 text-sm hover:bg-white/5 gap-2">
-                                                <span className="text-white w-1/4 truncate font-bold">{p.name}</span>
+                                                <span className="text-white w-1/4 truncate font-bold">{getPlayerName(p.userId, p.name)}</span>
 
                                                 {(() => {
                                                     if (closingEvent?.isStartingDay) {

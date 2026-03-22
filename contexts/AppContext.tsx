@@ -75,6 +75,7 @@ interface AppContextType {
     setEvents: React.Dispatch<React.SetStateAction<Event[]>>;
     setExperienceLevels: React.Dispatch<React.SetStateAction<ExperienceLevel[]>>;
     setDailyRewards: React.Dispatch<React.SetStateAction<DailyReward[]>>;
+    refreshSupabaseData: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -1257,7 +1258,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             handleUpdateRankingPrize, handleUpdateTotalQualifiers, handleUpdateMonth, handleToggleMonthStatus,
             handleNavigateToPlayerByName, handleCreatePoll, handleVoteOnPoll, handleSendAdminMessage, handleSendMessage, handleReplyMessage,
             handleMarkAsRead, handleDeleteMessage, handleCreateBadgeTemplate, updateContent, updateCategory, setNewNotification, getAllUniquePlayers,
-            setEvents, setExperienceLevels, setDailyRewards
+            setEvents, setExperienceLevels, setDailyRewards,
+            refreshSupabaseData: async () => {
+                await fetchSupabaseData();
+                if (currentUserId) await fetchProfile(currentUserId);
+            }
         }}>
             {children}
         </AppContext.Provider>
