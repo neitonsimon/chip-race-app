@@ -105,8 +105,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
 
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const upcomingEventsList = events.filter(ev => ev.date >= todayStr && ev.status !== 'closed').sort((a, b) => a.date.localeCompare(b.date));
-    const pastEventsList = events.filter(ev => ev.date < todayStr || ev.status === 'closed').sort((a, b) => b.date.localeCompare(a.date));
+    const upcomingEventsList = events.filter(ev => ev.status !== 'closed').sort((a, b) => a.date.localeCompare(b.date));
+    const pastEventsList = events.filter(ev => ev.status === 'closed').sort((a, b) => b.date.localeCompare(a.date));
 
 
     const updatePlayerBalanceLocally = (userId: string, amount: number, type: 'brl' | 'chipz' = 'brl') => {
@@ -763,9 +763,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             setCashAmount={setCashAmount}
                             handleAddManualCash={handleAddManualCash}
                             handleAddManualOnline={handleAddManualOnline}
-                            commandsTab={commandsTab === 'ativas' ? 'ativas' : 'encerradas'}
+                            commandsTab={commandsTab === 'ativas' ? 'ativas' : (commandsTab === 'resumo' ? 'resumo' : 'encerradas')}
                             setCommandsTab={(tabName) => {
-                                const newTab = tabName === 'ativas' ? 'ativas' : 'historico';
+                                const newTab = tabName === 'ativas' ? 'ativas' : (tabName === 'resumo' ? 'resumo' : 'historico');
                                 setCommandsTab(newTab);
                                 if (newTab === 'historico' && selectedEvent) {
                                     fetchClosedCommands(selectedEvent.id);

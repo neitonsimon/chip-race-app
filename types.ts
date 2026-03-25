@@ -372,6 +372,9 @@ export interface Command {
   closed_by?: string;
   opened_at: string;
   closed_at?: string;
+  cash_out_brl?: number;
+  profit_brl?: number;
+  profit_cash_payment_brl?: number;
   internal_notes?: string;
   profiles?: any;
 }

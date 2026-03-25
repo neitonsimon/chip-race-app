@@ -36,8 +36,8 @@ interface OperationalTabProps {
     cashAmount: string;
     setCashAmount: (v: string) => void;
     handleAddManualCash: () => void;
-    commandsTab: 'ativas' | 'encerradas';
-    setCommandsTab: (t: 'ativas' | 'encerradas') => void;
+    commandsTab: 'ativas' | 'encerradas' | 'resumo';
+    setCommandsTab: (t: 'ativas' | 'encerradas' | 'resumo') => void;
     staffExpenses: string;
     setStaffExpenses: (v: string) => void;
     prizePayout: string;
@@ -229,30 +229,12 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                                 />
                                             </div>
                                         </div>
-                                        <div className="flex justify-between items-center text-[9px] font-bold uppercase">
-                                            <span className="text-gray-500">Premiações Pagas:</span>
-                                            <div className="flex items-center gap-2">
-                                                <input
-                                                    type="text"
-                                                    inputMode="decimal"
-                                                    value={prizePayout}
-                                                    onChange={e => {
-                                                        const val = e.target.value.replace(',', '.');
-                                                        if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                                                            setPrizePayout(val);
-                                                        }
-                                                    }}
-                                                    onBlur={updatePrizePayout}
-                                                    className="w-16 bg-black/40 border border-white/5 rounded px-1 py-0.5 text-right text-red-400 outline-none"
-                                                />
-                                            </div>
+                                        <div className="flex justify-between text-[10px] font-black uppercase tracking-wider">
+                                            <span className="text-red-400">Staff / Galpão:</span>
+                                            <span className="text-red-400">- R$ {Number(staffExpenses).toFixed(2)}</span>
                                         </div>
                                         <div className="flex justify-between text-[10px] font-black uppercase tracking-wider">
-                                            <span className="text-red-400">Despesas:</span>
-                                            <span className="text-red-400">- R$ {(Number(staffExpenses) + Number(prizePayout)).toFixed(2)}</span>
-                                        </div>
-                                        <div className="flex justify-between text-[10px] font-black uppercase tracking-wider">
-                                            <span className="text-blue-400">Cash Out:</span>
+                                            <span className="text-blue-400">Cash Out (Prêmios):</span>
                                             <span className="text-blue-400">- R$ {closedCommands.reduce((s, c) => s + Number(c.cash_out_brl || 0), 0).toFixed(2)}</span>
                                         </div>
                                         <div className="flex justify-between text-[10px] font-black uppercase tracking-wider">
@@ -265,7 +247,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                             <span className="text-primary shadow-neon-pink">R$ {(
                                                 openCommands.reduce((s, c) => s + Number(c.total_brl), 0) +
                                                 closedCommands.reduce((s, c) => s + Number(c.total_brl), 0) -
-                                                (Number(staffExpenses) + Number(prizePayout)) -
+                                                Number(staffExpenses) -
                                                 closedCommands.reduce((s, c) => s + Number(c.cash_out_brl || 0), 0)
                                             ).toFixed(2)}</span>
                                         </div>
@@ -279,17 +261,22 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                                 <span className="text-red-500/70">Total em Pendura:</span>
                                                 <span className="text-red-500/70">- R$ {closedCommands.reduce((s, c) => s + Number(c.unpaid_amount_brl || 0), 0).toFixed(2)}</span>
                                             </div>
+                                            <div className="flex justify-between text-[9px] font-bold uppercase">
+                                                <span className="text-cyan-500/70">Saldo App Utilizado:</span>
+                                                <span className="text-cyan-500/70">- R$ {closedCommands.reduce((s, c) => s + Math.max(0, Number(c.total_brl || 0) - Number(c.discount_brl || 0) - Number(c.unpaid_amount_brl || 0) - Number(c.chips_payment_brl || 0)), 0).toFixed(2)}</span>
+                                            </div>
                                         </div>
 
                                         <div className="flex justify-between text-xs font-black uppercase tracking-wider pt-2 border-t border-white/10 mt-1">
-                                            <span className="text-green-400">Faturamento Real:</span>
+                                            <span className="text-green-400">Faturamento Real (Caixa):</span>
                                             <span className="text-green-400">R$ {(
                                                 openCommands.reduce((s, c) => s + Number(c.total_brl), 0) +
                                                 closedCommands.reduce((s, c) => s + Number(c.total_brl), 0) -
-                                                (Number(staffExpenses) + Number(prizePayout)) -
+                                                Number(staffExpenses) -
                                                 closedCommands.reduce((s, c) => s + Number(c.cash_out_brl || 0), 0) -
                                                 closedCommands.reduce((s, c) => s + Number(c.discount_brl || 0), 0) -
-                                                closedCommands.reduce((s, c) => s + Number(c.unpaid_amount_brl || 0), 0)
+                                                closedCommands.reduce((s, c) => s + Number(c.unpaid_amount_brl || 0), 0) -
+                                                closedCommands.reduce((s, c) => s + Math.max(0, Number(c.total_brl || 0) - Number(c.discount_brl || 0) - Number(c.unpaid_amount_brl || 0) - Number(c.chips_payment_brl || 0)), 0)
                                             ).toFixed(2)}</span>
                                         </div>
 
@@ -343,9 +330,10 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                         <button onClick={() => setSelectedEvent(null)} className="lg:hidden w-8 h-8 rounded-full bg-white/5 flex items-center justify-center">
                             <span className="material-icons-outlined text-sm">arrow_back</span>
                         </button>
-                        <div className="flex gap-2 sm:gap-4 flex-1">
-                            <button onClick={() => setCommandsTab('ativas')} className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${commandsTab === 'ativas' ? 'bg-primary text-white shadow-neon-pink' : 'text-gray-400 hover:text-gray-300'}`}>Ativas ({openCommands.length})</button>
-                            <button onClick={() => setCommandsTab('encerradas')} className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${commandsTab === 'encerradas' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-gray-300'}`}>Encerradas ({closedCommands.length})</button>
+                        <div className="flex gap-1.5 sm:gap-4 flex-1">
+                            <button onClick={() => setCommandsTab('ativas')} className={`flex-1 sm:flex-none px-2 sm:px-6 py-2 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${commandsTab === 'ativas' ? 'bg-primary text-white shadow-neon-pink' : 'text-gray-400 hover:text-gray-300'}`}>Ativas ({openCommands.length})</button>
+                            <button onClick={() => setCommandsTab('encerradas')} className={`flex-1 sm:flex-none px-2 sm:px-6 py-2 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${commandsTab === 'encerradas' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-gray-300'}`}>Encerradas ({closedCommands.length})</button>
+                            <button onClick={() => setCommandsTab('resumo')} className={`lg:hidden flex-1 sm:flex-none px-2 py-2 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${commandsTab === 'resumo' ? 'bg-secondary text-white shadow-neon-blue' : 'text-gray-400 hover:text-gray-300'}`}>Resumo</button>
                         </div>
                     </div>
                 </div>
@@ -400,70 +388,175 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                             </div>
 
                             <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-                                {(commandsTab === 'ativas' ? openCommands : closedCommands).map(cmd => (
-                                    <div
-                                        key={cmd.id}
-                                        onClick={() => {
-                                            setSelectedCommand(cmd);
-                                            if (cmd.status === 'closed') setRightMode('itens');
-                                        }}
-                                        className={`bg-surface-dark border rounded-2xl p-2.5 sm:p-3 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden flex flex-col items-center text-center ${selectedCommand?.id === cmd.id ? 'border-primary shadow-neon-pink ring-1 ring-primary' : 'border-white/5'}`}
-                                    >
-                                        {cmd.status === 'open' && (
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); handleDeleteCommand(cmd); }}
-                                                className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-10"
-                                                title="Excluir Comanda"
-                                            >
-                                                <span className="material-icons text-xs">close</span>
-                                            </button>
-                                        )}
-                                        <div className="relative mb-2 shrink-0">
-                                            <img src={cmd.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${cmd.profiles?.name}&background=random`} className="w-10 h-10 rounded-xl border border-white/10" />
-                                            {selectedCommand?.id === cmd.id && (
-                                                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border-2 border-[#050214] animate-pulse"></div>
-                                            )}
-                                        </div>
-                                        <div className="min-w-0 w-full mb-3">
-                                            <h5 className="text-white font-bold text-[10px] truncate leading-tight mb-1 uppercase tracking-wider">{cmd.profiles?.name}</h5>
-                                            <div className="flex items-center justify-center gap-1">
-                                                <span className="text-[8px] text-gray-500 font-black">R$</span>
-                                                <p className="text-primary font-display font-black text-sm shadow-neon-pink leading-none">
-                                                    {Number(cmd.total_brl).toFixed(2)}
-                                                </p>
+                                {commandsTab === 'resumo' ? (
+                                    <div className="lg:hidden animate-in fade-in slide-in-from-top-4">
+                                        {/* FINANCIAL SUMMARY REPLICATED FOR MOBILE TAB */}
+                                        <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 sm:p-6 mb-8">
+                                            <h4 className="text-xs font-black text-primary uppercase mb-5 flex items-center justify-between">
+                                                Resumo Financeiro
+                                                <span className="text-gray-500 font-bold">{selectedEvent.title}</span>
+                                            </h4>
+                                            <div className="space-y-3">
+                                                <div className="flex justify-between text-xs font-black uppercase tracking-wider">
+                                                    <span className="text-gray-400">Total Bruto:</span>
+                                                    <span className="text-white text-lg">R$ {(openCommands.reduce((s, c) => s + Number(c.total_brl), 0) + closedCommands.reduce((s, c) => s + Number(c.total_brl), 0)).toFixed(2)}</span>
+                                                </div>
+                                                <div className="h-px bg-white/5 my-2"></div>
+                                                <div className="space-y-4">
+                                                    <div className="flex justify-between items-center text-xs font-bold uppercase">
+                                                        <span className="text-gray-500">Staff / Galpão:</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <input
+                                                                type="text"
+                                                                inputMode="decimal"
+                                                                value={staffExpenses}
+                                                                onChange={e => {
+                                                                    const val = e.target.value.replace(',', '.');
+                                                                    if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                                                        setStaffExpenses(val);
+                                                                    }
+                                                                }}
+                                                                onBlur={updateStaffExpenses}
+                                                                className="w-20 bg-black/40 border border-white/5 rounded px-2 py-1 text-right text-red-400 outline-none text-sm"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex justify-between text-xs font-black uppercase tracking-wider">
+                                                        <span className="text-red-400">Staff / Galpão:</span>
+                                                        <span className="text-red-400 text-lg">- R$ {Number(staffExpenses).toFixed(2)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-xs font-black uppercase tracking-wider">
+                                                        <span className="text-blue-400">Cash Out (Prêmios):</span>
+                                                        <span className="text-blue-400 text-lg">- R$ {closedCommands.reduce((s, c) => s + Number(c.cash_out_brl || 0), 0).toFixed(2)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-xs font-black uppercase tracking-wider">
+                                                        <span className="text-yellow-400">Pago em Espécie:</span>
+                                                        <span className="text-yellow-400 text-lg">R$ {closedCommands.reduce((s, c) => s + Number(c.chips_payment_brl || 0), 0).toFixed(2)}</span>
+                                                    </div>
+                                                    <div className="h-px bg-white/5"></div>
+                                                    <div className="flex justify-between text-sm font-black uppercase tracking-wider">
+                                                        <span className="text-primary">Faturamento Líquido:</span>
+                                                        <span className="text-primary text-xl shadow-neon-pink">R$ {(
+                                                            openCommands.reduce((s, c) => s + Number(c.total_brl), 0) +
+                                                            closedCommands.reduce((s, c) => s + Number(c.total_brl), 0) -
+                                                            Number(staffExpenses) -
+                                                            closedCommands.reduce((s, c) => s + Number(c.cash_out_brl || 0), 0)
+                                                        ).toFixed(2)}</span>
+                                                    </div>
+
+                                                    <div className="pt-2 space-y-2 opacity-80 border-t border-white/5">
+                                                        <div className="flex justify-between text-[10px] font-bold uppercase">
+                                                            <span className="text-gray-500">Total em Desconto:</span>
+                                                            <span className="text-gray-400">- R$ {closedCommands.reduce((s, c) => s + Number(c.discount_brl || 0), 0).toFixed(2)}</span>
+                                                        </div>
+                                                        <div className="flex justify-between text-[10px] font-bold uppercase">
+                                                            <span className="text-red-500/70">Total em Pendura:</span>
+                                                            <span className="text-red-500/70">- R$ {closedCommands.reduce((s, c) => s + Number(c.unpaid_amount_brl || 0), 0).toFixed(2)}</span>
+                                                        </div>
+                                                        <div className="flex justify-between text-[10px] font-bold uppercase">
+                                                            <span className="text-cyan-500/70">Saldo App Utilizado:</span>
+                                                            <span className="text-cyan-500/70">- R$ {closedCommands.reduce((s, c) => s + Math.max(0, Number(c.total_brl || 0) - Number(c.discount_brl || 0) - Number(c.unpaid_amount_brl || 0) - Number(c.chips_payment_brl || 0)), 0).toFixed(2)}</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex justify-between text-sm font-black uppercase tracking-wider pt-3 border-t border-white/10 mt-1">
+                                                        <span className="text-green-400">Faturamento Real (Caixa):</span>
+                                                        <span className="text-green-400 text-xl">R$ {(
+                                                            openCommands.reduce((s, c) => s + Number(c.total_brl), 0) +
+                                                            closedCommands.reduce((s, c) => s + Number(c.total_brl), 0) -
+                                                            Number(staffExpenses) -
+                                                            closedCommands.reduce((s, c) => s + Number(c.cash_out_brl || 0), 0) -
+                                                            closedCommands.reduce((s, c) => s + Number(c.discount_brl || 0), 0) -
+                                                            closedCommands.reduce((s, c) => s + Number(c.unpaid_amount_brl || 0), 0) -
+                                                            closedCommands.reduce((s, c) => s + Math.max(0, Number(c.total_brl || 0) - Number(c.discount_brl || 0) - Number(c.unpaid_amount_brl || 0) - Number(c.chips_payment_brl || 0)), 0)
+                                                        ).toFixed(2)}</span>
+                                                    </div>
+
+                                                    <div className="flex justify-between text-xs font-bold text-gray-400 uppercase pt-3 border-t border-white/5 mt-1">
+                                                        <span>Comandas em Aberto:</span>
+                                                        <span className="text-white font-black">{openCommands.length}</span>
+                                                    </div>
+                                                </div>
+
+                                                <button
+                                                    onClick={handleFinalizeEvent}
+                                                    disabled={selectedEvent.status === 'closed'}
+                                                    className={`w-full mt-6 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 group ${selectedEvent.status === 'closed' ? 'bg-green-500/10 text-green-500/50 cursor-not-allowed border border-green-500/10' : 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 shadow-sm'}`}
+                                                >
+                                                    <span className={`material-icons text-xl ${selectedEvent.status !== 'closed' && 'group-hover:rotate-12 transition-transform'}`}>
+                                                        {selectedEvent.status === 'closed' ? 'check_circle' : 'flag_circle'}
+                                                    </span>
+                                                    {selectedEvent.status === 'closed' ? 'Evento Encerrado Oficialmente' : 'Finalizar Evento e Fechar Dia'}
+                                                </button>
                                             </div>
                                         </div>
-
-                                        <div className="w-full mt-auto pt-2 border-t border-white/5 flex gap-1.5">
-                                            {cmd.status === 'open' ? (
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); setSelectedCommand(cmd); setShowCheckout(true); }}
-                                                    className="w-full bg-white hover:bg-primary hover:text-white text-black text-[9px] font-black uppercase py-2 rounded-lg transition-all shadow-sm active:scale-95"
-                                                >
-                                                    Fechar
-                                                </button>
-                                            ) : (
-                                                <>
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); handleDownloadCommandReceipt(cmd, []); }}
-                                                        className="flex-1 bg-white/5 hover:bg-white/10 text-white text-[9px] font-black uppercase py-2 rounded-lg transition-all border border-white/10 active:scale-95 whitespace-nowrap px-1"
-                                                    >
-                                                        Recibo
-                                                    </button>
-                                                    {isAdmin && (
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); reopenCommand(cmd); }}
-                                                            className="px-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white text-[9px] font-black uppercase py-2 rounded-lg transition-all border border-red-500/20 active:scale-95"
-                                                            title="Reabrir Comanda"
-                                                        >
-                                                            <span className="material-icons text-xs">settings_backup_restore</span>
-                                                        </button>
-                                                    )}
-                                                </>
-                                            )}
-                                        </div>
                                     </div>
-                                ))}
+                                ) : (
+                                    (commandsTab === 'ativas' ? openCommands : closedCommands).map(cmd => (
+                                        <div
+                                            key={cmd.id}
+                                            onClick={() => {
+                                                setSelectedCommand(cmd);
+                                                if (cmd.status === 'closed') setRightMode('itens');
+                                            }}
+                                            className={`bg-surface-dark border rounded-2xl p-2.5 sm:p-3 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden flex flex-col items-center text-center ${selectedCommand?.id === cmd.id ? 'border-primary shadow-neon-pink ring-1 ring-primary' : 'border-white/5'}`}
+                                        >
+                                            {cmd.status === 'open' && (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleDeleteCommand(cmd); }}
+                                                    className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-10"
+                                                    title="Excluir Comanda"
+                                                >
+                                                    <span className="material-icons text-xs">close</span>
+                                                </button>
+                                            )}
+                                            <div className="relative mb-2 shrink-0">
+                                                <img src={cmd.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${cmd.profiles?.name}&background=random`} className="w-10 h-10 rounded-xl border border-white/10" />
+                                                {selectedCommand?.id === cmd.id && (
+                                                    <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border-2 border-[#050214] animate-pulse"></div>
+                                                )}
+                                            </div>
+                                            <div className="min-w-0 w-full mb-3">
+                                                <h5 className="text-white font-bold text-[10px] truncate leading-tight mb-1 uppercase tracking-wider">{cmd.profiles?.name}</h5>
+                                                <div className="flex items-center justify-center gap-1">
+                                                    <span className="text-[8px] text-gray-500 font-black">R$</span>
+                                                    <p className="text-primary font-display font-black text-sm shadow-neon-pink leading-none">
+                                                        {Number(cmd.total_brl).toFixed(2)}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="w-full mt-auto pt-2 border-t border-white/5 flex gap-1.5">
+                                                {cmd.status === 'open' ? (
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setSelectedCommand(cmd); setShowCheckout(true); }}
+                                                        className="w-full bg-white hover:bg-primary hover:text-white text-black text-[9px] font-black uppercase py-2 rounded-lg transition-all shadow-sm active:scale-95"
+                                                    >
+                                                        Fechar
+                                                    </button>
+                                                ) : (
+                                                    <>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleDownloadCommandReceipt(cmd, []); }}
+                                                            className="flex-1 bg-white/5 hover:bg-white/10 text-white text-[9px] font-black uppercase py-2 rounded-lg transition-all border border-white/10 active:scale-95 whitespace-nowrap px-1"
+                                                        >
+                                                            Recibo
+                                                        </button>
+                                                        {isAdmin && (
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); reopenCommand(cmd); }}
+                                                                className="px-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white text-[9px] font-black uppercase py-2 rounded-lg transition-all border border-red-500/20 active:scale-95"
+                                                                title="Reabrir Comanda"
+                                                            >
+                                                                <span className="material-icons text-xs">settings_backup_restore</span>
+                                                            </button>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         </div>
                     )}
@@ -471,7 +564,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
             </div>
 
             {/* Right Panel: Selected Command Details */}
-            <div className={`w-full lg:w-96 flex-1 lg:flex-none border-t lg:border-l border-white/5 bg-black/40 flex flex-col ${selectedCommand ? 'flex' : 'hidden lg:flex'}`}>
+            <div className={`w-full lg:w-96 flex-1 lg:flex-none border-t lg:border-l border-white/5 bg-black/40 flex flex-col min-h-0 overflow-y-auto ${selectedCommand ? 'flex pb-12' : 'hidden lg:flex'}`}>
                 {selectedCommand ? (
                     <>
                         <div className="p-4 sm:p-6 border-b border-white/10">
@@ -515,7 +608,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                             )}
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                        <div className="flex-1 p-4 lg:overflow-y-auto lg:custom-scrollbar">
                             {rightMode === 'venda' ? (
                                 <div className="space-y-4">
                                     <div className="bg-black/40 border border-white/5 rounded-2xl p-4">

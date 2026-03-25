@@ -28,7 +28,7 @@ export function useOperations({
     const [viewingItems, setViewingItems] = useState<any[]>([]);
     const [pendingProduct, setPendingProduct] = useState<any | null>(null);
     const [cashAmount, setCashAmount] = useState('');
-    const [commandsTab, setCommandsTab] = useState<'ativas' | 'historico'>('ativas');
+    const [commandsTab, setCommandsTab] = useState<'ativas' | 'historico' | 'resumo'>('ativas');
 
     const fetchOpenCommands = async (eventId: string) => {
         const { data } = await supabase.from('commands').select('*, profiles!user_id(name, numeric_id, avatar_url, is_vip, vip_status, vip_expires_at, role, balance_brl, debt_limit_brl, total_pending_debt)').eq('event_id', eventId).eq('status', 'open').order('created_at', { ascending: false });

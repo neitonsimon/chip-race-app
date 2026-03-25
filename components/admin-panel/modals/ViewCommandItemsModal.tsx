@@ -105,23 +105,41 @@ export const ViewCommandItemsModal: React.FC<ViewCommandItemsModalProps> = ({
                             )}
 
                             {/* Payment/Profit breakdown logic */}
+                            {Number(viewingClosedCommand.cash_out_brl) > 0 && (
+                                <div className="flex justify-between text-xs">
+                                    <span className="text-gray-500 uppercase font-bold">Cash Out (Puxado)</span>
+                                    <span className="text-blue-400">R$ {Number(viewingClosedCommand.cash_out_brl).toFixed(2)}</span>
+                                </div>
+                            )}
+                            {Number(viewingClosedCommand.profit_brl) > 0 && (
+                                <div className="flex justify-between text-xs">
+                                    <span className="text-green-400 uppercase font-bold text-[10px]">Lucro Total</span>
+                                    <span className="text-green-400 font-black">R$ {Number(viewingClosedCommand.profit_brl).toFixed(2)}</span>
+                                </div>
+                            )}
+                            {Number(viewingClosedCommand.profit_cash_payment_brl) > 0 && (
+                                <div className="flex justify-between text-[10px] pl-4 italic">
+                                    <span className="text-gray-500 font-bold">↳ Parte paga em mãos</span>
+                                    <span className="text-gray-400">R$ {Number(viewingClosedCommand.profit_cash_payment_brl).toFixed(2)}</span>
+                                </div>
+                            )}
                             {(() => {
                                 const total = Number(viewingClosedCommand.total_brl || 0);
                                 const disc = Number(viewingClosedCommand.discount_brl || 0);
                                 const debt = Number(viewingClosedCommand.unpaid_amount_brl || 0);
                                 const chips = Number(viewingClosedCommand.chips_payment_brl || 0);
-                                const netCost = total - disc - debt - chips;
-
-                                // Note: We don't have fields for cashOut or profit stored in the command object yet.
-                                // However, we can infer credit usage if netCost > 0.
-                                // If netCost <= 0, it means it was a cash game command with a cash out.
-                                // But since we don't store the exact profit/cashOut in 'commands' table, 
-                                // we'll just show 'Créditos App' for the paid portion for now.
-
-                                return netCost > 0 ? (
-                                    <div className="flex justify-between text-xs">
-                                        <span className="text-gray-500 uppercase font-bold">Créditos App</span>
-                                        <span className="text-green-400">R$ {netCost.toFixed(2)}</span>
+                                const cashOut = Number(viewingClosedCommand.cash_out_brl || 0);
+                                
+                                // Proper balance deduction: Total consumed - cash/disc/debt + cashOut
+                                // Actually, if it's a cash game, the 'total' IS the consumption.
+                                // If they haven't paid it in cash (chips), it comes from balance.
+                                // If they ALSO cash out, that cash out adds to the balance deduction.
+                                const netBalanceUsed = (total - disc - debt - chips) + cashOut;
+                                
+                                return netBalanceUsed > 0 ? (
+                                    <div className="flex justify-between text-xs pt-1 border-t border-white/5">
+                                        <span className="text-gray-500 uppercase font-bold">Dedução Saldo App</span>
+                                        <span className="text-white font-black">R$ {netBalanceUsed.toFixed(2)}</span>
                                     </div>
                                 ) : null;
                             })()}

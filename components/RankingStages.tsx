@@ -112,7 +112,8 @@ export const RankingStages: React.FC<RankingStagesProps> = ({ rankingId, ranking
             <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                 {rankingEvents.map((event) => {
                     const { label, color, text, glow } = getStageProps(event);
-                    const isCompleted = event.status === 'closed' || new Date(event.date) < new Date();
+                    const todayStr = new Date().toLocaleDateString('en-CA');
+                    const isCompleted = event.status === 'closed' || event.date < todayStr;
                     const eventDate = new Date(event.date);
                     const day = eventDate.getUTCDate().toString().padStart(2, '0');
                     const month = eventDate.toLocaleDateString('pt-BR', { month: 'short', timeZone: 'UTC' }).slice(0, 3).toUpperCase();
