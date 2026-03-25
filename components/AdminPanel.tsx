@@ -557,9 +557,27 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             const { error } = await supabase.from('events').update({ status: 'closed' }).eq('id', selectedEvent.id);
             if (error) throw error;
 
+            // REGISTRAR FATURAMENTO REAL NO CAIXA GERAL AUTOMATICAMENTE
+            const faturamentoReal = closedCommands.reduce((sum, cmd) => sum + Number(cmd.chips_payment_brl || 0), 0)
+                - Number(selectedEvent.staff_expenses_brl || 0)
+                - closedCommands.reduce((sum, cmd) => sum + Number(cmd.profit_cash_payment_brl || 0), 0);
+
+            if (faturamentoReal !== 0) {
+                const { error: txError } = await supabase.from('club_transactions').insert([{
+                    amount_brl: Math.abs(faturamentoReal),
+                    type: faturamentoReal >= 0 ? 'credit' : 'debit',
+                    category: 'evento',
+                    description: `Faturamento - ${selectedEvent.title}`,
+                    payment_method: 'dinheiro',
+                    admin_id: currentUser.id,
+                    event_id: selectedEvent.id
+                }]);
+                if (txError) console.error('Erro ao registrar caixa do evento:', txError);
+            }
+
             setEvents(prev => prev.map(e => e.id === selectedEvent.id ? { ...e, status: 'closed' } : e));
             setSelectedEvent((prev: any) => prev ? ({ ...prev, status: 'closed' }) : null);
-            alert('✅ Evento FINALIZADO com sucesso! O dia foi encerrado.');
+            alert(`✅ Evento FINALIZADO com sucesso! \n\nO Faturamento Real de R$ ${faturamentoReal.toFixed(2)} foi lançado automaticamente no CAIXA GERAL.`);
         } catch (err: any) {
             alert('Erro ao finalizar evento: ' + err.message);
         } finally {
