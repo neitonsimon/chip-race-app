@@ -241,6 +241,10 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                             <span className="text-yellow-400">Pago em Espécie:</span>
                                             <span className="text-yellow-400">R$ {closedCommands.reduce((s, c) => s + Number(c.chips_payment_brl || 0), 0).toFixed(2)}</span>
                                         </div>
+                                        <div className="flex justify-between text-[10px] font-black uppercase tracking-wider">
+                                            <span className="text-purple-400">Lucro Pago em Mãos:</span>
+                                            <span className="text-purple-400">- R$ {closedCommands.reduce((s, c) => s + Number(c.profit_cash_payment_brl || 0), 0).toFixed(2)}</span>
+                                        </div>
                                         <div className="h-px bg-white/5"></div>
                                         <div className="flex justify-between text-xs font-black uppercase tracking-wider">
                                             <span className="text-primary">Faturamento Líquido:</span>
@@ -263,20 +267,19 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                             </div>
                                             <div className="flex justify-between text-[9px] font-bold uppercase">
                                                 <span className="text-cyan-500/70">Saldo App Utilizado:</span>
-                                                <span className="text-cyan-500/70">- R$ {closedCommands.reduce((s, c) => s + Math.max(0, Number(c.total_brl || 0) - Number(c.discount_brl || 0) - Number(c.unpaid_amount_brl || 0) - Number(c.chips_payment_brl || 0)), 0).toFixed(2)}</span>
+                                                <span className="text-cyan-500/70">- R$ {closedCommands.reduce((s, c) => {
+                                                    const netCost = Number(c.total_brl || 0) - Number(c.discount_brl || 0) - Number(c.unpaid_amount_brl || 0) - Number(c.chips_payment_brl || 0);
+                                                    return s + (Number(c.cash_out_brl || 0) > 0 ? Math.max(0, netCost - Number(c.cash_out_brl || 0)) : Math.max(0, netCost));
+                                                }, 0).toFixed(2)}</span>
                                             </div>
                                         </div>
 
                                         <div className="flex justify-between text-xs font-black uppercase tracking-wider pt-2 border-t border-white/10 mt-1">
                                             <span className="text-green-400">Faturamento Real (Caixa):</span>
                                             <span className="text-green-400">R$ {(
-                                                openCommands.reduce((s, c) => s + Number(c.total_brl), 0) +
-                                                closedCommands.reduce((s, c) => s + Number(c.total_brl), 0) -
+                                                closedCommands.reduce((s, c) => s + Number(c.chips_payment_brl || 0), 0) -
                                                 Number(staffExpenses) -
-                                                closedCommands.reduce((s, c) => s + Number(c.cash_out_brl || 0), 0) -
-                                                closedCommands.reduce((s, c) => s + Number(c.discount_brl || 0), 0) -
-                                                closedCommands.reduce((s, c) => s + Number(c.unpaid_amount_brl || 0), 0) -
-                                                closedCommands.reduce((s, c) => s + Math.max(0, Number(c.total_brl || 0) - Number(c.discount_brl || 0) - Number(c.unpaid_amount_brl || 0) - Number(c.chips_payment_brl || 0)), 0)
+                                                closedCommands.reduce((s, c) => s + Number(c.profit_cash_payment_brl || 0), 0)
                                             ).toFixed(2)}</span>
                                         </div>
 
@@ -433,6 +436,10 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                                         <span className="text-yellow-400">Pago em Espécie:</span>
                                                         <span className="text-yellow-400 text-lg">R$ {closedCommands.reduce((s, c) => s + Number(c.chips_payment_brl || 0), 0).toFixed(2)}</span>
                                                     </div>
+                                                    <div className="flex justify-between text-[10px] font-black uppercase tracking-wider">
+                                                        <span className="text-purple-400">Lucro Pago em Mãos:</span>
+                                                        <span className="text-purple-400">- R$ {closedCommands.reduce((s, c) => s + Number(c.profit_cash_payment_brl || 0), 0).toFixed(2)}</span>
+                                                    </div>
                                                     <div className="h-px bg-white/5"></div>
                                                     <div className="flex justify-between text-sm font-black uppercase tracking-wider">
                                                         <span className="text-primary">Faturamento Líquido:</span>
@@ -455,20 +462,19 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                                         </div>
                                                         <div className="flex justify-between text-[10px] font-bold uppercase">
                                                             <span className="text-cyan-500/70">Saldo App Utilizado:</span>
-                                                            <span className="text-cyan-500/70">- R$ {closedCommands.reduce((s, c) => s + Math.max(0, Number(c.total_brl || 0) - Number(c.discount_brl || 0) - Number(c.unpaid_amount_brl || 0) - Number(c.chips_payment_brl || 0)), 0).toFixed(2)}</span>
+                                                            <span className="text-cyan-500/70">- R$ {closedCommands.reduce((s, c) => {
+                                                                const netCost = Number(c.total_brl || 0) - Number(c.discount_brl || 0) - Number(c.unpaid_amount_brl || 0) - Number(c.chips_payment_brl || 0);
+                                                                return s + (Number(c.cash_out_brl || 0) > 0 ? Math.max(0, netCost - Number(c.cash_out_brl || 0)) : Math.max(0, netCost));
+                                                            }, 0).toFixed(2)}</span>
                                                         </div>
                                                     </div>
 
                                                     <div className="flex justify-between text-sm font-black uppercase tracking-wider pt-3 border-t border-white/10 mt-1">
                                                         <span className="text-green-400">Faturamento Real (Caixa):</span>
                                                         <span className="text-green-400 text-xl">R$ {(
-                                                            openCommands.reduce((s, c) => s + Number(c.total_brl), 0) +
-                                                            closedCommands.reduce((s, c) => s + Number(c.total_brl), 0) -
+                                                            closedCommands.reduce((s, c) => s + Number(c.chips_payment_brl || 0), 0) -
                                                             Number(staffExpenses) -
-                                                            closedCommands.reduce((s, c) => s + Number(c.cash_out_brl || 0), 0) -
-                                                            closedCommands.reduce((s, c) => s + Number(c.discount_brl || 0), 0) -
-                                                            closedCommands.reduce((s, c) => s + Number(c.unpaid_amount_brl || 0), 0) -
-                                                            closedCommands.reduce((s, c) => s + Math.max(0, Number(c.total_brl || 0) - Number(c.discount_brl || 0) - Number(c.unpaid_amount_brl || 0) - Number(c.chips_payment_brl || 0)), 0)
+                                                            closedCommands.reduce((s, c) => s + Number(c.profit_cash_payment_brl || 0), 0)
                                                         ).toFixed(2)}</span>
                                                     </div>
 
