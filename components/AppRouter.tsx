@@ -15,6 +15,7 @@ import { RechargePage } from './RechargePage';
 import { RoadmapSection } from './RoadmapSection';
 import { FAQSection } from './FAQSection';
 import { AdminPanel } from './AdminPanel';
+import { FinancialDashboard } from './FinancialDashboard';
 import { SponsorsSection } from './SponsorsSection';
 import { TermsOfUse } from './TermsOfUse';
 import { PrivacyPolicy } from './PrivacyPolicy';
@@ -143,6 +144,12 @@ export const AppRouter: React.FC = () => {
                 />;
             case 'recharge':
                 return <RechargePage currentUser={currentUser as any} onNavigate={handleNavigate} onUpdateProfile={handleProfileUpdate} />;
+            case 'financial':
+                return <FinancialDashboard
+                    currentUser={currentUser as any}
+                    onClose={() => handleNavigate('home')}
+                    isAdmin={isAdmin}
+                />;
             case 'admin':
                 return <AdminPanel
                     currentUser={currentUser as any}

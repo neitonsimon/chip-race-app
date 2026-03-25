@@ -409,6 +409,19 @@ export interface Debt {
   profiles?: any;
 }
 
+export interface ClubTransaction {
+  id: string;
+  created_at: string;
+  amount_brl: number;
+  type: 'credit' | 'debit';
+  category: string;
+  description: string;
+  payment_method: string;
+  admin_id: string;
+  event_id?: string;
+  metadata?: any;
+}
+
 // SIMULAÇÃO DO BANCO DE DADOS DE CONTEÚDO
 export interface ContentDB {
   hero: {

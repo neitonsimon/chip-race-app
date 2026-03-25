@@ -158,16 +158,26 @@ export const Navigation: React.FC<NavigationProps> = ({
                                 <span className="text-xs font-bold uppercase tracking-wide hidden lg:inline">Seja VIP</span>
                             </button>
 
-                            {/* Admin Panel Button */}
+                            {/* Admin and Financial Panel Buttons */}
                             {isAdmin && (
-                                <button
-                                    onClick={() => onNavigate('admin')}
-                                    title="Painel Admin"
-                                    className="flex items-center gap-1.5 text-primary border border-primary/50 px-3 py-1.5 rounded-full hover:bg-primary hover:text-white transition-all shadow-[0_0_10px_rgba(217,0,255,0.2)] hover:shadow-[0_0_20px_rgba(217,0,255,0.6)] whitespace-nowrap"
-                                >
-                                    <span className="material-icons-outlined text-sm">admin_panel_settings</span>
-                                    <span className="text-xs font-bold uppercase tracking-wide hidden lg:inline">Admin</span>
-                                </button>
+                                <>
+                                    <button
+                                        onClick={() => onNavigate('financial')}
+                                        title="Caixa Geral"
+                                        className="flex items-center gap-1.5 text-green-400 border border-green-400/50 px-3 py-1.5 rounded-full hover:bg-green-400 hover:text-black transition-all shadow-[0_0_10px_rgba(74,222,128,0.2)] hover:shadow-[0_0_20px_rgba(74,222,128,0.6)] whitespace-nowrap"
+                                    >
+                                        <span className="material-icons-outlined text-sm">account_balance</span>
+                                        <span className="text-xs font-bold uppercase tracking-wide hidden lg:inline">Caixa</span>
+                                    </button>
+                                    <button
+                                        onClick={() => onNavigate('admin')}
+                                        title="Painel Admin"
+                                        className="flex items-center gap-1.5 text-primary border border-primary/50 px-3 py-1.5 rounded-full hover:bg-primary hover:text-white transition-all shadow-[0_0_10px_rgba(217,0,255,0.2)] hover:shadow-[0_0_20px_rgba(217,0,255,0.6)] whitespace-nowrap"
+                                    >
+                                        <span className="material-icons-outlined text-sm">admin_panel_settings</span>
+                                        <span className="text-xs font-bold uppercase tracking-wide hidden lg:inline">Admin</span>
+                                    </button>
+                                </>
                             )}
                         </div>
 
@@ -427,15 +437,26 @@ export const Navigation: React.FC<NavigationProps> = ({
                             </button>
 
                             {isAdmin && (
-                                <button
-                                    onClick={() => {
-                                        onNavigate('admin');
-                                        setMobileMenuOpen(false);
-                                    }}
-                                    className="block w-full text-left px-3 py-4 text-lg font-bold text-primary hover:bg-white/5 border-b border-white/5 flex items-center gap-2"
-                                >
-                                    <span className="material-icons-outlined">admin_panel_settings</span> PAINEL ADMIN
-                                </button>
+                                <>
+                                    <button
+                                        onClick={() => {
+                                            onNavigate('financial');
+                                            setMobileMenuOpen(false);
+                                        }}
+                                        className="block w-full text-left px-3 py-4 text-lg font-bold text-green-400 hover:text-green-300 hover:bg-white/5 border-b border-white/5 flex items-center gap-2"
+                                    >
+                                        <span className="material-icons-outlined">account_balance</span> CAIXA GERAL
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            onNavigate('admin');
+                                            setMobileMenuOpen(false);
+                                        }}
+                                        className="block w-full text-left px-3 py-4 text-lg font-bold text-primary hover:bg-white/5 border-b border-white/5 flex items-center gap-2"
+                                    >
+                                        <span className="material-icons-outlined">admin_panel_settings</span> PAINEL ADMIN
+                                    </button>
+                                </>
                             )}
 
                             {isLoggedIn ? (
