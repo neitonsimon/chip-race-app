@@ -22,6 +22,10 @@ export const StockTab: React.FC<StockTabProps> = ({ currentUser }) => {
     const [pTotalCost, setPTotalCost] = useState('');
     const [pDescription, setPDescription] = useState('');
 
+    // Production (Recipe) Form State
+    const [rName, setRName] = useState('');
+    const [rIngredients, setRIngredients] = useState<{item_id: string, qty: string}[]>([]);
+
     const fetchInventory = async () => {
         setIsLoading(true);
         try {
@@ -47,6 +51,11 @@ export const StockTab: React.FC<StockTabProps> = ({ currentUser }) => {
         setPQuantity('');
         setPTotalCost('');
         setPDescription('');
+    };
+
+    const resetRecipeForm = () => {
+        setRName('');
+        setRIngredients([]);
     };
 
     const handlePurchase = async (e: React.FormEvent) => {
@@ -124,6 +133,50 @@ export const StockTab: React.FC<StockTabProps> = ({ currentUser }) => {
         } catch (error: any) {
             console.error(error);
             alert('Erro ao registrar entrada: ' + error.message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleProduction = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!rName) { alert('Dê um nome para a produção (Ex: Janta - Cachorro Quente).'); return; }
+        if (rIngredients.length === 0) { alert('Adicione pelo menos um insumo.'); return; }
+        
+        setIsSubmitting(true);
+        try {
+            for (const ing of rIngredients) {
+                if (!ing.item_id || !ing.qty || Number(ing.qty) <= 0) continue;
+                
+                const item = items.find(i => i.id === ing.item_id);
+                if (!item) continue;
+
+                // 1. Deduct stock
+                const newStock = Number(item.current_stock) - Number(ing.qty);
+                const { error: errUpdate } = await supabase.from('inventory_items')
+                    .update({ current_stock: newStock })
+                    .eq('id', item.id);
+                if (errUpdate) throw errUpdate;
+
+                // 2. Register movement
+                const { error: errMove } = await supabase.from('inventory_movements').insert([{
+                    item_id: item.id,
+                    admin_id: currentUser.id,
+                    type: 'out',
+                    quantity: Number(ing.qty),
+                    total_cost_brl: 0, // This is consumption, real cost is already in average_cost_brl and the company already paid for it
+                    description: `Baixa de Produção: ${rName}`
+                }]);
+                if (errMove) throw errMove;
+            }
+
+            alert('✅ Produção registrada e insumos baixados do estoque!');
+            resetRecipeForm();
+            setView('overview');
+            fetchInventory();
+        } catch (error: any) {
+            console.error(error);
+            alert('Erro ao registrar baixa de produção: ' + error.message);
         } finally {
             setIsSubmitting(false);
         }
@@ -261,10 +314,54 @@ export const StockTab: React.FC<StockTabProps> = ({ currentUser }) => {
                             </form>
                         )}
                         {view === 'recipe' && (
-                            <div className="p-10 border-2 border-dashed border-white/10 rounded-2xl text-center">
-                                <span className="material-icons-outlined text-4xl text-purple-500 mb-2">restaurant_menu</span>
-                                <p className="text-gray-400">A central de Ficha Técnica (Cardápio / Baixa de Produção) será construída aqui na Fase 2.</p>
-                            </div>
+                            <form onSubmit={handleProduction} className="max-w-2xl mx-auto space-y-6 bg-black/40 border border-white/10 rounded-3xl p-6">
+                                <h2 className="text-xl font-black uppercase text-white border-b border-white/10 pb-4 flex items-center gap-2">
+                                    <span className="material-icons-outlined text-purple-500">restaurant_menu</span> Baixa de Produção (Cardápio)
+                                </h2>
+                                <p className="text-gray-400 text-sm">Use isso para preparar 'Jantas' ou similares. Você dá o nome do prato e cita quanto de cada insumo foi gasto. O sistema subtrairá do estoque, mas não afetará o caixa pois você já pagou por esses insumos quando comprou.</p>
+                                
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Nome da Produção</label>
+                                    <input required type="text" value={rName} onChange={e => setRName(e.target.value)} placeholder="Ex: Janta - Strogonoff (Sábado)" className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-purple-500 outline-none" />
+                                </div>
+
+                                <div className="space-y-4">
+                                    <h3 className="text-xs font-black text-purple-400 uppercase tracking-widest border-b border-white/10 pb-2">Insumos Utilizados</h3>
+                                    
+                                    {rIngredients.map((ing, index) => (
+                                        <div key={index} className="flex gap-2">
+                                            <select required value={ing.item_id} onChange={e => {
+                                                const newIngs = [...rIngredients];
+                                                newIngs[index].item_id = e.target.value;
+                                                setRIngredients(newIngs);
+                                            }} className="flex-1 bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-purple-500 outline-none">
+                                                <option value="">-- Selecione o Insumo --</option>
+                                                {items.map(i => <option key={i.id} value={i.id}>{i.name} ({i.unit_type}) - Disp: {Number(i.current_stock).toFixed(2)}</option>)}
+                                            </select>
+                                            <input required type="number" step="0.01" value={ing.qty} onChange={e => {
+                                                const newIngs = [...rIngredients];
+                                                newIngs[index].qty = e.target.value;
+                                                setRIngredients(newIngs);
+                                            }} placeholder="Qtd" className="w-24 bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-purple-500 outline-none" />
+                                            <button type="button" onClick={() => setRIngredients(rIngredients.filter((_, i) => i !== index))} className="w-12 flex-shrink-0 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-white transition-colors">
+                                                <span className="material-icons-outlined text-sm">delete</span>
+                                            </button>
+                                        </div>
+                                    ))}
+                                    
+                                    <button type="button" onClick={() => setRIngredients([...rIngredients, { item_id: '', qty: '' }])} className="w-full py-3 border border-dashed border-white/20 rounded-xl text-xs font-bold text-gray-400 hover:text-white hover:border-white/50 transition-colors uppercase">
+                                        + Adicionar Insumo
+                                    </button>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting || !rName || rIngredients.length === 0}
+                                    className="w-full bg-purple-500 text-white font-black py-4 rounded-2xl shadow-[0_0_20px_rgba(168,85,247,0.4)] uppercase tracking-widest text-xs mt-4 disabled:opacity-50"
+                                >
+                                    {isSubmitting ? 'Processando...' : 'Dar Baixa no Estoque'}
+                                </button>
+                            </form>
                         )}
                     </>
                 )}

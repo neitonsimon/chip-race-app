@@ -88,8 +88,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const toastTimer = useRef<any>(null);
 
     // Launch Tab State
-    const [newProduct, setNewProduct] = useState({ name: '', category: 'bar', price: '', description: '', price_unit: '' });
+    const [newProduct, setNewProduct] = useState({ name: '', category: 'bar', price: '', description: '', price_unit: '', inventory_item_id: '' });
     const [allProducts, setAllProducts] = useState<any[]>([]); // Includes inactive
+    const [inventoryItems, setInventoryItems] = useState<any[]>([]);
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [productCategories, setProductCategories] = useState<any[]>([]);
     const [editingProduct, setEditingProduct] = useState<any | null>(null);
@@ -399,7 +400,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         }
     });
 
-    useEffect(() => { fetchEvents(); fetchProducts(); fetchAllProducts(); fetchDebts(); fetchProductCategories(); }, []);
+    useEffect(() => { fetchEvents(); fetchProducts(); fetchAllProducts(); fetchDebts(); fetchProductCategories(); fetchInventoryItems(); }, []);
     useEffect(() => {
         if (activeTab === 'debts') fetchDebts();
     }, [activeTab]);
@@ -430,6 +431,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
         const { data } = await supabase.from('products').select('*').eq('active', true).order('category');
         if (data) setProducts(data);
     };
+    const fetchInventoryItems = async () => {
+        const { data } = await supabase.from('inventory_items').select('*').order('name');
+        if (data) setInventoryItems(data);
+    };
     const fetchAllProducts = async () => {
         const { data } = await supabase.from('products').select('*').order('category');
         if (data) setAllProducts(data);
@@ -457,11 +462,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                 price: parseFloat(newProduct.price),
                 description: newProduct.description,
                 price_unit: newProduct.price_unit,
+                inventory_item_id: newProduct.inventory_item_id || null,
                 active: true
             });
             if (error) throw error;
             alert('✅ Produto lançado com sucesso!');
-            setNewProduct({ name: '', category: 'bar', price: '', description: '', price_unit: '' });
+            setNewProduct({ name: '', category: 'bar', price: '', description: '', price_unit: '', inventory_item_id: '' });
             fetchAllProducts();
             fetchProducts();
         } catch (err: any) { alert('Erro: ' + err.message); }
@@ -477,13 +483,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                 category: newProduct.category,
                 price: parseFloat(newProduct.price),
                 description: newProduct.description,
-                price_unit: newProduct.price_unit
+                price_unit: newProduct.price_unit,
+                inventory_item_id: newProduct.inventory_item_id || null
             }).eq('id', editingProduct.id);
 
             if (error) throw error;
             alert('✅ Produto atualizado com sucesso!');
             setEditingProduct(null);
-            setNewProduct({ name: '', category: 'bar', price: '', description: '', price_unit: '' });
+            setNewProduct({ name: '', category: 'bar', price: '', description: '', price_unit: '', inventory_item_id: '' });
             fetchAllProducts();
             fetchProducts();
         } catch (err: any) { alert('Erro ao atualizar: ' + err.message); }
@@ -574,6 +581,42 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                     event_id: selectedEvent.id
                 }]);
                 if (txError) console.error('Erro ao registrar caixa do evento:', txError);
+            }
+
+            // AUTO-DEDUCT INVENTORY
+            if (closedCommands.length > 0) {
+                const { data: cmdItems } = await supabase.from('command_items')
+                    .select('quantity, products!inner(id, inventory_item_id, name)')
+                    .in('command_id', closedCommands.map((c: any) => c.id));
+                
+                if (cmdItems && cmdItems.length > 0) {
+                    const stockDeductions: Record<string, { qty: number, names: Set<string> }> = {};
+                    for (const item of cmdItems) {
+                        const invId = (item.products as any)?.inventory_item_id;
+                        if (invId) {
+                            if (!stockDeductions[invId]) stockDeductions[invId] = { qty: 0, names: new Set() };
+                            stockDeductions[invId].qty += Number(item.quantity) || 1;
+                            stockDeductions[invId].names.add((item.products as any).name);
+                        }
+                    }
+
+                    for (const [invId, data] of Object.entries(stockDeductions)) {
+                        const { data: currentItem } = await supabase.from('inventory_items').select('current_stock').eq('id', invId).single();
+                        if (currentItem) {
+                            const newStock = Number(currentItem.current_stock) - data.qty;
+                            await supabase.from('inventory_items').update({ current_stock: newStock }).eq('id', invId);
+                            
+                            await supabase.from('inventory_movements').insert([{
+                                item_id: invId,
+                                admin_id: currentUser.id,
+                                type: 'out',
+                                quantity: data.qty,
+                                total_cost_brl: 0,
+                                description: `Saída Automática (Evento: ${selectedEvent.title}) - Venda de: ${Array.from(data.names).join(', ')}`
+                            }]);
+                        }
+                    }
+                }
             }
 
             setEvents(prev => prev.map(e => e.id === selectedEvent.id ? { ...e, status: 'closed' } : e));
@@ -852,6 +895,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             newProduct={newProduct}
                             setNewProduct={setNewProduct}
                             allProducts={allProducts}
+                            inventoryItems={inventoryItems}
                             selectedCategory={selectedCategory}
                             setSelectedCategory={setSelectedCategory}
                             handleCreateProduct={handleAddProduct}

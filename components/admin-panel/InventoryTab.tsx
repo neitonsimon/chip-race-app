@@ -11,6 +11,7 @@ interface InventoryTabProps {
     deleteProduct: (id: string) => Promise<void>;
     isLoading: boolean;
     productCategories: any[];
+    inventoryItems: any[];
     editingProduct: any | null;
     setEditingProduct: (p: any | null) => void;
     handleUpdateProduct: () => Promise<void>;
@@ -19,7 +20,7 @@ interface InventoryTabProps {
 export const InventoryTab: React.FC<InventoryTabProps> = ({
     newProduct, setNewProduct, allProducts, selectedCategory, setSelectedCategory,
     handleCreateProduct, toggleProductStatus, deleteProduct, isLoading,
-    productCategories, editingProduct, setEditingProduct, handleUpdateProduct
+    productCategories, inventoryItems, editingProduct, setEditingProduct, handleUpdateProduct
 }) => {
     const displayCategories = productCategories;
 
@@ -30,7 +31,8 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
             category: p.category,
             price: p.price.toString(),
             description: p.description || '',
-            price_unit: p.price_unit || ''
+            price_unit: p.price_unit || '',
+            inventory_item_id: p.inventory_item_id || ''
         });
         // Scroll back to top to see the form
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -38,7 +40,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
 
     const cancelEdit = () => {
         setEditingProduct(null);
-        setNewProduct({ name: '', category: 'bar', price: '', description: '', price_unit: '' });
+        setNewProduct({ name: '', category: 'bar', price: '', description: '', price_unit: '', inventory_item_id: '' });
     };
 
     return (
@@ -96,6 +98,19 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
                                     placeholder="Ex: Coca-Cola Lata 350ml"
                                     className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none"
                                 />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-emerald-500 uppercase mb-2 ml-1">Vincular Base de Estoque (Opcional)</label>
+                                <select
+                                    value={newProduct.inventory_item_id || ''}
+                                    onChange={e => setNewProduct({ ...newProduct, inventory_item_id: e.target.value })}
+                                    className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-emerald-400 text-sm focus:border-emerald-500 outline-none"
+                                >
+                                    <option value="">Não descontar do estoque</option>
+                                    {inventoryItems?.map((item: any) => (
+                                        <option key={item.id} value={item.id}>{item.name} ({item.unit_type})</option>
+                                    ))}
+                                </select>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
