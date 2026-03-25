@@ -7,6 +7,7 @@ import { DebtsTab } from './admin-panel/DebtsTab';
 import { CommunicationsTab } from './admin-panel/CommunicationsTab';
 import { OperationalTab } from './admin-panel/OperationalTab';
 import { InventoryTab } from './admin-panel/InventoryTab';
+import { StockTab } from './admin-panel/StockTab';
 import { SettingsTab } from './admin-panel/SettingsTab';
 import { CheckoutModal } from './admin-panel/modals/CheckoutModal';
 import { TopUpModal } from './admin-panel/modals/TopUpModal';
@@ -66,7 +67,7 @@ function getOneTimeKeyFromNote(note: string): string | null {
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, isAdmin = false, onUpdateProfile, badgeTemplates = [], onCreateBadgeTemplate, onSendAdminMessage, onCreatePoll }) => {
-    const [activeTab, setActiveTab] = useState<'operational' | 'reports' | 'launch' | 'send-gifts' | 'debts' | 'communications' | 'reservations'>('operational');
+    const [activeTab, setActiveTab] = useState<'operational' | 'inventory' | 'reports' | 'launch' | 'send-gifts' | 'debts' | 'communications' | 'reservations'>('operational');
     const [events, setEvents] = useState<any[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
     const [products, setProducts] = useState<any[]>([]);
@@ -700,6 +701,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             <div className="lg:hidden flex overflow-x-auto custom-scrollbar bg-black/20 border-b border-white/10 p-2 gap-2 flex-shrink-0 no-scrollbar">
                 {[
                     { id: 'operational', icon: 'point_of_sale', label: 'Operaç.' },
+                    { id: 'inventory', icon: 'inventory_2', label: 'Estoque' },
                     { id: 'launch', icon: 'add_shopping_cart', label: 'Produtos' },
                     { id: 'reports', icon: 'bar_chart', label: 'Relat.' },
                     { id: 'send-gifts', icon: 'stars', label: 'Prêmios' },
@@ -719,6 +721,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                 <aside className="hidden lg:flex w-52 border-r border-white/10 bg-black/20 p-4 flex flex-col gap-2 flex-shrink-0">
                     {[
                         { id: 'operational', icon: 'point_of_sale', label: 'Operaç.' },
+                        { id: 'inventory', icon: 'inventory_2', label: 'Estoque' },
                         { id: 'launch', icon: 'add_shopping_cart', label: 'Produtos' },
                         { id: 'reports', icon: 'bar_chart', label: 'Relat.' },
                         { id: 'send-gifts', icon: 'stars', label: 'Prêmios' },
@@ -838,6 +841,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
 
                     {activeTab === 'reservations' && (
                         <ReservationsTab events={events} />
+                    )}
+
+                    {activeTab === 'inventory' && (
+                        <StockTab currentUser={currentUser as any} />
                     )}
 
                     {activeTab === 'launch' && (
