@@ -18,7 +18,7 @@ interface DebtsTabProps {
     isLoading: boolean;
     handleDebtSearch: (query: string) => Promise<void>;
     handleRegisterDebt: () => Promise<void>;
-    handleSettleDebt: (debt: any, type: 'balance' | 'manual', amount?: number) => Promise<void>;
+    handleSettleDebt: (debts: any[], type: 'balance' | 'manual', amount?: number) => Promise<void>;
     debtFilter: string;
     setDebtFilter: (f: string) => void;
     fetchDebts: () => Promise<void>;
@@ -97,6 +97,34 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
     debtFilter, setDebtFilter, fetchDebts,
     currentUser, products, productCategories, onUpdateProfile
 }) => {
+    const groupedDebts = React.useMemo(() => {
+        const map = new Map();
+        activeDebts.forEach(debt => {
+            const userId = debt.user_id;
+            if (!map.has(userId)) {
+                map.set(userId, {
+                    user_id: userId,
+                    profiles: debt.profiles,
+                    debts: [],
+                    total_amount: 0,
+                    newest_date: debt.created_at,
+                    events_list: new Set()
+                });
+            }
+            const group = map.get(userId);
+            group.debts.push(debt);
+            group.total_amount += Number(debt.amount_brl);
+            if (debt.events?.title) group.events_list.add(debt.events.title);
+            else if (debt.description) group.events_list.add(debt.description);
+            else group.events_list.add('Crédito Manual');
+            
+            if (new Date(debt.created_at) > new Date(group.newest_date)) {
+                group.newest_date = debt.created_at;
+            }
+        });
+        return Array.from(map.values()).sort((a: any, b: any) => new Date(b.newest_date).getTime() - new Date(a.newest_date).getTime());
+    }, [activeDebts]);
+
     const [subTab, setSubTab] = useState<SubTab>('pendura');
     // ── Partial settle: per-debt custom amount  ──
     const [settleAmounts, setSettleAmounts] = useState<Record<string, string>>({});
@@ -521,41 +549,41 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                     )}
 
                     <div className="bg-black/40 border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
-                        {activeDebts.length === 0 ? (
+                        {groupedDebts.length === 0 ? (
                             <div className="px-6 py-20 text-center text-gray-600 italic">
                                 <span className="material-icons-outlined text-4xl block mb-2 opacity-20">sentiment_satisfied</span>
                                 Nenhuma pendência ativa no momento.
                             </div>
                         ) : (
                             <div className="divide-y divide-white/5">
-                                {activeDebts.map(debt => {
-                                    const fullAmt = Number(debt.amount_brl);
-                                    const inputVal = settleAmounts[debt.id] ?? fullAmt.toFixed(2);
+                                {groupedDebts.map(group => {
+                                    const fullAmt = group.total_amount;
+                                    const inputVal = settleAmounts[group.user_id] ?? fullAmt.toFixed(2);
                                     const payAmt = Math.min(Math.max(parseFloat(inputVal) || 0, 0), fullAmt);
                                     const isPartial = payAmt < fullAmt && payAmt > 0;
 
                                     return (
-                                        <div key={debt.id} className="p-4 sm:p-5 hover:bg-white/5 transition-colors">
+                                        <div key={group.user_id} className="p-4 sm:p-5 hover:bg-white/5 transition-colors">
                                             {/* Row: player + date + amount */}
                                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                                                 <div className="flex items-center gap-3">
-                                                    <img src={debt.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${debt.profiles?.name}&background=random`} className="w-10 h-10 rounded-xl flex-shrink-0" alt="" />
+                                                    <img src={group.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${group.profiles?.name}&background=random`} className="w-10 h-10 rounded-xl flex-shrink-0" alt="" />
                                                     <div>
-                                                        <p className="text-white font-bold text-sm">{debt.profiles?.name}</p>
+                                                        <p className="text-white font-bold text-sm">{group.profiles?.name}</p>
                                                         <div className="flex flex-wrap items-center gap-2">
                                                             <p className="text-[9px] text-gray-500 uppercase">
-                                                                CR#{String(debt.profiles?.numeric_id).padStart(3, '0')} &nbsp;·&nbsp;
-                                                                {new Date(debt.created_at).toLocaleDateString('pt-BR')}
+                                                                CR#{String(group.profiles?.numeric_id).padStart(3, '0')} &nbsp;·&nbsp;
+                                                                {new Date(group.newest_date).toLocaleDateString('pt-BR')} ({group.debts.length} {group.debts.length === 1 ? 'pendura' : 'penduras'})
                                                             </p>
-                                                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${Number(debt.profiles?.balance_brl || 0) < payAmt
+                                                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${Number(group.profiles?.balance_brl || 0) < payAmt
                                                                 ? 'bg-red-500/20 text-red-500 border border-red-500/30'
                                                                 : 'bg-green-500/20 text-green-400 border border-green-500/30'
                                                                 }`}>
-                                                                Saldo: R$ {Number(debt.profiles?.balance_brl || 0).toFixed(2)}
+                                                                Saldo: R$ {Number(group.profiles?.balance_brl || 0).toFixed(2)}
                                                             </span>
                                                         </div>
-                                                        <span className="mt-1 inline-block px-2 py-0.5 bg-white/5 border border-white/10 rounded text-[8px] font-black uppercase text-gray-500">
-                                                            {debt.events?.title || debt.description || 'Crédito Manual'}
+                                                        <span className="mt-1 inline-block px-2 py-0.5 bg-white/5 border border-white/10 rounded text-[8px] font-black uppercase text-gray-500 truncate max-w-[200px] sm:max-w-md">
+                                                            {Array.from(group.events_list).join(', ')}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -576,13 +604,13 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                                                         onChange={e => {
                                                             const val = e.target.value.replace(',', '.');
                                                             if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                                                                setSettleAmounts(prev => ({ ...prev, [debt.id]: val }));
+                                                                setSettleAmounts(prev => ({ ...prev, [group.user_id]: val }));
                                                             }
                                                         }}
                                                         className="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-right text-white text-sm font-bold outline-none focus:border-primary/50"
                                                     />
                                                     <button
-                                                        onClick={() => setSettleAmounts(prev => ({ ...prev, [debt.id]: fullAmt.toFixed(2) }))}
+                                                        onClick={() => setSettleAmounts(prev => ({ ...prev, [group.user_id]: fullAmt.toFixed(2) }))}
                                                         className="px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[9px] font-black uppercase text-gray-400 hover:text-white whitespace-nowrap transition-all"
                                                     >Tudo</button>
                                                 </div>
@@ -597,19 +625,19 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
 
                                                     <div className="flex gap-2">
                                                         <button
-                                                            onClick={() => handleSettleDebt(debt, 'balance', payAmt)}
-                                                            disabled={isLoading || payAmt <= 0 || (Number(debt.profiles?.balance_brl || 0) < payAmt)}
+                                                            onClick={() => handleSettleDebt(group.debts, 'balance', payAmt)}
+                                                            disabled={isLoading || payAmt <= 0 || (Number(group.profiles?.balance_brl || 0) < payAmt)}
                                                             className="flex-1 sm:flex-none px-4 py-2.5 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl text-[9px] font-black uppercase transition-all border border-primary/20 disabled:opacity-40 disabled:cursor-not-allowed group relative"
                                                         >
                                                             {isPartial ? 'Parcial Saldo' : 'SALDO R$'}
-                                                            {(Number(debt.profiles?.balance_brl || 0) < payAmt) && (
+                                                            {(Number(group.profiles?.balance_brl || 0) < payAmt) && (
                                                                 <span className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-black text-white text-[8px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity">
                                                                     Saldo Insuficiente
                                                                 </span>
                                                             )}
                                                         </button>
                                                         <button
-                                                            onClick={() => handleSettleDebt(debt, 'manual', payAmt)}
+                                                            onClick={() => handleSettleDebt(group.debts, 'manual', payAmt)}
                                                             disabled={isLoading || payAmt <= 0}
                                                             className="flex-1 sm:flex-none px-4 py-2.5 bg-green-500/10 hover:bg-green-500 text-green-500 hover:text-white rounded-xl text-[9px] font-black uppercase transition-all border border-green-500/20 disabled:opacity-40"
                                                         >

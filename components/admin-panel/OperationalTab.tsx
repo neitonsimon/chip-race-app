@@ -392,7 +392,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
 
                             <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                                 {commandsTab === 'resumo' ? (
-                                    <div className="lg:hidden animate-in fade-in slide-in-from-top-4">
+                                    <div className="lg:hidden animate-in fade-in slide-in-from-top-4 col-span-full">
                                         {/* FINANCIAL SUMMARY REPLICATED FOR MOBILE TAB */}
                                         <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 sm:p-6 mb-8">
                                             <h4 className="text-xs font-black text-primary uppercase mb-5 flex items-center justify-between">
