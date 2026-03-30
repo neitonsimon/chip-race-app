@@ -808,8 +808,13 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                     ) : (
                         filteredEvents.map((event) => {
                             const eventIsToday = isToday(event.date);
+                            const isLive = event.type === 'live';
+                            const bgClass = isLive ? 'bg-gradient-to-br from-[#1c1400] to-[#0a0700]' : 'bg-white dark:bg-surface-dark';
+                            const borderClass = event.status === 'closed' ? 'border-secondary/20 opacity-75' : eventIsToday ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : isLive ? 'border-yellow-500/30 dark:border-yellow-500/30' : 'border-gray-200 dark:border-white/5';
+                            const hoverClass = isLive ? 'hover:border-yellow-500/50' : 'hover:border-primary/50';
+
                             return (
-                                <div key={event.id} className={`bg-white dark:bg-surface-dark border ${event.status === 'closed' ? 'border-secondary/20 opacity-75' : eventIsToday ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : 'border-gray-200 dark:border-white/5'} rounded-xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between hover:border-primary/50 transition-colors shadow-sm group relative overflow-hidden`}>
+                                <div key={event.id} className={`${bgClass} border ${borderClass} rounded-xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between ${hoverClass} transition-colors shadow-sm group relative overflow-hidden`}>
 
                                     {/* HOJE INDICATOR */}
                                     {eventIsToday && activeTab === 'upcoming' && (
@@ -1061,12 +1066,12 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md">
                     {/* Main Container - Adjusted to fit screen height with 20px margins */}
                     <div
-                        className="relative h-[calc(100vh-40px)] aspect-[3/4] bg-[#050214] border border-primary/30 rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(217,0,255,0.15)] flex flex-col"
+                        className={`relative h-[calc(100vh-40px)] aspect-[3/4] ${viewEvent.type === 'live' ? 'bg-gradient-to-b from-[#1c1400] to-[#050300] border-yellow-500/30 shadow-[0_0_50px_rgba(234,179,8,0.15)]' : 'bg-[#050214] border-primary/30 shadow-[0_0_50px_rgba(217,0,255,0.15)]'} border rounded-[2rem] overflow-hidden flex flex-col`}
                         style={{ maxHeight: 'calc(100vh - 40px)' }}
                     >
                         {/* Background Glows */}
-                        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[30%] bg-primary/20 rounded-full blur-[80px] pointer-events-none"></div>
-                        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[30%] bg-secondary/10 rounded-full blur-[80px] pointer-events-none"></div>
+                        <div className={`absolute top-[-10%] left-[-10%] w-[50%] h-[30%] ${viewEvent.type === 'live' ? 'bg-yellow-500/20' : 'bg-primary/20'} rounded-full blur-[80px] pointer-events-none`}></div>
+                        <div className={`absolute bottom-[-10%] right-[-10%] w-[50%] h-[30%] ${viewEvent.type === 'live' ? 'bg-orange-500/10' : 'bg-secondary/10'} rounded-full blur-[80px] pointer-events-none`}></div>
 
                         {/* Close Button */}
                         <button onClick={() => setViewEvent(null)} className="absolute top-4 right-4 z-50 w-8 h-8 flex items-center justify-center bg-black/40 text-white hover:text-red-500 rounded-full hover:bg-white/10 transition-colors backdrop-blur-sm border border-white/5">
@@ -1296,11 +1301,11 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                 viewClosedEvent && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md">
                         <div
-                            className="relative h-[calc(100vh-20px)] aspect-[3/4] bg-[#050214] border border-secondary/30 rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(0,224,255,0.15)] flex flex-col"
+                            className={`relative h-[calc(100vh-20px)] aspect-[3/4] ${viewClosedEvent.type === 'live' ? 'bg-gradient-to-b from-[#1c1400] to-[#050300] border-yellow-500/30 shadow-[0_0_50px_rgba(234,179,8,0.15)]' : 'bg-[#050214] border-secondary/30 shadow-[0_0_50px_rgba(0,224,255,0.15)]'} border rounded-[2rem] overflow-hidden flex flex-col`}
                             style={{ maxHeight: 'calc(100vh - 20px)' }}
                         >
                             {/* Background Glows */}
-                            <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[70%] h-[40%] bg-secondary/10 rounded-full blur-[80px] pointer-events-none"></div>
+                            <div className={`absolute top-[-20%] left-1/2 -translate-x-1/2 w-[70%] h-[40%] ${viewClosedEvent.type === 'live' ? 'bg-yellow-500/15' : 'bg-secondary/10'} rounded-full blur-[80px] pointer-events-none`}></div>
 
                             {/* Close Button */}
                             <button onClick={() => setViewClosedEvent(null)} className="absolute top-4 right-4 z-50 w-8 h-8 flex items-center justify-center bg-black/40 text-white hover:text-red-500 rounded-full hover:bg-white/10 transition-colors backdrop-blur-sm border border-white/5">
