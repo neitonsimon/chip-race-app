@@ -888,7 +888,16 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                             <span className="flex items-center gap-1 bg-white/5 px-2 py-1 rounded border border-white/5" title={event.gameMode === 'cash_game' ? "Mínimo / Máximo" : "Valor da Entrada"}>
                                                 <span className="material-icons-outlined text-sm text-green-500">payments</span>
                                                 <span className="text-gray-300 font-bold">
-                                                    {event.gameMode === 'cash_game' ? (event.cashGameMinMax || event.buyin) : event.buyin}
+                                                    {event.gameMode === 'cash_game' ? (event.cashGameMinMax || event.buyin) : (
+                                                        <>
+                                                            {event.buyin}
+                                                            {event.staffBonusValue && event.staffBonusValue !== '0' && (
+                                                                <span className="text-yellow-500 ml-1">
+                                                                    + {event.staffBonusValue}
+                                                                </span>
+                                                            )}
+                                                        </>
+                                                    )}
                                                 </span>
                                             </span>
                                             {event.gameMode !== 'cash_game' && (
