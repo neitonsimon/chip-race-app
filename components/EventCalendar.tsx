@@ -32,6 +32,98 @@ interface EventCalendarProps {
 // Lista de Produtos Paralelos com Estilos
 const PARALLEL_PRODUCTS = appConfig.events.parallelProducts;
 
+type EventTheme = 'cyan' | 'gold' | 'red' | 'purple';
+
+const getEventTheme = (type: string, gameMode?: string): EventTheme => {
+    const t = (type || 'live').toLowerCase().trim();
+    const gm = (gameMode || '').toLowerCase().trim();
+    
+    // Perigo: às vezes vem como 'Cash Game' ou 'CASH_GAME' ou 'Tournament'
+    const isCash = gm.includes('cash');
+    const isLive = t === 'live';
+
+    if (isLive && isCash) return 'red';
+    if (isLive) return 'gold';
+    if (!isLive && isCash) return 'purple';
+    return 'cyan';
+};
+
+
+
+const getThemeStyles = (theme: EventTheme) => {
+    switch (theme) {
+        case 'gold': return {
+            bgCard: 'bg-gradient-to-br from-[#1c1400] to-[#0a0700]',
+            borderCard: 'border-yellow-500/30 dark:border-yellow-500/30',
+            hoverCard: 'hover:border-yellow-500/50',
+            textMain: 'text-yellow-500',
+            textSec: 'text-yellow-400',
+            badgeBg: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30',
+            typeBadgeBg: 'border-yellow-500 text-yellow-500 bg-yellow-500/10 shadow-[0_0_10px_rgba(234,179,8,0.2)]',
+            flyerBg: 'bg-gradient-to-b from-[#1c1400] to-[#050300]',
+            flyerBorder: 'border-yellow-500/30',
+            flyerShadow: 'shadow-[0_0_50px_rgba(234,179,8,0.15)]',
+            glow1: 'bg-yellow-500/20',
+            glow2: 'bg-orange-500/10',
+            footerBg: 'bg-[#0a0700] border-yellow-500/10',
+            logoFilter: 'brightness-125 sepia hover:sepia-0 transition-all',
+            textWhiteGlow: 'text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]'
+        };
+        case 'red': return {
+            bgCard: 'bg-gradient-to-br from-[#1c0000] to-[#0a0000]',
+            borderCard: 'border-red-500/30 dark:border-red-500/30',
+            hoverCard: 'hover:border-red-500/50',
+            textMain: 'text-red-500',
+            textSec: 'text-red-400',
+            badgeBg: 'bg-red-500/10 text-red-500 border-red-500/30',
+            typeBadgeBg: 'border-red-500 text-red-500 bg-red-500/10 shadow-[0_0_10px_rgba(239,68,68,0.2)]',
+            flyerBg: 'bg-gradient-to-b from-[#1c0000] to-[#050000]',
+            flyerBorder: 'border-red-500/30',
+            flyerShadow: 'shadow-[0_0_50px_rgba(239,68,68,0.15)]',
+            glow1: 'bg-red-500/20',
+            glow2: 'bg-orange-600/10',
+            footerBg: 'bg-[#0a0000] border-red-500/10',
+            logoFilter: 'brightness-125 sepia hue-rotate-[320deg] hover:sepia-0 transition-all',
+            textWhiteGlow: 'text-white drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]'
+        };
+        case 'purple': return {
+            bgCard: 'bg-gradient-to-br from-[#12001c] to-[#06000a]',
+            borderCard: 'border-purple-500/30 dark:border-purple-500/30',
+            hoverCard: 'hover:border-purple-500/50',
+            textMain: 'text-purple-500',
+            textSec: 'text-purple-400',
+            badgeBg: 'bg-purple-500/10 text-purple-500 border-purple-500/30',
+            typeBadgeBg: 'border-purple-500 text-purple-500 bg-purple-500/10 shadow-[0_0_10px_rgba(168,85,247,0.2)]',
+            flyerBg: 'bg-gradient-to-b from-[#12001c] to-[#05000a]',
+            flyerBorder: 'border-purple-500/30',
+            flyerShadow: 'shadow-[0_0_50px_rgba(168,85,247,0.15)]',
+            glow1: 'bg-purple-500/20',
+            glow2: 'bg-fuchsia-500/10',
+            footerBg: 'bg-[#05000a] border-purple-500/10',
+            logoFilter: 'brightness-125 sepia hue-rotate-[250deg] hover:sepia-0 transition-all',
+            textWhiteGlow: 'text-white drop-shadow-[0_0_15px_rgba(168,85,247,0.4)]'
+        };
+        case 'cyan': 
+        default: return {
+            bgCard: 'bg-white dark:bg-surface-dark',
+            borderCard: 'border-gray-200 dark:border-white/5',
+            hoverCard: 'hover:border-primary/50',
+            textMain: 'text-cyan-500', 
+            textSec: 'text-primary',
+            badgeBg: 'bg-cyan-500/10 text-cyan-500 border-cyan-500/30',
+            typeBadgeBg: 'border-primary text-primary bg-primary/10 shadow-[0_0_10px_rgba(217,0,255,0.1)]',
+            flyerBg: 'bg-[#050214]',
+            flyerBorder: 'border-primary/30',
+            flyerShadow: 'shadow-[0_0_50px_rgba(217,0,255,0.15)]',
+            glow1: 'bg-primary/20',
+            glow2: 'bg-secondary/10',
+            footerBg: 'bg-[#050821] border-white/5',
+            logoFilter: '',
+            textWhiteGlow: 'text-primary drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]'
+        };
+    }
+}
+
 export const EventCalendar: React.FC<EventCalendarProps> = ({
     isAdmin,
     currentUser,
@@ -47,8 +139,14 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
     onSelectPlayerByName
 }) => {
     const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
     const [viewEvent, setViewEvent] = useState<Event | null>(null); // Modal de Flyer (Eventos Abertos)
+
     const [viewClosedEvent, setViewClosedEvent] = useState<Event | null>(null); // Modal de Resultados (Eventos Fechados)
+    
+    // Theme helpers for flyers
+    const viewThemeStyles = viewEvent ? getThemeStyles(getEventTheme(viewEvent.type, viewEvent.gameMode)) : null;
+    const viewClosedThemeStyles = viewClosedEvent ? getThemeStyles(getEventTheme(viewClosedEvent.type, viewClosedEvent.gameMode)) : null;
 
     // TAB FILTER STATE
     const [activeTab, setActiveTab] = useState<'upcoming' | 'completed'>('upcoming');
@@ -338,8 +436,14 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
     const handleSaveEvent = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (editingEvent) {
-            if (isMultiDayForm) {
+        if (!isAdmin || !editingEvent || isSaving) return;
+
+        setIsSaving(true);
+        try {
+            // Se for cash game, forçar isMultiDayForm como false para evitar duplicatas por engano
+            const actualIsMultiDay = editingEvent.gameMode === 'cash_game' ? false : isMultiDayForm;
+
+            if (actualIsMultiDay) {
                 // Validación Básica
                 if (!editingEvent.title) {
                     alert('Por favor, preencha o título do evento.');
@@ -406,9 +510,9 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                 } else {
                     // Sempre atualizar o estado local para garantir exibição imediata (Optimistic Update)
                     setEvents(currentEvents => {
-                        const existingIndex = currentEvents.findIndex(ev => ev.id === editingEvent.id);
-                        if (existingIndex >= 0) {
-                            return currentEvents.map(ev => ev.id === editingEvent.id ? editingEvent : ev);
+                        const exists = currentEvents.find(e => e.id === editingEvent.id);
+                        if (exists) {
+                            return currentEvents.map(e => e.id === editingEvent.id ? editingEvent : e);
                         } else {
                             return [...currentEvents, editingEvent];
                         }
@@ -417,7 +521,11 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
             }
 
             setEditingEvent(null);
-            setIsMultiDayForm(false);
+        } catch (error) {
+            console.error('Error saving event:', error);
+            alert('Erro ao salvar evento. Tente novamente.');
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -808,13 +916,12 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                     ) : (
                         filteredEvents.map((event) => {
                             const eventIsToday = isToday(event.date);
-                            const isLive = event.type === 'live';
-                            const bgClass = isLive ? 'bg-gradient-to-br from-[#1c1400] to-[#0a0700]' : 'bg-white dark:bg-surface-dark';
-                            const borderClass = event.status === 'closed' ? 'border-secondary/20 opacity-75' : eventIsToday ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : isLive ? 'border-yellow-500/30 dark:border-yellow-500/30' : 'border-gray-200 dark:border-white/5';
-                            const hoverClass = isLive ? 'hover:border-yellow-500/50' : 'hover:border-primary/50';
+                            const tStyles = getThemeStyles(getEventTheme(event.type, event.gameMode));
+                            const borderClass = event.status === 'closed' ? 'border-secondary/20 opacity-75' : eventIsToday ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : tStyles.borderCard;
 
                             return (
-                                <div key={event.id} className={`${bgClass} border ${borderClass} rounded-xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between ${hoverClass} transition-colors shadow-sm group relative overflow-hidden`}>
+                                <div key={event.id} className={`${tStyles.bgCard} border ${borderClass} rounded-xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between ${tStyles.hoverCard} transition-colors shadow-sm group relative overflow-hidden`}>
+
 
                                     {/* HOJE INDICATOR */}
                                     {eventIsToday && activeTab === 'upcoming' && (
@@ -825,9 +932,10 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
                                     {/* Date Box */}
                                     <div className="flex flex-row md:flex-col items-center gap-4 md:gap-1 min-w-[80px] mb-4 md:mb-0 mr-4">
-                                        <span className="text-base font-bold text-primary uppercase tracking-wider">
+                                        <span className={`text-base font-bold ${tStyles.textMain} uppercase tracking-wider`}>
                                             {new Date(event.date).toLocaleDateString('pt-BR', { month: 'short', timeZone: 'UTC' })}
                                         </span>
+
                                         <span className="text-3xl font-display font-bold text-gray-900 dark:text-white">
                                             {new Date(event.date).getUTCDate()}
                                         </span>
@@ -837,27 +945,22 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                     {/* Info */}
                                     <div className="flex-1 md:px-4 text-left w-full">
                                         <div className="flex flex-wrap items-center gap-3 mb-1">
-                                            <h3 className="text-xl font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors cursor-pointer flex items-center gap-2" onClick={() => isAdmin && setEditingEvent(event)}>
+                                            <h3 className={`text-xl font-bold text-gray-900 dark:text-white group-hover:${tStyles.textMain} transition-colors cursor-pointer flex items-center gap-2`} onClick={() => isAdmin && setEditingEvent(event)}>
                                                 {event.title}
+
                                                 {eventIsToday && activeTab === 'upcoming' && (
                                                     <span className="material-icons-outlined text-yellow-400 animate-pulse" title="Evento Hoje">star</span>
                                                 )}
                                             </h3>
-                                            <span className={`text-xs px-2 py-0.5 rounded uppercase font-bold tracking-wide border ${event.status === 'closed' ? 'border-gray-500 text-gray-500 bg-gray-500/10' :
-                                                event.type === 'live'
-                                                    ? 'border-secondary text-secondary bg-secondary/10'
-                                                    : 'border-cyan-500 text-cyan-500 bg-cyan-500/10'
-                                                }`}>
+                                            <span className={`text-xs px-2 py-0.5 rounded uppercase font-bold tracking-wide border ${event.status === 'closed' ? 'border-gray-500 text-gray-500 bg-gray-500/10' : tStyles.badgeBg}`}>
                                                 {event.status === 'closed' ? 'ENCERRADO' : event.type === 'live' ? 'AO VIVO' : 'ONLINE'}
                                             </span>
 
                                             {/* Game Mode Badge */}
-                                            <span className={`text-xs px-2 py-0.5 rounded uppercase font-black tracking-widest ${event.gameMode === 'cash_game'
-                                                ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/30 shadow-[0_0_10px_rgba(234,179,8,0.2)]'
-                                                : 'bg-primary/10 text-primary border border-primary/30 shadow-[0_0_10px_rgba(217,0,255,0.1)]'
-                                                }`}>
+                                            <span className={`text-xs px-2 py-0.5 rounded uppercase font-black tracking-widest border ${tStyles.typeBadgeBg}`}>
                                                 {event.gameMode === 'cash_game' ? 'CASH GAME' : 'TORNEIO'}
                                             </span>
+
 
                                             {event.isStartingDay && (
                                                 <span className="text-[10px] px-2 py-0.5 rounded uppercase font-black tracking-widest bg-gradient-to-r from-primary to-accent text-white shadow-neon-pink">
@@ -879,10 +982,11 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                         )}
 
                                         {event.description && (
-                                            <div className="text-[11px] text-gray-400 mb-3 line-clamp-2 italic bg-primary/5 p-2 rounded border-l-2 border-primary/30">
+                                            <div className={`text-[11px] text-gray-400 mb-3 line-clamp-2 italic ${tStyles.glow1} p-2 rounded border-l-2 ${tStyles.badgeBg}`}>
                                                 "{event.description}"
                                             </div>
                                         )}
+
 
                                         <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-3">
                                             <span className="flex items-center gap-1 bg-white/5 px-2 py-1 rounded border border-white/5" title={event.gameMode === 'cash_game' ? "Mínimo / Máximo" : "Valor da Entrada"}>
@@ -892,10 +996,11 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                         <>
                                                             {event.buyin}
                                                             {event.staffBonusValue && event.staffBonusValue !== '0' && (
-                                                                <span className="text-yellow-500 ml-1">
+                                                                <span className="text-yellow-500 ml-1 font-black underline decoration-yellow-500/30">
                                                                     + {event.staffBonusValue}
                                                                 </span>
                                                             )}
+
                                                         </>
                                                     )}
                                                 </span>
@@ -908,10 +1013,16 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                             )}
                                             {event.gameMode === 'cash_game' && event.cashGameType && (
                                                 <span className="flex items-center gap-1 bg-white/5 px-2 py-1 rounded border border-white/5" title="Modalidade">
-                                                <span className={`material-icons-outlined text-sm ${event.type === 'live' ? 'text-yellow-500' : 'text-secondary'}`}>Style</span>
+                                                <span className={`material-icons-outlined text-sm ${tStyles.textMain}`}>Style</span>
                                                     <span className="text-gray-300 font-bold capitalize">
                                                         {event.cashGameType === 'omaha4' ? 'Omaha 4' : event.cashGameType === 'omaha5' ? 'Omaha 5' : 'Texas'}
                                                     </span>
+                                                </span>
+                                            )}
+                                            {activeTab === 'completed' && event.results && event.results.length > 0 && (
+                                                <span className={`flex items-center gap-1 ${tStyles.glow1} px-2 py-1 rounded border ${tStyles.borderCard}`} title="Total de Entradas">
+                                                    <span className={`material-icons-outlined text-sm ${tStyles.textMain}`}>groups</span>
+                                                    <span className="text-gray-300 font-bold">{event.results.length}</span>
                                                 </span>
                                             )}
                                         </div>
@@ -921,13 +1032,13 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                 <>
                                                     {event.cashGameBlinds && (
                                                         <div className="flex items-center gap-1" title="Blinds">
-                                                            <span className="material-icons-outlined text-[12px] text-primary">timer</span>
+                                                            <span className={`material-icons-outlined text-[12px] ${tStyles.textMain}`}>timer</span>
                                                             <span className="text-gray-400">{event.cashGameBlinds}</span>
                                                         </div>
                                                     )}
                                                     {event.cashGameCapacity && (
                                                         <div className="flex items-center gap-1" title="Lugares">
-                                                            <span className="material-icons-outlined text-[12px] text-primary">groups</span>
+                                                            <span className={`material-icons-outlined text-[12px] ${tStyles.textMain}`}>groups</span>
                                                             <span className="text-gray-400">{event.cashGameCapacity}</span>
                                                         </div>
                                                     )}
@@ -936,25 +1047,25 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                 <>
                                                     {event.modality && (
                                                         <div className="flex items-center gap-1" title="Modalidade">
-                                                            <span className={`material-icons-outlined text-[12px] ${event.type === 'live' ? 'text-yellow-500' : 'text-primary'}`}>local_fire_department</span>
+                                                            <span className={`material-icons-outlined text-[12px] ${tStyles.textMain}`}>local_fire_department</span>
                                                             <span className="text-gray-400 capitalize">{event.modality}</span>
                                                         </div>
                                                     )}
                                                     {event.stack && (
                                                         <div className="flex items-center gap-1" title="Stack Inicial">
-                                                            <span className={`material-icons-outlined text-[12px] ${event.type === 'live' ? 'text-yellow-500' : 'text-primary'}`}>layers</span>
+                                                            <span className={`material-icons-outlined text-[12px] ${tStyles.textMain}`}>layers</span>
                                                             <span className="text-gray-400">{event.stack}</span>
                                                         </div>
                                                     )}
                                                     {event.blinds && (
                                                         <div className="flex items-center gap-1" title="Blinds">
-                                                            <span className={`material-icons-outlined text-[12px] ${event.type === 'live' ? 'text-yellow-500' : 'text-primary'}`}>timer</span>
+                                                            <span className={`material-icons-outlined text-[12px] ${tStyles.textMain}`}>timer</span>
                                                             <span className="text-gray-400">{event.blinds}</span>
                                                         </div>
                                                     )}
                                                     {event.lateReg && (
                                                         <div className="flex items-center gap-1" title="Registro Tardio">
-                                                            <span className={`material-icons-outlined text-[12px] ${event.type === 'live' ? 'text-yellow-500' : 'text-primary'}`}>history_toggle_off</span>
+                                                            <span className={`material-icons-outlined text-[12px] ${tStyles.textMain}`}>history_toggle_off</span>
                                                             <span className="text-gray-400">{event.lateReg}</span>
                                                         </div>
                                                     )}
@@ -1034,10 +1145,11 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                         setViewEvent(event);
                                                     }
                                                 }}
-                                                className="px-6 py-2 rounded-full font-bold text-base transition-all bg-primary text-white hover:bg-primary/90 hover:shadow-neon-pink flex items-center gap-2 w-full md:w-auto justify-center"
+                                                className={`px-6 py-2 rounded-full font-bold text-base transition-all ${tStyles.textWhiteGlow} ${tStyles.badgeBg} hover:opacity-90 hover:shadow-lg flex items-center gap-2 w-full md:w-auto justify-center border ${tStyles.borderCard}`}
                                             >
                                                 VER DETALHES <span className="material-icons-outlined text-lg">visibility</span>
                                             </button>
+
                                         </div>
 
                                         {/* Botão de Reservar (Para todos os usuários em eventos abertos) */}
@@ -1075,12 +1187,12 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md">
                     {/* Main Container - Adjusted to fit screen height with 20px margins */}
                     <div
-                        className={`relative h-[calc(100vh-40px)] aspect-[3/4] ${viewEvent.type === 'live' ? 'bg-gradient-to-b from-[#1c1400] to-[#050300] border-yellow-500/30 shadow-[0_0_50px_rgba(234,179,8,0.15)]' : 'bg-[#050214] border-primary/30 shadow-[0_0_50px_rgba(217,0,255,0.15)]'} border rounded-[2rem] overflow-hidden flex flex-col`}
+                        className={`relative h-[calc(100vh-40px)] aspect-[3/4] ${viewThemeStyles?.flyerBg} ${viewThemeStyles?.flyerBorder} ${viewThemeStyles?.flyerShadow} border rounded-[2rem] overflow-hidden flex flex-col`}
                         style={{ maxHeight: 'calc(100vh - 40px)' }}
                     >
                         {/* Background Glows */}
-                        <div className={`absolute top-[-10%] left-[-10%] w-[50%] h-[30%] ${viewEvent.type === 'live' ? 'bg-yellow-500/20' : 'bg-primary/20'} rounded-full blur-[80px] pointer-events-none`}></div>
-                        <div className={`absolute bottom-[-10%] right-[-10%] w-[50%] h-[30%] ${viewEvent.type === 'live' ? 'bg-orange-500/10' : 'bg-secondary/10'} rounded-full blur-[80px] pointer-events-none`}></div>
+                        <div className={`absolute top-[-10%] left-[-10%] w-[50%] h-[30%] ${viewThemeStyles?.glow1} rounded-full blur-[80px] pointer-events-none`}></div>
+                        <div className={`absolute bottom-[-10%] right-[-10%] w-[50%] h-[30%] ${viewThemeStyles?.glow2} rounded-full blur-[80px] pointer-events-none`}></div>
 
                         {/* Close Button */}
                         <button onClick={() => setViewEvent(null)} className="absolute top-4 right-4 z-50 w-8 h-8 flex items-center justify-center bg-black/40 text-white hover:text-red-500 rounded-full hover:bg-white/10 transition-colors backdrop-blur-sm border border-white/5">
@@ -1093,9 +1205,9 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                 {/* 1. Header Section */}
                                 <div className="pt-6 pb-2 px-6 text-center shrink-0 flex flex-col items-center">
                                     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-md mb-3 shadow-lg">
-                                        <span className={`text-[10px] sm:text-xs font-black uppercase tracking-widest ${viewEvent.gameMode === 'cash_game' ? 'text-yellow-400' : viewEvent.type === 'live' ? 'text-yellow-500' : 'text-secondary'}`}>{viewEvent.gameMode === 'cash_game' ? 'CASH GAME' : 'TORNEIO'}</span>
+                                        <span className={`text-[10px] sm:text-xs font-black uppercase tracking-widest ${viewEvent.gameMode === 'cash_game' ? viewThemeStyles?.textSec : viewThemeStyles?.textMain}`}>{viewEvent.gameMode === 'cash_game' ? 'CASH GAME' : 'TORNEIO'}</span>
                                         <span className="text-gray-600 text-xs">|</span>
-                                        <span className={`text-xs font-black uppercase tracking-widest ${viewEvent.type === 'live' ? 'text-yellow-500' : 'text-secondary'}`}>{viewEvent.type === 'live' ? 'AO VIVO' : 'ONLINE'}</span>
+                                        <span className={`text-xs font-black uppercase tracking-widest ${viewThemeStyles?.textMain}`}>{viewEvent.type === 'live' ? 'AO VIVO' : 'ONLINE'}</span>
                                         <span className="text-gray-600 text-xs">|</span>
                                         <span className="text-xs font-bold text-gray-300 tracking-wider">{(viewEvent.date || '').split('-').reverse().join('/')}</span>
                                         <span className="text-gray-600 text-xs">•</span>
@@ -1116,9 +1228,9 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                             <div className="flex flex-col items-center">
                                                 <span className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Buy-in</span>
                                                 <div className="flex items-center gap-1 font-display">
-                                                    <span className={`text-xl sm:text-3xl font-black ${viewEvent.type === 'live' ? 'text-white' : 'text-primary'} drop-shadow-[0_0_15px_rgba(255,255,255,0.2)] leading-none`}>{viewEvent.buyin}</span>
+                                                    <span className={`text-xl sm:text-3xl font-black ${viewThemeStyles?.textWhiteGlow} leading-none`}>{viewEvent.buyin}</span>
                                                     {viewEvent.staffBonusValue && viewEvent.staffBonusValue !== '0' && (
-                                                        <span className="text-xl sm:text-3xl font-black text-yellow-500 leading-none">
+                                                        <span className={`text-xl sm:text-3xl font-black ${viewThemeStyles?.textMain} leading-none`}>
                                                             + {viewEvent.staffBonusValue}
                                                         </span>
                                                     )}
@@ -1127,7 +1239,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                             <div className="w-px h-8 bg-white/10"></div>
                                             <div className="flex flex-col items-center">
                                                 <span className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-0.5">Garantido</span>
-                                                <span className="text-xl sm:text-3xl font-display font-black text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.4)] leading-tight">{viewEvent.guaranteed}</span>
+                                                <span className={`text-xl sm:text-3xl font-display font-black ${viewThemeStyles?.textSec} drop-shadow-[0_0_15px_rgba(255,255,255,0.2)] leading-tight`}>{viewEvent.guaranteed}</span>
                                             </div>
                                         </div>
                                     )}
@@ -1182,11 +1294,12 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                             <div className="flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-1">
                                                 {viewEvent.gameMode === 'cash_game' ? (
                                                     <>
-                                                        {renderStructureRow("Mínimo / Máximo", viewEvent.cashGameMinMax, undefined, "text-yellow-400", "payments")}
-                                                        {viewEvent.cashGameDinner && renderStructureRow("Jantar Cortesia", "Incluso", "Cortesia da Casa", "text-green-400", "restaurant")}
-                                                        {viewEvent.cashGameOpenBar && renderStructureRow("Open Bar", "Incluso", "Cortesia da Casa", "text-local_bar", "local_bar")}
-                                                        {viewEvent.parallelProducts?.includes('jackpot') && renderStructureRow("Jackpot", "Ativo", "Participe", viewEvent.type === 'live' ? "text-yellow-500" : "text-secondary", "trending_up")}
+                                                        {renderStructureRow("Mínimo / Máximo", viewEvent.cashGameMinMax, undefined, viewThemeStyles?.textMain, "payments")}
+                                                        {viewEvent.cashGameDinner && renderStructureRow("Jantar Cortesia", "Incluso", "Cortesia da Casa", "text-green-500", "restaurant")}
+                                                        {viewEvent.cashGameOpenBar && renderStructureRow("Open Bar", "Incluso", "Cortesia da Casa", viewThemeStyles?.textMain, "local_bar")}
+                                                        {viewEvent.parallelProducts?.includes('jackpot') && renderStructureRow("Jackpot", "Ativo", "Participe", viewThemeStyles?.textSec, "trending_up")}
                                                         {viewEvent.cashGameNotes && (
+
                                                             <div className="bg-white/5 p-3 rounded-lg border border-white/10 mt-2">
                                                                 <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1">Regras / Observações</span>
                                                                 <p className="text-xs text-gray-400 leading-relaxed italic">"{viewEvent.cashGameNotes}"</p>
@@ -1195,13 +1308,14 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                     </>
                                                 ) : (
                                                     <>
-                                                        {renderStructureRow("Rebuy", viewEvent.rebuyValue, viewEvent.rebuyChips, viewEvent.type === 'live' ? "text-yellow-500" : "text-primary", "add_circle_outline")}
-                                                        {renderStructureRow("Rebuy Duplo", viewEvent.doubleRebuyValue, viewEvent.doubleRebuyChips, viewEvent.type === 'live' ? "text-yellow-500" : "text-primary", "control_point_duplicate")}
-                                                        {renderStructureRow("Add-on", viewEvent.addonValue, viewEvent.addonChips, viewEvent.type === 'live' ? "text-yellow-500" : "text-secondary", "shopping_basket")}
-                                                        {renderStructureRow("Add-on Duplo", viewEvent.doubleAddonValue, viewEvent.doubleAddonChips, viewEvent.type === 'live' ? "text-yellow-500" : "text-secondary", "auto_awesome_motion")}
+                                                        {renderStructureRow("Rebuy", viewEvent.rebuyValue, viewEvent.rebuyChips, viewThemeStyles?.textMain, "add_circle_outline")}
+                                                        {renderStructureRow("Rebuy Duplo", viewEvent.doubleRebuyValue, viewEvent.doubleRebuyChips, viewThemeStyles?.textMain, "control_point_duplicate")}
+                                                        {renderStructureRow("Add-on", viewEvent.addonValue, viewEvent.addonChips, viewThemeStyles?.textSec, "shopping_basket")}
+                                                        {renderStructureRow("Add-on Duplo", viewEvent.doubleAddonValue, viewEvent.doubleAddonChips, viewThemeStyles?.textSec, "auto_awesome_motion")}
                                                         {/* Staff Bonus moved to buy-in row */}
-                                                        {renderStructureRow("Time Chip", viewEvent.timeChipValue, viewEvent.timeChipChips, "text-green-500", "schedule")}
+                                                        {renderStructureRow("Time Chip", viewEvent.timeChipValue, viewEvent.timeChipChips, "text-green-400 font-bold", "schedule")}
                                                     </>
+
                                                 )}
                                             </div>
                                         )}
@@ -1234,7 +1348,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
                                             return (
                                                 <div className="mt-2 flex flex-col flex-1 overflow-hidden">
-                                                    <div className={`text-[10px] uppercase font-bold ${viewEvent.type === 'live' ? 'text-yellow-500' : 'text-secondary'} mb-2 border-b ${viewEvent.type === 'live' ? 'border-yellow-500/20' : 'border-secondary/20'} pb-1 flex items-center gap-1`}>
+                                                    <div className={`text-[10px] uppercase font-bold ${viewThemeStyles?.textMain} mb-2 border-b border-white/10 pb-1 flex items-center gap-1`}>
                                                         <span className="material-icons-outlined text-xs">emoji_events</span>
                                                         Classificados para a Final
                                                         {qualifiedPlayers.length > 0 && <span className="ml-auto text-gray-500 normal-case font-normal">({qualifiedPlayers.length} jogadores)</span>}
@@ -1256,7 +1370,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                                         <span className={`font-bold mr-2 w-5 inline-block ${idx === 0 ? 'text-yellow-400' : idx === 1 ? 'text-gray-300' : idx === 2 ? 'text-orange-600' : 'text-gray-500'}`}>{idx + 1}º</span>
                                                                         {p.name}
                                                                     </span>
-                                                                    <span className={`font-bold ${viewEvent.type === 'live' ? 'text-yellow-500' : 'text-secondary'} ml-2 shrink-0`}>{formatChips(p.qualifierChips?.toString() || '0')} fichas</span>
+                                                                    <span className={`font-bold ${viewThemeStyles?.textMain} ml-2 shrink-0`}>{formatChips(p.qualifierChips?.toString() || '0')} fichas</span>
                                                                 </div>
                                                             ))}
                                                         </div>
@@ -1293,11 +1407,11 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
 
                         {/* 3. Footer */}
-                        <div className={`${viewEvent.type === 'live' ? 'bg-[#0a0700] border-yellow-500/10' : 'bg-[#050821] border-white/5'} px-6 py-4 border-t flex justify-between items-center shrink-0 relative z-20`}>
+                        <div className={`${viewThemeStyles?.footerBg} px-6 py-4 border-t flex justify-between items-center shrink-0 relative z-20`}>
                             <div className="flex items-center h-8">
-                                <img src="/cr-logo.png" alt="Chip Race" className={`h-full w-auto ${viewEvent.type === 'live' ? 'brightness-125 sepia hover:sepia-0 transition-all' : ''}`} />
+                                <img src="/cr-logo.png" alt="Chip Race" className={`h-full w-auto ${viewThemeStyles?.logoFilter}`} />
                             </div>
-                            <div className={`text-[8px] ${viewEvent.type === 'live' ? 'text-yellow-500/50' : 'text-gray-600'} uppercase tracking-[0.2em] font-bold`}>
+                            <div className={`text-[8px] ${viewThemeStyles?.textSec} opacity-50 uppercase tracking-[0.2em] font-bold`}>
                                 Organização Oficial
                             </div>
                         </div>
@@ -1326,7 +1440,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                             {/* 1. Header & Champion Section */}
                             <div className="pt-4 pb-1 px-6 text-center shrink-0 flex flex-col items-center">
                                 <div className="flex items-center gap-2 mb-1">
-                                    <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full border ${viewClosedEvent.gameMode === 'cash_game' ? 'border-yellow-500/30 text-yellow-400 bg-yellow-500/5' : viewClosedEvent.type === 'live' ? 'border-yellow-500/30 text-yellow-500 bg-yellow-500/5' : 'border-secondary/30 text-secondary bg-secondary/5'}`}>
+                                    <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full border ${viewClosedThemeStyles?.badgeBg}`}>
                                         {viewClosedEvent.gameMode === 'cash_game' ? 'CASH GAME' : 'TORNEIO'}
                                     </span>
                                     <span className="text-gray-700 text-[10px]">•</span>
@@ -1376,7 +1490,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                     {getPlayerName(winner.userId, winner.name)}
                                                 </h2>
                                                 {viewClosedEvent.isStartingDay ? (
-                                                    <div className={`text-lg sm:text-xl font-bold ${viewClosedEvent.type === 'live' ? 'text-yellow-500' : 'text-secondary'} mt-1`}>
+                                                    <div className={`text-lg sm:text-xl font-bold ${viewClosedThemeStyles?.textMain} mt-1`}>
                                                         {formatChips(winner.qualifierChips?.toString() || '0')} FICHAS
                                                     </div>
                                                 ) : (
@@ -1477,7 +1591,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                                     {getPlayerName(result.userId, result.name)}
                                                                 </td>
                                                                 {viewClosedEvent.isStartingDay ? (
-                                                                    <td className={`px-4 py-3 text-right ${viewClosedEvent.type === 'live' ? 'text-yellow-500' : 'text-secondary'} font-bold`}>
+                                                                    <td className={`px-4 py-3 text-right ${viewClosedThemeStyles?.textMain} font-bold`}>
                                                                         {formatChips(result.qualifierChips?.toString() || '0')}
                                                                     </td>
                                                                 ) : (
@@ -1489,7 +1603,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                                             const mainRankingId = viewClosedEvent.includedRankings![0];
                                                                             const savedPts = result.pointsPerRanking?.[mainRankingId] ?? result.calculatedPoints;
                                                                             return (
-                                                                                <td className={`px-4 py-3 text-center font-display font-black ${viewClosedEvent.type === 'live' ? 'text-yellow-500' : 'text-secondary'}`}>
+                                                                                <td className={`px-4 py-3 text-center font-display font-black ${viewClosedThemeStyles?.textMain}`}>
                                                                                     {savedPts}
                                                                                 </td>
                                                                             );
@@ -1506,11 +1620,11 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                             </div>
 
                             {/* 4. Footer */}
-                            <div className={`${viewClosedEvent.type === 'live' ? 'bg-[#0a0700] border-yellow-500/10' : 'bg-[#050821] border-white/5'} px-6 py-3 border-t flex justify-between items-center shrink-0`}>
+                            <div className={`${viewClosedThemeStyles?.footerBg} px-6 py-3 border-t flex justify-between items-center shrink-0`}>
                                 <div className="flex items-center h-7">
-                                    <img src="/cr-logo.png" alt="Chip Race" className={`h-full w-auto ${viewClosedEvent.type === 'live' ? 'brightness-125 sepia hover:sepia-0 transition-all' : ''}`} />
+                                    <img src="/cr-logo.png" alt="Chip Race" className={`h-full w-auto ${viewClosedThemeStyles?.logoFilter}`} />
                                 </div>
-                                <div className={`text-[8px] ${viewClosedEvent.type === 'live' ? 'text-yellow-500/50' : 'text-gray-600'} uppercase tracking-[0.2em] font-bold`}>
+                                <div className={`text-[8px] ${viewClosedThemeStyles?.textSec} opacity-50 uppercase tracking-[0.2em] font-bold`}>
                                     Resultados Oficiais
                                 </div>
                             </div>
@@ -1826,8 +1940,12 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => setEditingEvent({ ...editingEvent, gameMode: 'cash_game' })}
-                                        className={`flex-1 py-3 text-sm font-bold uppercase tracking-wider rounded-lg transition-all ${editingEvent.gameMode === 'cash_game' ? 'bg-yellow-500 text-black shadow-[0_0_15px_rgba(234,179,8,0.5)]' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
+                                        onClick={() => {
+                                            setEditingEvent({ ...editingEvent, gameMode: 'cash_game' });
+                                            setIsMultiDayForm(false);
+                                        }}
+                                        className={`flex-1 py-3 text-sm font-bold uppercase tracking-wider rounded-lg transition-all ${editingEvent.gameMode === 'cash_game' ? 'bg-red-600 text-white shadow-[0_0_15px_rgba(220,38,38,0.5)]' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
+
                                     >
                                         Cash Game
                                     </button>
@@ -2225,7 +2343,19 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                     </button>
                                     <div className="flex gap-2">
                                         <button type="button" onClick={() => setEditingEvent(null)} className="px-4 py-2 rounded-lg text-gray-400 hover:bg-white/5 transition-colors">Cancelar</button>
-                                        <button type="submit" className="px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-bold shadow-lg">Salvar Evento</button>
+                                        <button 
+                                            type="submit" 
+                                            disabled={isSaving}
+                                            className={`px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-bold shadow-lg flex items-center gap-2 ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        >
+                                            {isSaving ? (
+                                                <>
+                                                    <span className="animate-spin material-icons-outlined text-sm">sync</span>
+                                                    Salvando...
+                                                </>
+                                            ) : 'Salvar Evento'}
+                                        </button>
+
                                     </div>
                                 </div>
                             </form>
