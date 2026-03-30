@@ -908,7 +908,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                             )}
                                             {event.gameMode === 'cash_game' && event.cashGameType && (
                                                 <span className="flex items-center gap-1 bg-white/5 px-2 py-1 rounded border border-white/5" title="Modalidade">
-                                                    <span className="material-icons-outlined text-sm text-secondary">Style</span>
+                                                <span className={`material-icons-outlined text-sm ${event.type === 'live' ? 'text-yellow-500' : 'text-secondary'}`}>Style</span>
                                                     <span className="text-gray-300 font-bold capitalize">
                                                         {event.cashGameType === 'omaha4' ? 'Omaha 4' : event.cashGameType === 'omaha5' ? 'Omaha 5' : 'Texas'}
                                                     </span>
@@ -936,25 +936,25 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                 <>
                                                     {event.modality && (
                                                         <div className="flex items-center gap-1" title="Modalidade">
-                                                            <span className="material-icons-outlined text-[12px] text-primary">local_fire_department</span>
+                                                            <span className={`material-icons-outlined text-[12px] ${event.type === 'live' ? 'text-yellow-500' : 'text-primary'}`}>local_fire_department</span>
                                                             <span className="text-gray-400 capitalize">{event.modality}</span>
                                                         </div>
                                                     )}
                                                     {event.stack && (
                                                         <div className="flex items-center gap-1" title="Stack Inicial">
-                                                            <span className="material-icons-outlined text-[12px] text-primary">layers</span>
+                                                            <span className={`material-icons-outlined text-[12px] ${event.type === 'live' ? 'text-yellow-500' : 'text-primary'}`}>layers</span>
                                                             <span className="text-gray-400">{event.stack}</span>
                                                         </div>
                                                     )}
                                                     {event.blinds && (
                                                         <div className="flex items-center gap-1" title="Blinds">
-                                                            <span className="material-icons-outlined text-[12px] text-primary">timer</span>
+                                                            <span className={`material-icons-outlined text-[12px] ${event.type === 'live' ? 'text-yellow-500' : 'text-primary'}`}>timer</span>
                                                             <span className="text-gray-400">{event.blinds}</span>
                                                         </div>
                                                     )}
                                                     {event.lateReg && (
                                                         <div className="flex items-center gap-1" title="Registro Tardio">
-                                                            <span className="material-icons-outlined text-[12px] text-primary">history_toggle_off</span>
+                                                            <span className={`material-icons-outlined text-[12px] ${event.type === 'live' ? 'text-yellow-500' : 'text-primary'}`}>history_toggle_off</span>
                                                             <span className="text-gray-400">{event.lateReg}</span>
                                                         </div>
                                                     )}
