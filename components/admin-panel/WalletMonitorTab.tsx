@@ -77,9 +77,8 @@ export const WalletMonitorTab: React.FC = () => {
             }
             if (data) {
                 console.log('Transactions Data:', data.length);
-                // Remove transactions that are physical cash/pix so they don't mess up digital wallet numbers
-                const digitalTx = data.filter((tx: any) => tx.metadata?.payment_method !== 'cash_pix' && tx.metadata?.payment_method !== 'cash');
-                setTransactions(digitalTx as any);
+                // Include all transactions, including cash/pix
+                setTransactions(data as any);
             }
             setLastUpdated(new Date());
         } catch (err) {

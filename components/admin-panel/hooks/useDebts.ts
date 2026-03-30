@@ -49,6 +49,28 @@ export function useDebts({ isAdmin, currentUser, updatePlayerDebtLocally, update
             // Trigger will handle total_pending_debt update in database
             updatePlayerDebtLocally(newDebtData.userId, debtAmount);
 
+            // Fetch the event name if applicable
+            let eventTitle = '';
+            if (newDebtData.eventId && !isOnline) {
+                const { data: eventData } = await supabase.from('events').select('title').eq('id', newDebtData.eventId).single();
+                if (eventData) eventTitle = eventData.title;
+            }
+
+            // Register the debt in the transactions table so it appears in the Monitor
+            await supabase.from('transactions').insert({
+                user_id: newDebtData.userId,
+                amount_brl: -debtAmount, // Negative amount as it's a debt for something purchased/taken
+                amount_chipz: 0,
+                description: `Nova Pendura: ${newDebtData.description || (isOnline ? 'Crédito Online' : eventTitle)}`,
+                category: 'purchase',
+                type: 'debit',
+                metadata: {
+                    is_new_debt: true,
+                    event_id: newDebtData.eventId,
+                    debt_amount: debtAmount
+                }
+            });
+
             await supabase.from('messages').insert({
                 user_id: newDebtData.userId,
                 sender: 'Sistema',
