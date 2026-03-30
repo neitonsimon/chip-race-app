@@ -1084,9 +1084,9 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                 {/* 1. Header Section */}
                                 <div className="pt-6 pb-2 px-6 text-center shrink-0 flex flex-col items-center">
                                     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-md mb-3 shadow-lg">
-                                        <span className={`text-[10px] sm:text-xs font-black uppercase tracking-widest ${viewEvent.gameMode === 'cash_game' ? 'text-yellow-400' : 'text-secondary'}`}>{viewEvent.gameMode === 'cash_game' ? 'CASH GAME' : 'TORNEIO'}</span>
+                                        <span className={`text-[10px] sm:text-xs font-black uppercase tracking-widest ${viewEvent.gameMode === 'cash_game' ? 'text-yellow-400' : viewEvent.type === 'live' ? 'text-yellow-500' : 'text-secondary'}`}>{viewEvent.gameMode === 'cash_game' ? 'CASH GAME' : 'TORNEIO'}</span>
                                         <span className="text-gray-600 text-xs">|</span>
-                                        <span className="text-xs font-black uppercase tracking-widest text-secondary">{viewEvent.type === 'live' ? 'AO VIVO' : 'ONLINE'}</span>
+                                        <span className={`text-xs font-black uppercase tracking-widest ${viewEvent.type === 'live' ? 'text-yellow-500' : 'text-secondary'}`}>{viewEvent.type === 'live' ? 'AO VIVO' : 'ONLINE'}</span>
                                         <span className="text-gray-600 text-xs">|</span>
                                         <span className="text-xs font-bold text-gray-300 tracking-wider">{(viewEvent.date || '').split('-').reverse().join('/')}</span>
                                         <span className="text-gray-600 text-xs">•</span>
@@ -1107,7 +1107,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                             <div className="flex flex-col items-center">
                                                 <span className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Buy-in</span>
                                                 <div className="flex items-center gap-1 font-display">
-                                                    <span className="text-xl sm:text-3xl font-black text-primary drop-shadow-[0_0_15px_rgba(217,0,255,0.4)] leading-none">{viewEvent.buyin}</span>
+                                                    <span className={`text-xl sm:text-3xl font-black ${viewEvent.type === 'live' ? 'text-white' : 'text-primary'} drop-shadow-[0_0_15px_rgba(255,255,255,0.2)] leading-none`}>{viewEvent.buyin}</span>
                                                     {viewEvent.staffBonusValue && viewEvent.staffBonusValue !== '0' && (
                                                         <span className="text-xl sm:text-3xl font-black text-yellow-500 leading-none">
                                                             + {viewEvent.staffBonusValue}
@@ -1176,7 +1176,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                         {renderStructureRow("Mínimo / Máximo", viewEvent.cashGameMinMax, undefined, "text-yellow-400", "payments")}
                                                         {viewEvent.cashGameDinner && renderStructureRow("Jantar Cortesia", "Incluso", "Cortesia da Casa", "text-green-400", "restaurant")}
                                                         {viewEvent.cashGameOpenBar && renderStructureRow("Open Bar", "Incluso", "Cortesia da Casa", "text-local_bar", "local_bar")}
-                                                        {viewEvent.parallelProducts?.includes('jackpot') && renderStructureRow("Jackpot", "Ativo", "Participe", "text-secondary", "trending_up")}
+                                                        {viewEvent.parallelProducts?.includes('jackpot') && renderStructureRow("Jackpot", "Ativo", "Participe", viewEvent.type === 'live' ? "text-yellow-500" : "text-secondary", "trending_up")}
                                                         {viewEvent.cashGameNotes && (
                                                             <div className="bg-white/5 p-3 rounded-lg border border-white/10 mt-2">
                                                                 <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1">Regras / Observações</span>
@@ -1186,10 +1186,10 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                     </>
                                                 ) : (
                                                     <>
-                                                        {renderStructureRow("Rebuy", viewEvent.rebuyValue, viewEvent.rebuyChips, "text-primary", "add_circle_outline")}
-                                                        {renderStructureRow("Rebuy Duplo", viewEvent.doubleRebuyValue, viewEvent.doubleRebuyChips, "text-primary", "control_point_duplicate")}
-                                                        {renderStructureRow("Add-on", viewEvent.addonValue, viewEvent.addonChips, "text-secondary", "shopping_basket")}
-                                                        {renderStructureRow("Add-on Duplo", viewEvent.doubleAddonValue, viewEvent.doubleAddonChips, "text-secondary", "auto_awesome_motion")}
+                                                        {renderStructureRow("Rebuy", viewEvent.rebuyValue, viewEvent.rebuyChips, viewEvent.type === 'live' ? "text-yellow-500" : "text-primary", "add_circle_outline")}
+                                                        {renderStructureRow("Rebuy Duplo", viewEvent.doubleRebuyValue, viewEvent.doubleRebuyChips, viewEvent.type === 'live' ? "text-yellow-500" : "text-primary", "control_point_duplicate")}
+                                                        {renderStructureRow("Add-on", viewEvent.addonValue, viewEvent.addonChips, viewEvent.type === 'live' ? "text-yellow-500" : "text-secondary", "shopping_basket")}
+                                                        {renderStructureRow("Add-on Duplo", viewEvent.doubleAddonValue, viewEvent.doubleAddonChips, viewEvent.type === 'live' ? "text-yellow-500" : "text-secondary", "auto_awesome_motion")}
                                                         {/* Staff Bonus moved to buy-in row */}
                                                         {renderStructureRow("Time Chip", viewEvent.timeChipValue, viewEvent.timeChipChips, "text-green-500", "schedule")}
                                                     </>
@@ -1284,11 +1284,11 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
 
                         {/* 3. Footer */}
-                        <div className="bg-[#050821] px-6 py-4 border-t border-white/5 flex justify-between items-center shrink-0 relative z-20">
+                        <div className={`${viewEvent.type === 'live' ? 'bg-[#0a0700] border-yellow-500/10' : 'bg-[#050821] border-white/5'} px-6 py-4 border-t flex justify-between items-center shrink-0 relative z-20`}>
                             <div className="flex items-center h-8">
-                                <img src="/cr-logo.png" alt="Chip Race" className="h-full w-auto" />
+                                <img src="/cr-logo.png" alt="Chip Race" className={`h-full w-auto ${viewEvent.type === 'live' ? 'brightness-125 sepia hover:sepia-0 transition-all' : ''}`} />
                             </div>
-                            <div className="text-[8px] text-gray-600 uppercase tracking-[0.2em] font-bold">
+                            <div className={`text-[8px] ${viewEvent.type === 'live' ? 'text-yellow-500/50' : 'text-gray-600'} uppercase tracking-[0.2em] font-bold`}>
                                 Organização Oficial
                             </div>
                         </div>
@@ -1317,7 +1317,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                             {/* 1. Header & Champion Section */}
                             <div className="pt-4 pb-1 px-6 text-center shrink-0 flex flex-col items-center">
                                 <div className="flex items-center gap-2 mb-1">
-                                    <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full border ${viewClosedEvent.gameMode === 'cash_game' ? 'border-yellow-500/30 text-yellow-400 bg-yellow-500/5' : 'border-secondary/30 text-secondary bg-secondary/5'}`}>
+                                    <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full border ${viewClosedEvent.gameMode === 'cash_game' ? 'border-yellow-500/30 text-yellow-400 bg-yellow-500/5' : viewClosedEvent.type === 'live' ? 'border-yellow-500/30 text-yellow-500 bg-yellow-500/5' : 'border-secondary/30 text-secondary bg-secondary/5'}`}>
                                         {viewClosedEvent.gameMode === 'cash_game' ? 'CASH GAME' : 'TORNEIO'}
                                     </span>
                                     <span className="text-gray-700 text-[10px]">•</span>
@@ -1367,7 +1367,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                     {getPlayerName(winner.userId, winner.name)}
                                                 </h2>
                                                 {viewClosedEvent.isStartingDay ? (
-                                                    <div className="text-lg sm:text-xl font-bold text-secondary mt-1">
+                                                    <div className={`text-lg sm:text-xl font-bold ${viewClosedEvent.type === 'live' ? 'text-yellow-500' : 'text-secondary'} mt-1`}>
                                                         {formatChips(winner.qualifierChips?.toString() || '0')} FICHAS
                                                     </div>
                                                 ) : (
@@ -1382,7 +1382,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                             const mainRankingId = viewClosedEvent.includedRankings[0];
                                                             const savedPts = winner.pointsPerRanking?.[mainRankingId] ?? winner.calculatedPoints;
                                                             return (
-                                                                <div className="text-lg font-display font-bold text-secondary mt-1 bg-secondary/10 px-3 py-0.5 rounded-full inline-block border border-secondary/30">
+                                                                <div className={`text-lg font-display font-bold ${viewClosedEvent.type === 'live' ? 'text-yellow-500 bg-yellow-500/10 border-yellow-500/30' : 'text-secondary bg-secondary/10 border-secondary/30'} mt-1 px-3 py-0.5 rounded-full inline-block border`}>
                                                                     {savedPts} PTS
                                                                 </div>
                                                             );
@@ -1468,7 +1468,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                                     {getPlayerName(result.userId, result.name)}
                                                                 </td>
                                                                 {viewClosedEvent.isStartingDay ? (
-                                                                    <td className="px-4 py-3 text-right text-secondary font-bold">
+                                                                    <td className={`px-4 py-3 text-right ${viewClosedEvent.type === 'live' ? 'text-yellow-500' : 'text-secondary'} font-bold`}>
                                                                         {formatChips(result.qualifierChips?.toString() || '0')}
                                                                     </td>
                                                                 ) : (
@@ -1480,7 +1480,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                                             const mainRankingId = viewClosedEvent.includedRankings![0];
                                                                             const savedPts = result.pointsPerRanking?.[mainRankingId] ?? result.calculatedPoints;
                                                                             return (
-                                                                                <td className="px-4 py-3 text-center font-display font-black text-secondary">
+                                                                                <td className={`px-4 py-3 text-center font-display font-black ${viewClosedEvent.type === 'live' ? 'text-yellow-500' : 'text-secondary'}`}>
                                                                                     {savedPts}
                                                                                 </td>
                                                                             );
@@ -1497,11 +1497,11 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                             </div>
 
                             {/* 4. Footer */}
-                            <div className="bg-[#050821] px-6 py-3 border-t border-white/5 flex justify-between items-center shrink-0">
-                                <div className="flex items-center h-6">
-                                    <img src="/cr-logo.png" alt="Chip Race" className="h-full w-auto drop-shadow-md" />
+                            <div className={`${viewClosedEvent.type === 'live' ? 'bg-[#0a0700] border-yellow-500/10' : 'bg-[#050821] border-white/5'} px-6 py-3 border-t flex justify-between items-center shrink-0`}>
+                                <div className="flex items-center h-7">
+                                    <img src="/cr-logo.png" alt="Chip Race" className={`h-full w-auto ${viewClosedEvent.type === 'live' ? 'brightness-125 sepia hover:sepia-0 transition-all' : ''}`} />
                                 </div>
-                                <div className="text-[8px] text-gray-600 uppercase tracking-[0.2em] font-bold">
+                                <div className={`text-[8px] ${viewClosedEvent.type === 'live' ? 'text-yellow-500/50' : 'text-gray-600'} uppercase tracking-[0.2em] font-bold`}>
                                     Resultados Oficiais
                                 </div>
                             </div>
