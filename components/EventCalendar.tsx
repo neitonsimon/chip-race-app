@@ -1225,7 +1225,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
                                             return (
                                                 <div className="mt-2 flex flex-col flex-1 overflow-hidden">
-                                                    <div className="text-[10px] uppercase font-bold text-secondary mb-2 border-b border-secondary/20 pb-1 flex items-center gap-1">
+                                                    <div className={`text-[10px] uppercase font-bold ${viewEvent.type === 'live' ? 'text-yellow-500' : 'text-secondary'} mb-2 border-b ${viewEvent.type === 'live' ? 'border-yellow-500/20' : 'border-secondary/20'} pb-1 flex items-center gap-1`}>
                                                         <span className="material-icons-outlined text-xs">emoji_events</span>
                                                         Classificados para a Final
                                                         {qualifiedPlayers.length > 0 && <span className="ml-auto text-gray-500 normal-case font-normal">({qualifiedPlayers.length} jogadores)</span>}
@@ -1247,7 +1247,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                                         <span className={`font-bold mr-2 w-5 inline-block ${idx === 0 ? 'text-yellow-400' : idx === 1 ? 'text-gray-300' : idx === 2 ? 'text-orange-600' : 'text-gray-500'}`}>{idx + 1}º</span>
                                                                         {p.name}
                                                                     </span>
-                                                                    <span className="font-bold text-secondary ml-2 shrink-0">{formatChips(p.qualifierChips?.toString() || '0')} fichas</span>
+                                                                    <span className={`font-bold ${viewEvent.type === 'live' ? 'text-yellow-500' : 'text-secondary'} ml-2 shrink-0`}>{formatChips(p.qualifierChips?.toString() || '0')} fichas</span>
                                                                 </div>
                                                             ))}
                                                         </div>
