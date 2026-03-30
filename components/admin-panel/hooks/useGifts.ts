@@ -74,7 +74,7 @@ export function useGifts({ isAdmin, currentUser, badgeTemplates, updatePlayerBal
                 const template = badgeTemplates.find(b => b.id === selectedBadgeId);
                 if (template) {
                     const { data: duplicates } = await supabase.from('user_badges')
-                        .select('user_id, profiles!user_id(name)')
+                        .select('user_id, profiles(name)')
                         .in('user_id', targetUserIds)
                         .eq('badge_template_id', template.id);
 

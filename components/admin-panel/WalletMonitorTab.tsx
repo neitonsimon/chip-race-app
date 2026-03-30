@@ -67,19 +67,23 @@ export const WalletMonitorTab: React.FC = () => {
     const fetchTransactions = useCallback(async () => {
         setIsLoading(true);
         try {
-            const { data } = await supabase
+            const { data, error } = await supabase
                 .from('transactions')
-                .select('*, profiles!user_id(name, numeric_id, avatar_url)')
+                .select('*, profiles(name, numeric_id, avatar_url)')
                 .order('created_at', { ascending: false })
                 .limit(txLimit);
+            if (error) {
+                console.error('Supabase error fetching transactions:', error);
+            }
             if (data) {
+                console.log('Transactions Data:', data.length);
                 // Remove transactions that are physical cash/pix so they don't mess up digital wallet numbers
                 const digitalTx = data.filter((tx: any) => tx.metadata?.payment_method !== 'cash_pix' && tx.metadata?.payment_method !== 'cash');
                 setTransactions(digitalTx as any);
             }
             setLastUpdated(new Date());
         } catch (err) {
-            console.error('Error fetching transactions:', err);
+            console.error('Network or Parse error fetching transactions:', err);
         } finally {
             setIsLoading(false);
         }

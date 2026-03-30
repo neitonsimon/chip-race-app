@@ -680,7 +680,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
 
         // Fetch transactions (VIP, Chipz, etc.)
         const { data: txs } = await supabase.from('transactions')
-            .select('*, profiles!user_id(name, numeric_id)')
+            .select('*, profiles(name, numeric_id)')
             .gte('created_at', start + 'T00:00:00.000Z')
             .lte('created_at', end + 'T23:59:59.999Z')
             .filter('category', 'not.in', '("wallet_deposit","gift","purchase","debt_payment","command_charge")');
