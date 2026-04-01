@@ -38,6 +38,7 @@ interface AppContextType {
     selectedPlayer: RankingPlayer | null;
     setSelectedPlayer: (player: RankingPlayer | null) => void;
     months: MonthData[];
+    userReservations: string[];
 
     // Handlers
     handleNavigate: (view: string) => void;
@@ -113,6 +114,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [nextGoal, setNextGoal] = useState(appConfig.initialDefaults.applicationDefaults.nextGoal);
     const [months, setMonths] = useState<MonthData[]>(appConfig.initialDefaults.months as MonthData[]);
     const [vipPlans, setVipPlans] = useState<any[]>(appConfig.vip.plans);
+    const [userReservations, setUserReservations] = useState<string[]>([]);
 
     const [messages, setMessages] = useState<Message[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
@@ -210,6 +212,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     staffBonusChips: e.staff_bonus_chips,
                     timeChipValue: e.time_chip_value,
                     timeChipChips: e.time_chip_chips,
+                    timeChipAddonChips: e.time_chip_addon_chips,
+                    timeChipDiscountBrl: e.time_chip_discount_brl,
+                    maxCapacity: e.max_capacity,
                     flyerUrl: e.flyer_url,
                     doubleRebuyValue: e.double_rebuy_value,
                     doubleRebuyChips: e.double_rebuy_chips,
@@ -337,8 +342,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 const { data: userBadges } = await supabase.from('user_badges').select('*, badge_templates(*)').eq('user_id', userId).order('awarded_at', { ascending: false });
                 if (userBadges) userData.badges = userBadges;
                 setCurrentUser(userData);
+                // Also fetch reservations for this user
+                fetchUserReservations(userId);
             }
         } catch (error) { console.error('Error fetching profile:', error); }
+    };
+
+    const fetchUserReservations = async (userId: string) => {
+        try {
+            const { data, error } = await supabase
+                .from('tournament_reservations')
+                .select('event_id')
+                .eq('user_id', userId)
+                .in('status', ['reserved', 'confirmed']);
+            if (error) throw error;
+            if (data) {
+                setUserReservations(data.map(r => r.event_id));
+            }
+        } catch (e) {
+            console.error('Error fetching user reservations:', e);
+        }
     };
 
     const handleCreateBadgeTemplate = async (badge: Partial<BadgeTemplate>) => {
@@ -812,6 +835,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             stack: event.stack, blinds: event.blinds, late_reg: event.lateReg, location: event.location, rebuy_value: event.rebuyValue,
             rebuy_chips: event.rebuyChips, addon_value: event.addonValue, addon_chips: event.addonChips, staff_bonus_value: event.staffBonusValue,
             staff_bonus_chips: event.staffBonusChips, time_chip_value: event.timeChipValue, time_chip_chips: event.timeChipChips, flyer_url: event.flyerUrl,
+            time_chip_addon_chips: event.timeChipAddonChips, time_chip_discount_brl: event.timeChipDiscountBrl, max_capacity: event.maxCapacity,
             double_rebuy_value: event.doubleRebuyValue, double_rebuy_chips: event.doubleRebuyChips, double_addon_value: event.doubleAddonValue,
             double_addon_chips: event.doubleAddonChips, parallel_products: event.parallelProducts, results: event.results,
             total_rebuys: event.totalRebuys, total_addons: event.totalAddons, total_prize: event.totalPrize, scoring_schema_id: event.scoringSchemaId,
@@ -1252,7 +1276,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         <AppContext.Provider value={{
             currentView, setCurrentView, isAdmin, isLoggedIn, currentUserId, currentUser, events, isLoading, rankings, contentDB, globalScoringSchemas,
             allProfiles, experienceLevels, dailyRewards, badgeTemplates, systemMessageTemplates, prizeLabel, totalQualifiers, customTotalQualifiers, nextGoal,
-            messages, unreadCount, polls, pollVotesByCurrentUser, newNotification, selectedPlayer, setSelectedPlayer, months, vipPlans,
+            messages, unreadCount, polls, pollVotesByCurrentUser, newNotification, selectedPlayer, setSelectedPlayer, months, vipPlans, userReservations,
             handleNavigate, handleLogin, handleLogout, handlePlayerSelect, handleProfileUpdate, handleSaveEvent, handleDeleteEventAcrossApp,
             handleEventClosure, handleUpdateRankingMeta, handleUpdateGlobalSchemas, handleUpdateSystemMessageTemplate, handleCreateSystemMessageTemplate, handleAddRanking, handleDeleteRanking, handleAwardBadge,
             handleUpdateRankingPrize, handleUpdateTotalQualifiers, handleUpdateMonth, handleToggleMonthStatus,

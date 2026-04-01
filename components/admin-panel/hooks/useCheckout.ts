@@ -204,12 +204,48 @@ export function useCheckout({
                 chips_payment_brl: chips,
                 cash_out_brl: cashOut,
                 profit_brl: profit,
-                profit_cash_payment_brl: profitCash
+                profit_cash_payment_brl: profitCash,
+                inventory_deducted: true
             }).eq('id', selectedCommand.id);
 
             if (upErr) throw upErr;
 
-            // 4. Notify user
+            // 4. AUTO-DEDUCT INVENTORY (Ato de Pagamento)
+            try {
+                const { data: cmdItems } = await supabase.from('command_items')
+                    .select('quantity, products!inner(id, inventory_item_id, name, inventory_consumption_ratio)')
+                    .eq('command_id', selectedCommand.id);
+                
+                if (cmdItems && cmdItems.length > 0) {
+                    for (const item of cmdItems) {
+                        const product = item.products as any;
+                        const invId = product?.inventory_item_id;
+                        if (invId) {
+                            const ratio = Number(product.inventory_consumption_ratio) || 1;
+                            const qtyToDeduct = (Number(item.quantity) || 1) * ratio;
+
+                            const { data: currentItem } = await supabase.from('inventory_items').select('current_stock').eq('id', invId).single();
+                            if (currentItem) {
+                                const newStock = Number(currentItem.current_stock) - qtyToDeduct;
+                                await supabase.from('inventory_items').update({ current_stock: newStock }).eq('id', invId);
+                                
+                                await supabase.from('inventory_movements').insert([{
+                                    item_id: invId,
+                                    admin_id: currentUser.id,
+                                    type: 'out',
+                                    quantity: qtyToDeduct,
+                                    total_cost_brl: 0,
+                                    description: `Saída Automática (Pagamento Comanda ${selectedCommand.id.slice(0, 8)}) - Venda de: ${product.name}`
+                                }]);
+                            }
+                        }
+                    }
+                }
+            } catch (invErr) {
+                console.error('Erro ao baixar estoque na comanda:', invErr);
+            }
+
+            // 5. Notify user
             const msgContent = [
                 `Sua comanda foi encerrada. Total consumido: R$ ${total.toFixed(2)}.`,
                 discount > 0 ? `Desconto: R$ ${discount.toFixed(2)}.` : '',

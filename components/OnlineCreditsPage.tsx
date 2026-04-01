@@ -22,6 +22,14 @@ export const OnlineCreditsPage: React.FC<OnlineCreditsPageProps> = ({ onNavigate
         }
     }, [currentUser?.suprema_nickname]);
 
+    const [activeTab, setActiveTab] = useState<'buy' | 'withdraw'>('buy');
+
+    useEffect(() => {
+        if (currentUser?.suprema_nickname) {
+            setSupremaNickname(currentUser.suprema_nickname);
+        }
+    }, [currentUser?.suprema_nickname]);
+
     const currentBalance = currentUser?.balanceBrl || 0;
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -33,10 +41,12 @@ export const OnlineCreditsPage: React.FC<OnlineCreditsPageProps> = ({ onNavigate
             setError('Por favor, informe um valor válido.');
             return;
         }
-        if (amount > currentBalance) {
+        
+        if (activeTab === 'buy' && amount > currentBalance) {
             setError('Saldo insuficiente para esta solicitação.');
             return;
         }
+
         if (!supremaNickname) {
             setError('Por favor, preencha seu Nickname da Suprema Poker.');
             return;
@@ -45,34 +55,36 @@ export const OnlineCreditsPage: React.FC<OnlineCreditsPageProps> = ({ onNavigate
         setIsLoading(true);
 
         try {
-            // O RPC 'request_online_credits' já cuida de deduzir o saldo do usuário e criar o pedido
-            const { data, error } = await supabase.rpc('request_online_credits', {
-                p_amount: Number(amount),
-                p_suprema_nickname: supremaNickname.trim(),
-                p_suprema_id: 'N/A' // ID removido conforme solicitado
-            });
-
-            if (error) throw error;
-
-            if (data && data.success) {
-                setSuccess(`Solicitação de R$ ${amount.toFixed(2)} enviada com sucesso! Aguarde o envio das fichas.`);
-
-                // Redireciona para o WhatsApp para confirmar os dados
-                const text = encodeURIComponent(`Olá! Fiz uma solicitação de fichas pelo app e gostaria de confirmar:\n\n*Nome:* ${currentUser.name || 'Jogador'}\n*Nick Suprema:* ${supremaNickname.trim()}\n*Quantidade:* ${amount} Fichas\n\nAguardo o envio!`);
-                window.open(`https://wa.me/5551992425186?text=${text}`, '_blank');
-
-                setAmount('');
-
-                // Atualiza os states locais para refletirem a Suprema (o BD já atualizou)
-                if (onUpdateProfile) {
-                    onUpdateProfile(currentUser.id, {
-                        balanceBrl: currentBalance - Number(amount),
-                        suprema_nickname: supremaNickname.trim()
-                    });
+            if (activeTab === 'buy') {
+                // O RPC 'request_online_credits' já cuida de deduzir o saldo do usuário e criar o pedido
+                const { data, error } = await supabase.rpc('request_online_credits', {
+                    p_amount: Number(amount),
+                    p_suprema_nickname: supremaNickname.trim(),
+                    p_suprema_id: 'N/A'
+                });
+                if (error) throw error;
+                if (data && data.success) {
+                    setSuccess(`Solicitação de R$ ${amount.toFixed(2)} enviada com sucesso! Aguarde o envio das fichas.`);
+                    const text = encodeURIComponent(`Olá! Fiz uma solicitação de COMPRA de fichas pelo app e gostaria de confirmar:\n\n*Nome:* ${currentUser.name || 'Jogador'}\n*Nick Suprema:* ${supremaNickname.trim()}\n*Quantidade:* ${amount} Fichas\n\nAguardo o envio!`);
+                    window.open(`https://wa.me/5551992425186?text=${text}`, '_blank');
+                    if (onUpdateProfile) onUpdateProfile(currentUser.id, { balanceBrl: currentBalance - Number(amount), suprema_nickname: supremaNickname.trim() });
+                }
+            } else {
+                // Solicitação de Saque (Resgate)
+                const { data, error } = await supabase.rpc('request_online_withdrawal', {
+                    p_amount: Number(amount),
+                    p_suprema_nickname: supremaNickname.trim()
+                });
+                if (error) throw error;
+                if (data && data.success) {
+                    setSuccess(`Seu pedido de resgate de R$ ${amount.toFixed(2)} foi enviado! Quando o administrador confirmar o recebimento das fichas na Suprema, o saldo em R$ será liberado na sua carteira.`);
+                    const text = encodeURIComponent(`Olá! Acabei de enviar um pedido de RESGATE (Saque) de fichas pelo app:\n\n*Nome:* ${currentUser.name || 'Jogador'}\n*Nick Suprema:* ${supremaNickname.trim()}\n*Quantidade:* ${amount} Fichas\n\nJá enviei as fichas para o ID do clube na Suprema!`);
+                    window.open(`https://wa.me/5551992425186?text=${text}`, '_blank');
                 }
             }
+            setAmount('');
         } catch (err: any) {
-            console.error('Error requesting credits:', err);
+            console.error('Error processing request:', err);
             setError(err.message || 'Erro ao processar a solicitação. Tente novamente.');
         } finally {
             setIsLoading(false);
@@ -95,7 +107,7 @@ export const OnlineCreditsPage: React.FC<OnlineCreditsPageProps> = ({ onNavigate
                         <h1 className="text-3xl font-display font-black text-gray-900 dark:text-white uppercase tracking-wider">
                             Créditos Online
                         </h1>
-                        <p className="text-gray-500 dark:text-gray-400 text-sm">Adquira fichas para jogar no nosso Home Game Online.</p>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm">Gerencie suas fichas no nosso Home Game Online.</p>
                     </div>
                 </div>
 
@@ -124,93 +136,127 @@ export const OnlineCreditsPage: React.FC<OnlineCreditsPageProps> = ({ onNavigate
                             </div>
                         </div>
 
-                        <div className="bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/10 rounded-2xl p-6 shadow-xl">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                                <span className="material-icons-outlined text-primary">add_shopping_cart</span>
-                                Comprar Fichas Online
-                            </h3>
+                        <div className="bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-xl">
+                            {/* Tabs Switcher */}
+                            <div className="flex border-b border-gray-200 dark:border-white/10">
+                                <button
+                                    onClick={() => { setActiveTab('buy'); setError(''); setSuccess(''); }}
+                                    className={`flex-1 py-4 text-sm font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 ${activeTab === 'buy'
+                                        ? 'text-primary border-b-2 border-primary bg-primary/5'
+                                        : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                                        }`}
+                                >
+                                    <span className="material-icons-outlined text-sm">add_shopping_cart</span>
+                                    Fichas (Compra)
+                                </button>
+                                <button
+                                    onClick={() => { setActiveTab('withdraw'); setError(''); setSuccess(''); }}
+                                    className={`flex-1 py-4 text-sm font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 ${activeTab === 'withdraw'
+                                        ? 'text-neon-pink border-b-2 border-neon-pink bg-neon-pink/5'
+                                        : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                                        }`}
+                                >
+                                    <span className="material-icons-outlined text-sm">account_balance_wallet</span>
+                                    Fichas (Saque)
+                                </button>
+                            </div>
 
-                            {error && (
-                                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/50 rounded-xl flex items-start gap-3 text-red-500">
-                                    <span className="material-icons-outlined shrink-0">error_outline</span>
-                                    <p className="text-sm font-medium">{error}</p>
-                                </div>
-                            )}
+                            <div className="p-6">
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+                                    <span className={`material-icons-outlined ${activeTab === 'buy' ? 'text-primary' : 'text-neon-pink'}`}>
+                                        {activeTab === 'buy' ? 'shopping_bag' : 'outbound'}
+                                    </span>
+                                    {activeTab === 'buy' ? 'Solicitar Fichas (Depósito)' : 'Converter Fichas (Resgate)'}
+                                </h3>
 
-                            {success && (
-                                <div className="mb-6 p-4 bg-green-500/10 border border-green-500/50 rounded-xl flex items-start gap-3 text-green-500">
-                                    <span className="material-icons-outlined shrink-0">check_circle</span>
-                                    <p className="text-sm font-medium">{success}</p>
-                                </div>
-                            )}
+                                {error && (
+                                    <div className="mb-6 p-4 bg-red-500/10 border border-red-500/50 rounded-xl flex items-start gap-3 text-red-500">
+                                        <span className="material-icons-outlined shrink-0">error_outline</span>
+                                        <p className="text-sm font-medium">{error}</p>
+                                    </div>
+                                )}
 
-                            <form onSubmit={handleSubmit} className="space-y-5">
+                                {success && (
+                                    <div className="mb-6 p-4 bg-green-500/10 border border-green-500/50 rounded-xl flex items-start gap-3 text-green-500">
+                                        <span className="material-icons-outlined shrink-0">check_circle</span>
+                                        <p className="text-sm font-medium">{success}</p>
+                                    </div>
+                                )}
 
-                                <div className="p-4 bg-gray-50 dark:bg-black/30 rounded-xl border border-gray-200 dark:border-white/5 flex items-center justify-between mb-2">
-                                    <span className="text-gray-500 dark:text-gray-400 font-medium">Seu Saldo Disponível:</span>
-                                    <span className="text-xl font-black text-primary">R$ {currentBalance.toFixed(2)}</span>
-                                </div>
+                                <form onSubmit={handleSubmit} className="space-y-5">
 
-                                <div className="grid grid-cols-1 gap-5">
+                                    <div className="p-4 bg-gray-50 dark:bg-black/30 rounded-xl border border-gray-200 dark:border-white/5 flex items-center justify-between mb-2">
+                                        <span className="text-gray-500 dark:text-gray-400 font-medium">Seu Saldo Disponível:</span>
+                                        <span className="text-xl font-black text-primary">R$ {currentBalance.toFixed(2)}</span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-5">
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Seu Nick na Suprema</label>
+                                            <div className="relative">
+                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                    <span className="material-icons-outlined text-gray-400 text-sm">person</span>
+                                                </div>
+                                                <input
+                                                    type="text"
+                                                    value={supremaNickname}
+                                                    onChange={(e) => setSupremaNickname(e.target.value)}
+                                                    className="w-full bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-primary transition-colors"
+                                                    placeholder="Ex: PokerKing99"
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <div>
-                                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Seu Nick na Suprema</label>
+                                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                                            {activeTab === 'buy' ? 'Valor da Recarga (R$)' : 'Valor do Resgate (R$)'}
+                                        </label>
                                         <div className="relative">
                                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                <span className="material-icons-outlined text-gray-400 text-sm">person</span>
+                                                <span className="material-icons-outlined text-gray-400 text-sm">payments</span>
                                             </div>
                                             <input
-                                                type="text"
-                                                value={supremaNickname}
-                                                onChange={(e) => setSupremaNickname(e.target.value)}
-                                                className="w-full bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-primary transition-colors"
-                                                placeholder="Ex: PokerKing99"
+                                                type="number"
+                                                min="1"
+                                                step="1"
+                                                value={amount}
+                                                onChange={(e) => setAmount(Number(e.target.value) || '')}
+                                                className="w-full bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-4 text-lg font-bold text-gray-900 dark:text-white focus:outline-none focus:border-primary transition-colors"
+                                                placeholder="0,00"
                                                 required
                                             />
                                         </div>
+                                        <p className="text-xs text-gray-500 mt-2 italic">
+                                            {activeTab === 'buy'
+                                                ? '1 BRL no app = 1 Ficha na Suprema Poker. O valor será deduzido imediatamente do seu saldo.'
+                                                : 'Após solicitar, envie as fichas para o ID do clube na Suprema Poker. Assim que confirmado, o saldo será creditado na sua carteira.'
+                                            }
+                                        </p>
                                     </div>
-                                </div>
 
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Valor da Recarga (R$)</label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <span className="material-icons-outlined text-gray-400 text-sm">payments</span>
-                                        </div>
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            max={currentBalance}
-                                            step="1"
-                                            value={amount}
-                                            onChange={(e) => setAmount(Number(e.target.value) || '')}
-                                            className="w-full bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-4 text-lg font-bold text-gray-900 dark:text-white focus:outline-none focus:border-primary transition-colors"
-                                            placeholder="0,00"
-                                            required
-                                        />
-                                    </div>
-                                    <p className="text-xs text-gray-500 mt-2">
-                                        1 BRL no app = 1 Ficha na Suprema Poker. O valor será deduzido imediatamente do seu saldo.
-                                    </p>
-                                </div>
-
-                                <button
-                                    type="submit"
-                                    disabled={isLoading || !amount || amount <= 0 || amount > currentBalance}
-                                    className={`w-full py-4 rounded-xl font-black text-sm uppercase tracking-wider transition-all shadow-lg flex items-center justify-center gap-2 ${isLoading || !amount || amount <= 0 || amount > currentBalance
-                                        ? 'bg-gray-200 dark:bg-white/5 text-gray-400 dark:text-gray-600 cursor-not-allowed shadow-none'
-                                        : 'bg-primary hover:bg-white text-white hover:text-primary hover:shadow-neon-pink'
-                                        }`}
-                                >
-                                    {isLoading ? (
-                                        <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                                    ) : (
-                                        <>
-                                            <span className="material-icons-outlined">send</span>
-                                            Solicitar Fichas
-                                        </>
-                                    )}
-                                </button>
-                            </form>
+                                    <button
+                                        type="submit"
+                                        disabled={isLoading || !amount || amount <= 0 || (activeTab === 'buy' && amount > currentBalance)}
+                                        className={`w-full py-4 rounded-xl font-black text-sm uppercase tracking-wider transition-all shadow-lg flex items-center justify-center gap-2 ${isLoading || !amount || amount <= 0 || (activeTab === 'buy' && amount > currentBalance)
+                                            ? 'bg-gray-200 dark:bg-white/5 text-gray-400 dark:text-gray-600 cursor-not-allowed shadow-none'
+                                            : activeTab === 'buy'
+                                                ? 'bg-primary hover:bg-white text-white hover:text-primary hover:shadow-neon-pink'
+                                                : 'bg-neon-pink hover:bg-white text-white hover:text-neon-pink hover:shadow-neon-pink'
+                                            }`}
+                                    >
+                                        {isLoading ? (
+                                            <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                                        ) : (
+                                            <>
+                                                <span className="material-icons-outlined">{activeTab === 'buy' ? 'send' : 'file_upload'}</span>
+                                                {activeTab === 'buy' ? 'Solicitar Fichas' : 'Solicitar Resgate'}
+                                            </>
+                                        )}
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
 

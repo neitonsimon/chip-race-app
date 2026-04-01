@@ -101,7 +101,8 @@ export const SettingsTab: React.FC = () => {
         totalDebt: 0,
         verifiedUsers: 0
     });
-    const [pageViews, setPageViews] = useState<{ view_name: string, count: number }[]>([]);
+    const [pageViews, setPageViews] = useState<{ view_name: string, count: number, isNew?: boolean }[]>([]);
+    const [userClicks, setUserClicks] = useState<{ user_id: string, user_name: string, view_name: string, count: number }[]>([]);
     const [isLoadingStats, setIsLoadingStats] = useState(false);
 
     // Sponsorship State
@@ -174,6 +175,37 @@ export const SettingsTab: React.FC = () => {
                 }
             } catch (vErr) {
                 console.log("Lightweight analytics stats not available yet", vErr);
+            }
+
+            // Novo: Fetch User specific clicks (Verified Only)
+            try {
+                const { data: uClicks } = await supabase
+                    .from('user_page_stats')
+                    .select(`
+                        count,
+                        view_name,
+                        profiles!user_page_stats_user_id_fkey (
+                            id,
+                            name,
+                            is_verified
+                        )
+                    `)
+                    .order('count', { ascending: false })
+                    .limit(50);
+
+                if (uClicks) {
+                    const mapped = (uClicks as any[])
+                        .filter(uc => uc.profiles?.is_verified)
+                        .map(uc => ({
+                            user_id: uc.profiles.id,
+                            user_name: uc.profiles.name,
+                            view_name: uc.view_name,
+                            count: uc.count
+                        }));
+                    setUserClicks(mapped);
+                }
+            } catch (uErr) {
+                console.log("Error fetching user clicks", uErr);
             }
         } catch (err) {
             console.error('Error fetching stats:', err);
@@ -1215,6 +1247,38 @@ export const SettingsTab: React.FC = () => {
                                                 <div className="bg-primary/20 border border-primary/30 px-3 py-1.5 rounded-xl flex items-center gap-2 group-hover:scale-105 transition-transform">
                                                     <span className="material-icons-outlined text-[14px] text-cyan-400 opacity-80">visibility</span>
                                                     <span className="text-cyan-400 font-black text-xs font-display italic">{pv.count}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="bg-white/5 border border-white/10 rounded-[2rem] p-6 lg:p-8">
+                                <h4 className="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center gap-2">
+                                    <span className="material-icons-outlined text-blue-400">touch_app</span>
+                                    Clique por Usuários (Verificados)
+                                </h4>
+                                {userClicks.length === 0 ? (
+                                    <div className="text-center py-6">
+                                        <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">Aguardando interações dos jogadores verificados.</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                                        {userClicks.map((uc, idx) => (
+                                            <div key={idx} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center justify-between hover:bg-white/10 transition-all border-l-4 border-l-blue-400">
+                                                <div className="flex-1 min-w-0 mr-4">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className="material-icons text-[16px] text-blue-400">verified</span>
+                                                        <span className="text-white font-bold text-xs truncate uppercase tracking-tighter">{uc.user_name}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest bg-black/30 px-2 py-0.5 rounded-lg border border-white/5">{uc.view_name.replace(/-/g, ' ')}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="bg-blue-900/30 border border-blue-500/20 px-4 py-2 rounded-xl text-center min-w-[60px]">
+                                                    <div className="text-blue-400 font-black text-sm italic font-display">{uc.count}</div>
+                                                    <div className="text-[7px] text-blue-400/60 uppercase font-black tracking-tighter">Cliques</div>
                                                 </div>
                                             </div>
                                         ))}

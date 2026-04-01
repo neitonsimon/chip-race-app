@@ -10,6 +10,7 @@ interface ReservationsTabProps {
 export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
     const { currentUser, refreshSupabaseData } = useApp();
     const [activeSubTab, setActiveSubTab] = useState<'tournaments' | 'credits' | 'merge' | 'withdrawals'>('tournaments');
+    const [supremaSubTab, setSupremaSubTab] = useState<'buy' | 'withdraw'>('buy');
 
     // Merge State
     const [ghostAccount, setGhostAccount] = useState<any | null>(null);
@@ -33,15 +34,78 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
     const [withdrawals, setWithdrawals] = useState<any[]>([]);
     const [withdrawalStatusFilter, setWithdrawalStatusFilter] = useState<'pending' | 'completed' | 'rejected'>('pending');
 
+    // Online Withdrawals (Resgates Suprema)
+    const [onlineWithdrawals, setOnlineWithdrawals] = useState<any[]>([]);
+    const [onlineWithdrawalStatusFilter, setOnlineWithdrawalStatusFilter] = useState<'pending' | 'completed' | 'cancelled'>('pending');
+
     useEffect(() => {
         if (activeSubTab === 'tournaments') {
             fetchReservations();
         } else if (activeSubTab === 'credits') {
             fetchCreditRequests();
+            fetchOnlineWithdrawals();
         } else if (activeSubTab === 'withdrawals') {
             fetchWithdrawals();
         }
     }, [activeSubTab]);
+
+    const fetchOnlineWithdrawals = async () => {
+        setIsLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('online_withdrawal_requests')
+                .select('*, profiles(name, avatar_url, numeric_id)')
+                .order('created_at', { ascending: false });
+            if (error) throw error;
+            setOnlineWithdrawals(data || []);
+        } catch (err) {
+            console.error("Erro ao buscar resgates online:", err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleProcessOnlineWithdrawal = async (id: string, action: 'complete' | 'cancel', amount?: number, userId?: string, playerNick?: string) => {
+        const actionLabel = action === 'complete' ? 'AUTORIZAR E ADICIONAR SALDO' : 'CANCELAR';
+        if (!window.confirm(`Confirma ${actionLabel} para este resgate de R$ ${(amount || 0).toFixed(2)}?`)) return;
+
+        setIsLoading(true);
+        try {
+            if (action === 'complete') {
+                // Adicionar saldo BRL ao usuário
+                const { error: rpcErr } = await supabase.rpc('secure_balance_transaction', {
+                    p_user_id: userId,
+                    p_brl_amount: amount,
+                    p_description: `Resgate de Fichas Suprema (Nick: ${playerNick})`,
+                    p_category: 'deposit'
+                });
+                if (rpcErr) throw rpcErr;
+
+                const { error } = await supabase.from('online_withdrawal_requests').update({ status: 'completed' }).eq('id', id);
+                if (error) throw error;
+
+                await supabase.from('audit_logs').insert({
+                    admin_id: currentUser.id,
+                    action_type: 'ONLINE_WITHDRAWAL_APPROVED',
+                    description: `Admin aprovou resgate de R$ ${(amount || 0).toFixed(2)} (Nick: ${playerNick})`,
+                    target_user_id: userId,
+                    details: { request_id: id, amount }
+                });
+
+                alert("Resgate autorizado com sucesso! Saldo adicionado à carteira do jogador.");
+            } else {
+                const { error } = await supabase.from('online_withdrawal_requests').update({ status: 'cancelled' }).eq('id', id);
+                if (error) throw error;
+                alert("Pedido de resgate cancelado.");
+            }
+            fetchOnlineWithdrawals();
+        } catch (err: any) {
+            console.error("Erro ao processar resgate:", err);
+            alert("Erro: " + (err.message || "Falha ao processar solicitação."));
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const fetchWithdrawals = async () => {
         setIsLoading(true);
@@ -142,6 +206,8 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
 
             if (error) throw error;
             setReservations(prev => prev.filter(r => r.id !== id));
+            if (refreshSupabaseData) await refreshSupabaseData();
+            alert("Reserva excluída com sucesso.");
         } catch (err) {
             console.error("Erro ao excluir reserva:", err);
             alert("Erro ao excluir reserva.");
@@ -329,9 +395,9 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
                         className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeSubTab === 'credits' ? 'bg-white dark:bg-white/10 text-primary shadow-sm' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-white/5'}`}
                     >
                         Suprema Poker
-                        {creditRequests.filter(r => r.status === 'pending').length > 0 && (
+                        {(creditRequests.filter(r => r.status === 'pending').length + onlineWithdrawals.filter(w => w.status === 'pending').length) > 0 && (
                             <span className="bg-primary text-white text-[10px] px-1.5 py-0.5 rounded-full">
-                                {creditRequests.filter(r => r.status === 'pending').length}
+                                {creditRequests.filter(r => r.status === 'pending').length + onlineWithdrawals.filter(w => w.status === 'pending').length}
                             </span>
                         )}
                     </button>
@@ -391,19 +457,62 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
                 </>
             ) : activeSubTab === 'credits' ? (
                 <>
-                    <div className="flex items-center gap-3 w-full sm:w-auto">
-                        <select
-                            value={creditStatusFilter}
-                            onChange={(e) => setCreditStatusFilter(e.target.value as any)}
-                            className="bg-gray-50 dark:bg-black border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-primary flex-1 sm:w-48 appearance-none bg-no-repeat bg-[right_0.5rem_center] bg-[length:1.2em_1.2em]"
-                            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")` }}
-                        >
-                            <option value="pending">Aguardando Envio</option>
-                            <option value="completed">Concluídos</option>
-                            <option value="cancelled">Estornados / Editados</option>
-                        </select>
-                        <button onClick={fetchCreditRequests} className="p-2 bg-gray-100 dark:bg-white/5 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400">
-                        </button>
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div className="flex bg-gray-100 dark:bg-black/30 p-1 rounded-xl w-full sm:w-auto">
+                            <button
+                                onClick={() => setSupremaSubTab('buy')}
+                                className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${supremaSubTab === 'buy' ? 'bg-white dark:bg-white/10 text-primary shadow-sm' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
+                            >
+                                <span className="material-icons-outlined text-sm">shopping_cart</span>
+                                Depósitos
+                                {creditRequests.filter(r => r.status === 'pending').length > 0 && (
+                                    <span className="bg-primary text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                                        {creditRequests.filter(r => r.status === 'pending').length}
+                                    </span>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => setSupremaSubTab('withdraw')}
+                                className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${supremaSubTab === 'withdraw' ? 'bg-neon-pink/20 text-neon-pink shadow-sm shadow-neon-pink/10' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
+                            >
+                                <span className="material-icons-outlined text-sm">payments</span>
+                                Saques (Resgates)
+                                {onlineWithdrawals.filter(w => w.status === 'pending').length > 0 && (
+                                    <span className="bg-neon-pink text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                                        {onlineWithdrawals.filter(w => w.status === 'pending').length}
+                                    </span>
+                                )}
+                            </button>
+                        </div>
+
+                        <div className="flex items-center gap-3 w-full sm:w-auto">
+                            {supremaSubTab === 'buy' ? (
+                                <select
+                                    value={creditStatusFilter}
+                                    onChange={(e) => setCreditStatusFilter(e.target.value as any)}
+                                    className="bg-gray-50 dark:bg-black border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-primary flex-1 sm:w-48 appearance-none bg-no-repeat bg-[right_0.5rem_center] bg-[length:1.2em_1.2em]"
+                                    style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")` }}
+                                >
+                                    <option value="pending">Aguardando Envio (Depósitos)</option>
+                                    <option value="completed">Concluídos</option>
+                                    <option value="cancelled">Estornados / Editados</option>
+                                </select>
+                            ) : (
+                                <select
+                                    value={onlineWithdrawalStatusFilter}
+                                    onChange={(e) => setOnlineWithdrawalStatusFilter(e.target.value as any)}
+                                    className="bg-gray-50 dark:bg-black border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-primary flex-1 sm:w-48 appearance-none bg-no-repeat bg-[right_0.5rem_center] bg-[length:1.2em_1.2em]"
+                                    style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")` }}
+                                >
+                                    <option value="pending">Aguardando Recebimento (Saques)</option>
+                                    <option value="completed">Concluídos</option>
+                                    <option value="cancelled">Cancelados</option>
+                                </select>
+                            )}
+                            <button onClick={() => supremaSubTab === 'buy' ? fetchCreditRequests() : fetchOnlineWithdrawals()} className="p-2 bg-gray-100 dark:bg-white/5 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400">
+                                <span className="material-icons-outlined text-sm">refresh</span>
+                            </button>
+                        </div>
                     </div>
                 </>
             ) : activeSubTab === 'withdrawals' ? (
@@ -502,89 +611,173 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
                             </tbody>
                         </table>
                     ) : activeSubTab === 'credits' ? (
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-gray-50 dark:bg-white/[0.02] border-b border-gray-200 dark:border-white/10">
-                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Jogador</th>
-                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Dados Suprema</th>
-                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Valor BRL</th>
-                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Data</th>
-                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Ação do Admin</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-white/5">
-                                {isLoading ? (
-                                    <tr>
-                                        <td colSpan={5} className="p-8 text-center text-gray-500">Carregando...</td>
+                        supremaSubTab === 'buy' ? (
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-gray-50 dark:bg-white/[0.02] border-b border-gray-200 dark:border-white/10">
+                                        <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Jogador</th>
+                                        <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Dados Suprema</th>
+                                        <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Valor BRL</th>
+                                        <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Data</th>
+                                        <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Ação do Admin</th>
                                     </tr>
-                                ) : filteredCredits.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={5} className="p-8 text-center text-gray-500">Nenhum pedido encontrado.</td>
-                                    </tr>
-                                ) : (
-                                    filteredCredits.map(req => (
-                                        <tr key={req.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
-                                            <td className="p-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-white/10 overflow-hidden shrink-0">
-                                                        {req.profiles?.avatar_url ? (
-                                                            <img src={req.profiles.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                                                        ) : (
-                                                            <span className="material-icons-outlined text-gray-400 w-full h-full flex items-center justify-center text-sm">person</span>
-                                                        )}
-                                                    </div>
-                                                    <div>
-                                                        <div className="text-sm font-bold text-gray-900 dark:text-white">{req.profiles?.name || 'Desconhecido'}</div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="p-4">
-                                                <div className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{req.suprema_nickname}</div>
-                                                <div className="text-xs text-gray-500">ID: {req.suprema_user_id}</div>
-                                            </td>
-                                            <td className="p-4">
-                                                <span className="text-sm font-black text-gray-900 dark:text-white">R$ {req.amount_brl.toFixed(2)}</span>
-                                            </td>
-                                            <td className="p-4 text-sm text-gray-500">
-                                                {new Date(req.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                                            </td>
-                                            <td className="p-4 text-right">
-                                                {req.status === 'pending' ? (
-                                                    <div className="flex justify-end gap-2">
-                                                        <button
-                                                            onClick={() => handleProcessCreditRequest(req.id, 'complete')}
-                                                            className="flex items-center gap-1 bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm"
-                                                            title="Marcar como enviado (Fichas enviadas no App)"
-                                                        >
-                                                            <span className="material-icons-outlined text-sm">check</span>
-                                                            Já Enviei
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleProcessCreditRequest(req.id, 'cancel')}
-                                                            className="flex items-center gap-1 bg-gray-200 hover:bg-red-500 text-gray-700 hover:text-white dark:bg-white/10 dark:text-gray-300 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm"
-                                                            title="Cancelar Pedido e Estornar BRL"
-                                                        >
-                                                            <span className="material-icons-outlined text-sm">close</span>
-                                                            Recusar / Estornar
-                                                        </button>
-                                                    </div>
-                                                ) : req.status === 'completed' ? (
-                                                    <span className="inline-flex items-center gap-1 bg-green-500/10 text-green-500 px-3 py-1.5 rounded-lg text-xs font-bold">
-                                                        <span className="material-icons-outlined text-sm">check_circle</span>
-                                                        Processado
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center gap-1 bg-red-500/10 text-red-500 px-3 py-1.5 rounded-lg text-xs font-bold">
-                                                        <span className="material-icons-outlined text-sm">cancel</span>
-                                                        Cancelado
-                                                    </span>
-                                                )}
-                                            </td>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-white/5">
+                                    {isLoading ? (
+                                        <tr>
+                                            <td colSpan={5} className="p-8 text-center text-gray-500">Carregando...</td>
                                         </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
+                                    ) : filteredCredits.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={5} className="p-8 text-center text-gray-500">Nenhum pedido encontrado.</td>
+                                        </tr>
+                                    ) : (
+                                        filteredCredits.map(req => (
+                                            <tr key={req.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
+                                                <td className="p-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-white/10 overflow-hidden shrink-0">
+                                                            {req.profiles?.avatar_url ? (
+                                                                <img src={req.profiles.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <span className="material-icons-outlined text-gray-400 w-full h-full flex items-center justify-center text-sm">person</span>
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-sm font-bold text-gray-900 dark:text-white">{req.profiles?.name || 'Desconhecido'}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{req.suprema_nickname}</div>
+                                                    <div className="text-xs text-gray-500">ID: {req.suprema_user_id}</div>
+                                                </td>
+                                                <td className="p-4">
+                                                    <span className="text-sm font-black text-gray-900 dark:text-white">R$ {req.amount_brl.toFixed(2)}</span>
+                                                </td>
+                                                <td className="p-4 text-sm text-gray-500">
+                                                    {new Date(req.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                </td>
+                                                <td className="p-4 text-right">
+                                                    {req.status === 'pending' ? (
+                                                        <div className="flex justify-end gap-2">
+                                                            <button
+                                                                onClick={() => handleProcessCreditRequest(req.id, 'complete')}
+                                                                className="flex items-center gap-1 bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm"
+                                                                title="Marcar como enviado (Fichas enviadas no App)"
+                                                            >
+                                                                <span className="material-icons-outlined text-sm">check</span>
+                                                                Já Enviei
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleProcessCreditRequest(req.id, 'cancel')}
+                                                                className="flex items-center gap-1 bg-gray-200 hover:bg-red-500 text-gray-700 hover:text-white dark:bg-white/10 dark:text-gray-300 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm"
+                                                                title="Cancelar Pedido e Estornar BRL"
+                                                            >
+                                                                <span className="material-icons-outlined text-sm">close</span>
+                                                                Recusar / Estornar
+                                                            </button>
+                                                        </div>
+                                                    ) : req.status === 'completed' ? (
+                                                        <span className="inline-flex items-center gap-1 bg-green-500/10 text-green-500 px-3 py-1.5 rounded-lg text-xs font-bold">
+                                                            <span className="material-icons-outlined text-sm">check_circle</span>
+                                                            Processado
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1 bg-red-500/10 text-red-500 px-3 py-1.5 rounded-lg text-xs font-bold">
+                                                            <span className="material-icons-outlined text-sm">cancel</span>
+                                                            Cancelado
+                                                        </span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        ) : (
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-gray-50 dark:bg-white/[0.02] border-b border-gray-200 dark:border-white/10">
+                                        <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Jogador</th>
+                                        <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Nick Suprema</th>
+                                        <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Valor do Resgate</th>
+                                        <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Data</th>
+                                        <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Ação do Admin</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-white/5">
+                                    {isLoading ? (
+                                        <tr>
+                                            <td colSpan={5} className="p-8 text-center text-gray-500">Carregando...</td>
+                                        </tr>
+                                    ) : onlineWithdrawals.filter(w => w.status === onlineWithdrawalStatusFilter).length === 0 ? (
+                                        <tr>
+                                            <td colSpan={5} className="p-8 text-center text-gray-500">Nenhum resgate encontrado.</td>
+                                        </tr>
+                                    ) : (
+                                        onlineWithdrawals.filter(w => w.status === onlineWithdrawalStatusFilter).map(req => (
+                                            <tr key={req.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
+                                                <td className="p-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-white/10 overflow-hidden shrink-0">
+                                                            {req.profiles?.avatar_url ? (
+                                                                <img src={req.profiles.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <span className="material-icons-outlined text-gray-400 w-full h-full flex items-center justify-center text-sm">person</span>
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-sm font-bold text-gray-900 dark:text-white">{req.profiles?.name || 'Desconhecido'}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="text-sm font-bold text-neon-pink">{req.suprema_nickname}</div>
+                                                </td>
+                                                <td className="p-4">
+                                                    <span className="text-sm font-black text-gray-900 dark:text-white">R$ {req.amount_brl.toFixed(2)}</span>
+                                                </td>
+                                                <td className="p-4 text-sm text-gray-500">
+                                                    {new Date(req.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                </td>
+                                                <td className="p-4 text-right">
+                                                    {req.status === 'pending' ? (
+                                                        <div className="flex justify-end gap-2">
+                                                            <button
+                                                                onClick={() => handleProcessOnlineWithdrawal(req.id, 'complete', req.amount_brl, req.user_id, req.suprema_nickname)}
+                                                                className="flex items-center gap-1 bg-neon-pink hover:bg-white text-white hover:text-neon-pink px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm"
+                                                                title="Confirmar recebimento das fichas e liberar BRL no app"
+                                                            >
+                                                                <span className="material-icons-outlined text-sm">payments</span>
+                                                                Autorizar
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleProcessOnlineWithdrawal(req.id, 'cancel')}
+                                                                className="flex items-center gap-1 bg-gray-200 hover:bg-red-500 text-gray-700 hover:text-white dark:bg-white/10 dark:text-gray-300 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm"
+                                                            >
+                                                                <span className="material-icons-outlined text-sm">close</span>
+                                                                Cancelar
+                                                            </button>
+                                                        </div>
+                                                    ) : req.status === 'completed' ? (
+                                                        <span className="inline-flex items-center gap-1 bg-green-500/10 text-green-500 px-3 py-1.5 rounded-lg text-xs font-bold">
+                                                            <span className="material-icons-outlined text-sm">check_circle</span>
+                                                            Liberado
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1 bg-red-500/10 text-red-500 px-3 py-1.5 rounded-lg text-xs font-bold">
+                                                            <span className="material-icons-outlined text-sm">cancel</span>
+                                                            Cancelado
+                                                        </span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        )
                     ) : activeSubTab === 'withdrawals' ? (
                         <table className="w-full text-left border-collapse">
                             <thead>

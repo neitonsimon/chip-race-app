@@ -422,10 +422,50 @@ export function useOperations({
         if (!selectedCommand) return;
         const profile = selectedCommand?.profiles;
         const isVipActive = profile?.is_vip && profile?.vip_expires_at && new Date(profile.vip_expires_at) > new Date();
-        const finalPrice = getVipPrice(item.price, 'torneio', item.name);
+        let finalPrice = getVipPrice(item.price, 'torneio', item.name);
 
         const isAddon = item.name === 'Add On' || item.name === 'Add Duplo';
-        const bonusNote = isAddon && isVipActive ? ' (+5K fichas VIP)' : '';
+        const isBuyIn = item.name.toLowerCase().includes('buy in') || item.name.toLowerCase().includes('buy-in');
+        const isStaff = item.name.toLowerCase() === 'staff';
+        
+        let bonusNote = isAddon && isVipActive ? ' (+5K fichas VIP)' : '';
+
+        // Auto Bônus Reserva (Time Chip)
+        let hasReservation = false;
+        if (selectedEvent) {
+            try {
+                const { data } = await supabase.from('tournament_reservations')
+                    .select('id')
+                    .eq('event_id', selectedEvent.id)
+                    .eq('user_id', selectedCommand.user_id)
+                    .in('status', ['reserved', 'confirmed'])
+                    .single();
+                if (data) hasReservation = true;
+            } catch (e) {
+                // no reservation found
+            }
+        }
+
+        if (hasReservation && selectedEvent) {
+            if (isBuyIn && selectedEvent.time_chip_chips) {
+                bonusNote += ` (+${selectedEvent.time_chip_chips} fichas App)`;
+            }
+            if (isAddon && selectedEvent.time_chip_addon_chips) {
+                bonusNote += ` (+${selectedEvent.time_chip_addon_chips} fichas App)`;
+            }
+            if (selectedEvent.time_chip_discount_brl) {
+                const dValue = selectedEvent.time_chip_discount_brl.toString().toLowerCase().trim();
+                // A regra mais comum: "free" se aplica ao Staff Bonus, enquanto descontos numéricos ao Buy In
+                if (dValue === 'free' && isStaff) {
+                    finalPrice = 0;
+                    bonusNote += ' (Staff Free - App)';
+                } else if (!isNaN(Number(dValue)) && Number(dValue) > 0 && isBuyIn) {
+                    finalPrice = Math.max(0, finalPrice - Number(dValue));
+                    bonusNote += ` (-R$ ${dValue} Bônus App)`;
+                }
+            }
+        }
+
         const { error } = await supabase.from('command_items').insert({
             command_id: selectedCommand.id,
             product_id: null,

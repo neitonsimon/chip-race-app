@@ -1955,7 +1955,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                                 )}
                                                 <div className="text-xl font-display font-bold text-secondary mt-2 bg-secondary/10 px-4 py-1 rounded-full inline-block border border-secondary/30">
                                                     {(() => {
-                                                        const mainRankingId = viewClosedEvent.includedRankings?.[0];
+                                                        const mainRankingId = viewClosedEvent.includedRankings?.find(id => winner.pointsPerRanking?.[id] !== undefined) || viewClosedEvent.includedRankings?.[0];
                                                         return mainRankingId
                                                             ? (winner.pointsPerRanking?.[mainRankingId] ?? winner.calculatedPoints)
                                                             : winner.calculatedPoints;
@@ -2027,7 +2027,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                                         </td>
                                                         <td className="px-4 py-4 text-center font-display font-black text-secondary">
                                                             {(() => {
-                                                                const mainRankingId = viewClosedEvent.includedRankings?.[0];
+                                                                const mainRankingId = viewClosedEvent.includedRankings?.find(id => result.pointsPerRanking?.[id] !== undefined) || viewClosedEvent.includedRankings?.[0];
                                                                 return mainRankingId
                                                                     ? (result.pointsPerRanking?.[mainRankingId] ?? result.calculatedPoints)
                                                                     : result.calculatedPoints;

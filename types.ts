@@ -97,6 +97,9 @@ export interface Event {
   staffBonusChips?: string;
   timeChipValue?: string;
   timeChipChips?: string;
+  timeChipAddonChips?: string;
+  timeChipDiscountBrl?: string;
+  maxCapacity?: string;
   // --- New Cash Game Properties ---
   gameMode?: 'tournament' | 'cash_game';
   cashGameType?: 'omaha4' | 'omaha5' | 'texas';

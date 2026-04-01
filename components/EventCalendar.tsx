@@ -24,6 +24,8 @@ interface EventCalendarProps {
     scoringSchemas: ScoringSchema[]; // Global scoring formulas
     isLoading?: boolean;
     onSelectPlayerByName?: (name: string) => void;
+    userReservations: string[];
+    onRefreshData?: () => Promise<void>;
 }
 
 // Tipos auxiliares para o Closing
@@ -136,7 +138,9 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
     rankings,
     scoringSchemas,
     isLoading,
-    onSelectPlayerByName
+    onSelectPlayerByName,
+    userReservations,
+    onRefreshData
 }) => {
     const [editingEvent, setEditingEvent] = useState<Event | null>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -159,6 +163,10 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
     // States para Encerrar Evento / Gerenciar Resultados
     const [closingEvent, setClosingEvent] = useState<Event | null>(null);
+    const [reservingEvent, setReservingEvent] = useState<Event | null>(null);
+    const [currentReservationsCount, setCurrentReservationsCount] = useState<number>(0);
+    const [reservationPlayers, setReservationPlayers] = useState<any[]>([]);
+    const [showReservationPlayers, setShowReservationPlayers] = useState(false);
     const [formulaType, setFormulaType] = useState<RankingFormula>('weekly');
     const [totalPlayers, setTotalPlayers] = useState<number>(0);
     const [buyinValue, setBuyinValue] = useState<number>(0);
@@ -279,12 +287,12 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
     };
 
     const isMonetaryField = (field: string) => {
-        const monetaryFields = ['buyin', 'rebuyValue', 'doubleRebuyValue', 'addonValue', 'doubleAddonValue', 'staffBonusValue'];
+        const monetaryFields = ['buyin', 'rebuyValue', 'doubleRebuyValue', 'addonValue', 'doubleAddonValue', 'staffBonusValue', 'timeChipDiscountBrl'];
         return monetaryFields.includes(field);
     };
 
     const isChipField = (field: string) => {
-        const chipFields = ['stack', 'rebuyChips', 'doubleRebuyChips', 'addonChips', 'doubleAddonChips', 'staffBonusChips', 'timeChipChips'];
+        const chipFields = ['stack', 'rebuyChips', 'doubleRebuyChips', 'addonChips', 'doubleAddonChips', 'staffBonusChips', 'timeChipChips', 'timeChipAddonChips'];
         return chipFields.includes(field);
     };
 
@@ -574,18 +582,45 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
             alert("Você precisa estar logado para reservar um assento.");
             return;
         }
+        
+        // Fetch current reservations count
+        try {
+            const { data, count, error } = await supabase
+                .from('tournament_reservations')
+                .select('profiles(name, avatar_url)', { count: 'exact' })
+                .eq('event_id', eventToReserve.id)
+                .in('status', ['reserved', 'confirmed']);
+                
+            if (!error && data) {
+                setCurrentReservationsCount(count || 0);
+                setReservationPlayers(data.map(d => d.profiles));
+            } else {
+                setCurrentReservationsCount(0);
+                setReservationPlayers([]);
+            }
+        } catch (e) {
+            setCurrentReservationsCount(0);
+            setReservationPlayers([]);
+        }
+        
+        setShowReservationPlayers(false);
+        setReservingEvent(eventToReserve);
+    };
+
+    const confirmReservation = async () => {
+        if (!currentUser || !reservingEvent) return;
 
         try {
             const { error } = await supabase
                 .from('tournament_reservations')
                 .insert({
-                    event_id: eventToReserve.id,
+                    event_id: reservingEvent.id,
                     user_id: currentUser.id,
                     status: 'reserved'
                 });
 
             if (error) {
-                if (error.code === '23505') { // Unique constraint violation usually
+                if (error.code === '23505') {
                     alert("Você já possui reserva para este evento.");
                 } else {
                     console.error("Erro ao reservar:", error);
@@ -593,12 +628,38 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                 }
             } else {
                 alert("Assento reservado com sucesso! A organização foi notificada.");
+                if (onRefreshData) await onRefreshData();
             }
         } catch (err) {
             console.error("Erro inesperado:", err);
             alert("Ocorreu um erro ao processar sua reserva.");
+        } finally {
+            setReservingEvent(null);
         }
     };
+
+    const cancelReservation = async () => {
+        if (!currentUser || !reservingEvent) return;
+        if (!window.confirm("Deseja realmente cancelar sua reserva?")) return;
+
+        try {
+            const { error } = await supabase
+                .from('tournament_reservations')
+                .delete()
+                .eq('event_id', reservingEvent.id)
+                .eq('user_id', currentUser.id);
+
+            if (error) throw error;
+
+            alert("Reserva cancelada com sucesso.");
+            setReservingEvent(null);
+            if (onRefreshData) await onRefreshData();
+        } catch (err: any) {
+            console.error("Erro ao cancelar reserva:", err);
+            alert("Erro ao cancelar reserva: " + (err.message || "Erro desconhecido"));
+        }
+    };
+
 
     // --- LOGICA DE CÁLCULO DE PONTOS ---
 
@@ -1155,11 +1216,18 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                         {/* Botão de Reservar (Para todos os usuários em eventos abertos) */}
                                         {event.status !== 'closed' && event.gameMode === 'tournament' && event.type !== 'online' && (
                                             <button
-                                                onClick={(e) => { e.stopPropagation(); handleReserveSeat(event); }}
-                                                className="px-6 py-2 w-full mt-2 rounded-full font-bold text-xs uppercase tracking-widest transition-all bg-green-600/20 text-green-500 border border-green-600/50 hover:bg-green-600 hover:text-white flex items-center gap-2 md:w-auto justify-center"
+                                                onClick={(e) => { 
+                                                    e.stopPropagation(); 
+                                                    handleReserveSeat(event); 
+                                                }}
+                                                className={`px-6 py-2 w-full mt-2 rounded-full font-bold text-xs uppercase tracking-widest transition-all ${
+                                                    userReservations.includes(event.id) 
+                                                        ? "bg-blue-600/20 text-blue-400 border border-blue-600/50 hover:bg-blue-600 hover:text-white" 
+                                                        : "bg-green-600/20 text-green-500 border border-green-600/50 hover:bg-green-600 hover:text-white"
+                                                } flex items-center gap-2 md:w-auto justify-center`}
                                             >
-                                                <span className="material-icons-outlined text-sm">event_seat</span>
-                                                Reservar Assento
+                                                <span className="material-icons-outlined text-sm">{userReservations.includes(event.id) ? "visibility" : "event_seat"}</span>
+                                                {userReservations.includes(event.id) ? "Ver Reserva" : "Reservar Assento"}
                                             </button>
                                         )}
 
@@ -1313,7 +1381,35 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                         {renderStructureRow("Add-on", viewEvent.addonValue, viewEvent.addonChips, viewThemeStyles?.textSec, "shopping_basket")}
                                                         {renderStructureRow("Add-on Duplo", viewEvent.doubleAddonValue, viewEvent.doubleAddonChips, viewThemeStyles?.textSec, "auto_awesome_motion")}
                                                         {/* Staff Bonus moved to buy-in row */}
-                                                        {renderStructureRow("Time Chip", viewEvent.timeChipValue, viewEvent.timeChipChips, "text-green-400 font-bold", "schedule")}
+                                                        {/* Bônus de Reserva (Time Chip) */}
+                                                        {viewEvent.timeChipValue && (
+                                                            <div className="bg-white/[0.02] p-3 rounded-lg border border-white/5 flex flex-col gap-2 group hover:bg-white/[0.05] transition-all">
+                                                                <div className="flex items-center gap-2 mb-1">
+                                                                    <span className="material-icons-outlined text-sm text-green-400/60 group-hover:text-green-400 transition-colors">verified</span>
+                                                                    <span className="text-xs text-green-400 font-bold uppercase tracking-wider">{viewEvent.timeChipValue}</span>
+                                                                </div>
+                                                                <div className="grid grid-cols-3 gap-2 text-right">
+                                                                    {viewEvent.timeChipChips && (
+                                                                        <div className="flex flex-col items-end">
+                                                                            <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Buy-in Extra</span>
+                                                                            <span className="text-sm font-bold text-white">{viewEvent.timeChipChips}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {viewEvent.timeChipAddonChips && (
+                                                                        <div className="flex flex-col items-end border-l border-white/5 pl-2">
+                                                                            <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Add-on Extra</span>
+                                                                            <span className="text-sm font-bold text-white">{viewEvent.timeChipAddonChips}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {viewEvent.timeChipDiscountBrl && (
+                                                                        <div className="flex flex-col items-end border-l border-white/5 pl-2">
+                                                                            <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Desconto</span>
+                                                                            <span className="text-sm font-bold text-green-400">{viewEvent.timeChipDiscountBrl}</span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </>
 
                                                 )}
@@ -1500,9 +1596,8 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                                 R$ {winner.prize.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                             </div>
                                                         )}
-                                                        {/* POINTS ADDED HERE - Conditional */}
                                                         {viewClosedEvent.includedRankings && viewClosedEvent.includedRankings.length > 0 && (() => {
-                                                            const mainRankingId = viewClosedEvent.includedRankings[0];
+                                                            const mainRankingId = viewClosedEvent.includedRankings.find(id => winner.pointsPerRanking?.[id] !== undefined) || viewClosedEvent.includedRankings[0];
                                                             const savedPts = winner.pointsPerRanking?.[mainRankingId] ?? winner.calculatedPoints;
                                                             return (
                                                                 <div className={`text-lg font-display font-bold ${viewClosedEvent.type === 'live' ? 'text-yellow-500 bg-yellow-500/10 border-yellow-500/30' : 'text-secondary bg-secondary/10 border-secondary/30'} mt-1 px-3 py-0.5 rounded-full inline-block border`}>
@@ -1600,7 +1695,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                                             {result.prize > 0 ? `R$ ${result.prize.toLocaleString('pt-BR')}` : '-'}
                                                                         </td>
                                                                         {viewClosedEvent.includedRankings && viewClosedEvent.includedRankings.length > 0 && (() => {
-                                                                            const mainRankingId = viewClosedEvent.includedRankings![0];
+                                                                            const mainRankingId = viewClosedEvent.includedRankings.find(id => result.pointsPerRanking?.[id] !== undefined) || viewClosedEvent.includedRankings[0];
                                                                             const savedPts = result.pointsPerRanking?.[mainRankingId] ?? result.calculatedPoints;
                                                                             return (
                                                                                 <td className={`px-4 py-3 text-center font-display font-black ${viewClosedThemeStyles?.textMain}`}>
@@ -2191,6 +2286,10 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                     <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Garantido</label>
                                                     <input type="text" value={editingEvent.guaranteed} onChange={(e) => handleInputChange('guaranteed', e.target.value)} className="w-full bg-black/20 border border-white/10 rounded p-2 text-white focus:border-primary outline-none" placeholder="10K" />
                                                 </div>
+                                                <div>
+                                                    <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Max Assentos</label>
+                                                    <input type="number" value={editingEvent.maxCapacity || ''} onChange={(e) => setEditingEvent({ ...editingEvent, maxCapacity: e.target.value })} className="w-full bg-black/20 border border-white/10 rounded p-2 text-white focus:border-primary outline-none" placeholder="Ex: 45" />
+                                                </div>
                                             </div>
                                         </div>
 
@@ -2248,10 +2347,23 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                     </div>
                                                 </div>
                                                 <div className="p-2 border border-white/5 rounded">
-                                                    <div className="text-xs text-gray-400 mb-2 font-bold">TIME CHIP</div>
-                                                    <div className="grid grid-cols-2 gap-2">
-                                                        <input type="text" placeholder="Condição" value={editingEvent.timeChipValue || ''} onChange={(e) => handleInputChange('timeChipValue', e.target.value)} className="w-full bg-black/30 border border-white/10 rounded p-1 text-sm text-white" />
-                                                        <input type="text" placeholder="Fichas" value={editingEvent.timeChipChips || ''} onChange={(e) => handleInputChange('timeChipChips', e.target.value)} className="w-full bg-black/30 border border-white/10 rounded p-1 text-sm text-white" />
+                                                    <div className="text-xs text-green-400 mb-2 font-bold uppercase tracking-widest">Bônus de Reserva</div>
+                                                    <div className="flex flex-col gap-2">
+                                                        <input type="text" placeholder="Gatilho/Condição (ex: Reserva App/Site)" value={editingEvent.timeChipValue || ''} onChange={(e) => handleInputChange('timeChipValue', e.target.value)} className="w-full bg-black/30 border border-white/10 rounded p-1 text-sm text-white" />
+                                                        <div className="grid grid-cols-3 gap-2">
+                                                            <div>
+                                                                <span className="text-[10px] text-gray-500 mb-1 block">Buy-in Extra</span>
+                                                                <input type="text" placeholder="Fichas" value={editingEvent.timeChipChips || ''} onChange={(e) => handleInputChange('timeChipChips', e.target.value)} className="w-full bg-black/30 border border-white/10 rounded p-1 text-[11px] text-white" />
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[10px] text-gray-500 mb-1 block">Add-on Extra</span>
+                                                                <input type="text" placeholder="Fichas" value={editingEvent.timeChipAddonChips || ''} onChange={(e) => handleInputChange('timeChipAddonChips', e.target.value)} className="w-full bg-black/30 border border-white/10 rounded p-1 text-[11px] text-white" />
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[10px] text-gray-500 mb-1 block">Desconto (R$)</span>
+                                                                <input type="text" placeholder="Ex: 10, free" value={editingEvent.timeChipDiscountBrl || ''} onChange={(e) => handleInputChange('timeChipDiscountBrl', e.target.value)} className="w-full bg-black/30 border border-white/10 rounded p-1 text-[11px] text-green-400" />
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -2363,6 +2475,142 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                     </div>
                 )}
 
+
+                {/* MODAL DE RESERVA */}
+                {reservingEvent && (
+                    <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
+                        <div className="bg-[#1c1c1c] border border-green-500/30 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-fade-in relative">
+                            <button
+                                onClick={() => setReservingEvent(null)}
+                                className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+                            >
+                                <span className="material-icons-outlined">close</span>
+                            </button>
+
+                            <div className="p-6 md:p-8">
+                                <div className={`flex items-center gap-3 ${userReservations.includes(reservingEvent.id) ? 'text-blue-500' : 'text-green-500'} mb-6`}>
+                                    <span className="material-icons-outlined text-4xl">{userReservations.includes(reservingEvent.id) ? 'info' : 'event_seat'}</span>
+                                    <h2 className="text-2xl font-bold uppercase tracking-wider">{userReservations.includes(reservingEvent.id) ? 'Informações da Reserva' : 'Confirmar Reserva'}</h2>
+                                </div>
+
+                                <div className="space-y-6 text-gray-300">
+                                    {reservingEvent.maxCapacity && (
+                                        <div className="bg-black/40 border border-white/10 rounded-xl p-4 flex flex-col">
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <h4 className="text-gray-400 text-sm font-bold uppercase tracking-wider mb-1">Ocupação Atual</h4>
+                                                    <div className="flex items-baseline gap-2">
+                                                        <span className="text-3xl font-black text-white">{currentReservationsCount}</span>
+                                                        <span className="text-gray-500 font-bold">/ {reservingEvent.maxCapacity} VAGAS MÁXIMAS</span>
+                                                    </div>
+                                                </div>
+                                                <button onClick={() => setShowReservationPlayers(!showReservationPlayers)} className="w-16 h-16 rounded-full border-4 border-white/10 flex items-center justify-center relative shadow-inner cursor-pointer hover:bg-white/5 transition-colors group" title="Ver Jogadores garantidos">
+                                                    <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none">
+                                                        <circle className="text-white/5" strokeWidth="4" stroke="currentColor" fill="transparent" r="28" cx="32" cy="32"/>
+                                                        <circle className="text-green-500 drop-shadow-[0_0_5px_rgba(34,197,94,0.5)] transition-all duration-1000" strokeWidth="4" strokeDasharray="175" strokeDashoffset={175 - (175 * Math.min(1, currentReservationsCount / Number(reservingEvent.maxCapacity)))} stroke="currentColor" fill="transparent" r="28" cx="32" cy="32"/>
+                                                    </svg>
+                                                    <span className="material-icons-outlined text-green-500 z-10 text-xl group-hover:scale-110 transition-transform">people</span>
+                                                    <span className="absolute bottom-1 text-[8px] font-bold text-green-500 uppercase opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap bg-black/80 px-1 rounded-sm z-20">Ver Lista</span>
+                                                </button>
+                                            </div>
+
+                                            {/* Reservation Players Expansion */}
+                                            {showReservationPlayers && reservationPlayers.length > 0 && (
+                                                <div className="mt-4 p-3 bg-black/60 rounded-xl space-y-2 max-h-40 overflow-y-auto border border-white/5 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                                                    <h5 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 sticky top-0 bg-[#0f1011] p-1 -m-1 z-10">Jogadores Garantidos:</h5>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                                                        {reservationPlayers.map((player, idx) => (
+                                                            <div key={idx} className="flex items-center gap-2 bg-white/5 rounded-lg p-2">
+                                                                <div className="w-6 h-6 rounded-full bg-white/10 overflow-hidden shrink-0">
+                                                                    <img src={player?.avatar_url || '/default-avatar.png'} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = 'https://ui-avatars.com/api/?name=User&background=random'; }} />
+                                                                </div>
+                                                                <span className="text-xs font-bold text-gray-300 truncate">{player?.name || 'Desconhecido'}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    <div>
+                                        <h3 className="text-lg font-bold text-white mb-2">Seus Compromissos:</h3>
+                                        <ul className="list-disc pl-5 space-y-2 text-sm">
+                                            <li>Você se compromete em comparecer ao evento <strong>{reservingEvent.title}</strong> na data <strong>{reservingEvent.date.split('-').reverse().join('/')}</strong>, às <strong>{reservingEvent.time}</strong>.</li>
+                                            <li>Nós nos comprometemos a garantir que sempre haverá <strong>um(1) assento disponível</strong> para você iniciar este torneio.</li>
+                                            <li>A reserva é um acordo de cavalheiros. O cancelamento sem aviso prévio nos lesa profundamente e pode afetar futuras reservas.</li>
+                                            <li>O pagamento pode ser realizado presencialmente na hora ou debitado via App Poker caso você possua créditos Online.</li>
+                                        </ul>
+                                    </div>
+
+                                    {(reservingEvent.timeChipChips || reservingEvent.timeChipAddonChips || reservingEvent.timeChipDiscountBrl) && (
+                                        <div className="bg-green-500/10 border border-green-500/30 p-4 rounded-xl">
+                                            <h3 className="text-lg font-bold text-green-400 mb-2 flex items-center gap-2">
+                                                <span className="material-icons-outlined">redeem</span> 
+                                                Bônus de Reserva do App:
+                                            </h3>
+                                            <ul className="space-y-1 text-sm font-semibold">
+                                                {reservingEvent.timeChipChips && (
+                                                    <li className="flex items-center gap-2 text-white">
+                                                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span> 
+                                                        +{reservingEvent.timeChipChips} Fichas extras (bônus no Buy-In).
+                                                    </li>
+                                                )}
+                                                {reservingEvent.timeChipAddonChips && (
+                                                    <li className="flex items-center gap-2 text-white">
+                                                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span> 
+                                                        +{reservingEvent.timeChipAddonChips} Fichas extras (bônus no Add-On).
+                                                    </li>
+                                                )}
+                                                {reservingEvent.timeChipDiscountBrl && (
+                                                    <li className="flex items-center gap-2 text-yellow-500 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]">
+                                                        <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full"></span> 
+                                                        Você receberá {String(reservingEvent.timeChipDiscountBrl).toLowerCase() === 'free' ? 'Staff Free' : `Desconto de R$ ${reservingEvent.timeChipDiscountBrl}`} ao iniciar a compra!
+                                                    </li>
+                                                )}
+                                            </ul>
+                                        </div>
+                                    )}
+
+                                    <div className="flex flex-col sm:flex-row gap-3 pt-6">
+                                        {userReservations.includes(reservingEvent.id) ? (
+                                            <>
+                                                <button
+                                                    onClick={() => setReservingEvent(null)}
+                                                    className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold uppercase tracking-widest transition-all"
+                                                >
+                                                    Fechar
+                                                </button>
+                                                <button
+                                                    onClick={cancelReservation}
+                                                    className="flex-1 py-4 bg-red-600/20 hover:bg-red-600 text-red-500 hover:text-white border border-red-600/50 rounded-xl font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                                                >
+                                                    <span className="material-icons-outlined">cancel</span>
+                                                    Cancelar Reserva
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <button
+                                                onClick={confirmReservation}
+                                                disabled={!!reservingEvent.maxCapacity && currentReservationsCount >= Number(reservingEvent.maxCapacity)}
+                                                className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest transition-all flex justify-center items-center gap-2 ${
+                                                    !!reservingEvent.maxCapacity && currentReservationsCount >= Number(reservingEvent.maxCapacity) 
+                                                    ? 'bg-red-900/50 text-red-500 border border-red-500/30 cursor-not-allowed shadow-none' 
+                                                    : 'bg-green-600 hover:bg-green-500 text-white shadow-[0_0_20px_rgba(34,197,94,0.3)] hover:shadow-[0_0_30px_rgba(34,197,94,0.5)]'
+                                                }`}
+                                            >
+                                                {!!reservingEvent.maxCapacity && currentReservationsCount >= Number(reservingEvent.maxCapacity) 
+                                                    ? 'LIMITE DE VAGAS ATINGIDO (LOTADO)' 
+                                                    : 'EU CONCORDO E QUERO RESERVAR'
+                                                }
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
         </div>
     );

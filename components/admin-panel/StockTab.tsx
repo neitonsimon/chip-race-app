@@ -9,6 +9,7 @@ interface StockTabProps {
 export const StockTab: React.FC<StockTabProps> = ({ currentUser }) => {
     const [view, setView] = useState<'overview' | 'purchase' | 'recipe'>('overview');
     const [items, setItems] = useState<any[]>([]);
+    const [products, setProducts] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -39,8 +40,14 @@ export const StockTab: React.FC<StockTabProps> = ({ currentUser }) => {
         }
     };
 
+    const fetchProducts = async () => {
+        const { data } = await supabase.from('products').select('id, name, inventory_item_id, category').not('inventory_item_id', 'is', null);
+        if (data) setProducts(data);
+    };
+
     useEffect(() => {
         fetchInventory();
+        fetchProducts();
     }, []);
 
     const resetPurchaseForm = () => {
@@ -248,10 +255,28 @@ export const StockTab: React.FC<StockTabProps> = ({ currentUser }) => {
 
                                 {purchaseMode === 'existing' ? (
                                     <div>
-                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Selecione o Insumo</label>
-                                        <select required value={pItemId} onChange={e => setPItemId(e.target.value)} className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none">
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Selecione o Insumo ou Produto</label>
+                                        <select 
+                                            required 
+                                            value={pItemId} 
+                                            onChange={e => {
+                                                const val = e.target.value;
+                                                setPItemId(val);
+                                                const selectedItem = items.find(i => i.id === val);
+                                                if (selectedItem) setPCategory(selectedItem.category);
+                                            }} 
+                                            className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none"
+                                        >
                                             <option value="">-- Selecione --</option>
-                                            {items.map(i => <option key={i.id} value={i.id}>{i.name} ({i.unit_type})</option>)}
+                                            <optgroup label="PRODUTOS (Venda)">
+                                                {products.map(p => {
+                                                    const itemName = items.find(i => i.id === p.inventory_item_id)?.name || 'Insumo Desconhecido';
+                                                    return <option key={`prod-${p.id}`} value={p.inventory_item_id}>{p.name} (Gera: {itemName})</option>;
+                                                })}
+                                            </optgroup>
+                                            <optgroup label="INSUMOS (Base)">
+                                                {items.map(i => <option key={i.id} value={i.id}>{i.name} ({i.unit_type})</option>)}
+                                            </optgroup>
                                         </select>
                                     </div>
                                 ) : (

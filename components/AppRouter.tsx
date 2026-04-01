@@ -40,7 +40,7 @@ export const AppRouter: React.FC = () => {
         handleReplyMessage, handleMarkAsRead, updateContent, updateCategory,
         badgeTemplates, experienceLevels, setEvents, setExperienceLevels,
         dailyRewards, setDailyRewards, getAllUniquePlayers, handleCreateBadgeTemplate,
-        handleDeleteMessage
+        handleDeleteMessage, userReservations, refreshSupabaseData
     } = useApp();
 
     const renderContent = () => {
@@ -65,6 +65,8 @@ export const AppRouter: React.FC = () => {
                     scoringSchemas={globalScoringSchemas}
                     isLoading={isLoading}
                     onSelectPlayerByName={handleNavigateToPlayerByName}
+                    userReservations={userReservations}
+                    onRefreshData={refreshSupabaseData}
                 />;
             case 'ranking':
                 return <RankingTable
@@ -160,6 +162,7 @@ export const AppRouter: React.FC = () => {
                     onCreateBadgeTemplate={handleCreateBadgeTemplate}
                     onSendAdminMessage={handleSendAdminMessage}
                     onCreatePoll={handleCreatePoll}
+                    onRefreshData={refreshSupabaseData}
                 />;
             case 'online-credits':
                 return <OnlineCreditsPage

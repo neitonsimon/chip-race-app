@@ -32,7 +32,8 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
             price: p.price.toString(),
             description: p.description || '',
             price_unit: p.price_unit || '',
-            inventory_item_id: p.inventory_item_id || ''
+            inventory_item_id: p.inventory_item_id || '',
+            inventory_consumption_ratio: (p.inventory_consumption_ratio || 1).toString()
         });
         // Scroll back to top to see the form
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -40,7 +41,15 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
 
     const cancelEdit = () => {
         setEditingProduct(null);
-        setNewProduct({ name: '', category: 'bar', price: '', description: '', price_unit: '', inventory_item_id: '' });
+        setNewProduct({ 
+            name: '', 
+            category: 'bar', 
+            price: '', 
+            description: '', 
+            price_unit: '', 
+            inventory_item_id: '',
+            inventory_consumption_ratio: '1'
+        });
     };
 
     return (
@@ -101,16 +110,35 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
                             </div>
                             <div>
                                 <label className="block text-[10px] font-bold text-emerald-500 uppercase mb-2 ml-1">Vincular Base de Estoque (Opcional)</label>
-                                <select
-                                    value={newProduct.inventory_item_id || ''}
-                                    onChange={e => setNewProduct({ ...newProduct, inventory_item_id: e.target.value })}
-                                    className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-emerald-400 text-sm focus:border-emerald-500 outline-none"
-                                >
-                                    <option value="">Não descontar do estoque</option>
-                                    {inventoryItems?.map((item: any) => (
-                                        <option key={item.id} value={item.id}>{item.name} ({item.unit_type})</option>
-                                    ))}
-                                </select>
+                                <div className="grid grid-cols-3 gap-2">
+                                    <select
+                                        value={newProduct.inventory_item_id || ''}
+                                        onChange={e => setNewProduct({ ...newProduct, inventory_item_id: e.target.value })}
+                                        className="col-span-2 bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-emerald-400 text-sm focus:border-emerald-500 outline-none"
+                                    >
+                                        <option value="">Sem estoque</option>
+                                        {inventoryItems?.map((item: any) => (
+                                            <option key={item.id} value={item.id}>{item.name} ({item.unit_type})</option>
+                                        ))}
+                                    </select>
+                                    <div className="relative">
+                                        <label className="absolute -top-5 left-1 text-[8px] font-bold text-gray-500 uppercase">Qtd Baixa</label>
+                                        <input
+                                            type="text"
+                                            inputMode="decimal"
+                                            value={newProduct.inventory_consumption_ratio || '1'}
+                                            onChange={e => {
+                                                const val = e.target.value.replace(',', '.');
+                                                if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                                    setNewProduct({ ...newProduct, inventory_consumption_ratio: val });
+                                                }
+                                            }}
+                                            placeholder="1"
+                                            className="w-full bg-[#050214] border border-white/10 rounded-xl px-2 py-3 text-white text-center text-sm font-black focus:border-primary outline-none"
+                                            title="Quantidade que será subtraída do estoque a cada venda (Ex: 0.06 para doses)"
+                                        />
+                                    </div>
+                                </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
@@ -202,6 +230,12 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
                                                     <span className="text-[10px] text-gray-500 uppercase font-black">{p.category}</span>
                                                     <span className="hidden sm:inline w-1 h-1 rounded-full bg-gray-700"></span>
                                                     <span className="text-[10px] text-primary font-black">R$ {Number(p.price || 0).toFixed(2)}{p.price_unit ? ` / ${p.price_unit}` : ''}</span>
+                                                    {p.inventory_consumption_ratio && Number(p.inventory_consumption_ratio) !== 1 && (
+                                                        <>
+                                                            <span className="hidden sm:inline w-1 h-1 rounded-full bg-emerald-700"></span>
+                                                            <span className="text-[9px] text-emerald-500 font-bold uppercase tracking-tighter">Baixa: {p.inventory_consumption_ratio}</span>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>

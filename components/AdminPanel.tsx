@@ -30,6 +30,7 @@ interface AdminPanelProps {
     onCreateBadgeTemplate?: (badge: any) => Promise<void>;
     onSendAdminMessage?: (subject: string, content: string, category: 'admin' | 'system' | 'tournament') => void;
     onCreatePoll?: (question: string, options: string[]) => void;
+    onRefreshData?: () => Promise<void>;
 }
 
 function applyVipDiscount(price: number, category: string, productName: string, vipStatus?: string | null): number {
@@ -66,7 +67,7 @@ function getOneTimeKeyFromNote(note: string): string | null {
     return null;
 }
 
-export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, isAdmin = false, onUpdateProfile, badgeTemplates = [], onCreateBadgeTemplate, onSendAdminMessage, onCreatePoll }) => {
+export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, isAdmin = false, onUpdateProfile, badgeTemplates = [], onCreateBadgeTemplate, onSendAdminMessage, onCreatePoll, onRefreshData }) => {
     const [activeTab, setActiveTab] = useState<'operational' | 'inventory' | 'reports' | 'launch' | 'send-gifts' | 'debts' | 'communications' | 'reservations'>('operational');
     const [events, setEvents] = useState<any[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
@@ -88,7 +89,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
     const toastTimer = useRef<any>(null);
 
     // Launch Tab State
-    const [newProduct, setNewProduct] = useState({ name: '', category: 'bar', price: '', description: '', price_unit: '', inventory_item_id: '' });
+    const [newProduct, setNewProduct] = useState({ name: '', category: 'bar', price: '', description: '', price_unit: '', inventory_item_id: '', inventory_consumption_ratio: '1' });
     const [allProducts, setAllProducts] = useState<any[]>([]); // Includes inactive
     const [inventoryItems, setInventoryItems] = useState<any[]>([]);
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -107,8 +108,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
 
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const upcomingEventsList = events.filter(ev => ev.status !== 'closed').sort((a, b) => a.date.localeCompare(b.date));
-    const pastEventsList = events.filter(ev => ev.status === 'closed').sort((a, b) => b.date.localeCompare(a.date));
+    const upcomingEventsList = events.filter(ev => ev.status !== 'closed' && ev.type !== 'online').sort((a, b) => a.date.localeCompare(b.date));
+    const pastEventsList = events.filter(ev => ev.status === 'closed' && ev.type !== 'online').sort((a, b) => b.date.localeCompare(a.date));
 
 
     const updatePlayerBalanceLocally = (userId: string, amount: number, type: 'brl' | 'chipz' = 'brl') => {
@@ -463,11 +464,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                 description: newProduct.description,
                 price_unit: newProduct.price_unit,
                 inventory_item_id: newProduct.inventory_item_id || null,
+                inventory_consumption_ratio: parseFloat(newProduct.inventory_consumption_ratio) || 1,
                 active: true
             });
             if (error) throw error;
             alert('✅ Produto lançado com sucesso!');
-            setNewProduct({ name: '', category: 'bar', price: '', description: '', price_unit: '', inventory_item_id: '' });
+            setNewProduct({ name: '', category: 'bar', price: '', description: '', price_unit: '', inventory_item_id: '', inventory_consumption_ratio: '1' });
             fetchAllProducts();
             fetchProducts();
         } catch (err: any) { alert('Erro: ' + err.message); }
@@ -484,13 +486,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                 price: parseFloat(newProduct.price),
                 description: newProduct.description,
                 price_unit: newProduct.price_unit,
-                inventory_item_id: newProduct.inventory_item_id || null
+                inventory_item_id: newProduct.inventory_item_id || null,
+                inventory_consumption_ratio: parseFloat(newProduct.inventory_consumption_ratio) || 1
             }).eq('id', editingProduct.id);
 
             if (error) throw error;
             alert('✅ Produto atualizado com sucesso!');
             setEditingProduct(null);
-            setNewProduct({ name: '', category: 'bar', price: '', description: '', price_unit: '', inventory_item_id: '' });
+            setNewProduct({ name: '', category: 'bar', price: '', description: '', price_unit: '', inventory_item_id: '', inventory_consumption_ratio: '1' });
             fetchAllProducts();
             fetchProducts();
         } catch (err: any) { alert('Erro ao atualizar: ' + err.message); }
@@ -586,17 +589,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
             // AUTO-DEDUCT INVENTORY
             if (closedCommands.length > 0) {
                 const { data: cmdItems } = await supabase.from('command_items')
-                    .select('quantity, products!inner(id, inventory_item_id, name)')
-                    .in('command_id', closedCommands.map((c: any) => c.id));
+                    .select('quantity, products!inner(id, inventory_item_id, name, inventory_consumption_ratio), commands!inner(inventory_deducted)')
+                    .in('command_id', closedCommands.map((c: any) => c.id))
+                    .eq('commands.inventory_deducted', false);
                 
                 if (cmdItems && cmdItems.length > 0) {
                     const stockDeductions: Record<string, { qty: number, names: Set<string> }> = {};
                     for (const item of cmdItems) {
-                        const invId = (item.products as any)?.inventory_item_id;
+                        const product = item.products as any;
+                        const invId = product?.inventory_item_id;
                         if (invId) {
                             if (!stockDeductions[invId]) stockDeductions[invId] = { qty: 0, names: new Set() };
-                            stockDeductions[invId].qty += Number(item.quantity) || 1;
-                            stockDeductions[invId].names.add((item.products as any).name);
+                            const ratio = Number(product.inventory_consumption_ratio) || 1;
+                            stockDeductions[invId].qty += (Number(item.quantity) || 1) * ratio;
+                            stockDeductions[invId].names.add(product.name);
                         }
                     }
 
@@ -883,7 +889,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                     )}
 
                     {activeTab === 'reservations' && (
-                        <ReservationsTab events={events} />
+                        <ReservationsTab 
+                            events={events} 
+                            currentUser={currentUser} 
+                            isAdmin={isAdmin}
+                            onRefreshData={onRefreshData}
+                        />
                     )}
 
                     {activeTab === 'inventory' && (
