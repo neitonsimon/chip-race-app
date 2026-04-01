@@ -688,7 +688,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                         const savedPoints = r.pointsPerRanking?.[ranking.id];
                         const pointsToAdd = (savedPoints !== undefined && savedPoints !== null)
                             ? savedPoints
-                            : calculatePoints(ev.rankingType || 'weekly', ev.results?.length || 0, Number((ev.buyin?.toString() || '0').replace(/[^0-9]/g, '')) || 0, r.position, r.prize, r.isVip, mappedSchemaId, globalScoringSchemas);
+                            : calculatePoints(
+                                ev.rankingType || 'weekly', 
+                                ev.results?.length || 0, 
+                                Number((ev.buyin?.toString() || '0').replace(/[^0-9]/g, '')) || 0, 
+                                r.position, 
+                                r.prize, 
+                                r.isVip, 
+                                mappedSchemaId, 
+                                globalScoringSchemas,
+                                r.rake || 0,
+                                r.profitLoss || 0,
+                                r.earlyStart || false,
+                                r.lateStay || false,
+                                r.minTime1h || false
+                            );
                         p.points += pointsToAdd;
                     });
                 }

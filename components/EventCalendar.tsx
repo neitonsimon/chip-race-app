@@ -676,7 +676,10 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                 schemaId,
                 scoringSchemas,
                 p.rake || 0,
-                p.profitLoss || 0
+                p.profitLoss || 0,
+                p.earlyStart || false,
+                p.lateStay || false,
+                p.minTime1h || false
             );
 
             // Calculate points for each specific ranking the event is part of
@@ -699,7 +702,10 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                             mappedSchemaId,
                             scoringSchemas,
                             p.rake || 0,
-                            p.profitLoss || 0
+                            p.profitLoss || 0,
+                            p.earlyStart || false,
+                            p.lateStay || false,
+                            p.minTime1h || false
                         );
                     }
                 });
@@ -823,7 +829,10 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                         closingEvent?.scoringSchemaId,
                         scoringSchemas,
                         updatedP.rake || 0,
-                        updatedP.profitLoss || 0
+                        updatedP.profitLoss || 0,
+                        updatedP.earlyStart || false,
+                        updatedP.lateStay || false,
+                        updatedP.minTime1h || false
                     );
                 } else {
                     updatedP.calculatedPoints = 0;
@@ -1843,7 +1852,6 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                     </div>
 
                                     {/* HEADER DA TABELA DE JOGADORES NA MODAL */}
-                                    {/* HEADER DA TABELA DE JOGADORES NA MODAL */}
                                     {(() => {
                                         if (closingEvent?.isStartingDay) {
                                             return (
@@ -1856,15 +1864,18 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                         }
 
                                         const currentSchema = scoringSchemas.find(s => s.id === closingEvent?.scoringSchemaId);
-                                        const isCashLayout = formulaType === 'cash_online' || currentSchema?.criteria.some(c => c.type === 'rake' || c.type === 'profit_loss');
+                                        const isCashLayout = formulaType === 'cash_online' || currentSchema?.criteria.some(c => ['rake', 'profit_loss', 'earlyStart', 'lateStay', 'minTime1h'].includes(c.type));
 
                                         return (
                                             <div className="flex justify-between px-2 pb-2 text-[10px] font-bold text-gray-500 uppercase gap-2">
                                                 <span className="w-1/4">Nome</span>
                                                 {isCashLayout ? (
                                                     <>
-                                                        <span className="w-20 text-center">Rake</span>
-                                                        <span className="w-20 text-center">Lucro/Perda</span>
+                                                        {currentSchema?.criteria.some(c => c.type === 'rake') && <span className="w-20 text-center">Rake</span>}
+                                                        {currentSchema?.criteria.some(c => c.type === 'profit_loss') && <span className="w-20 text-center">Lucro/Perda</span>}
+                                                        {currentSchema?.criteria.some(c => c.type === 'earlyStart') && <span className="w-10 text-center text-[8px]" title="Participar no Início">Início</span>}
+                                                        {currentSchema?.criteria.some(c => c.type === 'lateStay') && <span className="w-10 text-center text-[8px]" title="Participar no Fim">Fim</span>}
+                                                        {currentSchema?.criteria.some(c => c.type === 'minTime1h') && <span className="w-10 text-center text-[8px]" title="Participar pelo menos 1h">Até 1h</span>}
                                                     </>
                                                 ) : (
                                                     <>
@@ -1905,36 +1916,70 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                     }
 
                                                     const currentSchema = scoringSchemas.find(s => s.id === closingEvent?.scoringSchemaId);
-                                                    const isCashLayout = formulaType === 'cash_online' || currentSchema?.criteria.some(c => c.type === 'rake' || c.type === 'profit_loss');
+                                                    const isCashLayout = formulaType === 'cash_online' || currentSchema?.criteria.some(c => ['rake', 'profit_loss', 'earlyStart', 'lateStay', 'minTime1h'].includes(c.type));
 
                                                     return isCashLayout ? (
                                                         <>
-                                                            <input
-                                                                type="text"
-                                                                inputMode="decimal"
-                                                                placeholder="Rake"
-                                                                value={p.rake || ''}
-                                                                onChange={(e) => {
-                                                                    const val = e.target.value.replace(',', '.');
-                                                                    if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                                                                        updatePlayerResult(p.id, 'rake', parseFloat(val) || 0);
-                                                                    }
-                                                                }}
-                                                                className="w-20 bg-black/50 text-center text-white rounded border border-white/10"
-                                                            />
-                                                            <input
-                                                                type="text"
-                                                                inputMode="decimal"
-                                                                placeholder="+/-"
-                                                                value={p.profitLoss || ''}
-                                                                onChange={(e) => {
-                                                                    const val = e.target.value.replace(',', '.');
-                                                                    if (val === '' || /^-?\d*\.?\d*$/.test(val)) {
-                                                                        updatePlayerResult(p.id, 'profitLoss', parseFloat(val) || 0);
-                                                                    }
-                                                                }}
-                                                                className="w-20 bg-black/50 text-center text-white rounded border border-white/10"
-                                                            />
+                                                            {currentSchema?.criteria.some(c => c.type === 'rake') && (
+                                                                <input
+                                                                    type="text"
+                                                                    inputMode="decimal"
+                                                                    placeholder="Rake"
+                                                                    value={p.rake || ''}
+                                                                    onChange={(e) => {
+                                                                        const val = e.target.value.replace(',', '.');
+                                                                        if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                                                            updatePlayerResult(p.id, 'rake', parseFloat(val) || 0);
+                                                                        }
+                                                                    }}
+                                                                    className="w-20 bg-black/50 text-center text-white rounded border border-white/10"
+                                                                />
+                                                            )}
+                                                            {currentSchema?.criteria.some(c => c.type === 'profit_loss') && (
+                                                                <input
+                                                                    type="text"
+                                                                    inputMode="decimal"
+                                                                    placeholder="+/-"
+                                                                    value={p.profitLoss || ''}
+                                                                    onChange={(e) => {
+                                                                        const val = e.target.value.replace(',', '.');
+                                                                        if (val === '' || /^-?\d*\.?\d*$/.test(val)) {
+                                                                            updatePlayerResult(p.id, 'profitLoss', parseFloat(val) || 0);
+                                                                        }
+                                                                    }}
+                                                                    className="w-20 bg-black/50 text-center text-white rounded border border-white/10"
+                                                                />
+                                                            )}
+                                                            {currentSchema?.criteria.some(c => c.type === 'earlyStart') && (
+                                                                <div className="w-10 flex justify-center">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={p.earlyStart || false}
+                                                                        onChange={(e) => updatePlayerResult(p.id, 'earlyStart', e.target.checked)}
+                                                                        className="w-5 h-5 accent-secondary cursor-pointer"
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                            {currentSchema?.criteria.some(c => c.type === 'lateStay') && (
+                                                                <div className="w-10 flex justify-center">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={p.lateStay || false}
+                                                                        onChange={(e) => updatePlayerResult(p.id, 'lateStay', e.target.checked)}
+                                                                        className="w-5 h-5 accent-secondary cursor-pointer"
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                            {currentSchema?.criteria.some(c => c.type === 'minTime1h') && (
+                                                                <div className="w-10 flex justify-center">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={p.minTime1h || false}
+                                                                        onChange={(e) => updatePlayerResult(p.id, 'minTime1h', e.target.checked)}
+                                                                        className="w-5 h-5 accent-secondary cursor-pointer"
+                                                                    />
+                                                                </div>
+                                                            )}
                                                         </>
                                                     ) : (
                                                         <>

@@ -16,30 +16,6 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
     const [pixKey, setPixKey] = useState<string>('');
     const [pixType, setPixType] = useState<string>('cpf');
 
-    const [hasDeposited, setHasDeposited] = useState<boolean | null>(null);
-
-    useEffect(() => {
-        const checkFirstDeposit = async () => {
-            if (!currentUser?.id) return;
-            try {
-                // Verificamos se o usuário já recebeu algum bônus de depósito antes
-                const { data } = await supabase
-                    .from('transactions')
-                    .select('id')
-                    .eq('user_id', currentUser.id)
-                    .ilike('description', '%Bônus%')
-                    .limit(1);
-
-                // Se não encontrou nenhuma transação com "Bônus", ele é elegível
-                setHasDeposited(data && data.length > 0);
-            } catch (err) {
-                console.error("Error checking eligibility:", err);
-            }
-        };
-
-        checkFirstDeposit();
-    }, [currentUser?.id]);
-
     const [chipzPackages, setChipzPackages] = useState<ChipzPackage[]>([]);
     const [isLoadingPackages, setIsLoadingPackages] = useState(true);
 
@@ -83,13 +59,10 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                 return;
             }
 
-            // Get current session (will auto-refresh if expired)
             const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
             if (sessionError || !sessionData?.session) {
                 throw new Error('Sessão expirada. Por favor, faça login novamente para continuar.');
             }
-
-            console.log('Generating PIX for amount:', amountToAdd);
 
             const { data, error } = await supabase.functions.invoke('create-pix-payment', {
                 body: {
@@ -102,12 +75,10 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
             });
 
             if (error || !data || data.error) {
-                console.error("Erro ao gerar PIX:", error || data?.error);
                 const errMsg = data?.error || error?.message || "Serviço de pagamento indisponível no momento.";
                 throw new Error(errMsg);
             }
 
-            // Exibir o QR Code na tela
             setPixData({
                 qr_code: data.qr_code,
                 qr_code_base64: data.qr_code_base64,
@@ -122,12 +93,10 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
         }
     };
 
-    // Monitoramento do status do pagamento quando um PIX é gerado
     useEffect(() => {
         if (!pixData?.payment_id) return;
 
         const interval = setInterval(async () => {
-            // Verifica no banco de dados se o status do payment intent mudou para approved
             const { data, error } = await supabase
                 .from('payment_intents')
                 .select('status, amount')
@@ -137,7 +106,6 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
             if (!error && data && data.status === 'approved') {
                 clearInterval(interval);
 
-                // Atualiza o perfil na tela (o webhook já fez a recarga por trás)
                 if (onUpdateProfile) {
                     const { data: profile } = await supabase.from('profiles').select('balance_brl').eq('id', currentUser.id).single();
                     if (profile) {
@@ -150,14 +118,12 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                 setCustomBrlAmount('');
                 setActiveTab('brl');
             }
-        }, 3000); // Poll every 3 seconds
+        }, 3000);
 
         return () => clearInterval(interval);
     }, [pixData]);
 
-    const isLocked = !!(currentUser.balanceUnlockDate && new Date() < new Date(currentUser.balanceUnlockDate));
-    const lockedAmount = isLocked ? (currentUser.lockedBalanceBrl || 0) : 0;
-    const availableToWithdraw = Math.max(0, (currentUser.balanceBrl || 0) - lockedAmount);
+    const availableToWithdraw = Math.max(0, (currentUser.balanceBrl || 0));
 
     const handleCashOut = async () => {
         if (isProcessing) return;
@@ -177,7 +143,6 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                 return;
             }
 
-            // 1. Decrement balance locally and on DB via RPC
             const { error: dbErr, data: rpcData } = await supabase.rpc('secure_balance_transaction', {
                 p_user_id: currentUser.id,
                 p_brl_amount: -amountToWithdraw,
@@ -188,7 +153,6 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
 
             if (dbErr || rpcData === false) throw dbErr || new Error("Falha ao debitar saldo para saque. Tente novamente.");
 
-            // 2. Insert request into withdrawal_requests
             const { error: reqErr } = await supabase.from('withdrawal_requests').insert({
                 user_id: currentUser.id,
                 amount_brl: amountToWithdraw,
@@ -199,7 +163,6 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
 
             if (reqErr) throw reqErr;
 
-            // 3. Notify admin (message)
             const { data: adminRoleData } = await supabase.from('profiles').select('id').in('role', ['admin', 'staff']);
             if (adminRoleData && adminRoleData.length > 0) {
                 const notifications = adminRoleData.map(admin => ({
@@ -214,7 +177,6 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
             }
 
             if (onUpdateProfile) {
-                // Fetch the new balance after RPC
                 const { data: updatedProf } = await supabase.from('profiles').select('balance_brl').eq('id', currentUser.id).single();
                 if (updatedProf) {
                     onUpdateProfile(currentUser.id, { balanceBrl: Number(updatedProf.balance_brl) } as any);
@@ -236,7 +198,6 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
         <div className="w-full overflow-x-hidden">
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in slide-in-from-bottom-8">
 
-                {/* HEADER SECTION */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
                     <div className="min-w-0">
                         <button
@@ -250,7 +211,6 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                         <p className="text-gray-400 mt-2 text-base sm:text-lg">Gerencie seus saldos e adquira mais créditos para jogar.</p>
                     </div>
 
-                    {/* Current Balances Display - Optimized for Mobile */}
                     <div className="flex gap-2 sm:gap-4 overflow-x-hidden">
                         <div className="bg-surface-dark border border-white/10 rounded-2xl p-3 sm:p-4 flex flex-col flex-1 min-w-[140px] relative overflow-hidden group hover:border-green-500/50 transition-colors">
                             <div className="absolute top-0 right-0 w-16 h-16 bg-green-500/10 blur-xl rounded-full group-hover:bg-green-500/20 transition-colors"></div>
@@ -270,7 +230,6 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                     </div>
                 </div>
 
-                {/* Tabs - Fixed mobile horizontal scroll/break */}
                 <div className="flex border-b border-white/10 mb-8 overflow-x-auto no-scrollbar whitespace-nowrap">
                     <button
                         onClick={() => setActiveTab('brl')}
@@ -308,7 +267,6 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                     </button>
                 </div>
 
-                {/* Tab Content */}
                 <div className="relative">
                     {isProcessing && (
                         <div className="absolute inset-0 z-10 bg-background-dark/80 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center">
@@ -319,66 +277,6 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
 
                     {activeTab === 'brl' && !pixData ? (
                         <div className="flex flex-col items-center w-full gap-6">
-
-                            {/* === HERO BONUS BANNER (first-deposit only) === */}
-                            {hasDeposited === false && (
-                                <div className="w-full relative overflow-hidden rounded-[2.5rem] mb-10 group/banner">
-                                    <div className="absolute inset-0 bg-gradient-to-br from-yellow-600/30 via-orange-600/20 to-[#0A061E] z-0" />
-                                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(234,179,8,0.2),transparent_70%)] z-0" />
-
-                                    {/* Abstract Patterns */}
-                                    <div className="absolute top-0 right-0 w-96 h-96 bg-yellow-500/10 blur-[100px] rounded-full animate-pulse z-0" />
-                                    <div className="absolute bottom-[-50px] left-[-50px] w-80 h-80 bg-orange-500/10 blur-[80px] rounded-full z-0" />
-
-                                    {/* Border Glow */}
-                                    <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-transparent via-yellow-500/50 to-transparent z-10" />
-                                    <div className="absolute inset-0 rounded-[2.5rem] border border-yellow-500/20 group-hover/banner:border-yellow-500/40 transition-colors duration-700 z-10" />
-
-                                    <div className="relative z-20 p-8 md:p-12 flex flex-col md:flex-row items-center gap-8 md:gap-12 text-center md:text-left">
-                                        <div className="shrink-0 relative">
-                                            <div className="absolute inset-0 bg-yellow-500/20 blur-3xl rounded-full scale-150 animate-pulse" />
-                                            <div className="w-32 h-32 md:w-40 md:h-40 rounded-[2.5rem] bg-gradient-to-br from-yellow-400 to-orange-600 p-[2px] shadow-2xl rotate-3 transform transition-transform group-hover/banner:rotate-6 duration-500">
-                                                <div className="w-full h-full bg-[#0A061E] rounded-[2.4rem] flex flex-col items-center justify-center p-4">
-                                                    <span className="text-4xl md:text-5xl font-black text-yellow-500 leading-none">+50%</span>
-                                                    <span className="text-[10px] md:text-xs text-yellow-500/70 font-black uppercase tracking-widest mt-1">Bônus</span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex-1">
-                                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded-full mb-4">
-                                                <span className="w-2 h-2 rounded-full bg-yellow-500 animate-ping" />
-                                                <span className="text-[10px] text-yellow-500 font-black uppercase tracking-[0.2em]">Promoção de Boas-vindas</span>
-                                            </div>
-                                            <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tight mb-4 leading-tight">
-                                                Eleve seu jogo com o <br />
-                                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-500 to-yellow-300">Primeiro Depósito</span>
-                                            </h2>
-                                            <p className="text-gray-400 text-sm md:text-lg mb-8 max-w-xl leading-relaxed">
-                                                Ao realizar sua primeira recarga em nossa carteira digital,
-                                                você recebe <strong>50% de bônus automático</strong> para utilizar em qualquer torneio do Chip Race.
-                                            </p>
-
-                                            <div className="flex flex-wrap justify-center md:justify-start gap-4 mb-2">
-                                                <div className="bg-black/40 backdrop-blur-sm border border-white/5 px-4 py-2 rounded-2xl">
-                                                    <div className="text-[9px] text-gray-500 uppercase font-black mb-0.5">Depósito Mínimo</div>
-                                                    <div className="text-white font-black">R$ 10,00</div>
-                                                </div>
-                                                <div className="bg-black/40 backdrop-blur-sm border border-white/5 px-4 py-2 rounded-2xl">
-                                                    <div className="text-[9px] text-gray-500 uppercase font-black mb-0.5">Bônus Máximo</div>
-                                                    <div className="text-yellow-500 font-black">R$ 250,00</div>
-                                                </div>
-                                                <div className="bg-black/40 backdrop-blur-sm border border-yellow-500/20 px-4 py-2 rounded-2xl">
-                                                    <div className="text-[9px] text-yellow-500/70 uppercase font-black mb-0.5">Sua Vantagem</div>
-                                                    <div className="text-green-500 font-black">+ 50% EXTRA</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Purchase card */}
                             <div className="w-full max-w-md bg-surface-dark border border-white/10 rounded-3xl p-8 flex flex-col relative overflow-hidden text-center shadow-2xl">
                                 <div className="absolute top-4 right-[-35px] bg-green-500 text-black text-[10px] font-black uppercase py-1.5 px-12 rotate-45 shadow-lg">
                                     PIX / CARTÃO
@@ -402,7 +300,6 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                                         className="w-full max-w-[200px] bg-transparent text-6xl font-black text-white text-center border-b-2 border-white/20 focus:border-green-500 outline-none transition-colors pb-2"
                                     />
                                 </div>
-
 
                                 <p className="text-gray-500 text-sm mb-8 font-light">Digite o valor que deseja adicionar em sua carteira. Sem taxas adicionais.</p>
 
@@ -437,7 +334,6 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                                 </button>
                             </div>
 
-                            {/* Info Card Market */}
                             <div className="col-span-full mt-6 bg-accent/10 border border-accent/30 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-6">
                                 <div className="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
                                     <span className="material-icons-outlined text-3xl text-accent">storefront</span>
@@ -459,16 +355,6 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
 
                                 <span className="text-gray-400 text-sm font-bold uppercase tracking-widest mb-2 block">Sacar Saldo</span>
 
-                                {isLocked && lockedAmount > 0 && (
-                                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 mb-4 text-left">
-                                        <p className="text-red-400 text-xs font-bold uppercase mb-1 flex items-center gap-1">
-                                            <span className="material-icons-outlined text-[14px]">lock</span> Saldo Bloqueado (Bônus/Depósito)
-                                        </p>
-                                        <p className="text-white text-sm">R$ {lockedAmount.toFixed(2)}</p>
-                                        <p className="text-gray-400 text-xs mt-1">Disponível a partir de: {new Date(currentUser.balanceUnlockDate!).toLocaleDateString('pt-BR')}</p>
-                                    </div>
-                                )}
-
                                 <div className="bg-white/5 border border-white/10 rounded-xl p-3 mb-6 flex justify-between items-center">
                                     <span className="text-gray-400 text-sm font-bold uppercase">Livre para Saque:</span>
                                     <span className="text-green-400 font-black text-lg">R$ {availableToWithdraw.toFixed(2)}</span>
@@ -487,8 +373,8 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                                     />
                                 </div>
 
-                                <div className="mb-4">
-                                    <label className="text-gray-400 text-[10px] font-bold uppercase mb-1.5 block tracking-widest text-left">Tipo de Chave PIX</label>
+                                <div className="mb-4 text-left">
+                                    <label className="text-gray-400 text-[10px] font-bold uppercase mb-1.5 block tracking-widest">Tipo de Chave PIX</label>
                                     <select
                                         value={pixType}
                                         onChange={(e) => setPixType(e.target.value)}
@@ -501,7 +387,7 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                                         <option value="aleatoria" className="bg-[#050214]">Chave Aleatória</option>
                                     </select>
 
-                                    <label className="text-gray-400 text-[10px] font-bold uppercase mb-1.5 block tracking-widest text-left">Sua Chave PIX</label>
+                                    <label className="text-gray-400 text-[10px] font-bold uppercase mb-1.5 block tracking-widest">Sua Chave PIX</label>
                                     <input
                                         type="text"
                                         placeholder="Ex: 123.456.789-00"
@@ -525,39 +411,6 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                                 </div>
                             </div>
                         </div>
-                    ) : pixData ? (
-                        <div className="flex justify-center w-full">
-                            <div className="w-full max-w-md bg-surface-dark border border-primary/30 rounded-3xl p-8 flex flex-col relative overflow-hidden text-center shadow-[0_0_30px_rgba(236,72,153,0.1)]">
-                                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 mx-auto border border-primary/20">
-                                    <span className="material-icons-outlined text-3xl text-primary">qr_code_scanner</span>
-                                </div>
-                                <h3 className="text-xl font-bold text-white uppercase mb-2 text-primary">Pagar via PIX</h3>
-                                <p className="text-gray-400 text-sm mb-6">Escaneie o QR Code abaixo ou copie o código PIX para concluir o pagamento de R$ {Number(customBrlAmount).toFixed(2).replace('.', ',')}</p>
-
-                                <div className="bg-white p-4 rounded-xl mb-6 mx-auto w-[250px] h-[250px] flex items-center justify-center border-4 border-primary/20">
-                                    {pixData.qr_code_base64 ? (
-                                        <img src={`data:image/jpeg;base64,${pixData.qr_code_base64}`} alt="QR Code PIX" className="w-full h-full object-contain" />
-                                    ) : (
-                                        <span className="material-icons-outlined text-gray-400 text-6xl">qr_code_2</span>
-                                    )}
-                                </div>
-
-                                <button
-                                    onClick={() => {
-                                        navigator.clipboard.writeText(pixData.qr_code);
-                                        alert('Código PIX Copiado!');
-                                    }}
-                                    className="w-full bg-white/5 border border-white/10 hover:bg-white/10 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors mb-4"
-                                >
-                                    <span className="material-icons-outlined text-sm">content_copy</span> Copiar Código PIX
-                                </button>
-
-                                <div className="flex items-center justify-center gap-2 text-primary text-xs font-bold uppercase animate-pulse">
-                                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                                    Aguardando pagamento...
-                                </div>
-                            </div>
-                        </div>
                     ) : (
                         <div className="flex justify-center w-full">
                             <div className="w-full max-w-md bg-surface-dark border border-primary/30 rounded-3xl p-8 flex flex-col relative overflow-hidden text-center shadow-[0_0_30px_rgba(236,72,153,0.1)]">
@@ -567,11 +420,23 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                                 <h3 className="text-xl font-bold text-white uppercase mb-2 text-primary">Pagar via PIX</h3>
                                 <p className="text-gray-400 text-sm mb-6">Escaneie o QR Code abaixo ou copie o código PIX para concluir o pagamento de R$ {Number(customBrlAmount).toFixed(2).replace('.', ',')}</p>
 
-                                <div className="bg-white p-4 rounded-xl mb-6 mx-auto w-[200px] h-[200px] flex items-center justify-center border-4 border-primary/20">
-                                    <span className="material-icons-outlined text-gray-400 text-6xl">qr_code_2</span>
+                                <div className="bg-white p-4 rounded-xl mb-6 mx-auto w-[250px] h-[250px] flex items-center justify-center border-4 border-primary/20">
+                                    {pixData?.qr_code_base64 ? (
+                                        <img src={`data:image/jpeg;base64,${pixData.qr_code_base64}`} alt="QR Code PIX" className="w-full h-full object-contain" />
+                                    ) : (
+                                        <span className="material-icons-outlined text-gray-400 text-6xl">qr_code_2</span>
+                                    )}
                                 </div>
 
-                                <button className="w-full bg-white/5 border border-white/10 hover:bg-white/10 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors mb-4">
+                                <button
+                                    onClick={() => {
+                                        if (pixData?.qr_code) {
+                                            navigator.clipboard.writeText(pixData.qr_code);
+                                            alert('Código PIX Copiado!');
+                                        }
+                                    }}
+                                    className="w-full bg-white/5 border border-white/10 hover:bg-white/10 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors mb-4"
+                                >
                                     <span className="material-icons-outlined text-sm">content_copy</span> Copiar Código PIX
                                 </button>
 

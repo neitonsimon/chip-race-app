@@ -15,6 +15,9 @@ const CRITERIA_OPTIONS: { type: CriterionType; label: string; dataType: 'integer
     { type: 'rake', label: 'Rake Gerado', dataType: 'integer' },
     { type: 'isFt', label: 'Mesa Final (Sim/Não)', dataType: 'boolean' },
     { type: 'isVip', label: 'É VIP (Sim/Não)', dataType: 'boolean' },
+    { type: 'earlyStart', label: 'Participar no Início', dataType: 'boolean' },
+    { type: 'lateStay', label: 'Participar no Fim', dataType: 'boolean' },
+    { type: 'minTime1h', label: 'Participar pelo menos 1h', dataType: 'boolean' },
 ];
 
 export const ScoringFormulaEditor: React.FC<ScoringFormulaEditorProps> = ({ schemas, onSave, onClose }) => {

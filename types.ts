@@ -55,6 +55,9 @@ export interface PlayerResult {
   pointsPerRanking?: Record<string, number>; // Points specific to each ranking
   rake?: number; // For Cash Games
   profitLoss?: number; // For Cash Games
+  earlyStart?: boolean; // New Cash Game criterion
+  lateStay?: boolean;   // New Cash Game criterion
+  minTime1h?: boolean;  // New Cash Game criterion
   qualifierChips?: number; // Qualify chips for multi-day events
 }
 
@@ -198,7 +201,7 @@ export interface ChipzPackage {
 
 
 // NOVA INTERFACE PARA RANKINGS DINÂMICOS
-export type CriterionType = 'participants' | 'buyin' | 'itm' | 'winnings' | 'rake' | 'spent' | 'isFt' | 'isVip' | 'profit_loss';
+export type CriterionType = 'participants' | 'buyin' | 'itm' | 'winnings' | 'rake' | 'spent' | 'isFt' | 'isVip' | 'profit_loss' | 'earlyStart' | 'lateStay' | 'minTime1h';
 
 export interface ScoringCriterion {
   id: string;

@@ -10,7 +10,10 @@ export const calculatePoints = (
     schemaId?: string,
     globalSchemas?: ScoringSchema[],
     rake: number = 0,
-    profitLoss: number = 0
+    profitLoss: number = 0,
+    earlyStart: boolean = false,
+    lateStay: boolean = false,
+    minTime1h: boolean = false
 ): number => {
     if (schemaId === 'null') return 0;
     if (players <= 0 && type !== 'cash_online' && !type.includes('legacy') && !schemaId) return 0;
@@ -42,6 +45,9 @@ export const calculatePoints = (
                 else if (crit.type === 'spent') multiplier = buyin;
                 else if (crit.type === 'rake') multiplier = rake;
                 else if (crit.type === 'profit_loss') multiplier = Math.abs(profitLoss);
+                else if (crit.type === 'earlyStart' && earlyStart) multiplier = 1;
+                else if (crit.type === 'lateStay' && lateStay) multiplier = 1;
+                else if (crit.type === 'minTime1h' && minTime1h) multiplier = 1;
 
                 let currentPts = 0;
                 if (crit.operation === 'multiply') currentPts = multiplier * crit.value;
