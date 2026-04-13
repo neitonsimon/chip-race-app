@@ -190,11 +190,14 @@ export const RankingTable: React.FC<RankingTableProps> = ({
     const getLastScores = (player: RankingPlayer) => {
         if (!events) return [];
 
-        const normalize = (name: string) => name.toLowerCase().replace(/\s*\(ghost\)\s*/g, '').trim();
+        const normalize = (name: string) => name.toLowerCase().trim();
         const playerNormName = normalize(player.name);
 
         const scores = events
-            .filter(e => e.status === 'closed' && e.results && !e.is_hidden && (!e.includedRankings || e.includedRankings.includes(activeRankingId)))
+            .filter(e => {
+                const included = e.includedRankings || ['annual', 'quarterly', 'legacy'];
+                return e.status === 'closed' && e.results && !e.is_hidden && !e.isStartingDay && included.includes(activeRankingId);
+            })
             .map(e => {
                 const res = e.results?.find(r => {
                     // 1. Try matching by ID first (most robust)
@@ -206,7 +209,38 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                 if (!res) return null;
 
                 // Prioritize ranking-specific points, fallback to generic calculatedPoints
-                const points = res.pointsPerRanking?.[activeRankingId] ?? res.calculatedPoints;
+                const isSpecialEvent = e.rankingType === 'special';
+                const isLegacyRanking = activeRanking?.id === 'legacy' || activeRanking?.label.toLowerCase().includes('legado');
+                const forceRecalc = isSpecialEvent && isLegacyRanking;
+                const savedPoints = res.pointsPerRanking?.[activeRankingId];
+                const hasPointsMap = res.pointsPerRanking && Object.keys(res.pointsPerRanking).length > 0;
+                let points = 0;
+
+                if (hasPointsMap && !forceRecalc) {
+                    points = savedPoints || 0;
+                } else if (savedPoints !== undefined && savedPoints !== null && !forceRecalc) {
+                    points = savedPoints;
+                } else {
+                    const mappedSchemaId = (e.rankingType && activeRanking?.scoringSchemaMap) 
+                        ? activeRanking.scoringSchemaMap[e.rankingType] 
+                        : e.scoringSchemaId;
+                        
+                    points = calculatePoints(
+                        e.rankingType || 'weekly',
+                        e.results?.length || 0,
+                        (isSpecialEvent && res.buyinTotal) ? res.buyinTotal : (Number((e.buyin?.toString() || '0').replace(/[^0-9]/g, '')) || 0),
+                        res.position,
+                        res.prize,
+                        res.isVip,
+                        mappedSchemaId,
+                        globalScoringSchemas,
+                        res.rake || 0,
+                        res.profitLoss || 0,
+                        res.earlyStart || false,
+                        res.lateStay || false,
+                        res.minTime1h || false
+                    );
+                }
 
                 return points > 0
                     ? { date: e.date, points }

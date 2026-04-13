@@ -30,6 +30,7 @@ interface ContentDB {
         ways_title: string;
     };
     faq: { question: string; answer: string }[];
+    documents: { title: string; subtitle: string; icon: string; url: string; color: string }[];
 }
 
 interface Month {
@@ -102,7 +103,8 @@ export const SettingsTab: React.FC = () => {
         verifiedUsers: 0
     });
     const [pageViews, setPageViews] = useState<{ view_name: string, count: number, isNew?: boolean }[]>([]);
-    const [userClicks, setUserClicks] = useState<{ user_id: string, user_name: string, view_name: string, count: number }[]>([]);
+    const [userClicks, setUserClicks] = useState<{ user_id: string, user_name: string, total_count: number, pages: { view_name: string, count: number }[] }[]>([]);
+    const [expandedUserClicks, setExpandedUserClicks] = useState<string[]>([]);
     const [isLoadingStats, setIsLoadingStats] = useState(false);
 
     // Sponsorship State
@@ -112,7 +114,7 @@ export const SettingsTab: React.FC = () => {
     const [vipPlans, setVipPlans] = useState<any[]>(appConfig.vip.plans || []);
 
     // Sidebar active section
-    const [activeSection, setActiveSection] = useState<'roadmap' | 'hero' | 'details' | 'faq' | 'months' | 'ecosystem' | 'daily-rewards' | 'defaults' | 'sponsorship' | 'vip'>('roadmap');
+    const [activeSection, setActiveSection] = useState<'roadmap' | 'hero' | 'details' | 'faq' | 'months' | 'ecosystem' | 'daily-rewards' | 'defaults' | 'sponsorship' | 'vip' | 'documents'>('roadmap');
 
     useEffect(() => {
         fetchRoadmap();
@@ -194,15 +196,27 @@ export const SettingsTab: React.FC = () => {
                     .limit(50);
 
                 if (uClicks) {
-                    const mapped = (uClicks as any[])
-                        .filter(uc => uc.profiles?.is_verified)
-                        .map(uc => ({
-                            user_id: uc.profiles.id,
-                            user_name: uc.profiles.name,
+                    const grouped: Record<string, any> = {};
+                    (uClicks as any[]).forEach(uc => {
+                        if (!uc.profiles?.is_verified) return;
+                        const userId = uc.profiles.id;
+                        if (!grouped[userId]) {
+                            grouped[userId] = {
+                                user_id: userId,
+                                user_name: uc.profiles.name || 'Sem Nome',
+                                total_count: 0,
+                                pages: []
+                            };
+                        }
+                        grouped[userId].total_count += uc.count;
+                        grouped[userId].pages.push({
                             view_name: uc.view_name,
                             count: uc.count
-                        }));
-                    setUserClicks(mapped);
+                        });
+                    });
+
+                    const sorted = Object.values(grouped).sort((a: any, b: any) => b.total_count - a.total_count);
+                    setUserClicks(sorted as any);
                 }
             } catch (uErr) {
                 console.log("Error fetching user clicks", uErr);
@@ -237,13 +251,22 @@ export const SettingsTab: React.FC = () => {
             const { data, error } = await supabase.from('content_db').select('*');
             if (error) throw error;
 
-            const newContent: any = { hero: {}, details: {}, faq: [] };
+            const newContent: any = { 
+                hero: {}, 
+                details: {}, 
+                faq: [], 
+                documents: [
+                    { title: 'ADTP 2025', subtitle: 'Regulamento oficial', icon: 'menu_book', url: '#', color: 'from-amber-500 to-orange-600' },
+                    { title: 'Anexos ADTP', subtitle: 'Exemplos e anexos', icon: 'description', url: '#', color: 'from-blue-500 to-indigo-600' },
+                    { title: 'TDA 2022', subtitle: 'Tournament Directors Assoc.', icon: 'gavel', url: '#', color: 'from-emerald-500 to-teal-600' }
+                ] 
+            };
             const { data: catData } = await supabase.from('ecosystem_categories').select('*').order('order', { ascending: true });
             if (catData) setCategories(catData);
 
             let loadedVipPlans: any[] = [];
             data?.forEach(item => {
-                if (item.key === 'hero' || item.key === 'details' || item.key === 'faq') {
+                if (item.key === 'hero' || item.key === 'details' || item.key === 'faq' || item.key === 'documents') {
                     newContent[item.key] = item.value;
                 } else if (item.key === 'months') {
                     setMonths(item.value);
@@ -526,6 +549,13 @@ export const SettingsTab: React.FC = () => {
         setContent({ ...content, faq: newFaq });
     };
 
+    const handleUpdateDocument = (index: number, field: string, value: string) => {
+        if (!content) return;
+        const newDocs = [...(content.documents || [])];
+        newDocs[index] = { ...newDocs[index], [field]: value };
+        setContent({ ...content, documents: newDocs });
+    };
+
     const handleAddFAQ = () => {
         if (!content) return;
         setContent({ ...content, faq: [...content.faq, { question: '', answer: '' }] });
@@ -727,6 +757,12 @@ export const SettingsTab: React.FC = () => {
                     onClick={() => setActiveSection('vip')}
                     icon="diamond"
                     label="Planos VIP"
+                />
+                <SidebarButton
+                    active={activeSection === 'documents'}
+                    onClick={() => setActiveSection('documents')}
+                    icon="description"
+                    label="Documentos"
                 />
             </aside>
 
@@ -1265,23 +1301,49 @@ export const SettingsTab: React.FC = () => {
                                     </div>
                                 ) : (
                                     <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                                        {userClicks.map((uc, idx) => (
-                                            <div key={idx} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center justify-between hover:bg-white/10 transition-all border-l-4 border-l-blue-400">
-                                                <div className="flex-1 min-w-0 mr-4">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <span className="material-icons text-[16px] text-blue-400">verified</span>
-                                                        <span className="text-white font-bold text-xs truncate uppercase tracking-tighter">{uc.user_name}</span>
+                                        {userClicks.map((uc, idx) => {
+                                            const isExpanded = expandedUserClicks.includes(uc.user_id);
+                                            return (
+                                                <div key={uc.user_id} className="flex flex-col gap-2">
+                                                    <div 
+                                                        onClick={() => {
+                                                            if (isExpanded) {
+                                                                setExpandedUserClicks(expandedUserClicks.filter(id => id !== uc.user_id));
+                                                            } else {
+                                                                setExpandedUserClicks([...expandedUserClicks, uc.user_id]);
+                                                            }
+                                                        }}
+                                                        className={`bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center justify-between hover:bg-white/10 transition-all border-l-4 cursor-pointer ${isExpanded ? 'border-l-primary' : 'border-l-blue-400'}`}
+                                                    >
+                                                        <div className="flex-1 min-w-0 mr-4">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <span className="material-icons text-[16px] text-blue-400">verified</span>
+                                                                <span className="text-white font-bold text-xs truncate uppercase tracking-tighter">{uc.user_name}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{uc.pages.length} {uc.pages.length === 1 ? 'Página' : 'Páginas'} visualizadas</span>
+                                                                <span className="material-icons text-[12px] text-gray-600">{isExpanded ? 'expand_less' : 'expand_more'}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="bg-blue-900/30 border border-blue-500/20 px-4 py-2 rounded-xl text-center min-w-[60px]">
+                                                            <div className="text-blue-400 font-black text-sm italic font-display">{uc.total_count}</div>
+                                                            <div className="text-[7px] text-blue-400/60 uppercase font-black tracking-tighter">Total</div>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest bg-black/30 px-2 py-0.5 rounded-lg border border-white/5">{uc.view_name.replace(/-/g, ' ')}</span>
-                                                    </div>
+
+                                                    {isExpanded && (
+                                                        <div className="mx-2 space-y-1 animate-in fade-in slide-in-from-top-2 duration-300">
+                                                            {uc.pages.map((p, pIdx) => (
+                                                                <div key={pIdx} className="bg-black/30 border border-white/5 rounded-xl px-4 py-2 flex items-center justify-between">
+                                                                    <span className="text-[9px] text-gray-400 font-black uppercase tracking-widest">{p.view_name.replace(/-/g, ' ')}</span>
+                                                                    <span className="text-[10px] text-primary font-black font-display italic">{p.count} <span className="text-[7px] opacity-60">cliques</span></span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                <div className="bg-blue-900/30 border border-blue-500/20 px-4 py-2 rounded-xl text-center min-w-[60px]">
-                                                    <div className="text-blue-400 font-black text-sm italic font-display">{uc.count}</div>
-                                                    <div className="text-[7px] text-blue-400/60 uppercase font-black tracking-tighter">Cliques</div>
-                                                </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>
@@ -1768,6 +1830,49 @@ export const SettingsTab: React.FC = () => {
                             >
                                 <span className="material-icons-outlined text-sm">auto_awesome</span>
                                 {isSavingContent ? 'Salvando...' : 'Salvar Todos Planos VIP'}
+                            </button>
+                        </div>
+                    </div>
+                )}
+                
+                {activeSection === 'documents' && content && (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 lg:slide-in-from-right duration-500">
+                        <SectionHeader title="Documentos Oficiais" subtitle="Links para regulamentos e PDFs" />
+                        
+                        <div className="grid grid-cols-1 gap-6 mb-12">
+                            {content.documents.map((doc, idx) => (
+                                <div key={idx} className="bg-white/5 border border-white/10 rounded-[2rem] p-6 lg:p-8">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <FormGroup label="TÍTULO">
+                                            <input type="text" value={doc.title} onChange={e => handleUpdateDocument(idx, 'title', e.target.value)} className="form-input" />
+                                        </FormGroup>
+                                        <FormGroup label="SUBTÍTULO">
+                                            <input type="text" value={doc.subtitle} onChange={e => handleUpdateDocument(idx, 'subtitle', e.target.value)} className="form-input" />
+                                        </FormGroup>
+                                        <FormGroup label="URL DO PDF (STORAGE)">
+                                            <input type="text" value={doc.url} onChange={e => handleUpdateDocument(idx, 'url', e.target.value)} className="form-input text-primary" placeholder="Cole a URL do Supabase Storage aqui" />
+                                        </FormGroup>
+                                        <FormGroup label="ÍCONE (MATERIAL ICON)">
+                                            <div className="flex gap-2">
+                                                <input type="text" value={doc.icon} onChange={e => handleUpdateDocument(idx, 'icon', e.target.value)} className="form-input flex-1" />
+                                                <button onClick={() => setShowIconPicker(idx)} className="bg-white/5 border border-white/10 rounded-xl px-3 hover:bg-white/10 transition-colors">
+                                                    <span className="material-icons-outlined">{doc.icon}</span>
+                                                </button>
+                                            </div>
+                                        </FormGroup>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="flex justify-center pb-12">
+                            <button
+                                onClick={() => handleSaveContent('documents', content.documents)}
+                                disabled={isSavingContent}
+                                className="btn-save shadow-neon-pink w-full max-w-md py-6 h-auto"
+                            >
+                                <span className="material-icons-outlined text-sm">save_alt</span>
+                                {isSavingContent ? 'Salvando...' : 'Salvar Todos Documentos'}
                             </button>
                         </div>
                     </div>

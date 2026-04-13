@@ -5,10 +5,19 @@ import { useApp } from '../../contexts/AppContext';
 
 interface ReservationsTabProps {
     events: Event[];
+    currentUser?: any;
+    isAdmin?: boolean;
+    onRefreshData?: () => Promise<void>;
+    onSelectPlayer?: (player: any) => void;
+    onNavigate?: (view: string) => void;
 }
 
-export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
-    const { currentUser, refreshSupabaseData } = useApp();
+export const ReservationsTab: React.FC<ReservationsTabProps> = ({ 
+    events, currentUser: propCurrentUser, isAdmin, onRefreshData, onSelectPlayer, onNavigate 
+}) => {
+    const { currentUser: contextCurrentUser, refreshSupabaseData: contextRefreshData } = useApp();
+    const currentUser = propCurrentUser || contextCurrentUser;
+    const refreshSupabaseData = onRefreshData || contextRefreshData;
     const [activeSubTab, setActiveSubTab] = useState<'tournaments' | 'credits' | 'merge' | 'withdrawals'>('tournaments');
     const [supremaSubTab, setSupremaSubTab] = useState<'buy' | 'withdraw'>('buy');
 
@@ -37,6 +46,16 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
     // Online Withdrawals (Resgates Suprema)
     const [onlineWithdrawals, setOnlineWithdrawals] = useState<any[]>([]);
     const [onlineWithdrawalStatusFilter, setOnlineWithdrawalStatusFilter] = useState<'pending' | 'completed' | 'cancelled'>('pending');
+
+    // Nova Reserva Admin
+    const [resSearchQuery, setResSearchQuery] = useState('');
+    const [resSearchResults, setResSearchResults] = useState<any[]>([]);
+    const [resSelectedPlayer, setResSelectedPlayer] = useState<any | null>(null);
+    const [resSelectedEventId, setResSelectedEventId] = useState<string>('');
+    const [resBonusChips, setResBonusChips] = useState<string>('5000');
+    const [showGhostCreate, setShowGhostCreate] = useState(false);
+    const [newGhostName, setNewGhostName] = useState('');
+    const [isSubmittingRes, setIsSubmittingRes] = useState(false);
 
     useEffect(() => {
         if (activeSubTab === 'tournaments') {
@@ -161,12 +180,84 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
         }
     };
 
+    // --- LOGICA NOVA RESERVA ---
+    const handleSearchProfiles = async (query: string) => {
+        setResSearchQuery(query);
+        if (query.length < 2) { setResSearchResults([]); return; }
+        const isNumeric = /^\d+$/.test(query);
+        let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, role');
+        if (isNumeric) q = q.eq('numeric_id', parseInt(query));
+        else q = q.ilike('name', `%${query}%`);
+        
+        const { data } = await q.order('name', { ascending: true }).limit(8);
+        setResSearchResults(data || []);
+    };
+
+    const handleCreateGhost = async () => {
+        if (!newGhostName || newGhostName.length < 2) { alert('Nome inválido.'); return; }
+        setIsLoading(true);
+        try {
+            const { data, error } = await supabase.rpc('create_ghost_user', { p_name: newGhostName });
+            if (error) throw error;
+            
+            const { data: user } = await supabase.from('profiles').select('*').eq('id', data).single();
+            if (user) {
+                setResSelectedPlayer(user);
+                setShowGhostCreate(false);
+                setNewGhostName('');
+                setResSearchQuery('');
+                setResSearchResults([]);
+                alert(`Jogador fantasma "${user.name}" criado com sucesso!`);
+            }
+        } catch (err: any) {
+            alert('Erro ao criar ghost: ' + err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleConfirmManualReservation = async () => {
+        if (!resSelectedPlayer) { alert('Selecione um jogador.'); return; }
+        if (!resSelectedEventId) { alert('Selecione um evento.'); return; }
+        
+        const bonusAmount = parseInt(resBonusChips) || 0;
+        if (bonusAmount > 15000) { alert('O bônus máximo permitido é de 15.000 fichas.'); return; }
+
+        setIsSubmittingRes(true);
+        try {
+            const isOutsourced = resSelectedPlayer.role === 'ghost' || resSelectedPlayer.name.toLowerCase().includes('ghost');
+            
+            const { error } = await supabase.from('tournament_reservations').insert({
+                event_id: resSelectedEventId,
+                user_id: resSelectedPlayer.id,
+                status: 'reserved',
+                is_outsourced: isOutsourced,
+                metadata: { 
+                    manual_bonus_input: bonusAmount,
+                    launched_by_admin_id: currentUser.id
+                }
+            });
+
+            if (error) throw error;
+
+            alert('Reserva lançada com sucesso!');
+            setResSelectedPlayer(null);
+            setResSelectedEventId('');
+            setResBonusChips('5000');
+            fetchReservations();
+        } catch (err: any) {
+            alert('Erro ao lançar reserva: ' + err.message);
+        } finally {
+            setIsSubmittingRes(false);
+        }
+    };
+
     const fetchReservations = async () => {
         setIsLoading(true);
         try {
             const { data, error } = await supabase
                 .from('tournament_reservations')
-                .select('*, profiles(name, numeric_id, avatar_url), events(id, title, date, status)')
+                .select('*, profiles!user_id(id, name, numeric_id, avatar_url), events(*)')
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
@@ -422,7 +513,161 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
             </div>
 
             {activeSubTab === 'tournaments' ? (
-                <>
+                <div className="flex flex-col gap-6">
+                    {/* Painel de Lançamento de Reserva ADM */}
+                    <div className="bg-gradient-to-br from-indigo-900/40 via-purple-900/20 to-transparent p-6 rounded-2xl border border-white/10 shadow-xl">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+                                <span className="material-icons-outlined">add_task</span>
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-black text-white uppercase tracking-tighter">Novo Lançamento de Reserva</h3>
+                                <p className="text-xs text-gray-400">Lançar reserva manualmente para jogadores presenciais ou captados via terceiros.</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                            {/* Jogador */}
+                            <div className="relative md:col-span-1">
+                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">1. Selecionar Jogador</label>
+                                {resSelectedPlayer ? (
+                                    <div className="flex items-center gap-3 bg-white/5 border border-primary/40 p-2.5 rounded-xl">
+                                        <div className="w-8 h-8 rounded-full overflow-hidden bg-white/10 shrink-0">
+                                            <img src={resSelectedPlayer.avatar_url || 'https://ui-avatars.com/api/?name=' + resSelectedPlayer.name} className="w-full h-full object-cover" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-sm font-bold text-white truncate">{resSelectedPlayer.name}</div>
+                                            <div className="text-[10px] text-gray-500">ID: {resSelectedPlayer.numeric_id}</div>
+                                        </div>
+                                        <button onClick={() => setResSelectedPlayer(null)} className="text-gray-500 hover:text-red-500 p-1">
+                                            <span className="material-icons-outlined text-sm">close</span>
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            value={resSearchQuery}
+                                            onChange={(e) => handleSearchProfiles(e.target.value)}
+                                            placeholder="Buscar nome ou ID..."
+                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary placeholder:text-gray-600"
+                                        />
+                                        <button 
+                                            onClick={() => setShowGhostCreate(true)}
+                                            className="absolute right-2 top-1.5 p-1.5 text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                                            title="Criar Novo Fantasma"
+                                        >
+                                            <span className="material-icons-outlined text-xl">person_add_alt_1</span>
+                                        </button>
+
+                                        {resSearchResults.length > 0 && (
+                                            <div className="absolute top-full left-0 right-0 mt-2 bg-[#1c1c1c] border border-white/10 rounded-xl shadow-2xl z-[100] overflow-hidden">
+                                                {resSearchResults.map((p) => (
+                                                    <button
+                                                        key={p.id}
+                                                        onClick={() => { setResSelectedPlayer(p); setResSearchResults([]); setResSearchQuery(''); }}
+                                                        className="w-full flex items-center gap-3 p-3 hover:bg-white/5 text-left border-b border-white/5 last:border-0"
+                                                    >
+                                                        <div className="w-8 h-8 rounded-full overflow-hidden bg-white/10">
+                                                            <img src={p.avatar_url || 'https://ui-avatars.com/api/?name=' + p.name} className="w-full h-full object-cover" />
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-sm font-bold text-white leading-tight">{p.name}</div>
+                                                            <div className="text-[10px] text-gray-500 uppercase font-bold">ID: {p.numeric_id} • {p.role}</div>
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Evento */}
+                            <div className="md:col-span-1">
+                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">2. Selecionar Evento</label>
+                                <select
+                                    value={resSelectedEventId}
+                                    onChange={(e) => setResSelectedEventId(e.target.value)}
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary appearance-none"
+                                    style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1.2em' }}
+                                >
+                                    <option value="">Escolha um evento...</option>
+                                    {events.filter(ev => 
+                                        ev.status !== 'closed' && 
+                                        ev.type === 'live' && 
+                                        (ev.gameMode === 'tournament' || (ev as any).game_mode === 'tournament')
+                                    ).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(ev => (
+                                        <option key={ev.id} value={ev.id}>
+                                            {ev.title} ({new Date(ev.date).toLocaleDateString('pt-BR')})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Bônus */}
+                            <div className="md:col-span-1">
+                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">3. Fichas de Bônus</label>
+                                <div className="relative">
+                                    <input
+                                        type="number"
+                                        value={resBonusChips}
+                                        onChange={(e) => setResBonusChips(e.target.value)}
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary pr-12 font-black text-yellow-500"
+                                        placeholder="Ex: 5000"
+                                    />
+                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-primary uppercase">FICHAS</span>
+                                </div>
+                            </div>
+
+                            {/* Botão */}
+                            <div className="md:col-span-1">
+                                <button
+                                    onClick={handleConfirmManualReservation}
+                                    disabled={isSubmittingRes || !resSelectedPlayer || !resSelectedEventId}
+                                    className="w-full h-[46px] bg-primary hover:bg-primary-dark disabled:bg-white/5 disabled:text-gray-600 text-white font-black uppercase text-xs tracking-widest rounded-xl transition-all active:scale-95 shadow-lg shadow-primary/10 flex items-center justify-center gap-2"
+                                >
+                                    {isSubmittingRes ? (
+                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                    ) : (
+                                        <>
+                                            <span className="material-icons-outlined text-sm">rocket_launch</span>
+                                            Lançar Reserva
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Modal Criar Ghost Rápido */}
+                        {showGhostCreate && (
+                            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
+                                <div className="bg-[#1c1c1c] border border-white/10 rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-scale-up">
+                                    <h4 className="text-lg font-black text-white uppercase mb-1">Criar Perfil Fantasma</h4>
+                                    <p className="text-xs text-gray-500 mb-6">Cria um usuário temporário para controle de comanda e reserva.</p>
+                                    
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Nome do Jogador</label>
+                                            <input
+                                                type="text"
+                                                autoFocus
+                                                value={newGhostName}
+                                                onChange={(e) => setNewGhostName(e.target.value)}
+                                                className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary"
+                                                placeholder="Ex: João da Silva (Ghost)"
+                                            />
+                                        </div>
+                                        <div className="flex gap-2 pt-2">
+                                            <button onClick={() => { setShowGhostCreate(false); setNewGhostName(''); }} className="flex-1 py-3 text-xs font-bold text-gray-400 uppercase tracking-widest hover:bg-white/5 rounded-xl transition-colors">Cancelar</button>
+                                            <button onClick={handleCreateGhost} disabled={!newGhostName || isLoading} className="flex-1 py-3 bg-primary text-white text-xs font-black uppercase tracking-widest rounded-xl shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all">Criar Perfil</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
                     <div className="flex flex-col sm:flex-row items-center gap-3">
                         <select
                             value={statusFilter}
@@ -441,8 +686,8 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
                             style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")` }}
                         >
                             <option value="all">Todos os Eventos</option>
-                            {Array.from(new Set(reservations.filter(r => (statusFilter === 'upcoming' ? r.events?.status !== 'closed' : r.events?.status === 'closed')).map(r => r.event_id))).map(eventId => {
-                                const event = events.find(e => e.id === eventId) || reservations.find(r => r.event_id === eventId)?.events;
+                            {Array.from(new Set(reservations.map(r => r.event_id))).map(eventId => {
+                                const event = events.find(e => e.id === eventId) || (reservations.find(r => r.event_id === eventId)?.events);
                                 if (!event) return null;
                                 return (
                                     <option key={eventId} value={eventId}>{event.title}</option>
@@ -454,7 +699,7 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
                             <span className="material-icons-outlined text-sm">refresh</span>
                         </button>
                     </div>
-                </>
+                </div>
             ) : activeSubTab === 'credits' ? (
                 <>
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -544,6 +789,7 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
                                     <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Jogador</th>
                                     <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Evento</th>
                                     <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Data da Reserva</th>
+                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Stack / Fichas</th>
                                     <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
                                     <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Ações</th>
                                 </tr>
@@ -551,11 +797,11 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
                             <tbody className="divide-y divide-gray-100 dark:divide-white/5">
                                 {isLoading ? (
                                     <tr>
-                                        <td colSpan={5} className="p-8 text-center text-gray-500">Carregando...</td>
+                                        <td colSpan={6} className="p-8 text-center text-gray-500">Carregando...</td>
                                     </tr>
                                 ) : filteredReservations.length === 0 ? (
                                     <tr>
-                                        <td colSpan={5} className="p-8 text-center text-gray-500">Nenhuma reserva encontrada para este filtro.</td>
+                                        <td colSpan={6} className="p-8 text-center text-gray-500">Nenhuma reserva encontrada para este filtro.</td>
                                     </tr>
                                 ) : (
                                     filteredReservations.map(res => (
@@ -570,8 +816,40 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
                                                         )}
                                                     </div>
                                                     <div>
-                                                        <div className="text-sm font-bold text-gray-900 dark:text-white">{res.profiles?.name || 'Desconhecido'}</div>
-                                                        {res.profiles?.numeric_id && <div className="text-xs text-gray-500">ID: {res.profiles.numeric_id}</div>}
+                                                        <div 
+                                                            className="flex items-center gap-2 group/name cursor-pointer"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (onSelectPlayer && onNavigate && res.profiles) {
+                                                                    const profileData = Array.isArray(res.profiles) ? res.profiles[0] : res.profiles;
+                                                                    if (profileData && profileData.id) {
+                                                                        const mappedPlayer = {
+                                                                            id: profileData.id,
+                                                                            name: profileData.name || 'Jogador',
+                                                                            avatar: profileData.avatar_url || `https://ui-avatars.com/api/?name=${profileData.name?.replace(' ', '+') || 'User'}&background=random`,
+                                                                            numericId: profileData.numeric_id,
+                                                                            rank: 0,
+                                                                            points: 0
+                                                                        };
+                                                                        onSelectPlayer(mappedPlayer);
+                                                                    } else {
+                                                                        alert('Erro: Perfil do jogador não encontrado ou sem ID.');
+                                                                    }
+                                                                }
+                                                            }}
+                                                        >
+                                                            <span className="text-sm font-bold text-gray-900 dark:text-white group-hover/name:text-primary transition-colors">{ (Array.isArray(res.profiles) ? res.profiles[0] : res.profiles)?.name || 'Desconhecido' }</span>
+                                                            <span className="material-icons-outlined text-[10px] text-gray-400 opacity-0 group-hover/name:opacity-100 transition-all">open_in_new</span>
+                                                            {res.is_outsourced && (
+                                                                <span className="bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400 text-[10px] px-1.5 py-0.5 rounded uppercase font-black tracking-widest border border-purple-200 dark:border-purple-500/30 flex items-center gap-1" title="Lançado pelo Admin">
+                                                                    <span className="material-icons-outlined text-[10px]">admin_panel_settings</span>
+                                                                    Terceirizado
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                            {res.profiles?.numeric_id && <span className="text-xs text-gray-500">ID: {res.profiles.numeric_id}</span>}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </td>
@@ -581,6 +859,64 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({ events }) => {
                                             </td>
                                             <td className="p-4 text-sm text-gray-500">
                                                 {new Date(res.created_at).toLocaleString('pt-BR')}
+                                            </td>
+                                            <td className="p-4">
+                                                {(() => {
+                                                    const parseChips = (val: string | undefined | null) => {
+                                                        if (!val) return 0;
+                                                        const clean = val.toString().replace(/[^\d]/g, '');
+                                                        return parseInt(clean) || 0;
+                                                    };
+                                                    
+                                                    let bonusTotal = 0;
+                                                    let bonusBreakdown = [];
+                                                    
+                                                    // Prioridade 1: Bônus Manual (Lançado pelo ADM na nova interface)
+                                                    if (res.metadata?.manual_bonus_input !== undefined) {
+                                                        bonusTotal = parseInt(res.metadata.manual_bonus_input);
+                                                        bonusBreakdown.push(`+${bonusTotal.toLocaleString('pt-BR')} (Manual)`);
+                                                    } 
+                                                    // Prioridade 2: Lógica legada (para reservas antigas)
+                                                    else {
+                                                        const eventStaff = parseChips(res.events?.staff_bonus_chips);
+                                                        const eventTime = parseChips(res.events?.time_chip_chips);
+                                                        const eventTAddon = parseChips(res.events?.time_chip_addon_chips);
+                                                        
+                                                        if (res.is_outsourced) {
+                                                            if (res.metadata?.extra_10k_compensation) {
+                                                                bonusTotal = eventStaff + eventTime + eventTAddon + 10000;
+                                                                if (eventStaff > 0) bonusBreakdown.push(`+${eventStaff.toLocaleString('pt-BR')} (Staff)`);
+                                                                if (eventTime > 0) bonusBreakdown.push(`+${eventTime.toLocaleString('pt-BR')} (Time)`);
+                                                                if (eventTAddon > 0) bonusBreakdown.push(`+${eventTAddon.toLocaleString('pt-BR')} (T.Addon)`);
+                                                                bonusBreakdown.push("+10.000 (Compensação)");
+                                                            } else {
+                                                                bonusTotal = 5000;
+                                                                bonusBreakdown.push("+5.000 (Admin)");
+                                                            }
+                                                        } else {
+                                                            bonusTotal = eventStaff + eventTime + eventTAddon;
+                                                            if (eventStaff > 0) bonusBreakdown.push(`+${eventStaff.toLocaleString('pt-BR')} (Staff)`);
+                                                            if (eventTime > 0) bonusBreakdown.push(`+${eventTime.toLocaleString('pt-BR')} (Time)`);
+                                                            if (eventTAddon > 0) bonusBreakdown.push(`+${eventTAddon.toLocaleString('pt-BR')} (T.Addon)`);
+                                                        }
+                                                    }
+                                                    
+                                                    if (bonusTotal === 0) return <div className="text-gray-500 text-xs italic">Sem bônus</div>;
+
+                                                    return (
+                                                        <div className="flex flex-col items-center justify-center p-2 bg-yellow-500/5 rounded-lg min-w-[120px] border border-yellow-500/10 shadow-sm">
+                                                            <div className="text-[15px] font-black text-yellow-500 mb-1">
+                                                                +{bonusTotal.toLocaleString('pt-BR')}
+                                                                <span className="text-[10px] ml-1 opacity-80 uppercase tracking-tighter">Bônus</span>
+                                                            </div>
+                                                            <div className="flex flex-col gap-0.5 items-center opacity-70">
+                                                                {bonusBreakdown.map((b, i) => (
+                                                                    <span key={i} className="text-[9px] text-gray-400 font-bold uppercase tracking-tight leading-none">{b}</span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })()}
                                             </td>
                                             <td className="p-4">
                                                 <select

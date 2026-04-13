@@ -126,6 +126,7 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
     }, [activeDebts]);
 
     const [subTab, setSubTab] = useState<SubTab>('pendura');
+    const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
     // ── Partial settle: per-debt custom amount  ──
     const [settleAmounts, setSettleAmounts] = useState<Record<string, string>>({});
 
@@ -588,10 +589,47 @@ export const DebtsTab: React.FC<DebtsTabProps> = ({
                                                     </div>
                                                 </div>
                                                 <div className="sm:text-right flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2">
-                                                    <p className="text-[9px] text-gray-500 uppercase font-black">Total Devedor</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <button 
+                                                            onClick={() => setExpandedUserId(expandedUserId === group.user_id ? null : group.user_id)}
+                                                            className={`p-1.5 rounded-lg transition-all ${expandedUserId === group.user_id ? 'bg-red-500 text-white' : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'}`}
+                                                            title={expandedUserId === group.user_id ? "Recolher detalhes" : "Ver detalhes"}
+                                                        >
+                                                            <span className="material-icons-outlined text-sm">
+                                                                {expandedUserId === group.user_id ? 'expand_less' : 'expand_more'}
+                                                            </span>
+                                                        </button>
+                                                        <p className="text-[9px] text-gray-500 uppercase font-black">Total Devedor</p>
+                                                    </div>
                                                     <span className="text-red-400 font-display font-black text-xl sm:text-2xl">R$ {fullAmt.toFixed(2)}</span>
                                                 </div>
                                             </div>
+
+                                            {/* Expanded details */}
+                                            {expandedUserId === group.user_id && (
+                                                <div className="mb-4 bg-black/20 border border-white/5 rounded-2xl overflow-hidden animate-in slide-in-from-top-2 duration-300">
+                                                    <div className="px-4 py-2 bg-white/5 border-b border-white/5">
+                                                        <p className="text-[8px] font-black uppercase text-gray-500 tracking-widest">Resumo de Gastos</p>
+                                                    </div>
+                                                    <div className="divide-y divide-white/5 max-h-48 overflow-y-auto custom-scrollbar">
+                                                        {group.debts.map((debt: any) => (
+                                                            <div key={debt.id} className="px-4 py-2.5 flex items-center justify-between hover:bg-white/[0.02] transition-colors">
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-[10px] text-white font-bold">{debt.events?.title || debt.description || 'Crédito Manual'}</span>
+                                                                    <span className="text-[8px] text-gray-500 uppercase font-black">
+                                                                        {new Date(debt.created_at).toLocaleDateString('pt-BR')} às {new Date(debt.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                                                    </span>
+                                                                </div>
+                                                                <span className="text-red-400 font-bold text-xs">R$ {Number(debt.amount_brl).toFixed(2)}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <div className="px-4 py-2 bg-red-500/5 flex justify-between items-center">
+                                                        <span className="text-[9px] text-gray-400 font-black uppercase">Consolidado ({group.debts.length} itens)</span>
+                                                        <span className="text-white font-black text-[10px]">R$ {fullAmt.toFixed(2)}</span>
+                                                    </div>
+                                                </div>
+                                            )}
 
                                             {/* Payment row */}
                                             <div className="bg-black/30 border border-white/5 rounded-2xl p-3 flex flex-col lg:flex-row lg:items-center gap-4">

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useApp } from '../contexts/AppContext';
 import { Event, PlayerResult, RankingPlayer, RankingInstance, ScoringSchema, RankingFormula, PlayerStats } from '../types';
 import { supabase } from '../src/lib/supabase';
 import { calculatePoints } from '../utils/scoring';
@@ -40,7 +41,7 @@ const getEventTheme = (type: string, gameMode?: string): EventTheme => {
     const t = (type || 'live').toLowerCase().trim();
     const gm = (gameMode || '').toLowerCase().trim();
     
-    // Perigo: às vezes vem como 'Cash Game' ou 'CASH_GAME' ou 'Tournament'
+    // Perigo: ÃƒÂ s vezes vem como 'Cash Game' ou 'CASH_GAME' ou 'Tournament'
     const isCash = gm.includes('cash');
     const isLive = t === 'live';
 
@@ -142,6 +143,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
     userReservations,
     onRefreshData
 }) => {
+    const { setIsFlyerOpen } = useApp();
     const [editingEvent, setEditingEvent] = useState<Event | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [viewEvent, setViewEvent] = useState<Event | null>(null); // Modal de Flyer (Eventos Abertos)
@@ -151,6 +153,14 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
     // Theme helpers for flyers
     const viewThemeStyles = viewEvent ? getThemeStyles(getEventTheme(viewEvent.type, viewEvent.gameMode)) : null;
     const viewClosedThemeStyles = viewClosedEvent ? getThemeStyles(getEventTheme(viewClosedEvent.type, viewClosedEvent.gameMode)) : null;
+
+    // Sincroniza o estado de flyer aberto com o contexto global
+    useEffect(() => {
+        setIsFlyerOpen(!!viewEvent || !!viewClosedEvent);
+        
+        // Cleanup on unmount
+        return () => setIsFlyerOpen(false);
+    }, [viewEvent, viewClosedEvent, setIsFlyerOpen]);
 
     // TAB FILTER STATE
     const [activeTab, setActiveTab] = useState<'upcoming' | 'completed'>('upcoming');
@@ -165,6 +175,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
     const [closingEvent, setClosingEvent] = useState<Event | null>(null);
     const [reservingEvent, setReservingEvent] = useState<Event | null>(null);
     const [currentReservationsCount, setCurrentReservationsCount] = useState<number>(0);
+    const [allReservationsCount, setAllReservationsCount] = useState<Record<string, number>>({});
     const [reservationPlayers, setReservationPlayers] = useState<any[]>([]);
     const [showReservationPlayers, setShowReservationPlayers] = useState(false);
     const [formulaType, setFormulaType] = useState<RankingFormula>('weekly');
@@ -188,6 +199,13 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
     const [selectedUserId, setSelectedUserId] = useState<string | undefined>(undefined);
     const [suggestions, setSuggestions] = useState<RankingPlayer[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    
+    // Outsourced Reservation Autocomplete States
+    const [outsourcedPlayerName, setOutsourcedPlayerName] = useState('');
+    const [outsourcedSelectedUserId, setOutsourcedSelectedUserId] = useState<string | undefined>(undefined);
+    const [outsourcedSuggestions, setOutsourcedSuggestions] = useState<RankingPlayer[]>([]);
+    const [showOutsourcedSuggestions, setShowOutsourcedSuggestions] = useState(false);
+    const [outsourcedExtra10k, setOutsourcedExtra10k] = useState(false);
 
     // Helpers for Sorting
     const getBuyinValue = (str: string) => {
@@ -195,7 +213,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
         return isNaN(num) ? 0 : num;
     };
 
-    // CALCULO AUTOMÁTICO DE PREMIAÇÃO (Baseado na DISTRIBUIÇÃO dos prêmios)
+    // CALCULO AUTOMÃƒÂTICO DE PREMIAç!ÓO (Baseado na DISTRIBUIç!ÓO dos prêmios)
     useEffect(() => {
         // Soma o campo 'prize' de cada jogador na lista
         const totalDistributed = playerResults.reduce((acc, curr) => acc + (curr.prize || 0), 0);
@@ -217,7 +235,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
     };
 
     // Helper para buscar Nome atualizado (pelo ID se disponível)
-    const getPlayerName = (userId?: string, fallbackName: string = '—') => {
+    const getPlayerName = (userId?: string, fallbackName: string = 'ç') => {
         if (!userId) return fallbackName;
         const player = rankingPlayers.find(p => p.id === userId);
         return player?.name || fallbackName;
@@ -234,6 +252,35 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
         }
         return player?.avatar || `https://ui-avatars.com/api/?name=${name.replace(' ', '+')}&background=random`;
     };
+
+    // Fetch reservation counts for all visible events
+    useEffect(() => {
+        const fetchAllCounts = async () => {
+            if (!events || events.length === 0) return;
+            const openEventIds = events.filter(e => e.status !== 'closed').map(e => e.id);
+            if (openEventIds.length === 0) return;
+
+            try {
+                const { data, error } = await supabase
+                    .from('tournament_reservations')
+                    .select('event_id')
+                    .in('event_id', openEventIds)
+                    .in('status', ['reserved', 'confirmed']);
+                
+                if (!error && data) {
+                    const countsMap: Record<string, number> = {};
+                    data.forEach(r => {
+                        countsMap[r.event_id] = (countsMap[r.event_id] || 0) + 1;
+                    });
+                    setAllReservationsCount(countsMap);
+                }
+            } catch (e) {
+                console.error('Error fetching all reservation counts:', e);
+            }
+        };
+
+        fetchAllCounts();
+    }, [events]);
 
     // Filter & Sort Events
     const filteredEvents = events
@@ -275,7 +322,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
             }
         });
 
-    // --- HELPERS DE FORMATAÇÃO ---
+    // --- HELPERS DE FORMATAç!ÓO ---
     const formatCurrency = (value: string) => {
         const numbers = value.replace(/\D/g, '');
         return numbers ? `R$ ${parseInt(numbers, 10)}` : '';
@@ -302,13 +349,20 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
     const handleOpenClosing = (event: Event) => {
         setClosingEvent(event);
 
-        // Tenta extrair o valor numérico do buyin string (ex: "R$ 150" -> 150)
-        const numericBuyin = parseInt(event.buyin.replace(/\D/g, '')) || 0;
-        setBuyinValue(numericBuyin);
+        // Extract numeric base buyin (e.g. "R$ 150" -> 150)
+        const numericBaseBuyin = parseInt(event.buyin.replace(/\D/g, '')) || 0;
+        
+        // Extract numeric staff/admin fee (e.g. "30" -> 30)
+        const numericStaffFee = parseInt((event.staffBonusValue || '').replace(/\D/g, '')) || 0;
+        
+        // Final buy-in for points calculation should be the sum (e.g. 150 + 30 = 180)
+        const totalBuyinForPoints = numericBaseBuyin + numericStaffFee;
+        
+        setBuyinValue(totalBuyinForPoints);
         setFormulaType(event.rankingType || 'weekly');
 
         if (event.status === 'closed' && event.results) {
-            // MODO EDIÇÃO DE RESULTADOS: Carrega dados existentes
+            // MODO EDIç!ÓO DE RESULTADOS: Carrega dados existentes
             setPlayerResults([...event.results]);
             setTotalPlayers(event.results.length);
             setRebuysCount(event.totalRebuys || 0);
@@ -582,18 +636,29 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
             alert("Você precisa estar logado para reservar um assento.");
             return;
         }
+        // Abre o modal IMEDIATAMENTE sem depender do fetch
+        setShowReservationPlayers(false);
+        setReservingEvent(eventToReserve);
         
-        // Fetch current reservations count
+        // Fetch current reservations count in background (nço bloqueia a abertura do modal)
         try {
             const { data, count, error } = await supabase
                 .from('tournament_reservations')
-                .select('profiles(name, avatar_url)', { count: 'exact' })
+                .select('is_outsourced, profiles(name, avatar_url)', { count: 'exact' })
                 .eq('event_id', eventToReserve.id)
                 .in('status', ['reserved', 'confirmed']);
                 
             if (!error && data) {
-                setCurrentReservationsCount(count || 0);
-                setReservationPlayers(data.map(d => d.profiles));
+                const countVal = count || 0;
+                setCurrentReservationsCount(countVal);
+                // Exibe na lista apenas quem não é 'outsourced'
+                setReservationPlayers(data.filter(r => !r.is_outsourced).map(d => d.profiles));
+                
+                // Update specific count in the map too
+                setAllReservationsCount(prev => ({
+                    ...prev,
+                    [eventToReserve.id]: countVal
+                }));
             } else {
                 setCurrentReservationsCount(0);
                 setReservationPlayers([]);
@@ -602,10 +667,8 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
             setCurrentReservationsCount(0);
             setReservationPlayers([]);
         }
-        
-        setShowReservationPlayers(false);
-        setReservingEvent(eventToReserve);
     };
+
 
     const confirmReservation = async () => {
         if (!currentUser || !reservingEvent) return;
@@ -661,7 +724,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
     };
 
 
-    // --- LOGICA DE CÁLCULO DE PONTOS ---
+    // --- LOGICA DE CÃƒÂLCULO DE PONTOS ---
 
     const refreshAllPoints = (newType: RankingFormula, newPlayers: number, newBuyin: number, currentResults: PlayerResult[], schemaId?: string) => {
         return currentResults.map(p => {
@@ -684,13 +747,15 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
             // Calculate points for each specific ranking the event is part of
             const pointsPerRanking: Record<string, number> = {};
+            // For 'special' type, force legacy formula (ignore global schema)
+            const isSpecialType = newType === 'special';
             if (closingEvent?.includedRankings) {
                 closingEvent.includedRankings.forEach(rId => {
                     const ranking = rankings.find(r => r.id === rId);
                     if (ranking) {
                         const mappedSchemaId = (newType && ranking.scoringSchemaMap)
-                            ? ranking.scoringSchemaMap[newType]
-                            : schemaId;
+                                ? ranking.scoringSchemaMap[newType]
+                                : schemaId;
 
                         pointsPerRanking[rId] = calculatePoints(
                             newType,
@@ -714,7 +779,8 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
             return {
                 ...p,
                 calculatedPoints,
-                pointsPerRanking
+                pointsPerRanking,
+                buyinTotal: newBuyin  // save so AppContext fallback can also use it
             };
         });
     };
@@ -802,6 +868,93 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
         setNewPlayerName('');
         setSelectedUserId(undefined);
         setShowSuggestions(false);
+    };
+
+    const handleOutsourcedNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setOutsourcedPlayerName(val);
+        setOutsourcedSelectedUserId(undefined);
+        if (val.length > 0) {
+            const valLower = val.toLowerCase();
+            const filtered = rankingPlayers.filter(p => {
+                const nameLower = p.name.toLowerCase();
+                const matchesSearch = nameLower.includes(valLower);
+                const isAlreadyAdded = reservationPlayers.some(rp => rp.name && rp.name.toLowerCase() === nameLower);
+                return matchesSearch && !isAlreadyAdded;
+            });
+            setOutsourcedSuggestions(filtered.slice(0, 5));
+            setShowOutsourcedSuggestions(true);
+        } else {
+            setShowOutsourcedSuggestions(false);
+        }
+    };
+
+    const selectOutsourcedSuggestion = (player: RankingPlayer) => {
+        setOutsourcedPlayerName(player.name);
+        setOutsourcedSelectedUserId(player.id);
+        setShowOutsourcedSuggestions(false);
+    };
+
+    const addOutsourcedReservation = async () => {
+        if (!outsourcedPlayerName.trim() || !reservingEvent) return;
+
+        setIsSaving(true);
+        let finalUserId = outsourcedSelectedUserId;
+        let finalName = outsourcedPlayerName.trim();
+
+        if (!finalUserId) {
+            const manualPlayer = rankingPlayers.find(p => p.name.toLowerCase() === finalName.toLowerCase());
+            if (manualPlayer) {
+                finalUserId = manualPlayer.id;
+            }
+        }
+
+        if (!finalUserId) {
+            try {
+                const { data, error } = await supabase.rpc('create_ghost_user', { p_name: finalName });
+                if (error) throw error;
+                finalUserId = data;
+            } catch (err: any) {
+                alert('Erro ao criar jogador fantasma para reserva: ' + err.message);
+                setIsSaving(false);
+                return;
+            }
+        }
+
+        try {
+            const { error } = await supabase.from('tournament_reservations').insert({
+                event_id: reservingEvent.id,
+                user_id: finalUserId,
+                status: 'confirmed',
+                is_outsourced: true,
+                metadata: {
+                    extra_10k_compensation: outsourcedExtra10k
+                }
+            });
+
+            if (error) {
+                // Ignore unique violation if user already booked
+                if (error.code !== '23505') throw error;
+            } else {
+                const bonusMsg = outsourcedExtra10k 
+                    ? '+5.000 Fichas (terceirizado) + +10.000 Fichas (compensação site)'
+                    : '+5.000 Fichas de bônus';
+                alert(`Reserva terceirizada confirmada! ${bonusMsg} ativados para ${finalName}.`);
+            }
+            
+            setOutsourcedPlayerName('');
+            setOutsourcedSelectedUserId(undefined);
+            setShowOutsourcedSuggestions(false);
+            setOutsourcedExtra10k(false);
+            
+            // Reload reservations
+            await handleReserveSeat(reservingEvent);
+            
+        } catch (e: any) {
+            alert('Erro ao salvar reserva terceirizada: ' + e.message);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const removePlayerResult = (id: string) => {
@@ -924,7 +1077,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                     )}
                 </div>
 
-                {/* TABS DE NAVEGAÇÃO & SORTING */}
+                {/* TABS DE NAVEGAç!ÓO & SORTING */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-gray-200 dark:border-white/10 mb-8 gap-4">
                     <div className="flex items-center gap-4">
                         <button
@@ -1034,7 +1187,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
                                             {event.isStartingDay && (
                                                 <span className="text-[10px] px-2 py-0.5 rounded uppercase font-black tracking-widest bg-gradient-to-r from-primary to-accent text-white shadow-neon-pink">
-                                                    DIA CLASSIFICATÓRIO
+                                                    DIA CLASSIFICATçRIO
                                                 </span>
                                             )}
                                             {event.isFinalDay && (
@@ -1108,8 +1261,8 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                     )}
                                                     {event.cashGameCapacity && (
                                                         <div className="flex items-center gap-1" title="Lugares">
-                                                            <span className={`material-icons-outlined text-[12px] ${tStyles.textMain}`}>groups</span>
-                                                            <span className="text-gray-400">{event.cashGameCapacity}</span>
+                                                            <span className={`material-icons-outlined text-[12px] opacity-60`}>groups</span>
+                                                            <span className="text-gray-400 font-bold">{allReservationsCount[event.id] || 0} / {event.cashGameCapacity}</span>
                                                         </div>
                                                     )}
                                                 </>
@@ -1137,6 +1290,12 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                         <div className="flex items-center gap-1" title="Registro Tardio">
                                                             <span className={`material-icons-outlined text-[12px] ${tStyles.textMain}`}>history_toggle_off</span>
                                                             <span className="text-gray-400">{event.lateReg}</span>
+                                                        </div>
+                                                    )}
+                                                    {event.maxCapacity && (
+                                                        <div className="flex items-center gap-1" title="Reservas Confirmadas">
+                                                            <span className={`material-icons-outlined text-[12px] text-green-500`}>event_seat</span>
+                                                            <span className="text-gray-400 font-bold">{allReservationsCount[event.id] || 0} / {event.maxCapacity}</span>
                                                         </div>
                                                     )}
                                                 </>
@@ -1222,7 +1381,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
                                         </div>
 
-                                        {/* Botão de Reservar (Para todos os usuários em eventos abertos) */}
+                                        {/* Botão de Reservar (Para todos os usuários em eventos abertos - torneios e cash games presenciais) */}
                                         {event.status !== 'closed' && event.gameMode === 'tournament' && event.type !== 'online' && (
                                             <button
                                                 onClick={(e) => { 
@@ -1240,7 +1399,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                             </button>
                                         )}
 
-                                        {/* BOTÃO DE ENCERRAR EVENTO (ADMIN ONLY - Só se não estiver fechado) */}
+                                        {/* BOTÓO DE ENCERRAR EVENTO (ADMIN ONLY - Só se não estiver fechado) */}
                                         {isAdmin && event.status !== 'closed' && (
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); handleOpenClosing(event); }}
@@ -1287,7 +1446,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                         <span className={`text-xs font-black uppercase tracking-widest ${viewThemeStyles?.textMain}`}>{viewEvent.type === 'live' ? 'AO VIVO' : 'ONLINE'}</span>
                                         <span className="text-gray-600 text-xs">|</span>
                                         <span className="text-xs font-bold text-gray-300 tracking-wider">{(viewEvent.date || '').split('-').reverse().join('/')}</span>
-                                        <span className="text-gray-600 text-xs">•</span>
+                                        <span className="text-gray-600 text-xs">âÂ¬Â¢</span>
                                         <span className="text-xs font-bold text-gray-300 tracking-wider">{viewEvent.time}</span>
                                     </div>
                                     <h2 className="text-2xl sm:text-3xl font-display font-black text-white uppercase leading-[0.9] text-glow mb-4 drop-shadow-2xl">
@@ -1468,12 +1627,12 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                             {qualifiedPlayers.map((p, idx) => (
                                                                 <div
                                                                     key={idx}
-                                                                    onClick={() => onSelectPlayerByName?.(p.name)}
+                                                                    onClick={() => onSelectPlayerByName?.(p.userId ? getPlayerName(p.userId, p.name) : p.name)}
                                                                     className="flex justify-between items-center text-xs text-gray-300 py-1.5 border-b border-white/5 px-2 bg-white/5 rounded cursor-pointer hover:bg-white/10 transition-colors"
                                                                 >
                                                                     <span className="truncate flex-1">
                                                                         <span className={`font-bold mr-2 w-5 inline-block ${idx === 0 ? 'text-yellow-400' : idx === 1 ? 'text-gray-300' : idx === 2 ? 'text-orange-600' : 'text-gray-500'}`}>{idx + 1}º</span>
-                                                                        {p.name}
+                                                                        {getPlayerName(p.userId, p.name)}
                                                                     </span>
                                                                     <span className={`font-bold ${viewThemeStyles?.textMain} ml-2 shrink-0`}>{formatChips(p.qualifierChips?.toString() || '0')} fichas</span>
                                                                 </div>
@@ -1548,7 +1707,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                     <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full border ${viewClosedThemeStyles?.badgeBg}`}>
                                         {viewClosedEvent.gameMode === 'cash_game' ? 'CASH GAME' : 'TORNEIO'}
                                     </span>
-                                    <span className="text-gray-700 text-[10px]">•</span>
+                                    <span className="text-gray-700 text-[10px]">âÂ¬Â¢</span>
                                     <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{viewClosedEvent.date.split('-').reverse().join('/')}</div>
                                 </div>
                                 <h3 className="text-lg md:text-xl font-bold text-white mb-2 uppercase tracking-wider">{viewClosedEvent.title}</h3>
@@ -1582,7 +1741,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                     className="w-24 h-24 rounded-full border-4 border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.5)] object-cover relative z-10"
                                                 />
                                                 <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-yellow-400 text-black font-black text-[9px] px-3 py-0.5 rounded-full shadow-lg z-20 border-2 border-black">
-                                                    {viewClosedEvent.isStartingDay ? 'CHIP LEADER' : 'CAMPEÃO'}
+                                                    {viewClosedEvent.isStartingDay ? 'CHIP LEADER' : 'CAMPEÓO'}
                                                 </div>
                                             </div>
 
@@ -1774,7 +1933,23 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                 }}
                                                 className="w-full bg-black/30 border border-white/20 rounded p-2 text-white" />
                                         </div>
-                                        {/* REMOVED BUY-IN TOTAL INPUT AS REQUESTED */}
+                                        <div className="mt-4">
+                                            <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Buy-in Total (P/ Ranking)</label>
+                                            <div className="relative">
+                                                <input 
+                                                    type="text" 
+                                                    inputMode="numeric" 
+                                                    value={buyinValue}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value.replace(/\D/g, '');
+                                                        handleGlobalChange('buyin', val);
+                                                    }}
+                                                    className="w-full bg-black/30 border border-primary/30 rounded p-2 text-primary font-bold text-lg" 
+                                                />
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">R$</span>
+                                            </div>
+                                            <p className="text-[10px] text-gray-500 mt-1 uppercase">Soma do Buy-in + Taxa Adm para pontuação.</p>
+                                        </div>
                                     </div>
 
                                     {/* NEW STATISTICS SECTION */}
@@ -1863,26 +2038,32 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                             );
                                         }
 
-                                        const currentSchema = scoringSchemas.find(s => s.id === closingEvent?.scoringSchemaId);
-                                        const isCashLayout = formulaType === 'cash_online' || currentSchema?.criteria.some(c => ['rake', 'profit_loss', 'earlyStart', 'lateStay', 'minTime1h'].includes(c.type));
+                                        let schemaId = closingEvent?.scoringSchemaId;
+                                        if (!schemaId && closingEvent?.includedRankings) {
+                                            for (const rId of closingEvent.includedRankings) {
+                                                const ranked = rankings.find(r => r.id === rId);
+                                                if (ranked && ranked.scoringSchemaMap && ranked.scoringSchemaMap[formulaType]) {
+                                                    schemaId = ranked.scoringSchemaMap[formulaType];
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        const currentSchema = scoringSchemas.find(s => s.id === schemaId);
 
                                         return (
                                             <div className="flex justify-between px-2 pb-2 text-[10px] font-bold text-gray-500 uppercase gap-2">
                                                 <span className="w-1/4">Nome</span>
-                                                {isCashLayout ? (
-                                                    <>
-                                                        {currentSchema?.criteria.some(c => c.type === 'rake') && <span className="w-20 text-center">Rake</span>}
-                                                        {currentSchema?.criteria.some(c => c.type === 'profit_loss') && <span className="w-20 text-center">Lucro/Perda</span>}
-                                                        {currentSchema?.criteria.some(c => c.type === 'earlyStart') && <span className="w-10 text-center text-[8px]" title="Participar no Início">Início</span>}
-                                                        {currentSchema?.criteria.some(c => c.type === 'lateStay') && <span className="w-10 text-center text-[8px]" title="Participar no Fim">Fim</span>}
-                                                        {currentSchema?.criteria.some(c => c.type === 'minTime1h') && <span className="w-10 text-center text-[8px]" title="Participar pelo menos 1h">Até 1h</span>}
-                                                    </>
-                                                ) : (
+                                                {closingEvent?.gameMode !== 'cash_game' && formulaType !== 'cash_online' && (
                                                     <>
                                                         <span className="w-12 text-center">Pos</span>
                                                         <span className="w-20 text-right">Prêmio (R$)</span>
                                                     </>
                                                 )}
+                                                {currentSchema?.criteria.some(c => c.type === 'rake') && <span className="w-20 text-center">Rake</span>}
+                                                {currentSchema?.criteria.some(c => c.type === 'profit_loss') && <span className="w-20 text-center">Lucro/Perda</span>}
+                                                {currentSchema?.criteria.some(c => c.type === 'earlyStart') && <span className="w-10 text-center text-[8px]" title="Participar no Início">Início</span>}
+                                                {currentSchema?.criteria.some(c => c.type === 'lateStay') && <span className="w-10 text-center text-[8px]" title="Participar no Fim">Fim</span>}
+                                                {currentSchema?.criteria.some(c => c.type === 'minTime1h') && <span className="w-10 text-center text-[8px]" title="Participar pelo menos 1h">Até 1h</span>}
                                                 <span className="w-12 text-center">VIP</span>
                                                 <span className="w-12 text-center">Pts</span>
                                                 <span className="w-6"></span>
@@ -1915,11 +2096,47 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                         );
                                                     }
 
-                                                    const currentSchema = scoringSchemas.find(s => s.id === closingEvent?.scoringSchemaId);
-                                                    const isCashLayout = formulaType === 'cash_online' || currentSchema?.criteria.some(c => ['rake', 'profit_loss', 'earlyStart', 'lateStay', 'minTime1h'].includes(c.type));
+                                                    let schemaId = closingEvent?.scoringSchemaId;
+                                                    if (!schemaId && closingEvent?.includedRankings) {
+                                                        for (const rId of closingEvent.includedRankings) {
+                                                            const ranked = rankings.find(r => r.id === rId);
+                                                            if (ranked && ranked.scoringSchemaMap && ranked.scoringSchemaMap[formulaType]) {
+                                                                schemaId = ranked.scoringSchemaMap[formulaType];
+                                                                break;
+                                                            }
+                                                        }
+                                                    }
+                                                    const currentSchema = scoringSchemas.find(s => s.id === schemaId);
 
-                                                    return isCashLayout ? (
+                                                    return (
                                                         <>
+                                                            {closingEvent?.gameMode !== 'cash_game' && formulaType !== 'cash_online' && (
+                                                                <>
+                                                                    <input
+                                                                        type="text"
+                                                                        inputMode="numeric"
+                                                                        value={p.position}
+                                                                        onChange={(e) => {
+                                                                            const val = e.target.value.replace(/\D/g, '');
+                                                                            updatePlayerResult(p.id, 'position', parseInt(val) || 0);
+                                                                        }}
+                                                                        className="w-12 bg-black/50 text-center text-white rounded border border-white/10"
+                                                                    />
+                                                                    <input
+                                                                        type="text"
+                                                                        inputMode="decimal"
+                                                                        placeholder="0"
+                                                                        value={p.prize || ''}
+                                                                        onChange={(e) => {
+                                                                            const val = e.target.value.replace(',', '.');
+                                                                            if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                                                                updatePlayerResult(p.id, 'prize', parseFloat(val) || 0);
+                                                                            }
+                                                                        }}
+                                                                        className="w-20 bg-black/50 text-right text-green-400 font-bold rounded border border-white/10 px-2"
+                                                                    />
+                                                                </>
+                                                            )}
                                                             {currentSchema?.criteria.some(c => c.type === 'rake') && (
                                                                 <input
                                                                     type="text"
@@ -1980,32 +2197,6 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                                     />
                                                                 </div>
                                                             )}
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <input
-                                                                type="text"
-                                                                inputMode="numeric"
-                                                                value={p.position}
-                                                                onChange={(e) => {
-                                                                    const val = e.target.value.replace(/\D/g, '');
-                                                                    updatePlayerResult(p.id, 'position', parseInt(val) || 0);
-                                                                }}
-                                                                className="w-12 bg-black/50 text-center text-white rounded border border-white/10"
-                                                            />
-                                                            <input
-                                                                type="text"
-                                                                inputMode="decimal"
-                                                                placeholder="0"
-                                                                value={p.prize || ''}
-                                                                onChange={(e) => {
-                                                                    const val = e.target.value.replace(',', '.');
-                                                                    if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                                                                        updatePlayerResult(p.id, 'prize', parseFloat(val) || 0);
-                                                                    }
-                                                                }}
-                                                                className="w-20 bg-black/50 text-right text-green-400 font-bold rounded border border-white/10 px-2"
-                                                            />
                                                         </>
                                                     );
                                                 })()}
@@ -2325,7 +2516,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                 </div>
                                                 <div>
                                                     <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Late Reg</label>
-                                                    <input type="text" value={editingEvent.lateReg || ''} onChange={(e) => handleInputChange('lateReg', e.target.value)} className="w-full bg-black/20 border border-white/10 rounded p-2 text-white focus:border-primary outline-none" placeholder="6º Nível" />
+                                                    <input type="text" value={editingEvent.lateReg || ''} onChange={(e) => handleInputChange('lateReg', e.target.value)} className="w-full bg-black/20 border border-white/10 rounded p-2 text-white focus:border-primary outline-none" placeholder="6Ã‚Âº Nível" />
                                                 </div>
                                                 <div>
                                                     <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Garantido</label>
@@ -2455,7 +2646,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                             onChange={(e) => setEditingEvent({ ...editingEvent, cashGameDinner: e.target.checked })}
                                                             className="w-5 h-5 accent-yellow-500 bg-black border-white/20 rounded"
                                                         />
-                                                        <span className="text-sm text-gray-300 font-bold uppercase tracking-wider group-hover:text-white transition-colors">Jantar Cortesia 🍽️</span>
+                                                        <span className="text-sm text-gray-300 font-bold uppercase tracking-wider group-hover:text-white transition-colors">Jantar Cortesia çxx</span>
                                                     </label>
                                                     <label className="flex items-center gap-3 cursor-pointer group">
                                                         <input
@@ -2464,7 +2655,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                             onChange={(e) => setEditingEvent({ ...editingEvent, cashGameOpenBar: e.target.checked })}
                                                             className="w-5 h-5 accent-yellow-500 bg-black border-white/20 rounded"
                                                         />
-                                                        <span className="text-sm text-gray-300 font-bold uppercase tracking-wider group-hover:text-white transition-colors">Open Bar 🍻</span>
+                                                        <span className="text-sm text-gray-300 font-bold uppercase tracking-wider group-hover:text-white transition-colors">Open Bar </span>
                                                     </label>
                                                 </div>
 
@@ -2476,7 +2667,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                             onChange={() => toggleParallelProduct('jackpot')}
                                                             className="w-5 h-5 accent-yellow-500 bg-black border-white/20 rounded"
                                                         />
-                                                        <span className="text-sm text-gray-300 font-bold uppercase tracking-wider group-hover:text-white transition-colors">Participa do Jackpot 💰</span>
+                                                        <span className="text-sm text-gray-300 font-bold uppercase tracking-wider group-hover:text-white transition-colors">Participa do Jackpot çxç</span>
                                                     </label>
                                                 </div>
 
@@ -2523,8 +2714,8 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
                 {/* MODAL DE RESERVA */}
                 {reservingEvent && (
-                    <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
-                        <div className="bg-[#1c1c1c] border border-green-500/30 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-fade-in relative">
+                    <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-[60] backdrop-blur-sm overflow-y-auto">
+                        <div className="bg-[#1c1c1c] border border-green-500/30 rounded-2xl w-full max-w-lg shadow-2xl animate-fade-in relative my-auto max-h-[90vh] overflow-y-auto custom-scrollbar">
                             <button
                                 onClick={() => setReservingEvent(null)}
                                 className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
@@ -2546,7 +2737,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                     <h4 className="text-gray-400 text-sm font-bold uppercase tracking-wider mb-1">Ocupação Atual</h4>
                                                     <div className="flex items-baseline gap-2">
                                                         <span className="text-3xl font-black text-white">{currentReservationsCount}</span>
-                                                        <span className="text-gray-500 font-bold">/ {reservingEvent.maxCapacity} VAGAS MÁXIMAS</span>
+                                                        <span className="text-gray-500 font-bold">/ {reservingEvent.maxCapacity} VAGAS MÃƒÂXIMAS</span>
                                                     </div>
                                                 </div>
                                                 <button onClick={() => setShowReservationPlayers(!showReservationPlayers)} className="w-16 h-16 rounded-full border-4 border-white/10 flex items-center justify-center relative shadow-inner cursor-pointer hover:bg-white/5 transition-colors group" title="Ver Jogadores garantidos">
@@ -2579,9 +2770,9 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                     )}
 
                                     <div>
-                                        <h3 className="text-lg font-bold text-white mb-2">Seus Compromissos:</h3>
+                                        <h3 className="text-lg font-bold text-white mb-2 mt-6">Seus Compromissos:</h3>
                                         <ul className="list-disc pl-5 space-y-2 text-sm">
-                                            <li>Você se compromete em comparecer ao evento <strong>{reservingEvent.title}</strong> na data <strong>{reservingEvent.date.split('-').reverse().join('/')}</strong>, às <strong>{reservingEvent.time}</strong>.</li>
+                                            <li>Você se compromete em comparecer ao evento <strong>{reservingEvent.title}</strong> na data <strong>{reservingEvent.date.split('-').reverse().join('/')}</strong>, Ã s <strong>{reservingEvent.time}</strong>.</li>
                                             <li>Nós nos comprometemos a garantir que sempre haverá <strong>um(1) assento disponível</strong> para você iniciar este torneio.</li>
                                             <li>A reserva é um acordo de cavalheiros. O cancelamento sem aviso prévio nos lesa profundamente e pode afetar futuras reservas.</li>
                                             <li>O pagamento pode ser realizado presencialmente na hora ou debitado via App Poker caso você possua créditos Online.</li>

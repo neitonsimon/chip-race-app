@@ -23,6 +23,7 @@ import { ClubRules } from './ClubRules';
 import { ResponsibleGaming } from './ResponsibleGaming';
 import { OnlineCreditsPage } from './OnlineCreditsPage';
 import { CategoryPage } from './CategoryPage';
+import { DocumentLinks } from './DocumentLinks';
 
 export const AppRouter: React.FC = () => {
     const {
@@ -156,13 +157,15 @@ export const AppRouter: React.FC = () => {
                 return <AdminPanel
                     currentUser={currentUser as any}
                     onClose={() => handleNavigate('home')}
-                    isAdmin={isAdmin}
+                    isAdmin={isAdmin || currentUser?.role === 'staff'}
                     onUpdateProfile={handleProfileUpdate}
                     badgeTemplates={badgeTemplates}
                     onCreateBadgeTemplate={handleCreateBadgeTemplate}
                     onSendAdminMessage={handleSendAdminMessage}
                     onCreatePoll={handleCreatePoll}
                     onRefreshData={refreshSupabaseData}
+                    onSelectPlayer={handlePlayerSelect}
+                    onNavigate={handleNavigate}
                 />;
             case 'online-credits':
                 return <OnlineCreditsPage
@@ -209,6 +212,7 @@ export const AppRouter: React.FC = () => {
                             faqs={contentDB.faq}
                             onUpdateFaqs={(val) => updateContent('faq', '', val)}
                         />
+                        <DocumentLinks />
                     </>
                 );
         }

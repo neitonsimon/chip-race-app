@@ -55,6 +55,7 @@ interface OperationalTabProps {
     handleCreateGhostUser?: (name: string) => Promise<void>;
     getVipPrice?: (price: number, category: string, name: string) => number;
     handleDeleteCommand: (cmd: any) => Promise<void>;
+    currentUserRole?: string;
 }
 
 export const OperationalTab: React.FC<OperationalTabProps> = ({
@@ -71,11 +72,13 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
     pastEventsList, handleFinalizeEvent, handleCreateQuickEvent,
     searchQuery, handleCreateGhostUser,
     getVipPrice,
-    handleDeleteCommand
+    handleDeleteCommand,
+    currentUserRole
 }) => {
     const [eventFilterTab, setEventFilterTab] = React.useState<'proximos' | 'concluidos'>('proximos');
     const [selectedSubCategory, setSelectedSubCategory] = React.useState<string | null>(null);
     const [rightMode, setRightMode] = React.useState<'venda' | 'itens'>('venda');
+    const [commandCardFilter, setCommandCardFilter] = React.useState('');
 
     // Filter categories that should go into 'Diversos'
     const mainCategoryKeys = ['bar', 'torneio', 'cash'];
@@ -146,12 +149,14 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                 </option>
                             ))}
                         </select>
-                        <button
-                            onClick={handleCreateQuickEvent}
-                            className="w-full mt-2 py-2 rounded-xl text-[10px] font-black uppercase transition-all bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white border border-green-500/20"
-                        >
-                            + Evento Comum (Simples)
-                        </button>
+                        {currentUserRole === 'admin' && (
+                            <button
+                                onClick={handleCreateQuickEvent}
+                                className="w-full mt-2 py-2 rounded-xl text-[10px] font-black uppercase transition-all bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white border border-green-500/20"
+                            >
+                                + Evento Comum (Simples)
+                            </button>
+                        )}
                     </div>
 
                     <div className="space-y-2">
@@ -197,7 +202,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-                    {selectedEvent ? (
+                    {selectedEvent && currentUserRole !== 'staff' ? (
                         <>
                             <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4">
                                 <h4 className="text-[10px] font-black text-primary uppercase mb-3 flex items-center justify-between">
@@ -289,16 +294,18 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                         </div>
                                     </div>
 
-                                    <button
-                                        onClick={handleFinalizeEvent}
-                                        disabled={selectedEvent.status === 'closed'}
-                                        className={`w-full mt-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 group ${selectedEvent.status === 'closed' ? 'bg-green-500/10 text-green-500/50 cursor-not-allowed border border-green-500/10' : 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 shadow-sm'}`}
-                                    >
-                                        <span className={`material-icons text-sm ${selectedEvent.status !== 'closed' && 'group-hover:rotate-12 transition-transform'}`}>
-                                            {selectedEvent.status === 'closed' ? 'check_circle' : 'flag_circle'}
-                                        </span>
-                                        {selectedEvent.status === 'closed' ? 'Evento Encerrado Oficialmente' : 'Finalizar Evento e Fechar Dia'}
-                                    </button>
+                                    {currentUserRole === 'admin' && (
+                                        <button
+                                            onClick={handleFinalizeEvent}
+                                            disabled={selectedEvent.status === 'closed'}
+                                            className={`w-full mt-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 group ${selectedEvent.status === 'closed' ? 'bg-green-500/10 text-green-500/50 cursor-not-allowed border border-green-500/10' : 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 shadow-sm'}`}
+                                        >
+                                            <span className={`material-icons text-sm ${selectedEvent.status !== 'closed' && 'group-hover:rotate-12 transition-transform'}`}>
+                                                {selectedEvent.status === 'closed' ? 'check_circle' : 'flag_circle'}
+                                            </span>
+                                            {selectedEvent.status === 'closed' ? 'Evento Encerrado Oficialmente' : 'Finalizar Evento e Fechar Dia'}
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </>
@@ -336,9 +343,23 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                         <div className="flex gap-1.5 sm:gap-4 flex-1">
                             <button onClick={() => setCommandsTab('ativas')} className={`flex-1 sm:flex-none px-2 sm:px-6 py-2 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${commandsTab === 'ativas' ? 'bg-primary text-white shadow-neon-pink' : 'text-gray-400 hover:text-gray-300'}`}>Ativas ({openCommands.length})</button>
                             <button onClick={() => setCommandsTab('encerradas')} className={`flex-1 sm:flex-none px-2 sm:px-6 py-2 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${commandsTab === 'encerradas' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-gray-300'}`}>Encerradas ({closedCommands.length})</button>
-                            <button onClick={() => setCommandsTab('resumo')} className={`lg:hidden flex-1 sm:flex-none px-2 py-2 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${commandsTab === 'resumo' ? 'bg-secondary text-white shadow-neon-blue' : 'text-gray-400 hover:text-gray-300'}`}>Resumo</button>
+                            {currentUserRole === 'admin' && (
+                                <button onClick={() => setCommandsTab('resumo')} className={`lg:hidden flex-1 sm:flex-none px-2 py-2 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${commandsTab === 'resumo' ? 'bg-secondary text-white shadow-neon-blue' : 'text-gray-400 hover:text-gray-300'}`}>Resumo</button>
+                            )}
                         </div>
                     </div>
+                    {commandsTab !== 'resumo' && (
+                        <div className="relative w-full sm:w-64">
+                            <span className="material-icons-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">search</span>
+                            <input
+                                type="text"
+                                placeholder="Procurar jogador nesta lista..."
+                                value={commandCardFilter}
+                                onChange={(e) => setCommandCardFilter(e.target.value)}
+                                className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-xs text-white outline-none focus:border-primary placeholder-gray-600"
+                            />
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
@@ -391,7 +412,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                             </div>
 
                             <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-                                {commandsTab === 'resumo' ? (
+                                {commandsTab === 'resumo' && currentUserRole === 'admin' ? (
                                     <div className="lg:hidden animate-in fade-in slide-in-from-top-4 col-span-full">
                                         {/* FINANCIAL SUMMARY REPLICATED FOR MOBILE TAB */}
                                         <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 sm:p-6 mb-8">
@@ -498,7 +519,15 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                         </div>
                                     </div>
                                 ) : (
-                                    (commandsTab === 'ativas' ? openCommands : closedCommands).map(cmd => (
+                                    (commandsTab === 'ativas' ? openCommands : closedCommands)
+                                    .filter(cmd => {
+                                        if (!commandCardFilter) return true;
+                                        const searchLower = commandCardFilter.toLowerCase().trim();
+                                        const matchName = cmd.profiles?.name?.toLowerCase().includes(searchLower);
+                                        const matchCr = `cr#${String(cmd.profiles?.numeric_id).padStart(3, '0')}`.includes(searchLower) || String(cmd.profiles?.numeric_id).includes(searchLower);
+                                        return matchName || matchCr;
+                                    })
+                                    .map(cmd => (
                                         <div
                                             key={cmd.id}
                                             onClick={() => {
@@ -507,7 +536,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                             }}
                                             className={`bg-surface-dark border rounded-2xl p-2.5 sm:p-3 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden flex flex-col items-center text-center ${selectedCommand?.id === cmd.id ? 'border-primary shadow-neon-pink ring-1 ring-primary' : 'border-white/5'}`}
                                         >
-                                            {cmd.status === 'open' && (
+                                            {cmd.status === 'open' && currentUserRole === 'admin' && (
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleDeleteCommand(cmd); }}
                                                     className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-10"
@@ -570,7 +599,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
             </div>
 
             {/* Right Panel: Selected Command Details */}
-            <div className={`w-full lg:w-96 flex-1 lg:flex-none border-t lg:border-l border-white/5 bg-black/40 flex flex-col min-h-0 overflow-y-auto ${selectedCommand ? 'flex pb-12' : 'hidden lg:flex'}`}>
+            <div className={`w-full lg:w-[420px] xl:w-[500px] 2xl:w-[550px] flex-1 lg:flex-none border-t lg:border-l border-white/5 bg-black/40 flex flex-col min-h-0 overflow-y-auto ${selectedCommand ? 'flex pb-12' : 'hidden lg:flex'}`}>
                 {selectedCommand ? (
                     <>
                         <div className="p-4 sm:p-6 border-b border-white/10">
@@ -618,30 +647,30 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                             {rightMode === 'venda' ? (
                                 <div className="space-y-4">
                                     <div className="bg-black/40 border border-white/5 rounded-2xl p-4">
-                                        <div className="flex items-center justify-between mb-3">
-                                            <p className="text-[10px] font-black text-gray-500 uppercase">Categorias</p>
-                                            <div className="flex gap-1 overflow-x-auto pb-1 max-w-[200px] custom-scrollbar">
+                                        <div className="flex flex-col xl:flex-row xl:items-center justify-between mb-4 gap-3">
+                                            <p className="text-xs font-black text-gray-500 uppercase">Categorias</p>
+                                            <div className="flex gap-2 flex-wrap">
                                                 <button
                                                     onClick={() => { setProductSection('bar'); setSelectedSubCategory(null); }}
-                                                    className={`px-3 py-1 rounded-md text-[9px] font-black uppercase transition-all whitespace-nowrap ${productSection === 'bar' ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}
+                                                    className={`px-4 py-2 flex-1 xl:flex-none rounded-lg text-[10px] sm:text-xs font-black uppercase transition-all whitespace-nowrap text-center ${productSection === 'bar' ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'}`}
                                                 >
                                                     Bar
                                                 </button>
                                                 <button
                                                     onClick={() => { setProductSection('torneio'); setSelectedSubCategory(null); }}
-                                                    className={`px-3 py-1 rounded-md text-[9px] font-black uppercase transition-all whitespace-nowrap ${productSection === 'torneio' ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}
+                                                    className={`px-4 py-2 flex-1 xl:flex-none rounded-lg text-[10px] sm:text-xs font-black uppercase transition-all whitespace-nowrap text-center ${productSection === 'torneio' ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'}`}
                                                 >
                                                     Evento
                                                 </button>
                                                 <button
                                                     onClick={() => { setProductSection('cash'); setSelectedSubCategory(null); }}
-                                                    className={`px-3 py-1 rounded-md text-[9px] font-black uppercase transition-all whitespace-nowrap ${productSection === 'cash' ? 'bg-white text-black shadow-neon-blue' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}
+                                                    className={`px-4 py-2 flex-1 xl:flex-none rounded-lg text-[10px] sm:text-xs font-black uppercase transition-all whitespace-nowrap text-center ${productSection === 'cash' ? 'bg-white text-black shadow-neon-blue' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'}`}
                                                 >
                                                     Cash
                                                 </button>
                                                 <button
                                                     onClick={() => { setProductSection('diversos'); }}
-                                                    className={`px-3 py-1 rounded-md text-[9px] font-black uppercase transition-all whitespace-nowrap ${productSection === 'diversos' ? 'bg-secondary text-white shadow-neon-blue' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}
+                                                    className={`px-4 py-2 flex-1 xl:flex-none rounded-lg text-[10px] sm:text-xs font-black uppercase transition-all whitespace-nowrap text-center ${productSection === 'diversos' ? 'bg-secondary text-white shadow-neon-blue' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'}`}
                                                 >
                                                     Diversos
                                                 </button>
@@ -729,7 +758,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                             </div>
                                         )}
 
-                                        <div className="grid grid-cols-2 gap-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-1">
+                                        <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-3 gap-3 max-h-[600px] overflow-y-auto custom-scrollbar pr-1">
                                             {visibleItems.map(p => {
                                                 const disabled = productSection === 'torneio' ? isTourItemDisabled(p) : isProductDisabled(p);
                                                 const count = getItemCount(p);

@@ -27,27 +27,32 @@ export const StockTab: React.FC<StockTabProps> = ({ currentUser }) => {
     const [rName, setRName] = useState('');
     const [rIngredients, setRIngredients] = useState<{item_id: string, qty: string}[]>([]);
 
-    const fetchInventory = async () => {
+    const fetchData = async () => {
         setIsLoading(true);
         try {
-            const { data, error } = await supabase.from('inventory_items').select('*').order('name');
-            if (error) throw error;
-            setItems(data || []);
+            const [invRes, prodRes] = await Promise.all([
+                supabase.from('inventory_items').select('*').order('name'),
+                supabase.from('products')
+                    .select('id, name, inventory_item_id, category')
+                    .in('category', ['bar', 'cozinha'])
+                    .order('name')
+            ]);
+            
+            if (invRes.error) throw invRes.error;
+            if (prodRes.error) throw prodRes.error;
+            
+            setItems(invRes.data || []);
+            setProducts(prodRes.data || []);
         } catch (err) {
-            console.error(err);
+            console.error('Error fetching inventory data:', err);
+            // alert('Erro ao carregar dados do estoque.');
         } finally {
             setIsLoading(false);
         }
     };
 
-    const fetchProducts = async () => {
-        const { data } = await supabase.from('products').select('id, name, inventory_item_id, category').not('inventory_item_id', 'is', null);
-        if (data) setProducts(data);
-    };
-
     useEffect(() => {
-        fetchInventory();
-        fetchProducts();
+        fetchData();
     }, []);
 
     const resetPurchaseForm = () => {
@@ -136,10 +141,48 @@ export const StockTab: React.FC<StockTabProps> = ({ currentUser }) => {
             alert('✅ Estoque atualizado e despesa lançada no Caixa Geral!');
             resetPurchaseForm();
             setView('overview');
-            fetchInventory();
+            fetchData();
         } catch (error: any) {
             console.error(error);
             alert('Erro ao registrar entrada: ' + error.message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleAutoLink = async (productId: string) => {
+        const product = products.find(p => p.id === productId);
+        if (!product) return;
+
+        if (!confirm(`Deseja criar automaticamente uma base de estoque chamada "${product.name}" e vinculá-la a este produto?`)) return;
+
+        setIsSubmitting(true);
+        try {
+            // 1. Create item
+            const { data: newItem, error: errNew } = await supabase.from('inventory_items').insert([{
+                name: product.name,
+                category: product.category || 'bar',
+                unit_type: 'unidade',
+                current_stock: 0,
+                average_cost_brl: 0
+            }]).select().single();
+
+            if (errNew) throw errNew;
+
+            // 2. Link product
+            const { error: errLink } = await supabase.from('products').update({
+                inventory_item_id: newItem.id
+            }).eq('id', productId);
+
+            if (errLink) throw errLink;
+
+            alert('✅ Base de estoque criada e vinculada com sucesso!');
+            await fetchData();
+            setPItemId(newItem.id);
+            setPCategory(newItem.category);
+        } catch (error: any) {
+            console.error(error);
+            alert('Erro ao criar vínculo: ' + error.message);
         } finally {
             setIsSubmitting(false);
         }
@@ -180,7 +223,7 @@ export const StockTab: React.FC<StockTabProps> = ({ currentUser }) => {
             alert('✅ Produção registrada e insumos baixados do estoque!');
             resetRecipeForm();
             setView('overview');
-            fetchInventory();
+            fetchData();
         } catch (error: any) {
             console.error(error);
             alert('Erro ao registrar baixa de produção: ' + error.message);
@@ -262,22 +305,48 @@ export const StockTab: React.FC<StockTabProps> = ({ currentUser }) => {
                                             onChange={e => {
                                                 const val = e.target.value;
                                                 setPItemId(val);
-                                                const selectedItem = items.find(i => i.id === val);
-                                                if (selectedItem) setPCategory(selectedItem.category);
+                                                if (val && !val.startsWith('unlinked-')) {
+                                                    const selectedItem = items.find(i => i.id === val);
+                                                    if (selectedItem) setPCategory(selectedItem.category);
+                                                }
                                             }} 
                                             className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none"
                                         >
                                             <option value="">-- Selecione --</option>
                                             <optgroup label="PRODUTOS (Venda)">
                                                 {products.map(p => {
-                                                    const itemName = items.find(i => i.id === p.inventory_item_id)?.name || 'Insumo Desconhecido';
-                                                    return <option key={`prod-${p.id}`} value={p.inventory_item_id}>{p.name} (Gera: {itemName})</option>;
+                                                    const linkedItem = items.find(i => i.id === p.inventory_item_id);
+                                                    return (
+                                                        <option key={`prod-${p.id}`} value={p.inventory_item_id || `unlinked-${p.id}`}>
+                                                            {p.name} {linkedItem ? `(Gera: ${linkedItem.name})` : '⚠️ (Sem Vínculo)'}
+                                                        </option>
+                                                    );
                                                 })}
                                             </optgroup>
                                             <optgroup label="INSUMOS (Base)">
                                                 {items.map(i => <option key={i.id} value={i.id}>{i.name} ({i.unit_type})</option>)}
                                             </optgroup>
                                         </select>
+                                        
+                                        {/* Auto-link Helper */}
+                                        {pItemId.startsWith('unlinked-') && (
+                                            <div className="mt-3 p-4 bg-primary/10 border border-primary/20 rounded-2xl animate-in fade-in slide-in-from-top-2">
+                                                <div className="flex items-start gap-3">
+                                                    <span className="material-icons-outlined text-primary">info</span>
+                                                    <div className="flex-1">
+                                                        <p className="text-xs text-white font-bold mb-2">Este produto não possui vínculo com o estoque.</p>
+                                                        <p className="text-[10px] text-gray-400 mb-3">Para registrar entradas, um produto precisa estar conectado a um "Insumo Base".</p>
+                                                        <button 
+                                                            type="button" 
+                                                            onClick={() => handleAutoLink(pItemId.replace('unlinked-', ''))}
+                                                            className="bg-primary hover:bg-accent text-white px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all"
+                                                        >
+                                                            Criar Vínculo Agora
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
@@ -331,7 +400,7 @@ export const StockTab: React.FC<StockTabProps> = ({ currentUser }) => {
                                 </div>
                                 <button
                                     type="submit"
-                                    disabled={isSubmitting || (purchaseMode === 'existing' && !pItemId)}
+                                    disabled={isSubmitting || (purchaseMode === 'existing' && (!pItemId || pItemId.startsWith('unlinked-')))}
                                     className="w-full bg-emerald-500 text-white font-black py-4 rounded-2xl shadow-[0_0_20px_rgba(16,185,129,0.4)] uppercase tracking-widest text-xs mt-4 disabled:opacity-50"
                                 >
                                     {isSubmitting ? 'Registrando Compra...' : 'Finalizar e Alimentar Estoque'}

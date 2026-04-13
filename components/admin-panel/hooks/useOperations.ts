@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../../src/lib/supabase';
 
 interface UseOperationsProps {
@@ -32,7 +32,13 @@ export function useOperations({
 
     const fetchOpenCommands = async (eventId: string) => {
         const { data } = await supabase.from('commands').select('*, profiles!user_id(name, numeric_id, avatar_url, is_vip, vip_status, vip_expires_at, role, balance_brl, debt_limit_brl, total_pending_debt)').eq('event_id', eventId).eq('status', 'open').order('created_at', { ascending: false });
-        if (data) setOpenCommands(data);
+        if (data) {
+            setOpenCommands(data);
+            setSelectedCommand(prev => {
+                if (!prev) return null;
+                return data.find(c => c.id === prev.id) || prev;
+            });
+        }
     };
 
     const fetchClosedCommands = async (eventId: string) => {
@@ -46,7 +52,15 @@ export function useOperations({
             console.error('Error fetching closed commands:', error);
             return;
         }
-        setClosedCommands(data || []);
+        if (data) {
+            setClosedCommands(data);
+            setSelectedCommand(prev => {
+                if (!prev) return null;
+                return data.find(c => c.id === prev.id) || prev;
+            });
+        } else {
+            setClosedCommands([]);
+        }
     };
 
     const fetchCommandItems = async (commandId: string) => {
@@ -623,6 +637,37 @@ export function useOperations({
         if (pendingProduct?.id === item.id) { addCashItemToCommand(item); setPendingProduct(null); }
         else setPendingProduct(item);
     };
+
+    useEffect(() => {
+        if (!selectedEvent?.id) return;
+
+        const commandsSub = supabase
+            .channel(`public:commands:${selectedEvent.id}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'commands', filter: `event_id=eq.${selectedEvent.id}` }, () => {
+                fetchOpenCommands(selectedEvent.id);
+                fetchClosedCommands(selectedEvent.id);
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(commandsSub);
+        };
+    }, [selectedEvent?.id]);
+
+    useEffect(() => {
+        if (!selectedCommand?.id) return;
+
+        const itemsSub = supabase
+            .channel(`public:command_items:${selectedCommand.id}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'command_items', filter: `command_id=eq.${selectedCommand.id}` }, () => {
+                fetchCommandItems(selectedCommand.id);
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(itemsSub);
+        };
+    }, [selectedCommand?.id]);
 
     return {
         commandsTab, setCommandsTab,

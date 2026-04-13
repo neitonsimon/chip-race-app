@@ -22,6 +22,10 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({ currentU
     const [paymentMethod, setPaymentMethod] = useState('pix');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Edit states
+    const [editingTransaction, setEditingTransaction] = useState<ClubTransaction | null>(null);
+    const [isDeleting, setIsDeleting] = useState<string | null>(null);
+
     const categories = [
         { id: 'evento', label: 'Fechamento de Evento' },
         { id: 'recarga_app', label: 'Recarga de Saldo no App' },
@@ -118,6 +122,61 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({ currentU
         } catch (error) {
             console.error('Error adding transaction:', error);
             alert('Erro ao registrar lançamento.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDeleteTransaction = async (id: string) => {
+        if (!confirm('Deseja realmente excluir este lançamento? Esta ação não pode ser desfeita.')) return;
+
+        setIsDeleting(id);
+        try {
+            const { error } = await supabase
+                .from('club_transactions')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+            
+            fetchData();
+        } catch (error) {
+            console.error('Error deleting transaction:', error);
+            alert('Erro ao deletar lançamento.');
+        } finally {
+            setIsDeleting(null);
+        }
+    };
+
+    const handleEditClick = (tx: ClubTransaction) => {
+        setEditingTransaction(tx);
+    };
+
+    const handleSaveEdit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingTransaction) return;
+
+        setIsSubmitting(true);
+        try {
+            const { error } = await supabase
+                .from('club_transactions')
+                .update({
+                    amount_brl: Number(editingTransaction.amount_brl),
+                    type: editingTransaction.type,
+                    category: editingTransaction.category,
+                    description: editingTransaction.description.trim(),
+                    payment_method: editingTransaction.payment_method
+                })
+                .eq('id', editingTransaction.id);
+
+            if (error) throw error;
+
+            alert('Lançamento atualizado com sucesso!');
+            setEditingTransaction(null);
+            fetchData();
+        } catch (error) {
+            console.error('Error updating transaction:', error);
+            alert('Erro ao atualizar lançamento.');
         } finally {
             setIsSubmitting(false);
         }
@@ -328,15 +387,38 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({ currentU
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="text-right pl-11 sm:pl-0">
-                                                    <p className={`font-black tracking-wide ${
-                                                        tx.type === 'credit' ? 'text-green-400' : 'text-red-500'
-                                                    }`}>
-                                                        {tx.type === 'credit' ? '+' : '-'} R$ {Number(tx.amount_brl).toFixed(2)}
-                                                    </p>
-                                                    <p className="text-[10px] text-gray-500 uppercase mt-0.5">
-                                                        {paymentMethods.find(p => p.id === tx.payment_method)?.label || tx.payment_method}
-                                                    </p>
+                                                <div className="flex items-center gap-4">
+                                                    <div className="text-right pl-11 sm:pl-0">
+                                                        <p className={`font-black tracking-wide ${
+                                                            tx.type === 'credit' ? 'text-green-400' : 'text-red-500'
+                                                        }`}>
+                                                            {tx.type === 'credit' ? '+' : '-'} R$ {Number(tx.amount_brl).toFixed(2)}
+                                                        </p>
+                                                        <p className="text-[10px] text-gray-500 uppercase mt-0.5">
+                                                            {paymentMethods.find(p => p.id === tx.payment_method)?.label || tx.payment_method}
+                                                        </p>
+                                                    </div>
+                                                    
+                                                    {/* Edit/Delete Buttons */}
+                                                    <div className="flex items-center gap-1">
+                                                        <button 
+                                                            onClick={() => handleEditClick(tx)}
+                                                            className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-primary/20 hover:border-primary/40 transition-all text-gray-400 hover:text-primary"
+                                                            title="Editar"
+                                                        >
+                                                            <span className="material-icons-outlined text-sm">edit</span>
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleDeleteTransaction(tx.id)}
+                                                            disabled={isDeleting === tx.id}
+                                                            className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-red-500/20 hover:border-red-500/40 transition-all text-gray-400 hover:text-red-500 disabled:opacity-30"
+                                                            title="Excluir"
+                                                        >
+                                                            <span className={`material-icons-outlined text-sm ${isDeleting === tx.id ? 'animate-spin' : ''}`}>
+                                                                {isDeleting === tx.id ? 'refresh' : 'delete'}
+                                                            </span>
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}
@@ -345,6 +427,127 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({ currentU
                             </div>
                         </div>
 
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Modal */}
+            {editingTransaction && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+                    <div className="bg-[#0f0a28] border border-white/10 w-full max-w-xl rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-black/20">
+                            <h3 className="text-white font-black uppercase text-lg flex items-center gap-2">
+                                <span className="material-icons-outlined text-primary">edit</span>
+                                Editar Lançamento
+                            </h3>
+                            <button 
+                                onClick={() => setEditingTransaction(null)}
+                                className="text-gray-500 hover:text-white transition-colors"
+                            >
+                                <span className="material-icons-outlined">close</span>
+                            </button>
+                        </div>
+                        
+                        <form onSubmit={handleSaveEdit} className="p-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5 ml-1">Tipo da Operação</label>
+                                    <div className="flex gap-2 p-1 bg-black/40 border border-white/5 rounded-xl">
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditingTransaction({...editingTransaction, type: 'credit'})}
+                                            className={`flex-1 py-2 px-3 rounded-lg font-black text-[10px] transition-all ${
+                                                editingTransaction.type === 'credit' 
+                                                ? 'bg-green-500/20 text-green-400 shadow-neon-emerald' 
+                                                : 'text-gray-500 hover:text-gray-300'
+                                            }`}
+                                        >
+                                            ENTRADA
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditingTransaction({...editingTransaction, type: 'debit'})}
+                                            className={`flex-1 py-2 px-3 rounded-lg font-black text-[10px] transition-all ${
+                                                editingTransaction.type === 'debit' 
+                                                ? 'bg-red-500/20 text-red-500 shadow-neon-pink' 
+                                                : 'text-gray-500 hover:text-gray-300'
+                                            }`}
+                                        >
+                                            SAÍDA
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5 ml-1">Valor (R$)</label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        required
+                                        value={editingTransaction.amount_brl}
+                                        onChange={(e) => setEditingTransaction({...editingTransaction, amount_brl: Number(e.target.value)})}
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-primary transition-colors text-sm font-bold"
+                                        placeholder="0.00"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5 ml-1">Categoria</label>
+                                    <select
+                                        value={editingTransaction.category}
+                                        onChange={(e) => setEditingTransaction({...editingTransaction, category: e.target.value})}
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-primary transition-colors appearance-none text-sm font-bold"
+                                    >
+                                        {categories.map(cat => (
+                                            <option key={cat.id} value={cat.id} className="bg-[#0f0a28]">{cat.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5 ml-1">Forma de Pagamento</label>
+                                    <select
+                                        value={editingTransaction.payment_method}
+                                        onChange={(e) => setEditingTransaction({...editingTransaction, payment_method: e.target.value})}
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-primary transition-colors appearance-none text-sm font-bold"
+                                    >
+                                        {paymentMethods.map(method => (
+                                            <option key={method.id} value={method.id} className="bg-[#0f0a28]">{method.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="sm:col-span-2">
+                                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5 ml-1">Descrição</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={editingTransaction.description}
+                                        onChange={(e) => setEditingTransaction({...editingTransaction, description: e.target.value})}
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-primary transition-colors text-sm font-bold"
+                                        placeholder="Ex: Compra de 100 copos plásticos..."
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 mt-8">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingTransaction(null)}
+                                    className="flex-1 bg-white/5 hover:bg-white/10 text-white font-black uppercase text-[10px] tracking-widest py-3.5 rounded-xl transition-all border border-white/10"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="flex-[2] bg-primary hover:bg-accent text-white font-black uppercase text-[10px] tracking-widest py-3.5 rounded-xl transition-all shadow-neon-pink disabled:opacity-50"
+                                >
+                                    {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

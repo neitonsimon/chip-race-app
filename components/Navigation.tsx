@@ -14,6 +14,7 @@ interface NavigationProps {
     balanceBrl?: number;
     balanceChipz?: number;
     isAdmin?: boolean;
+    currentUserRole?: string;
 }
 
 import appConfig from '../src/config/appConfig.json';
@@ -32,7 +33,8 @@ export const Navigation: React.FC<NavigationProps> = ({
     balanceBrl = 0,
     balanceChipz = 0,
     totalPendingDebt = 0,
-    isAdmin = false
+    isAdmin = false,
+    currentUserRole
 }) => {
     const { contentDB } = useApp();
     const categories = contentDB?.categories || [];
@@ -159,16 +161,18 @@ export const Navigation: React.FC<NavigationProps> = ({
                             </button>
 
                             {/* Admin and Financial Panel Buttons */}
-                            {isAdmin && (
+                            {(isAdmin || currentUserRole === 'staff') && (
                                 <>
-                                    <button
-                                        onClick={() => onNavigate('financial')}
-                                        title="Caixa Geral"
-                                        className="flex items-center gap-1.5 text-green-400 border border-green-400/50 px-3 py-1.5 rounded-full hover:bg-green-400 hover:text-black transition-all shadow-[0_0_10px_rgba(74,222,128,0.2)] hover:shadow-[0_0_20px_rgba(74,222,128,0.6)] whitespace-nowrap"
-                                    >
-                                        <span className="material-icons-outlined text-sm">account_balance</span>
-                                        <span className="text-xs font-bold uppercase tracking-wide hidden lg:inline">Caixa</span>
-                                    </button>
+                                    {currentUserRole === 'admin' && (
+                                        <button
+                                            onClick={() => onNavigate('financial')}
+                                            title="Caixa Geral"
+                                            className="flex items-center gap-1.5 text-green-400 border border-green-400/50 px-3 py-1.5 rounded-full hover:bg-green-400 hover:text-black transition-all shadow-[0_0_10px_rgba(74,222,128,0.2)] hover:shadow-[0_0_20px_rgba(74,222,128,0.6)] whitespace-nowrap"
+                                        >
+                                            <span className="material-icons-outlined text-sm">account_balance</span>
+                                            <span className="text-xs font-bold uppercase tracking-wide hidden lg:inline">Caixa</span>
+                                        </button>
+                                    )}
                                     <button
                                         onClick={() => onNavigate('admin')}
                                         title="Painel Admin"
@@ -436,17 +440,19 @@ export const Navigation: React.FC<NavigationProps> = ({
                                 <span className="material-icons-outlined">diamond</span> SEJA VIP
                             </button>
 
-                            {isAdmin && (
+                            {(isAdmin || currentUserRole === 'staff') && (
                                 <>
-                                    <button
-                                        onClick={() => {
-                                            onNavigate('financial');
-                                            setMobileMenuOpen(false);
-                                        }}
-                                        className="block w-full text-left px-3 py-4 text-lg font-bold text-green-400 hover:text-green-300 hover:bg-white/5 border-b border-white/5 flex items-center gap-2"
-                                    >
-                                        <span className="material-icons-outlined">account_balance</span> CAIXA GERAL
-                                    </button>
+                                    {currentUserRole === 'admin' && (
+                                        <button
+                                            onClick={() => {
+                                                onNavigate('financial');
+                                                setMobileMenuOpen(false);
+                                            }}
+                                            className="block w-full text-left px-3 py-4 text-lg font-bold text-green-400 hover:text-green-300 hover:bg-white/5 border-b border-white/5 flex items-center gap-2"
+                                        >
+                                            <span className="material-icons-outlined">account_balance</span> CAIXA GERAL
+                                        </button>
+                                    )}
                                     <button
                                         onClick={() => {
                                             onNavigate('admin');

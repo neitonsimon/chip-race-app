@@ -66,6 +66,11 @@ export interface TournamentReservation {
   event_id: string;
   user_id: string;
   status: 'reserved' | 'confirmed' | 'cancelled';
+  is_outsourced?: boolean;
+  metadata?: {
+    extra_10k_compensation?: boolean;
+    [key: string]: any;
+  };
   created_at: string;
   updated_at?: string;
   profiles?: any;
@@ -450,4 +455,5 @@ export interface ContentDB {
   // Adicione mais seções conforme necessário
   categories: TournamentCategory[]; // Categories são dinâmicas agora
   faq?: { question: string; answer: string }[];
+  documents?: { title: string; subtitle: string; icon: string; url: string; color: string }[];
 }

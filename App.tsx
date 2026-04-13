@@ -11,7 +11,7 @@ export default function App() {
     const {
         currentView, handleNavigate, prizeLabel, isLoggedIn, isAdmin,
         messages, unreadCount, handleMarkAsRead, handleReplyMessage,
-        currentUser, newNotification, setNewNotification
+        currentUser, newNotification, setNewNotification, isFlyerOpen
     } = useApp();
 
     const lastTrackedView = React.useRef<string | null>(null);
@@ -130,6 +130,7 @@ export default function App() {
                 balanceBrl={currentUser.balanceBrl || 0}
                 balanceChipz={currentUser.balanceChipz || 0}
                 totalPendingDebt={currentUser.totalPendingDebt || 0}
+                currentUserRole={currentUser?.role}
             />
 
             <AppRouter />
@@ -154,14 +155,14 @@ export default function App() {
             <ScrollToTop />
 
             {/* Indicador de Usuário Logado - Fixo no canto inferior direito */}
-            {isLoggedIn && currentUser.name && (
+            {isLoggedIn && currentUser.name && !isFlyerOpen && (
                 <div
                     onClick={() => handleNavigate('profile')}
                     className="fixed bottom-20 sm:bottom-4 right-4 z-50 bg-surface-dark/90 backdrop-blur border border-white/10 px-4 py-2 rounded-full shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4 cursor-pointer hover:border-primary/50 hover:bg-surface-dark transition-all group"
                     title="Ver meu perfil"
                 >
-                    <div className={`w-2 h-2 rounded-full ${isAdmin ? 'bg-red-500' : 'bg-green-500'} animate-pulse`}></div>
-                    <span className="text-sm text-gray-300">Olá, <span className="font-bold text-white group-hover:text-primary transition-colors">{currentUser.name}</span> {isAdmin && <span className="text-[10px] text-red-400 bg-red-900/30 px-1 rounded ml-1 border border-red-500/30">ADMIN</span>}</span>
+                    <div className={`w-2 h-2 rounded-full ${isAdmin ? 'bg-red-500' : currentUser.role === 'staff' ? 'bg-blue-500' : 'bg-green-500'} animate-pulse`}></div>
+                    <span className="text-sm text-gray-300">Olá, <span className="font-bold text-white group-hover:text-primary transition-colors">{currentUser.name}</span> {isAdmin ? <span className="text-[10px] text-red-400 bg-red-900/30 px-1 rounded ml-1 border border-red-500/30">ADMIN</span> : currentUser.role === 'staff' ? <span className="text-[10px] text-blue-400 bg-blue-900/30 px-1 rounded ml-1 border border-blue-500/30">STAFF</span> : null}</span>
                     <span className="material-icons-outlined text-sm text-gray-600 group-hover:text-primary transition-colors">chevron_right</span>
                 </div>
             )}

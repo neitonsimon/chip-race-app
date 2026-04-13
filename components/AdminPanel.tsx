@@ -31,6 +31,8 @@ interface AdminPanelProps {
     onSendAdminMessage?: (subject: string, content: string, category: 'admin' | 'system' | 'tournament') => void;
     onCreatePoll?: (question: string, options: string[]) => void;
     onRefreshData?: () => Promise<void>;
+    onSelectPlayer?: (player: any) => void;
+    onNavigate?: (view: string) => void;
 }
 
 function applyVipDiscount(price: number, category: string, productName: string, vipStatus?: string | null): number {
@@ -67,7 +69,11 @@ function getOneTimeKeyFromNote(note: string): string | null {
     return null;
 }
 
-export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, isAdmin = false, onUpdateProfile, badgeTemplates = [], onCreateBadgeTemplate, onSendAdminMessage, onCreatePoll, onRefreshData }) => {
+export const AdminPanel: React.FC<AdminPanelProps> = ({ 
+    onClose, currentUser, isAdmin = false, onUpdateProfile, badgeTemplates = [], 
+    onCreateBadgeTemplate, onSendAdminMessage, onCreatePoll, onRefreshData,
+    onSelectPlayer, onNavigate 
+}) => {
     const [activeTab, setActiveTab] = useState<'operational' | 'inventory' | 'reports' | 'launch' | 'send-gifts' | 'debts' | 'communications' | 'reservations'>('operational');
     const [events, setEvents] = useState<any[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
@@ -858,6 +864,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             handleCreateGhostUser={handleCreateGhostUser}
                             getVipPrice={getVipPrice}
                             handleDeleteCommand={handleDeleteCommand}
+                            currentUserRole={currentUser?.role}
                         />
                     )}
 
@@ -894,6 +901,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, currentUser, is
                             currentUser={currentUser} 
                             isAdmin={isAdmin}
                             onRefreshData={onRefreshData}
+                            onSelectPlayer={onSelectPlayer}
+                            onNavigate={onNavigate}
                         />
                     )}
 

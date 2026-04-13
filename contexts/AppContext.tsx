@@ -77,6 +77,8 @@ interface AppContextType {
     setExperienceLevels: React.Dispatch<React.SetStateAction<ExperienceLevel[]>>;
     setDailyRewards: React.Dispatch<React.SetStateAction<DailyReward[]>>;
     refreshSupabaseData: () => Promise<void>;
+    isFlyerOpen: boolean;
+    setIsFlyerOpen: (isOpen: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -121,6 +123,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [polls, setPolls] = useState<Poll[]>([]);
     const [pollVotesByCurrentUser, setPollVotesByCurrentUser] = useState<Record<string, number>>({});
     const [newNotification, setNewNotification] = useState<Message | null>(null);
+    const [isFlyerOpen, setIsFlyerOpen] = useState(false);
     const notificationTimer = useRef<any>(null);
 
     const fetchSupabaseData = async () => {
@@ -252,6 +255,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     else if (item.key === 'faq') setContentDB(prev => ({ ...prev, faq: item.value }));
                     else if (item.key === 'months') setMonths(item.value);
                     else if (item.key === 'total_qualifiers') setCustomTotalQualifiers(item.value);
+                    else if (item.key === 'documents') setContentDB(prev => ({ ...prev, documents: item.value }));
                     else if (item.key === 'vip_plans') setVipPlans(item.value);
                 });
             }
@@ -307,7 +311,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const { data, error } = await supabase.from('profiles').select('*, total_pending_debt, locked_balance_brl, balance_unlock_date').eq('id', userId).single();
             if (error) throw error;
             if (data) {
-                const userIsAdmin = data.role === 'admin' || data.role === 'staff';
+                const userIsAdmin = data.role === 'admin';
                 setIsAdmin(userIsAdmin);
                 const userData: any = {
                     id: userId,
@@ -685,13 +689,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                         const p = playerMap.get(playerKey)!;
                         // Prioritize the pre-saved per-ranking points (calculated at event closure with correct schema)
                         // Only fall back to re-calculation if no saved value exists (legacy events)
+                        // Force dynamic calculation for special tournaments to bypass any stale schema-based db values
+                        const isSpecialEvent = ev.rankingType === 'special';
+                        const isLegacyRanking = ranking.id === 'legacy' || ranking.label.toLowerCase().includes('legado');
+                        const forceRecalc = isSpecialEvent && isLegacyRanking;
                         const savedPoints = r.pointsPerRanking?.[ranking.id];
-                        const pointsToAdd = (savedPoints !== undefined && savedPoints !== null)
+                        const pointsToAdd = (savedPoints !== undefined && savedPoints !== null && !forceRecalc)
                             ? savedPoints
                             : calculatePoints(
                                 ev.rankingType || 'weekly', 
                                 ev.results?.length || 0, 
-                                Number((ev.buyin?.toString() || '0').replace(/[^0-9]/g, '')) || 0, 
+                                // For special events, use the buyinTotal if provided in results, else parse from event
+                                (isSpecialEvent && r.buyinTotal) ? r.buyinTotal : (Number((ev.buyin?.toString() || '0').replace(/[^0-9]/g, '')) || 0), 
                                 r.position, 
                                 r.prize, 
                                 r.isVip, 
@@ -707,7 +716,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     });
                 }
             });
-            const sortedPlayers = Array.from(playerMap.values()).sort((a, b) => b.points - a.points).map((p, i) => ({ ...p, rank: i + 1 }));
+            const sortedPlayers = Array.from(playerMap.values()).filter(p => p.points > 0).sort((a, b) => b.points - a.points).map((p, i) => ({ ...p, rank: i + 1 }));
             if (JSON.stringify(sortedPlayers) !== JSON.stringify(ranking.players)) { hasChanges = true; return { ...ranking, players: sortedPlayers }; }
             return ranking;
         });
@@ -916,7 +925,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     console.error('Error closing event:', e);
                 }
             }
-            if (results && !eventToUpdate.isStartingDay) {
+
+            if (results && !eventToUpdate.isStartingDay && eventToUpdate.gameMode !== 'cash_game') {
                 for (const r of results) {
                     if (r.userId) {
                         let slug = 'tournament_result';
@@ -988,7 +998,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                         }
                     }
                 }
-
             }
         } catch (e) {
             console.error('Error in event closure messages:', e);
@@ -1297,6 +1306,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             handleNavigateToPlayerByName, handleCreatePoll, handleVoteOnPoll, handleSendAdminMessage, handleSendMessage, handleReplyMessage,
             handleMarkAsRead, handleDeleteMessage, handleCreateBadgeTemplate, updateContent, updateCategory, setNewNotification, getAllUniquePlayers,
             setEvents, setExperienceLevels, setDailyRewards,
+            isFlyerOpen, setIsFlyerOpen,
             refreshSupabaseData: async () => {
                 await fetchSupabaseData();
                 if (currentUserId) await fetchProfile(currentUserId);

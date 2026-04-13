@@ -84,9 +84,9 @@ export const calculatePoints = (
         if (isFT) points += 15;
         if (prize > 0) points += (prize / 15);
     } else if (type === 'special') {
-        points = (players / 4) + (buyin / 6);
+        points = (players / 4) + (buyin / 4);
         if (isFT) points += 30;
-        if (prize > 0) points += (prize / 25);
+        if (prize > 0) points += (prize / 20);
     } else if (type === 'legacy_weekly' || type === 'legacy_monthly' || type === 'legacy_special') {
         const table: Record<number, number> = { 1: 100, 2: 80, 3: 70, 4: 60, 5: 50, 6: 40, 7: 30, 8: 20, 9: 10 };
         let basePoints = table[position] || (position > 0 && position <= 15 ? 5 : 0);
