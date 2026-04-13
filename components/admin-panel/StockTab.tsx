@@ -12,6 +12,7 @@ export const StockTab: React.FC<StockTabProps> = ({ currentUser }) => {
     const [products, setProducts] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [editingItem, setEditingItem] = useState<any | null>(null);
 
     // Purchase Form State
     const [purchaseMode, setPurchaseMode] = useState<'new' | 'existing'>('existing');
@@ -232,6 +233,61 @@ export const StockTab: React.FC<StockTabProps> = ({ currentUser }) => {
         }
     };
 
+    const handleUpdateItem = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingItem) return;
+
+        setIsSubmitting(true);
+        try {
+            const { error } = await supabase.from('inventory_items')
+                .update({
+                    name: editingItem.name,
+                    category: editingItem.category,
+                    unit_type: editingItem.unit_type,
+                    current_stock: Number(editingItem.current_stock),
+                    average_cost_brl: Number(editingItem.average_cost_brl)
+                })
+                .eq('id', editingItem.id);
+
+            if (error) throw error;
+
+            alert('✅ Item atualizado com sucesso!');
+            setEditingItem(null);
+            fetchData();
+        } catch (error: any) {
+            console.error(error);
+            alert('Erro ao atualizar item: ' + error.message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDeleteItem = async (id: string) => {
+        if (!confirm('Tem certeza que deseja excluir este item permanentemente? Esta ação não pode ser desfeita e pode afetar produtos vinculados.')) return;
+
+        setIsSubmitting(true);
+        try {
+            // First nullify links in products to avoid FK errors if not cascade
+            await supabase.from('products').update({ inventory_item_id: null }).eq('inventory_item_id', id);
+            
+            // Delete movements first
+            await supabase.from('inventory_movements').delete().eq('item_id', id);
+
+            // Delete item
+            const { error } = await supabase.from('inventory_items').delete().eq('id', id);
+            
+            if (error) throw error;
+
+            alert('✅ Item excluído com sucesso!');
+            fetchData();
+        } catch (error: any) {
+            console.error(error);
+            alert('Erro ao excluir item: ' + error.message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     return (
         <div className="flex flex-col h-full bg-[#050214] text-white">
             <header className="px-6 py-4 border-b border-white/10 bg-black/40 backdrop-blur-md sticky top-0 z-10">
@@ -270,14 +326,25 @@ export const StockTab: React.FC<StockTabProps> = ({ currentUser }) => {
                                 ) : (
                                     <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
                                         {items.map(item => (
-                                            <div key={item.id} className="bg-white/5 border border-white/10 rounded-xl p-4 flex justify-between items-center group hover:bg-white/10 transition-colors">
-                                                <div>
-                                                    <h4 className="font-bold text-sm uppercase">{item.name}</h4>
-                                                    <p className="text-xs text-gray-500 uppercase">{item.category} • {item.unit_type}</p>
+                                            <div key={item.id} className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col gap-4 group hover:bg-white/10 transition-colors">
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <h4 className="font-bold text-sm uppercase">{item.name}</h4>
+                                                        <p className="text-xs text-gray-500 uppercase font-medium">{item.category} • {item.unit_type}</p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <div className="text-sm font-black text-emerald-400">{Number(item.current_stock).toFixed(2)}</div>
+                                                        <div className="text-[10px] text-gray-400">R$ {Number(item.average_cost_brl).toFixed(2)} / {item.unit_type === 'kg' ? 'kg' : item.unit_type === 'litro' ? 'L' : 'un'}</div>
+                                                    </div>
                                                 </div>
-                                                <div className="text-right">
-                                                    <div className="text-sm font-black text-emerald-400">{Number(item.current_stock).toFixed(2)}</div>
-                                                    <div className="text-[10px] text-gray-400">R$ {Number(item.average_cost_brl).toFixed(2)} / un</div>
+                                                
+                                                <div className="flex gap-2 pt-3 border-t border-white/10 opacity-60 group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={() => setEditingItem(item)} className="flex-1 flex items-center justify-center gap-2 py-2 bg-white/5 hover:bg-primary text-gray-400 hover:text-white rounded-lg text-[10px] font-bold uppercase transition-all">
+                                                        <span className="material-icons-outlined text-xs">edit</span> Editar
+                                                    </button>
+                                                    <button onClick={() => handleDeleteItem(item.id)} className="flex-1 flex items-center justify-center gap-2 py-2 bg-white/5 hover:bg-red-500 text-gray-400 hover:text-white rounded-lg text-[10px] font-bold uppercase transition-all">
+                                                        <span className="material-icons-outlined text-xs">delete</span> Excluir
+                                                    </button>
                                                 </div>
                                             </div>
                                         ))}
@@ -460,6 +527,109 @@ export const StockTab: React.FC<StockTabProps> = ({ currentUser }) => {
                     </>
                 )}
             </div>
+
+            {/* Modal de Edição de Insumo */}
+            {editingItem && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
+                    <div className="bg-[#050214] border border-white/10 rounded-3xl w-full max-w-xl p-8 relative shadow-2xl animate-in zoom-in-95 duration-200">
+                        <button 
+                            onClick={() => setEditingItem(null)}
+                            className="absolute top-6 right-6 text-gray-500 hover:text-white transition-colors"
+                        >
+                            <span className="material-icons-outlined font-black">close</span>
+                        </button>
+
+                        <h2 className="text-2xl font-black uppercase text-white mb-6 flex items-center gap-3">
+                            <span className="material-icons-outlined text-primary">edit</span>
+                            Editar Insumo
+                        </h2>
+
+                        <form onSubmit={handleUpdateItem} className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Nome do Insumo</label>
+                                    <input 
+                                        required 
+                                        type="text" 
+                                        value={editingItem.name} 
+                                        onChange={e => setEditingItem({...editingItem, name: e.target.value})} 
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none" 
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Categoria</label>
+                                    <select 
+                                        value={editingItem.category} 
+                                        onChange={e => setEditingItem({...editingItem, category: e.target.value})} 
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none"
+                                    >
+                                        <option value="bar">Bar (Bebidas, Salgadinhos)</option>
+                                        <option value="cozinha">Cozinha (Alimentos)</option>
+                                        <option value="limpeza">Limpeza / Descartáveis</option>
+                                        <option value="equipamentos">Equipamentos / Suprimentos</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Unidade de Medida</label>
+                                    <select 
+                                        value={editingItem.unit_type} 
+                                        onChange={e => setEditingItem({...editingItem, unit_type: e.target.value})} 
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none"
+                                    >
+                                        <option value="unidade">Unidades</option>
+                                        <option value="kg">Quilogramas (Kg)</option>
+                                        <option value="litro">Litros (L)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-emerald-500 uppercase mb-2 ml-1">Estoque Atual (Ajuste Direto)</label>
+                                    <input 
+                                        required 
+                                        type="number" 
+                                        step="0.01" 
+                                        value={editingItem.current_stock} 
+                                        onChange={e => setEditingItem({...editingItem, current_stock: e.target.value})} 
+                                        className="w-full bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-4 py-3 text-emerald-400 text-sm font-black focus:border-emerald-500 outline-none" 
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Custo Médio (R$)</label>
+                                <input 
+                                    required 
+                                    type="number" 
+                                    step="0.01" 
+                                    value={editingItem.average_cost_brl} 
+                                    onChange={e => setEditingItem({...editingItem, average_cost_brl: e.target.value})} 
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none" 
+                                />
+                                <p className="text-[9px] text-gray-500 mt-2">*Ajuste manual do custo médio não altera o caixa do clube, serve apenas para correção de relatórios.</p>
+                            </div>
+
+                            <div className="flex gap-3 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingItem(null)}
+                                    className="flex-1 bg-white/5 hover:bg-white/10 text-white font-bold py-3 rounded-2xl uppercase tracking-widest text-[10px] transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="flex-[2] bg-primary text-white font-black py-3 rounded-2xl shadow-neon-pink uppercase tracking-widest text-[10px] disabled:opacity-50 transition-all"
+                                >
+                                    {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
