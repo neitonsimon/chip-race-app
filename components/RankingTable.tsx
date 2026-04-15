@@ -684,15 +684,15 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                         <div className="bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden shadow-2xl relative z-10">
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-secondary"></div>
 
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left">
+                            <div>
+                                <table className="w-full text-left table-fixed">
                                     <thead className="bg-gray-5 dark:bg-white/5">
                                         <tr>
-                                            <th className="px-3 md:px-6 py-3 md:py-5 text-xs md:text-sm font-black text-primary uppercase tracking-wider md:tracking-[0.2em] w-12 md:w-auto text-center md:text-left">Rank</th>
-                                            <th className="px-3 md:px-6 py-3 md:py-5 text-xs md:text-sm font-black text-primary uppercase tracking-wider md:tracking-[0.2em]">Competidor</th>
-                                            <th className="px-6 py-5 text-sm font-black text-primary uppercase tracking-[0.2em] hidden md:table-cell">Últimas Pontuações</th>
-                                            <th className="px-3 md:px-6 py-3 md:py-5 text-xs md:text-sm font-black text-primary uppercase tracking-wider md:tracking-[0.2em] text-right">Score</th>
-                                            <th className="px-3 md:px-6 py-3 md:py-5 text-xs md:text-sm font-black text-secondary uppercase tracking-wider md:tracking-[0.2em] text-center">Prêmio</th>
+                                            <th className="px-2 md:px-6 py-3 md:py-5 text-[10px] md:text-sm font-black text-primary uppercase tracking-wider w-10 md:w-16 text-center">RANK</th>
+                                            <th className="px-2 md:px-6 py-3 md:py-5 text-[10px] md:text-sm font-black text-primary uppercase tracking-wider">COMPETIDOR</th>
+                                            <th className="px-6 py-5 text-sm font-black text-primary uppercase tracking-[0.2em] hidden md:table-cell w-40">Últ. Pontos</th>
+                                            <th className="px-2 md:px-6 py-3 md:py-5 text-[10px] md:text-sm font-black text-primary uppercase tracking-wider text-right w-20 md:w-28">SCORE</th>
+                                            <th className="px-1 md:px-6 py-3 md:py-5 text-[10px] md:text-sm font-black text-secondary uppercase tracking-wider text-center w-16 md:w-28">PRÊMIO</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-200 dark:divide-white/5">
@@ -713,9 +713,9 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                                     className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group cursor-pointer"
                                                     onClick={() => onSelectPlayer && onSelectPlayer(player)}
                                                 >
-                                                    <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-center md:text-left">
-                                                        <div className="flex items-center justify-center md:justify-start gap-2">
-                                                            <div className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-lg font-display font-bold text-sm md:text-lg shadow-lg group-hover:scale-110 transition-transform ${player.rank === 1 ? 'bg-gradient-to-br from-primary to-cyan-700 text-white border border-primary/50' :
+                                                    <td className="px-2 md:px-6 py-2 md:py-4 text-center">
+                                                        <div className="flex items-center justify-center gap-1">
+                                                            <div className={`w-7 h-7 md:w-10 md:h-10 flex items-center justify-center rounded-lg font-display font-bold text-xs md:text-lg shadow-lg group-hover:scale-110 transition-transform ${player.rank === 1 ? 'bg-gradient-to-br from-primary to-cyan-700 text-white border border-primary/50' :
                                                                 player.rank === 2 ? 'bg-gradient-to-br from-secondary to-cyan-700 text-black border border-secondary/50' :
                                                                     player.rank === 3 ? 'bg-gradient-to-br from-gray-600 to-gray-800 text-white border border-gray-500/50' :
                                                                         'bg-gray-100 dark:bg-white/5 text-gray-500 border border-gray-200 dark:border-white/5'
@@ -724,26 +724,26 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap">
-                                                        <div className="flex items-center gap-3 md:gap-4">
+                                                    <td className="px-2 md:px-6 py-2 md:py-4 min-w-0">
+                                                        <div className="flex items-center gap-2 md:gap-4">
                                                             <div className="relative shrink-0">
                                                                 <img
                                                                     src={player.avatar || `https://ui-avatars.com/api/?name=${player.name.replace(' ', '+')}&background=random`}
                                                                     alt={player.name}
-                                                                    className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border-2 border-gray-200 dark:border-white/10 group-hover:border-primary transition-colors"
+                                                                    className="w-8 h-8 md:w-12 md:h-12 rounded-full object-cover border-2 border-gray-200 dark:border-white/10 group-hover:border-primary transition-colors"
                                                                 />
-                                                                {player.change === 'up' && <div className="absolute -top-1 -right-1 w-3 h-3 md:w-4 md:h-4 bg-green-500 rounded-full border-2 border-white dark:border-surface-dark flex items-center justify-center"><span className="material-icons-outlined text-[8px] md:text-[10px] text-white">arrow_drop_up</span></div>}
-                                                                {player.change === 'down' && <div className="absolute -top-1 -right-1 w-3 h-3 md:w-4 md:h-4 bg-red-500 rounded-full border-2 border-white dark:border-surface-dark flex items-center justify-center"><span className="material-icons-outlined text-[8px] md:text-[10px] text-white">arrow_drop_down</span></div>}
+                                                                {player.change === 'up' && <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border border-white dark:border-surface-dark flex items-center justify-center"><span className="material-icons-outlined text-[7px] text-white">arrow_drop_up</span></div>}
+                                                                {player.change === 'down' && <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border border-white dark:border-surface-dark flex items-center justify-center"><span className="material-icons-outlined text-[7px] text-white">arrow_drop_down</span></div>}
                                                             </div>
-                                                            <div className="min-w-0">
-                                                                <span className="flex items-center gap-1 font-bold text-gray-900 dark:text-gray-200 group-hover:text-primary transition-colors text-sm md:text-lg">
-                                                                    <span className="truncate max-w-[120px] sm:max-w-none">{player.name}</span>
+                                                            <div className="min-w-0 flex-1 overflow-hidden">
+                                                                <span className="flex items-center gap-0.5 font-bold text-gray-900 dark:text-gray-200 group-hover:text-primary transition-colors text-xs md:text-lg">
+                                                                    <span className="truncate block">{player.name}</span>
                                                                     {player.isVerified && (
-                                                                        <span className="material-icons text-[#00E5FF] text-sm md:text-base shrink-0" title="Perfil Verificado">verified</span>
+                                                                        <span className="material-icons text-[#00E5FF] text-[11px] md:text-base shrink-0" title="Perfil Verificado">verified</span>
                                                                     )}
                                                                 </span>
-                                                                <span className="text-[10px] md:text-xs uppercase tracking-wider text-gray-500 block truncate max-w-[120px]">
-                                                                    {player.numericId ? `CR#${String(player.numericId).padStart(3, '0')}` : 'CR#INV'} · {player.city}
+                                                                <span className="text-[9px] md:text-xs uppercase tracking-wider text-gray-500 block truncate">
+                                                                    {player.numericId ? `CR#${String(player.numericId).padStart(3, '0')}` : 'CR#INV'}<span className="hidden sm:inline"> · {player.city}</span>
                                                                 </span>
                                                             </div>
                                                         </div>
@@ -766,13 +766,13 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                                         </div>
                                                     </td>
 
-                                                    <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-right">
-                                                        <span className="font-display font-black text-base md:text-xl text-primary text-glow">
+                                                    <td className="px-1 md:px-6 py-2 md:py-4 text-right">
+                                                        <span className="font-display font-black text-sm md:text-xl text-primary text-glow">
                                                             {player.points.toLocaleString()}
                                                         </span>
-                                                        <span className="text-[10px] md:text-xs uppercase text-gray-500 ml-1">pts</span>
+                                                        <span className="text-[9px] md:text-xs uppercase text-gray-500 ml-0.5">pts</span>
                                                     </td>
-                                                    <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-center">
+                                                    <td className="px-1 md:px-6 py-2 md:py-4 text-center">
                                                         {isAdmin && !isRetracted ? (
                                                             <input
                                                                 type="text"
@@ -780,10 +780,10 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                                                 onClick={(e) => e.stopPropagation()}
                                                                 onChange={(e) => onUpdatePrize && onUpdatePrize(activeRankingId, player.rank, e.target.value)}
                                                                 placeholder="-"
-                                                                className="bg-black/30 border border-white/10 rounded px-2 py-1 text-center text-xs md:text-sm text-secondary font-bold w-16 md:w-24 focus:border-secondary outline-none"
+                                                                className="bg-black/30 border border-white/10 rounded px-1 py-1 text-center text-[10px] md:text-sm text-secondary font-bold w-12 md:w-24 focus:border-secondary outline-none"
                                                             />
                                                         ) : (
-                                                            <span className="text-xs md:text-base font-bold text-gray-500 dark:text-gray-400">
+                                                            <span className="text-[10px] md:text-base font-bold text-gray-500 dark:text-gray-400 truncate block text-center">
                                                                 {activeRanking.positionPrizes?.[player.rank] || '-'}
                                                             </span>
                                                         )}

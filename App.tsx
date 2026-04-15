@@ -154,11 +154,11 @@ export default function App() {
 
             <ScrollToTop />
 
-            {/* Indicador de Usuário Logado - Fixo no canto inferior direito */}
-            {isLoggedIn && currentUser.name && !isFlyerOpen && (
+            {/* Indicador de Usuário Logado - Fixo no canto inferior direito (apenas na home) */}
+            {isLoggedIn && currentUser.name && !isFlyerOpen && currentView === 'home' && (
                 <div
                     onClick={() => handleNavigate('profile')}
-                    className="fixed bottom-20 sm:bottom-4 right-4 z-50 bg-surface-dark/90 backdrop-blur border border-white/10 px-4 py-2 rounded-full shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4 cursor-pointer hover:border-primary/50 hover:bg-surface-dark transition-all group"
+                    className="fixed bottom-6 right-4 z-50 bg-surface-dark/90 backdrop-blur border border-white/10 px-4 py-2 rounded-full shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4 cursor-pointer hover:border-primary/50 hover:bg-surface-dark transition-all group"
                     title="Ver meu perfil"
                 >
                     <div className={`w-2 h-2 rounded-full ${isAdmin ? 'bg-red-500' : currentUser.role === 'staff' ? 'bg-blue-500' : 'bg-green-500'} animate-pulse`}></div>

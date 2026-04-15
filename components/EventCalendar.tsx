@@ -1205,7 +1205,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                         )}
 
                                         {event.description && (
-                                            <div className={`text-[11px] text-gray-400 mb-3 line-clamp-2 italic ${tStyles.glow1} p-2 rounded border-l-2 ${tStyles.badgeBg}`}>
+                                            <div className={`text-[11px] text-gray-400 mb-3 italic ${tStyles.glow1} p-2 rounded border-l-2 ${tStyles.badgeBg}`}>
                                                 "{event.description}"
                                             </div>
                                         )}
