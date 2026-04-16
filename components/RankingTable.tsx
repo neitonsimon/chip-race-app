@@ -58,6 +58,8 @@ export const RankingTable: React.FC<RankingTableProps> = ({
     const [showStages, setShowStages] = useState(false);
     const [rankingView, setRankingView] = useState<'active' | 'finalized'>('active');
     const [isRetracted, setIsRetracted] = useState(false);
+    const [detailPlayer, setDetailPlayer] = useState<RankingPlayer | null>(null);
+    const [tooltipVisible, setTooltipVisible] = useState(false);
 
 
     // Admin Editing State
@@ -187,28 +189,25 @@ export const RankingTable: React.FC<RankingTableProps> = ({
     const userCurrentPoints = currentUser?.name ? (activeRanking?.players.find(p => p.name === currentUser.name)?.points || 0) : 0;
 
     // Helper function to get last 3 scores
-    const getLastScores = (player: RankingPlayer) => {
+    const getAllScores = (player: RankingPlayer) => {
         if (!events) return [];
 
         const normalize = (name: string) => name.toLowerCase().trim();
         const playerNormName = normalize(player.name);
 
-        const scores = events
+        return events
             .filter(e => {
                 const included = e.includedRankings || ['annual', 'quarterly', 'legacy'];
-                return e.status === 'closed' && e.results && !e.is_hidden && !e.isStartingDay && included.includes(activeRankingId);
+                return e.status === 'closed' && e.results && !e.is_hidden && !e.isStartingDay && (included.includes(activeRankingId) || included.includes(activeRanking?.id || ''));
             })
             .map(e => {
                 const res = e.results?.find(r => {
-                    // 1. Try matching by ID first (most robust)
                     if (player.id && r.userId && player.id === r.userId) return true;
-                    // 2. Try normalized name matching
                     return normalize(r.name) === playerNormName;
                 });
 
                 if (!res) return null;
 
-                // Prioritize ranking-specific points, fallback to generic calculatedPoints
                 const isSpecialEvent = e.rankingType === 'special';
                 const isLegacyRanking = activeRanking?.id === 'legacy' || activeRanking?.label.toLowerCase().includes('legado');
                 const forceRecalc = isSpecialEvent && isLegacyRanking;
@@ -243,14 +242,16 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                 }
 
                 return points > 0
-                    ? { date: e.date, points }
+                    ? { eventName: e.name, date: e.date, points, position: res.position }
                     : null;
             })
             .filter(item => item !== null)
-            .sort((a, b) => new Date(b!.date).getTime() - new Date(a!.date).getTime())
-            .slice(0, 3);
+            .sort((a, b) => new Date(b!.date).getTime() - new Date(a!.date).getTime());
+    };
 
-        return scores;
+    // Keep existing for the inline view
+    const getLastScores = (player: RankingPlayer) => {
+        return getAllScores(player).slice(0, 3);
     };
 
     const handleSaveRanking = (e: React.FormEvent) => {
@@ -266,7 +267,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
             {/* Primary Glow Background */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/10 rounded-full blur-[120px] pointer-events-none"></div>
 
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
 
                 <div className="text-center mb-10 group relative">
                     {availableRankings.length > 0 ? (
@@ -684,8 +685,8 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                         <div className="bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden shadow-2xl relative z-10">
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-secondary"></div>
 
-                            <div>
-                                <table className="w-full text-left table-fixed">
+                            <div className="overflow-x-auto overflow-y-visible">
+                                <table className="w-full text-left table-auto">
                                     <thead className="bg-gray-5 dark:bg-white/5">
                                         <tr>
                                             <th className="px-2 md:px-6 py-3 md:py-5 text-[10px] md:text-sm font-black text-primary uppercase tracking-wider w-10 md:w-16 text-center">RANK</th>
@@ -724,8 +725,15 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-2 md:px-6 py-2 md:py-4 min-w-0">
-                                                        <div className="flex items-center gap-2 md:gap-4">
+                                                    <td 
+                                                        className="px-2 md:px-6 py-2 md:py-4 min-w-0 relative group/name"
+                                                        onMouseEnter={() => {
+                                                            setDetailPlayer(player);
+                                                            setTooltipVisible(true);
+                                                        }}
+                                                        onMouseLeave={() => setTooltipVisible(false)}
+                                                    >
+                                                        <div className="flex items-center gap-2 md:gap-4 h-full">
                                                             <div className="relative shrink-0">
                                                                 <img
                                                                     src={player.avatar || `https://ui-avatars.com/api/?name=${player.name.replace(' ', '+')}&background=random`}
@@ -736,17 +744,87 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                                                 {player.change === 'down' && <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border border-white dark:border-surface-dark flex items-center justify-center"><span className="material-icons-outlined text-[7px] text-white">arrow_drop_down</span></div>}
                                                             </div>
                                                             <div className="min-w-0 flex-1 overflow-hidden">
-                                                                <span className="flex items-center gap-0.5 font-bold text-gray-900 dark:text-gray-200 group-hover:text-primary transition-colors text-xs md:text-lg">
-                                                                    <span className="truncate block">{player.name}</span>
+                                                                <div className="flex items-center gap-1">
+                                                                    <span className="font-bold text-gray-900 dark:text-gray-200 group-hover:text-primary transition-colors text-xs md:text-lg truncate">
+                                                                        {player.name}
+                                                                    </span>
                                                                     {player.isVerified && (
                                                                         <span className="material-icons text-[#00E5FF] text-[11px] md:text-base shrink-0" title="Perfil Verificado">verified</span>
                                                                     )}
-                                                                </span>
+                                                                    <button 
+                                                                        className="md:hidden ml-auto p-1 bg-primary/10 text-primary rounded-full"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setDetailPlayer(player);
+                                                                            setTooltipVisible(true);
+                                                                        }}
+                                                                    >
+                                                                        <span className="material-icons text-[14px]">insights</span>
+                                                                    </button>
+                                                                </div>
                                                                 <span className="text-[9px] md:text-xs uppercase tracking-wider text-gray-500 block truncate">
                                                                     {player.numericId ? `CR#${String(player.numericId).padStart(3, '0')}` : 'CR#INV'}<span className="hidden sm:inline"> · {player.city}</span>
                                                                 </span>
                                                             </div>
                                                         </div>
+
+                                                        {/* Tooltip / Popup Detalhado */}
+                                                        {tooltipVisible && detailPlayer?.name === player.name && (
+                                                            <div className="absolute left-full top-0 ml-4 w-[300px] md:w-[400px] z-[100] bg-surface-dark border border-primary/30 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95 duration-200 pointer-events-none md:pointer-events-auto">
+                                                                <div className="p-4 border-b border-white/10 bg-gradient-to-r from-primary/20 to-transparent rounded-t-2xl flex items-center justify-between">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <img src={player.avatar || `https://ui-avatars.com/api/?name=${player.name.replace(' ', '+')}&background=random`} className="w-8 h-8 rounded-full border border-primary/30" alt="" />
+                                                                        <div>
+                                                                            <h4 className="text-sm font-black text-white uppercase tracking-wider">{player.name}</h4>
+                                                                            <p className="text-[10px] text-primary/70 font-bold uppercase">{activeRanking?.label}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="text-right">
+                                                                        <p className="text-[10px] text-gray-500 uppercase font-black">Score Total</p>
+                                                                        <p className="text-lg font-black text-primary font-display">{player.points.toLocaleString()} pts</p>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="p-2 max-h-[300px] overflow-y-auto custom-scrollbar">
+                                                                    <table className="w-full text-left">
+                                                                        <thead>
+                                                                            <tr className="text-[9px] text-gray-500 border-b border-white/5 uppercase font-black">
+                                                                                <th className="px-3 py-2">Evento / Etapa</th>
+                                                                                <th className="px-3 py-2 text-center">Pos</th>
+                                                                                <th className="px-3 py-2 text-right">Pts</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody className="divide-y divide-white/5">
+                                                                            {getAllScores(player).length > 0 ? (
+                                                                                getAllScores(player).map((s, i) => (
+                                                                                    <tr key={i} className="hover:bg-white/5 transition-colors">
+                                                                                        <td className="px-3 py-2">
+                                                                                            <p className="text-[11px] font-bold text-gray-200 truncate">{s.eventName}</p>
+                                                                                            <p className="text-[9px] text-gray-600">{s.date}</p>
+                                                                                        </td>
+                                                                                        <td className="px-3 py-2 text-center">
+                                                                                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${
+                                                                                                s.position === 1 ? 'bg-yellow-500/20 text-yellow-500' :
+                                                                                                s.position <= 3 ? 'bg-gray-400/20 text-gray-300' : 'text-gray-500'
+                                                                                            }`}>
+                                                                                                {s.position}º
+                                                                                            </span>
+                                                                                        </td>
+                                                                                        <td className="px-3 py-2 text-right font-display font-black text-primary text-xs">+{s.points}</td>
+                                                                                    </tr>
+                                                                                ))
+                                                                            ) : (
+                                                                                <tr>
+                                                                                    <td colSpan={3} className="px-4 py-8 text-center text-gray-600 text-[10px] uppercase font-bold tracking-widest italic">Nenhuma pontuação detalhada</td>
+                                                                                </tr>
+                                                                            )}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                                <div className="p-3 bg-black/20 rounded-b-2xl border-t border-white/5">
+                                                                    <p className="text-[9px] text-gray-500 italic text-center uppercase tracking-tighter">Detalhamento gerado automaticamente pelo sistema de pontuação.</p>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </td>
 
                                                     {/* Latest Scores Column (Replaces Origem) */}
