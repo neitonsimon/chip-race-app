@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { RankingPlayer, Event, RankingInstance, ScoringSchema, RankingFormula, BadgeTemplate } from '../types';
 import { ScoringFormulaEditor } from './ScoringFormulaEditor';
-import { calculatePoints } from '../utils/scoring';
 import { RankingSkeleton } from './Skeleton';
 import { RankingStages } from './RankingStages';
+import { calculatePointsWithBreakdown, ScoreBreakdown } from '../utils/scoring';
 
 interface RankingTableProps {
     isAdmin?: boolean;
@@ -19,6 +19,7 @@ interface RankingTableProps {
     onUpdateGlobalSchemas?: (schemas: ScoringSchema[]) => void;
     isLoading?: boolean;
     badgeTemplates?: BadgeTemplate[];
+    events?: Event[];
 }
 
 type SimType = 'weekly' | 'monthly' | 'special';
@@ -60,6 +61,8 @@ export const RankingTable: React.FC<RankingTableProps> = ({
     const [isRetracted, setIsRetracted] = useState(false);
     const [detailPlayer, setDetailPlayer] = useState<RankingPlayer | null>(null);
     const [tooltipVisible, setTooltipVisible] = useState(false);
+    const [showBreakdown, setShowBreakdown] = useState(false);
+    const [breakdownData, setBreakdownData] = useState<{player: RankingPlayer, scores: any[]} | null>(null);
 
 
     // Admin Editing State
@@ -188,7 +191,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
     // Get current user points for projection
     const userCurrentPoints = currentUser?.name ? (activeRanking?.players.find(p => p.name === currentUser.name)?.points || 0) : 0;
 
-    // Helper function to get last 3 scores
+    // Helper function to get scores with detailed breakdown
     const getAllScores = (player: RankingPlayer) => {
         if (!events) return [];
 
@@ -213,18 +216,19 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                 const forceRecalc = isSpecialEvent && isLegacyRanking;
                 const savedPoints = res.pointsPerRanking?.[activeRankingId];
                 const hasPointsMap = res.pointsPerRanking && Object.keys(res.pointsPerRanking).length > 0;
-                let points = 0;
+                
+                let breakdown: ScoreBreakdown;
 
-                if (hasPointsMap && !forceRecalc) {
-                    points = savedPoints || 0;
-                } else if (savedPoints !== undefined && savedPoints !== null && !forceRecalc) {
-                    points = savedPoints;
+                if (hasPointsMap && !forceRecalc && savedPoints !== undefined) {
+                    // Even if saved, we try to reconstruct breakdown for display if possible, 
+                    // or just show it as a single "Pontos Salvos" item
+                    breakdown = { total: savedPoints, items: [{ label: 'Pontos Consolidados', value: savedPoints }] };
                 } else {
                     const mappedSchemaId = (e.rankingType && activeRanking?.scoringSchemaMap) 
                         ? activeRanking.scoringSchemaMap[e.rankingType] 
                         : e.scoringSchemaId;
                         
-                    points = calculatePoints(
+                    breakdown = calculatePointsWithBreakdown(
                         e.rankingType || 'weekly',
                         e.results?.length || 0,
                         (isSpecialEvent && res.buyinTotal) ? res.buyinTotal : (Number((e.buyin?.toString() || '0').replace(/[^0-9]/g, '')) || 0),
@@ -241,8 +245,8 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                     );
                 }
 
-                return points > 0
-                    ? { eventName: e.name, date: e.date, points, position: res.position }
+                return breakdown.total > 0
+                    ? { eventName: e.name, date: e.date, points: breakdown.total, position: res.position, breakdown: breakdown.items }
                     : null;
             })
             .filter(item => item !== null)
@@ -765,6 +769,22 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                                                 <span className="text-[9px] md:text-xs uppercase tracking-wider text-gray-500 block truncate">
                                                                     {player.numericId ? `CR#${String(player.numericId).padStart(3, '0')}` : 'CR#INV'}<span className="hidden sm:inline"> · {player.city}</span>
                                                                 </span>
+                                                                
+                                                                {/* Botão de Justificativa / Breakdown na área ociosa (Desktop) */}
+                                                                <div className="hidden md:flex mt-1 items-center gap-2">
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            const scores = getAllScores(player);
+                                                                            setBreakdownData({ player, scores });
+                                                                            setShowBreakdown(true);
+                                                                        }}
+                                                                        className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/5 hover:bg-primary/20 text-primary border border-primary/20 transition-all text-[10px] font-bold uppercase tracking-wider"
+                                                                    >
+                                                                        <span className="material-icons text-[12px]">analytics</span>
+                                                                        Justificativa de Pontos
+                                                                    </button>
+                                                                </div>
                                                             </div>
                                                         </div>
 
@@ -927,6 +947,121 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                     Entendido
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* DETAILED POINT BREAKDOWN MODAL */}
+            {showBreakdown && breakdownData && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-[#0A0B1A] border border-primary/30 rounded-3xl w-full max-w-3xl shadow-[0_0_50px_rgba(217,0,255,0.15)] relative animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 flex flex-col max-h-[85vh] overflow-hidden">
+                        
+                        {/* Header */}
+                        <div className="p-6 border-b border-white/10 bg-gradient-to-r from-primary/10 via-transparent to-primary/10 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="relative">
+                                    <img 
+                                        src={breakdownData.player.avatar || `https://ui-avatars.com/api/?name=${breakdownData.player.name.replace(' ', '+')}&background=random`} 
+                                        className="w-12 h-12 rounded-2xl border-2 border-primary/50 shadow-neon-pink" 
+                                        alt="" 
+                                    />
+                                    <div className="absolute -bottom-1 -right-1 bg-primary text-white p-0.5 rounded-md">
+                                        <span className="material-icons text-[12px]">analytics</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-black text-white uppercase tracking-wider">{breakdownData.player.name}</h3>
+                                    <p className="text-xs text-primary font-bold uppercase tracking-widest flex items-center gap-2">
+                                        {activeRanking?.label} 
+                                        <span className="w-1 h-1 rounded-full bg-primary/40"></span>
+                                        Histórico Justificado
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div className="text-right">
+                                <p className="text-[10px] text-gray-500 uppercase font-black tracking-[0.2em] mb-1">Score Total no Rank</p>
+                                <div className="text-3xl font-black text-primary font-display drop-shadow-[0_0_10px_rgba(217,0,255,0.3)]">
+                                    {breakdownData.player.points.toLocaleString()} <span className="text-xs uppercase ml-1">pts</span>
+                                </div>
+                            </div>
+                            
+                            <button 
+                                onClick={() => setShowBreakdown(false)}
+                                className="absolute top-4 right-4 text-gray-400 hover:text-white hover:bg-white/5 p-2 rounded-full transition-all"
+                            >
+                                <span className="material-icons">close</span>
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+                            {breakdownData.scores.length > 0 ? (
+                                breakdownData.scores.map((s, idx) => (
+                                    <div key={idx} className="group/item bg-white/5 border border-white/5 hover:border-primary/20 rounded-2xl p-4 transition-all hover:bg-white/[0.07]">
+                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 pb-4 border-b border-white/5">
+                                            <div className="flex items-start gap-3">
+                                                <div className="mt-1 w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
+                                                    <span className="material-icons text-xl">event_available</span>
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-black text-gray-100 uppercase text-sm tracking-wide group-hover/item:text-primary transition-colors">{s.eventName}</h4>
+                                                    <div className="flex items-center gap-3 mt-0.5">
+                                                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter flex items-center gap-1">
+                                                            <span className="material-icons text-[12px]">calendar_today</span>
+                                                            {new Date(s.date).toLocaleDateString('pt-BR')}
+                                                        </span>
+                                                        <span className="w-1 h-1 rounded-full bg-gray-700"></span>
+                                                        <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
+                                                            s.position === 1 ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' :
+                                                            s.position <= 3 ? 'bg-white/10 text-gray-300 border border-white/5' : 
+                                                            'bg-black/20 text-gray-500 border border-white/5'
+                                                        }`}>
+                                                            {s.position}º LUGAR
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="bg-primary/10 border border-primary/20 px-4 py-2 rounded-xl text-center md:text-right">
+                                                <p className="text-[9px] text-primary font-black uppercase tracking-widest">Ganhos no Evento</p>
+                                                <p className="text-xl font-display font-black text-primary">+{s.points} pts</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Step by Step Breakdown */}
+                                        <div className="space-y-2">
+                                            <p className="text-[9px] text-gray-500 font-black uppercase tracking-[0.2em] mb-2">Composição da Pontuação:</p>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                {s.breakdown && s.breakdown.map((item: any, i: number) => (
+                                                    <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-black/20 border border-white/5">
+                                                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-tight">{item.label}</span>
+                                                        <span className="text-[11px] font-black text-gray-200">+{Math.round(item.value)} pts</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="py-20 text-center space-y-4">
+                                    <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto">
+                                        <span className="material-icons text-4xl text-gray-700">history</span>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-lg font-black text-gray-500 uppercase">Sem histórico detalhado</p>
+                                        <p className="text-sm text-gray-700">Este jogador ainda não possui pontuações registradas neste ranking.</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer Info */}
+                        <div className="p-4 bg-black/40 border-t border-white/10 text-center">
+                            <p className="text-[10px] text-gray-600 font-bold uppercase tracking-[0.3em] flex items-center justify-center gap-2">
+                                <span className="material-icons text-[14px]">verified_user</span>
+                                Cálculos validados de acordo com o regulamento oficial
+                            </p>
                         </div>
                     </div>
                 </div>
