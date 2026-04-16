@@ -416,7 +416,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                             isEpic ? 'badge-epic-aura' :
                                             isRare ? 'badge-rare-aura' :
                                             isUncommon ? 'badge-uncommon-aura' :
-                                            isCommon ? 'opacity-60 grayscale border-white/5' : 'border-white/10'
+                                            isCommon ? 'opacity-90 grayscale-[0.5] border-white/10' : 'border-white/10'
                                         }`}
                                         style={isPatrao ? {
                                             borderColor: '#fff',
@@ -440,7 +440,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                                 <img src={badge.image_url} alt={badgeTitle} className="w-10 h-10 object-contain" />
                                             ) : (
                                                 <span
-                                                    className={`material-icons-outlined text-3xl ${isPatrao ? 'text-white' : ''} ${isCommon ? 'text-white/10' : ''}`}
+                                                    className={`material-icons-outlined text-3xl ${isPatrao ? 'text-white' : ''} ${isCommon ? 'text-white/50' : ''}`}
                                                     style={isPatrao ? { textShadow: '0 0 15px rgba(255,255,255,0.8)' } : isSupreme ? supremeGradientStyle : isLegendary ? { color: '#eab308', textShadow: '0 0 20px rgba(234,179,8,0.8)' } : isCommon ? {} : { color: badgeColor }}
                                                 >{badgeIcon}</span>
                                             )}

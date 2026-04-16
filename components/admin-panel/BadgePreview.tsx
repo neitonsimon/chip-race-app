@@ -25,13 +25,13 @@ export const BadgePreview: React.FC<BadgePreviewProps> = ({ icon, color = '#00E5
                 active && isCelestial ? 'badge-celestial-aura' :
                 active && isSupreme ? 'badge-supreme-aura' :
                 active && isLegendary ? 'badge-legendary-aura' :
-                active && isCommon ? 'opacity-60 grayscale' : ''
+                active && isCommon ? 'opacity-90 grayscale-[0.5]' : ''
             }`}
             style={{
                 backgroundColor: active ? `${color}26` : 'rgba(255,255,255,0.05)',
                 backgroundImage: active && isSupreme ? 'linear-gradient(135deg, rgba(236,72,153,0.3) 0%, rgba(249,115,22,0.3) 100%)' : 'none',
                 borderColor: active ? color : 'rgba(255,255,255,0.1)',
-                color: active ? color : '#9ca3af',
+                color: active ? (isCommon ? 'rgba(255,255,255,0.6)' : color) : '#9ca3af',
                 boxShadow: active && !isLegendary && !isSupreme && !isCelestial ? `0 0 20px ${color}40` : 'none'
             }}
         >
