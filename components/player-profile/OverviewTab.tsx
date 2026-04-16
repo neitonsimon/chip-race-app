@@ -404,7 +404,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
                                 return (
                                     <div key={badge.id}
-                                        className={`group relative w-14 h-14 md:w-16 md:h-16 flex items-center justify-center transition-all cursor-help transform hover:scale-110 rounded-[1.25rem] border-2 ${isPatrao ? 'badge-patrao-aura' : isSupreme ? 'badge-supreme-aura' : isLegendary ? 'badge-legendary-aura' : ''} ${isCommon ? 'opacity-40 grayscale-[0.5]' : ''}`}
+                                        className={`group relative w-14 h-14 md:w-16 md:h-16 flex items-center justify-center transition-all cursor-help transform hover:scale-110 rounded-[1.25rem] border-2 ${isPatrao ? 'badge-patrao-aura' : isSupreme ? 'badge-supreme-aura' : isLegendary ? 'badge-legendary-aura' : ''} ${isCommon ? 'opacity-20 grayscale' : ''}`}
                                         style={isPatrao ? {
                                             borderColor: '#fff',
                                         } : isSupreme ? {
@@ -412,8 +412,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                         } : isLegendary ? {
                                             borderColor: '#FFD700',
                                         } : isCommon ? {
-                                            backgroundColor: 'rgba(0,0,0,0.2)',
-                                            borderColor: 'rgba(255,255,255,0.05)',
+                                            backgroundColor: 'rgba(0,0,0,0.5)',
+                                            borderColor: 'rgba(255,255,255,0.02)',
                                             boxShadow: 'none',
                                         } : {
                                             backgroundColor: 'rgba(255,255,255,0.03)',
@@ -426,7 +426,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                                 <img src={badge.image_url} alt={badgeTitle} className="w-10 h-10 object-contain" />
                                             ) : (
                                                 <span
-                                                    className={`material-icons-outlined text-3xl ${isPatrao ? 'text-white' : ''} ${isCommon ? 'text-gray-600' : ''}`}
+                                                    className={`material-icons-outlined text-3xl ${isPatrao ? 'text-white' : ''} ${isCommon ? 'text-white/10' : ''}`}
                                                     style={isPatrao ? { textShadow: '0 0 15px rgba(255,255,255,0.8)' } : isSupreme ? supremeGradientStyle : isLegendary ? { color: '#FFD700', textShadow: '0 0 20px rgba(255,215,0,0.8)' } : isCommon ? {} : { color: badgeColor }}
                                                 >{badgeIcon}</span>
                                             )}
