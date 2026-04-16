@@ -207,6 +207,32 @@
             border-width: 3px !important;
             z-index: 1;
         }
+
+        /* SUPREME AURA */
+        @keyframes supreme-pulse {
+            0% { box-shadow: 0 0 8px rgba(236, 72, 153, 0.3), 0 0 15px rgba(234, 88, 12, 0.1); border-color: rgba(236, 72, 153, 0.4); }
+            50% { box-shadow: 0 0 18px rgba(236, 72, 153, 0.6), 0 0 30px rgba(234, 88, 12, 0.4); border-color: rgba(236, 72, 153, 0.8); }
+            100% { box-shadow: 0 0 8px rgba(236, 72, 153, 0.3), 0 0 15px rgba(234, 88, 12, 0.1); border-color: rgba(236, 72, 153, 0.4); }
+        }
+
+        .badge-supreme-aura {
+            animation: supreme-pulse 3s infinite ease-in-out;
+            background: linear-gradient(135deg, rgba(236,72,153,0.1), rgba(234,88,12,0.05)) !important;
+            border-width: 2px !important;
+        }
+
+        /* LEGENDARY AURA */
+        @keyframes legendary-pulse {
+            0% { box-shadow: 0 0 5px rgba(255, 215, 0, 0.2); border-color: rgba(255, 215, 0, 0.3); }
+            50% { box-shadow: 0 0 12px rgba(255, 215, 0, 0.4); border-color: rgba(255, 215, 0, 0.6); }
+            100% { box-shadow: 0 0 5px rgba(255, 215, 0, 0.2); border-color: rgba(255, 215, 0, 0.3); }
+        }
+
+        .badge-legendary-aura {
+            animation: legendary-pulse 4s infinite ease-in-out;
+            background: rgba(255, 215, 0, 0.05) !important;
+            border-width: 2px !important;
+        }
     </style>
     <script type="importmap">
 {

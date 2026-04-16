@@ -399,20 +399,21 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                     background: 'linear-gradient(135deg, #f9a8d4 0%, #ec4899 30%, #db2777 55%, #ea580c 80%, #c2410c 100%)',
                                     WebkitBackgroundClip: 'text',
                                     WebkitTextFillColor: 'transparent',
-                                    backgroundClip: 'text',
                                 };
 
                                 const isPatrao = badgeTitle?.toLowerCase().includes('patrão') || badgeTitle?.toLowerCase().includes('patrao');
+                                const isSupreme = badgeColor === '#ff4d79' || badgeTitle?.toLowerCase().includes('supreme');
+                                const isLegendary = badgeColor === '#FFD700' || badgeTitle?.toLowerCase().includes('lendária') || badgeTitle?.toLowerCase().includes('lendaria') || badgeTitle?.toLowerCase().includes('legendary');
 
                                 return (
                                     <div key={badge.id}
-                                        className={`group relative w-14 h-14 md:w-16 md:h-16 flex items-center justify-center transition-all cursor-help transform hover:scale-110 rounded-[1.25rem] border-2 ${isPatrao ? 'badge-patrao-aura' : ''}`}
+                                        className={`group relative w-14 h-14 md:w-16 md:h-16 flex items-center justify-center transition-all cursor-help transform hover:scale-110 rounded-[1.25rem] border-2 ${isPatrao ? 'badge-patrao-aura' : isSupreme ? 'badge-supreme-aura' : isLegendary ? 'badge-legendary-aura' : ''}`}
                                         style={isPatrao ? {
                                             borderColor: '#fff',
                                         } : isSupreme ? {
-                                            background: 'linear-gradient(135deg, rgba(249,168,212,0.08) 0%, rgba(236,72,153,0.12) 40%, rgba(234,88,12,0.12) 100%)',
-                                            borderColor: 'rgba(236,72,153,0.45)',
-                                            boxShadow: '0 0 18px rgba(236,72,153,0.25), 0 0 6px rgba(234,88,12,0.2)',
+                                            borderColor: 'rgba(236,72,153,0.6)',
+                                        } : isLegendary ? {
+                                            borderColor: 'rgba(255,215,0,0.5)',
                                         } : {
                                             backgroundColor: 'rgba(255,255,255,0.03)',
                                             borderColor: `${badgeColor}22`,
@@ -425,7 +426,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                             ) : (
                                                 <span
                                                     className={`material-icons-outlined text-3xl ${isPatrao ? 'text-white' : ''}`}
-                                                    style={isPatrao ? { textShadow: '0 0 15px rgba(255,255,255,0.8)' } : isSupreme ? supremeGradientStyle : { color: badgeColor }}
+                                                    style={isPatrao ? { textShadow: '0 0 15px rgba(255,255,255,0.8)' } : isSupreme ? supremeGradientStyle : isLegendary ? { color: '#FFD700', textShadow: '0 0 10px rgba(255,215,0,0.5)' } : { color: badgeColor }}
                                                 >{badgeIcon}</span>
                                             )}
                                         </div>
