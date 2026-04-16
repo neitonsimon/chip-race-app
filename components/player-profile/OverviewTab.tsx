@@ -50,6 +50,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 }) => {
     const { badgeTemplates } = useApp();
     const [showAllBadges, setShowAllBadges] = useState(false);
+    const [expandedHistory, setExpandedHistory] = useState(false);
 
     if (!player) return null;
 
@@ -475,10 +476,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             </thead>
                             <tbody className="divide-y divide-white/5">
                                 {player.tournamentLog && player.tournamentLog.length > 0 ? (
-                                    player.tournamentLog.map((log: any, index: number) => (
+                                    (expandedHistory ? player.tournamentLog : player.tournamentLog.slice(0, 8)).map((log: any, index: number) => (
                                         <tr
                                             key={index}
-                                            className="hover:bg-white/5 transition-colors cursor-pointer group/row"
+                                            className="hover:bg-white/5 transition-colors cursor-pointer group/row animate-in fade-in"
                                             onClick={() => handleOpenFlyer(log)}
                                         >
                                             <td className="px-3 md:px-6 py-4 whitespace-nowrap hidden sm:table-cell">{log.date}</td>
@@ -508,6 +509,20 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                 )}
                             </tbody>
                         </table>
+                        
+                        {player.tournamentLog && player.tournamentLog.length > 8 && (
+                            <div className="p-4 bg-black/10 border-t border-white/5 text-center">
+                                <button
+                                    onClick={() => setExpandedHistory(!expandedHistory)}
+                                    className="text-[10px] font-black text-gray-500 uppercase tracking-widest hover:text-white transition-all flex items-center justify-center gap-2 mx-auto group"
+                                >
+                                    <span className="material-icons-outlined text-sm group-hover:animate-bounce-slow">
+                                        {expandedHistory ? 'expand_less' : 'expand_more'}
+                                    </span>
+                                    {expandedHistory ? 'Ver Menos' : `Ver Mais (${player.tournamentLog.length - 8} eventos restantes)`}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
 
