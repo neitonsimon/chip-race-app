@@ -5,8 +5,8 @@ import { BadgePreview } from './BadgePreview';
 interface GiftsTabProps {
     giftTarget: 'single' | 'all';
     setGiftTarget: (t: 'single' | 'all') => void;
-    giftType: 'brl' | 'chipz' | 'badge' | 'vip';
-    setGiftType: (t: 'brl' | 'chipz' | 'badge' | 'vip') => void;
+    giftType: 'brl' | 'chipz' | 'vip';
+    setGiftType: (t: 'brl' | 'chipz' | 'vip') => void;
     selectedVipType?: 'trimestral' | 'anual' | 'master' | 'honorario';
     setSelectedVipType?: (t: 'trimestral' | 'anual' | 'master' | 'honorario') => void;
     giftAmount: string;
@@ -15,22 +15,10 @@ interface GiftsTabProps {
     setGiftSearchQuery: (q: string) => void;
     giftDescription: string;
     setGiftDescription: (d: string) => void;
-    selectedBadgeId: string;
-    setSelectedBadgeId: (id: string) => void;
-    giftSearchResults: any[];
-    setGiftSearchResults: (res: any[]) => void;
-    badgeTemplates: any[];
-    selectedGiftUsers: any[];
-    setSelectedGiftUsers: (users: any[]) => void;
-    usersWithSelectedBadge: Set<string>;
-    handleSendGifts: () => Promise<void>;
-    handleGiftSearch: (query: string) => Promise<void>;
-    onCreateBadgeTemplate?: (badge: any) => Promise<void>;
-    onUpdateBadgeTemplate?: (id: string, badge: any) => Promise<void>;
     isLoading: boolean;
 }
 
-// ─── 200+ Material Icons for badges ────────────────────────────────────────
+// ─── Main GiftsTab ────────────────────────────────────────────────────────────
 const BADGE_ICONS = [
     // Conquistas & Trofeus
     { id: 'stars', label: 'Estrela' },
@@ -357,175 +345,14 @@ const BADGE_ICONS = [
 
 
 
-const RARITY_COLORS = [
-    { id: 'comum', label: 'Comum', color: '#00E5FF' }, // Azul Clara / Cyan
-    { id: 'incomum', label: 'Incomum', color: '#22c55e' }, // Verde
-    { id: 'rara', label: 'Rara', color: '#ec4899' }, // Rosa
-    { id: 'epica', label: 'Épica', color: '#ef4444' }, // Vermelha
-    { id: 'lendaria', label: 'Lendária', color: '#eab308' }, // Dourada
-    { id: 'suprema', label: 'Suprema', color: '#ff4d79' }, // Rosa mesclado laranja
-    { id: 'celestial', label: 'Celestial', color: '#fffff0' }, // Marfim
-];
-
-// ─── Icon Picker Modal ────────────────────────────────────────────────────────
-const IconPickerModal: React.FC<{
-    currentIcon: string;
-    currentColor?: string;
-    onSelect: (icon: string) => void;
-    onClose: () => void;
-}> = ({ currentIcon, currentColor = '#00E5FF', onSelect, onClose }) => {
-    const [search, setSearch] = React.useState('');
-    const [rows, setRows] = React.useState(3);
-
-    // Grid settings
-    const iconsPerRow = 6;
-    const initialIcons = iconsPerRow * rows;
-
-    const filtered = search.length >= 1
-        ? BADGE_ICONS.filter(i => i.label.toLowerCase().includes(search.toLowerCase()) || i.id.toLowerCase().includes(search.toLowerCase()))
-        : BADGE_ICONS;
-
-    const displayedIcons = filtered.slice(0, initialIcons);
-    const hasMore = filtered.length > initialIcons;
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-[#0c0920] border border-white/10 rounded-[2rem] sm:rounded-[2.5rem] w-full max-w-xl max-h-[90vh] sm:max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
-                {/* Header */}
-                <div className="flex items-center justify-between p-6 sm:p-8 pb-4">
-                    <div className="flex items-center gap-3 sm:gap-4 text-left">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-center shrink-0">
-                            <span className="material-icons-outlined text-primary text-xl sm:text-2xl">grid_view</span>
-                        </div>
-                        <div>
-                            <h3 className="text-base sm:text-lg font-black text-white uppercase tracking-widest leading-none mb-1">Escolher ícone</h3>
-                            <p className="text-[9px] sm:text-[10px] text-gray-500 font-bold uppercase tracking-wider">{filtered.length} ícones</p>
-                        </div>
-                    </div>
-                    <button onClick={onClose} className="w-9 h-9 sm:w-10 sm:h-10 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all group shrink-0">
-                        <span className="material-icons-outlined text-gray-500 group-hover:text-white text-lg sm:text-xl">close</span>
-                    </button>
-                </div>
-
-                {/* Search */}
-                <div className="px-6 sm:px-8 py-2 sm:py-4">
-                    <div className="relative group text-left">
-                        <span className="material-icons-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg group-focus-within:text-primary transition-colors">search</span>
-                        <input
-                            autoFocus
-                            type="text"
-                            value={search}
-                            onChange={e => { setSearch(e.target.value); setRows(3); }}
-                            placeholder="Buscar ícone... (ex: troféu, fogo)"
-                            className="w-full bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl pl-12 pr-4 py-3 sm:py-4 text-white text-sm outline-none focus:border-primary/50 focus:bg-primary/5 transition-all font-bold"
-                        />
-                    </div>
-                </div>
-
-                {/* Grid */}
-                <div className="overflow-y-auto flex-1 px-6 sm:px-8 pb-4 pt-2 custom-scrollbar">
-                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-3 sm:gap-4">
-                        {displayedIcons.map(icon => (
-                            <button
-                                key={icon.id}
-                                onClick={() => { onSelect(icon.id); onClose(); }}
-                                className="group flex flex-col items-center gap-2"
-                            >
-                                <BadgePreview icon={icon.id} size="sm" active={currentIcon === icon.id} color={currentColor} />
-                                <span className="text-[8px] sm:text-[9px] text-gray-500 font-bold uppercase tracking-tighter truncate w-full text-center group-hover:text-white transition-colors">{icon.label}</span>
-                            </button>
-                        ))}
-                    </div>
-
-                    {hasMore && (
-                        <div className="mt-6 sm:mt-8 mb-4 flex justify-center">
-                            <button
-                                onClick={() => setRows(prev => prev + 3)}
-                                className="px-6 sm:px-8 py-2.5 sm:py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[9px] sm:text-[10px] font-black text-gray-400 hover:text-white uppercase tracking-[0.2em] transition-all flex items-center gap-2"
-                            >
-                                <span className="material-icons-outlined text-xs sm:text-sm">expand_more</span>
-                                Ver mais ícones
-                            </button>
-                        </div>
-                    )}
-
-                    {filtered.length === 0 && (
-                        <div className="text-center py-16 sm:py-20">
-                            <span className="material-icons-outlined text-gray-700 text-4xl sm:text-5xl mb-3 sm:mb-4 block">search_off</span>
-                            <p className="text-gray-500 text-xs sm:text-sm italic font-light">Nenhum ícone encontrado para "{search}"</p>
-                        </div>
-                    )}
-                </div>
-
-                <div className="p-4 sm:p-6 bg-black/20 border-t border-white/5 text-center shrink-0">
-                    <p className="text-[8px] sm:text-[9px] text-gray-600 uppercase font-black tracking-widest">Estilo Minimalista • Chip Race Design System</p>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// ─── Main GiftsTab ────────────────────────────────────────────────────────────
 export const GiftsTab: React.FC<GiftsTabProps> = ({
     giftTarget, setGiftTarget, giftType, setGiftType, giftAmount, setGiftAmount,
     giftSearchQuery, setGiftSearchQuery, giftDescription, setGiftDescription,
-    selectedBadgeId, setSelectedBadgeId, giftSearchResults, setGiftSearchResults,
-    badgeTemplates, selectedGiftUsers, setSelectedGiftUsers, usersWithSelectedBadge,
-    handleSendGifts, handleGiftSearch, onCreateBadgeTemplate, onUpdateBadgeTemplate, isLoading,
+    giftSearchResults, setGiftSearchResults,
+    selectedGiftUsers, setSelectedGiftUsers,
+    handleSendGifts, handleGiftSearch, isLoading,
     selectedVipType, setSelectedVipType
 }) => {
-    const [showNewBadgeForm, setShowNewBadgeForm] = React.useState(false);
-    const [newBadge, setNewBadge] = React.useState({ title: '', description: '', icon: 'stars', color: '#00E5FF' });
-    const [showIconPicker, setShowIconPicker] = React.useState(false);
-    const [badgeSearchFilter, setBadgeSearchFilter] = React.useState('');
-
-    const [editingBadgeId, setEditingBadgeId] = React.useState<string | null>(null);
-    const [viewBadgeUsers, setViewBadgeUsers] = React.useState<any>(null);
-
-    const handleSaveBadge = async () => {
-        if (!newBadge.title) return;
-
-        // Check for duplicates (same icon AND same color)
-        const isDuplicate = badgeTemplates.some(b =>
-            b.id !== editingBadgeId &&
-            b.icon === newBadge.icon &&
-            (b.color === newBadge.color || (!b.color && newBadge.color === '#00E5FF'))
-        );
-
-        if (isDuplicate) {
-            alert('⚠️ Já existe uma insígnia com este mesmo ícone e cor. Use uma combinação única!');
-            return;
-        }
-
-        if (editingBadgeId && onUpdateBadgeTemplate) {
-            await onUpdateBadgeTemplate(editingBadgeId, newBadge);
-        } else if (onCreateBadgeTemplate) {
-            await onCreateBadgeTemplate(newBadge);
-        }
-        
-        setShowNewBadgeForm(false);
-        setEditingBadgeId(null);
-        setNewBadge({ title: '', description: '', icon: 'stars', color: '#00E5FF' });
-    };
-
-    const handleEditBadge = (b: any, e: React.MouseEvent) => {
-        e.stopPropagation();
-        setNewBadge({ title: b.title, description: b.description || '', icon: b.icon || 'stars', color: b.color || '#00E5FF' });
-        setEditingBadgeId(b.id);
-        setShowNewBadgeForm(true);
-        // Scroll to top to ensure form is visible
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
-    const handleViewBadgeUsers = (b: any, e: React.MouseEvent) => {
-        e.stopPropagation();
-        setViewBadgeUsers(b);
-    };
-
-    const filteredBadgeTemplates = badgeSearchFilter
-        ? badgeTemplates.filter(b => b.title.toLowerCase().includes(badgeSearchFilter.toLowerCase()))
-        : badgeTemplates;
-
     return (
         <div className="p-4 sm:p-8 max-w-4xl mx-auto space-y-8">
             {/* Header */}
@@ -539,130 +366,7 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                         <p className="text-gray-400 text-xs sm:text-sm">Distribua créditos, fichas ou insígnias.</p>
                     </div>
                 </div>
-                <button
-                    onClick={() => {
-                        setShowNewBadgeForm(!showNewBadgeForm);
-                        if (showNewBadgeForm) {
-                            setEditingBadgeId(null);
-                            setNewBadge({ title: '', description: '', icon: 'stars', color: '#00E5FF' });
-                        }
-                    }}
-                    className={`w-full sm:w-auto px-4 py-3 sm:py-2 rounded-xl border transition-all flex items-center justify-center gap-2 text-[10px] font-black uppercase shadow-neon-pink/10 ${showNewBadgeForm ? 'bg-white/5 border-white/20 text-white' : 'bg-primary/10 border-primary/30 text-primary hover:bg-primary/20'
-                        }`}
-                >
-                    <span className="material-icons-outlined text-sm">{showNewBadgeForm ? 'close' : 'add_circle'}</span>
-                    {showNewBadgeForm && editingBadgeId ? 'Cancelar Edição' : showNewBadgeForm ? 'Cancelar' : 'Nova Medalha'}
-                </button>
             </div>
-
-            {/* CREATE BADGE FORM */}
-            {showNewBadgeForm && (
-                <div className="bg-black/40 border border-primary/20 rounded-[2rem] sm:rounded-3xl p-4 sm:p-6 animate-in slide-in-from-top-4">
-                    <h4 className="text-[11px] sm:text-sm font-black text-primary uppercase mb-6 flex items-center gap-2 px-1">
-                        <span className="material-icons-outlined text-sm">{editingBadgeId ? 'edit' : 'new_label'}</span>
-                        {editingBadgeId ? 'Editar Medalha Existente' : 'Lançar Nova Medalha no Banco'}
-                    </h4>
-
-                    {/* Preview */}
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 mb-8 p-4 sm:p-6 bg-black/30 border border-white/5 rounded-[1.5rem] sm:rounded-3xl">
-                        <div className="flex justify-center sm:block">
-                            <BadgePreview icon={newBadge.icon} color={newBadge.color} size="lg" active />
-                        </div>
-                        <div className="flex-1 min-w-0 text-center sm:text-left">
-                            <div className="flex items-center justify-center sm:justify-start gap-2 mb-1.5 sm:mb-1">
-                                <span className="text-[9px] font-black px-2 py-0.5 rounded bg-white/10 text-gray-400 uppercase tracking-widest">Preview</span>
-                                <span
-                                    className="text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-widest"
-                                    style={{ backgroundColor: `${newBadge.color}20`, color: newBadge.color, border: `1px solid ${newBadge.color}40` }}
-                                >
-                                    {RARITY_COLORS.find(r => r.color === newBadge.color)?.label}
-                                </span>
-                            </div>
-                            <p className="text-white font-black text-lg sm:text-xl leading-tight truncate">{newBadge.title || 'Nome da Medalha'}</p>
-                            <p className="text-gray-500 text-[10px] sm:text-xs mt-1 line-clamp-2 max-w-sm mx-auto sm:mx-0">{newBadge.description || 'Explique como o jogador conquista esta honraria...'}</p>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-4">
-                            <div className="text-left">
-                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Nome da Medalha</label>
-                                <input
-                                    type="text"
-                                    value={newBadge.title}
-                                    onChange={e => setNewBadge({ ...newBadge, title: e.target.value })}
-                                    placeholder="Ex: Campeão 2026"
-                                    className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none transition-all"
-                                />
-                            </div>
-
-                            <div className="text-left">
-                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Raridade & Cor</label>
-                                <div className="grid grid-cols-5 gap-2">
-                                    {RARITY_COLORS.map((rarity) => (
-                                        <button
-                                            key={rarity.id}
-                                            onClick={() => setNewBadge({ ...newBadge, color: rarity.color })}
-                                            className={`flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all ${newBadge.color === rarity.color
-                                                ? 'bg-white/10 border-white/20 scale-105'
-                                                : 'bg-black/20 border-white/5 hover:border-white/10 opacity-60'}`}
-                                            title={rarity.label}
-                                        >
-                                            <div
-                                                className="w-5 h-5 sm:w-6 sm:h-6 rounded-full shadow-lg"
-                                                style={{ 
-                                                    backgroundColor: rarity.color, 
-                                                    backgroundImage: rarity.color === '#ff4d79' ? 'linear-gradient(135deg, #ec4899 0%, #f97316 100%)' : rarity.color === '#8b5cf6' ? 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)' : rarity.color === '#f59e0b' ? 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)' : 'none',
-                                                    boxShadow: `0 0 10px ${rarity.color}60` 
-                                                }}
-                                            />
-                                            <span className="text-[7px] sm:text-[8px] font-black uppercase tracking-tighter text-gray-400 whitespace-nowrap">{rarity.label}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Icon picker button */}
-                        <div className="text-left">
-                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Ícone da Medalha</label>
-                            <button
-                                onClick={() => setShowIconPicker(true)}
-                                className="w-full bg-[#050214] border border-white/10 hover:border-primary/50 rounded-xl px-4 py-3 flex items-center gap-3 transition-all group h-auto sm:h-[74px]"
-                            >
-                                <BadgePreview icon={newBadge.icon} color={newBadge.color} size="sm" active />
-                                <div className="flex-1 text-left min-w-0">
-                                    <p className="text-white text-sm font-bold truncate">{BADGE_ICONS.find(i => i.id === newBadge.icon)?.label || newBadge.icon}</p>
-                                    <p className="text-gray-600 text-[8px] uppercase font-black">Alterar Ícone</p>
-                                </div>
-                                <span className="material-icons-outlined text-gray-500 group-hover:text-primary transition-colors text-sm shrink-0">open_in_new</span>
-                            </button>
-                        </div>
-
-                        <div className="sm:col-span-2 text-left">
-                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Descrição</label>
-                            <input
-                                type="text"
-                                value={newBadge.description}
-                                onChange={e => setNewBadge({ ...newBadge, description: e.target.value })}
-                                placeholder="Explique como o jogador conquista..."
-                                className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-yellow-500 outline-none"
-                            />
-                        </div>
-                    </div>
-
-                    <button
-                        onClick={handleSaveBadge}
-                        disabled={isLoading || !newBadge.title}
-                        className="w-full mt-6 bg-primary hover:bg-white hover:text-black text-white font-black py-4 rounded-2xl transition-all shadow-neon-pink uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                        {isLoading
-                            ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            : <><span className="material-icons-outlined text-sm">save</span> {editingBadgeId ? 'Salvar Alterações' : 'Salvar Nova Medalha'}</>
-                        }
-                    </button>
-                </div>
-            )}
 
             {/* SEND GIFTS GRID */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:items-start">
@@ -694,7 +398,6 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                                 <div className="flex gap-2">
                                     <button onClick={() => setGiftType('brl')} className={`flex-1 py-3 rounded-xl border text-[9px] sm:text-[10px] font-black uppercase transition-all ${giftType === 'brl' ? 'bg-primary border-primary text-white shadow-neon-pink' : 'bg-white/5 border-white/10 text-gray-400'}`}>R$</button>
                                     <button onClick={() => setGiftType('chipz')} className={`flex-1 py-3 rounded-xl border text-[9px] sm:text-[10px] font-black uppercase transition-all ${giftType === 'chipz' ? 'bg-cyan-500 border-cyan-500 text-white shadow-neon-cyan' : 'bg-white/5 border-white/10 text-gray-400'}`}>Chipz</button>
-                                    <button onClick={() => setGiftType('badge')} className={`flex-1 py-3 rounded-xl border text-[9px] sm:text-[10px] font-black uppercase transition-all ${giftType === 'badge' ? 'bg-primary border-primary text-white shadow-neon-pink' : 'bg-white/5 border-white/10 text-gray-400'}`}>Medalha</button>
                                     <button onClick={() => setGiftType('vip')} className={`flex-1 py-3 rounded-xl border text-[9px] sm:text-[10px] font-black uppercase transition-all ${giftType === 'vip' ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg' : 'bg-white/5 border-white/10 text-gray-400'}`}>VIP</button>
                                 </div>
                             </div>
@@ -727,61 +430,7 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                                 </div>
                             )}
 
-                            {/* Badge selector OR amount */}
-                            {giftType === 'badge' ? (
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-between px-1">
-                                        <label className="text-[10px] font-bold text-gray-500 uppercase">Selecionar Medalha</label>
-                                        <span className="text-[9px] text-gray-600 font-bold">{badgeTemplates.length} disponíveis</span>
-                                    </div>
-                                    {badgeTemplates.length > 3 && (
-                                        <div className="relative">
-                                            <span className="material-icons-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">search</span>
-                                            <input
-                                                type="text"
-                                                value={badgeSearchFilter}
-                                                onChange={e => setBadgeSearchFilter(e.target.value)}
-                                                placeholder="Filtrar..."
-                                                className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-white text-[11px] outline-none focus:border-primary/40 transition-colors"
-                                            />
-                                        </div>
-                                    )}
-                                    <div className="grid grid-cols-2 gap-2 max-h-52 overflow-y-auto pr-1 custom-scrollbar">
-                                        {filteredBadgeTemplates.map(b => (
-                                            <button
-                                                key={b.id}
-                                                onClick={() => setSelectedBadgeId(b.id)}
-                                                className={`relative p-3 rounded-xl border flex flex-col items-center gap-2 transition-all group ${selectedBadgeId === b.id
-                                                    ? 'bg-white/5'
-                                                    : 'bg-black/20 border-white/5 hover:border-primary/20'
-                                                    }`}
-                                                style={selectedBadgeId === b.id ? { borderColor: b.color || '#00E5FF', boxShadow: `0 0 15px ${(b.color || '#00E5FF')}40` } : {}}
-                                            >
-                                                <BadgePreview icon={b.icon || 'stars'} color={b.color} size="sm" active={selectedBadgeId === b.id} />
-                                                <span
-                                                    className="text-[9px] font-black uppercase truncate w-full text-center"
-                                                    style={selectedBadgeId === b.id ? { color: b.color || '#00E5FF' } : { color: 'white' }}
-                                                >
-                                                    {b.title}
-                                                </span>
-                                                <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button onClick={(e) => handleEditBadge(b, e)} className="w-6 h-6 rounded-md bg-black/60 border border-white/10 flex items-center justify-center hover:bg-primary/20 hover:text-primary hover:border-primary/50 text-gray-400 transition-colors">
-                                                        <span className="material-icons-outlined text-[12px]">edit</span>
-                                                    </button>
-                                                    <button onClick={(e) => handleViewBadgeUsers(b, e)} className="w-6 h-6 rounded-md bg-black/60 border border-white/10 flex items-center justify-center hover:bg-cyan-500/20 hover:text-cyan-500 hover:border-cyan-500/50 text-gray-400 transition-colors">
-                                                        <span className="material-icons-outlined text-[12px]">group</span>
-                                                    </button>
-                                                </div>
-                                            </button>
-                                        ))}
-                                        {filteredBadgeTemplates.length === 0 && (
-                                            <div className="col-span-2 text-center py-6 text-gray-600 text-xs italic">
-                                                Nenhuma medalha encontrada.
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            ) : giftType === 'vip' ? null : (
+                            {giftType === 'vip' ? null : (
                                 <div>
                                     <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Quantidade</label>
                                     <div className="relative">
@@ -803,13 +452,13 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                             <div>
                                 <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Justificativa / Motivo</label>
                                 <input type="text" value={giftDescription} onChange={e => setGiftDescription(e.target.value)}
-                                    placeholder={giftType === 'badge' ? 'Ex: Membro Honorário...' : 'Ex: Presente de Natal...'}
+                                    placeholder={'Ex: Presente de Natal...'}
                                     className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none" />
                             </div>
 
                             <button
                                 onClick={handleSendGifts}
-                                disabled={isLoading || (giftType !== 'badge' && giftType !== 'vip' && !giftAmount) || (giftType === 'badge' && !selectedBadgeId) || (giftType === 'vip' && !selectedVipType)}
+                                disabled={isLoading || (giftType !== 'vip' && !giftAmount) || (giftType === 'vip' && !selectedVipType)}
                                 className="w-full bg-primary hover:bg-white hover:text-black text-white font-black py-4 rounded-2xl transition-all shadow-neon-pink uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
                             >
                                 {isLoading
@@ -835,7 +484,6 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                             {giftSearchResults.length > 0 && (
                                 <div className="absolute top-full left-0 right-0 mt-1 bg-[#0a0720] border border-white/10 rounded-xl overflow-hidden shadow-2xl z-20 max-h-[250px] overflow-y-auto custom-scrollbar">
                                     {giftSearchResults.map(u => {
-                                        const alreadyHasBadge = giftType === 'badge' && usersWithSelectedBadge.has(u.id);
                                         return (
                                             <button
                                                 key={u.id}
@@ -843,7 +491,7 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                                                     if (!selectedGiftUsers.find(x => x.id === u.id)) setSelectedGiftUsers([...selectedGiftUsers, u]);
                                                     setGiftSearchQuery(''); setGiftSearchResults([]);
                                                 }}
-                                                className={`w-full flex items-center justify-between p-3 hover:bg-primary/20 text-left border-b border-white/5 last:border-0 ${alreadyHasBadge ? 'opacity-60 grayscale-[0.5]' : ''}`}
+                                                className={`w-full flex items-center justify-between p-3 hover:bg-primary/20 text-left border-b border-white/5 last:border-0`}
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${u.name}&background=random`} className="w-8 h-8 rounded-full object-cover shrink-0" alt="" />
@@ -852,12 +500,6 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                                                         <p className="text-[9px] text-primary font-black uppercase">CR#{String(u.numeric_id).padStart(3, '0')}</p>
                                                     </div>
                                                 </div>
-                                                {alreadyHasBadge && (
-                                                    <div className="flex items-center gap-1 text-amber-500/80 bg-amber-500/5 px-1.5 py-0.5 rounded border border-amber-500/10 shrink-0">
-                                                        <span className="material-icons text-[10px]">info</span>
-                                                        <span className="text-[8px] font-black uppercase tracking-wider">Já tem</span>
-                                                    </div>
-                                                )}
                                             </button>
                                         );
                                     })}
@@ -900,24 +542,6 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                     </div>
                 </div>
             </div>
-
-            {/* Icon Picker Modal */}
-            {showIconPicker && (
-                <IconPickerModal
-                    currentIcon={newBadge.icon}
-                    currentColor={newBadge.color}
-                    onSelect={icon => setNewBadge({ ...newBadge, icon })}
-                    onClose={() => setShowIconPicker(false)}
-                />
-            )}
-
-            {/* View Users Modal */}
-            {viewBadgeUsers && (
-                <ViewBadgeUsersModal
-                    badge={viewBadgeUsers}
-                    onClose={() => setViewBadgeUsers(null)}
-                />
-            )}
         </div>
     );
 };

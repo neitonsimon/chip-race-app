@@ -3,6 +3,7 @@ import { supabase } from '../src/lib/supabase';
 import { PlayerName } from './PlayerName';
 import { ReportsTab } from './admin-panel/ReportsTab';
 import { GiftsTab } from './admin-panel/GiftsTab';
+import { BadgesTab } from './admin-panel/BadgesTab';
 import { DebtsTab } from './admin-panel/DebtsTab';
 import { CommunicationsTab } from './admin-panel/CommunicationsTab';
 import { OperationalTab } from './admin-panel/OperationalTab';
@@ -19,6 +20,7 @@ import { useTopUp } from './admin-panel/hooks/useTopUp';
 import { useDebts } from './admin-panel/hooks/useDebts';
 import { useCommunications } from './admin-panel/hooks/useCommunications';
 import { useGifts } from './admin-panel/hooks/useGifts';
+import { useBadges } from './admin-panel/hooks/useBadges';
 import { useOperations } from './admin-panel/hooks/useOperations';
 
 interface AdminPanelProps {
@@ -74,7 +76,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     onClose, currentUser, onUpdateProfile, badgeTemplates = [], isAdmin = false, 
     onCreateBadgeTemplate, onUpdateBadgeTemplate, onSendAdminMessage, onCreatePoll, onRefreshData, onSelectPlayer, onNavigate 
 }) => {
-    const [activeTab, setActiveTab] = useState<'operational' | 'inventory' | 'reports' | 'launch' | 'send-gifts' | 'debts' | 'communications' | 'reservations'>('operational');
+    const [activeTab, setActiveTab] = useState<'operational' | 'inventory' | 'reports' | 'launch' | 'send-gifts' | 'badges' | 'debts' | 'communications' | 'reservations'>('operational');
     const [events, setEvents] = useState<any[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
     const [products, setProducts] = useState<any[]>([]);
@@ -374,6 +376,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         currentUser,
         badgeTemplates,
         updatePlayerBalanceLocally
+    });
+
+    const badgesSystem = useBadges({
+        isAdmin: isAdmin || false,
+        currentUser,
+        badgeTemplates
     });
 
     const checkoutSystem = useCheckout({
@@ -759,7 +767,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     { id: 'inventory', icon: 'inventory_2', label: 'Estoque' },
                     { id: 'launch', icon: 'add_shopping_cart', label: 'Produtos' },
                     { id: 'reports', icon: 'bar_chart', label: 'Relat.' },
-                    { id: 'send-gifts', icon: 'stars', label: 'Prêmios' },
+                    { id: 'send-gifts', icon: 'redeem', label: 'Prêmios' },
+                    { id: 'badges', icon: 'badge', label: 'Medalhas' },
                     { id: 'debts', icon: 'receipt_long', label: 'Crédito' },
                     { id: 'communications', icon: 'campaign', label: 'Comunic.' },
                     { id: 'reservations', icon: 'support_agent', label: 'Atendimento' },
@@ -779,7 +788,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         { id: 'inventory', icon: 'inventory_2', label: 'Estoque' },
                         { id: 'launch', icon: 'add_shopping_cart', label: 'Produtos' },
                         { id: 'reports', icon: 'bar_chart', label: 'Relat.' },
-                        { id: 'send-gifts', icon: 'stars', label: 'Prêmios' },
+                        { id: 'send-gifts', icon: 'redeem', label: 'Prêmios' },
+                        { id: 'badges', icon: 'badge', label: 'Medalhas' },
                         { id: 'debts', icon: 'receipt_long', label: 'Crédito' },
                         { id: 'communications', icon: 'campaign', label: 'Comunic.' },
                         { id: 'reservations', icon: 'support_agent', label: 'Atend.' },
@@ -940,21 +950,39 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             setGiftSearchQuery={giftsSystem.setGiftSearchQuery}
                             giftDescription={giftsSystem.giftDescription}
                             setGiftDescription={giftsSystem.setGiftDescription}
-                            selectedBadgeId={giftsSystem.selectedBadgeId}
-                            setSelectedBadgeId={giftsSystem.setSelectedBadgeId}
                             giftSearchResults={giftsSystem.giftSearchResults}
                             setGiftSearchResults={giftsSystem.setGiftSearchResults}
-                            badgeTemplates={badgeTemplates}
                             selectedGiftUsers={giftsSystem.selectedGiftUsers}
                             setSelectedGiftUsers={giftsSystem.setSelectedGiftUsers}
-                            usersWithSelectedBadge={giftsSystem.usersWithSelectedBadge}
                             handleSendGifts={giftsSystem.handleSendGifts}
                             handleGiftSearch={giftsSystem.handleGiftSearch}
+                            isLoading={giftsSystem.isLoading}
+                            selectedVipType={giftsSystem.selectedVipType as any}
+                            setSelectedVipType={giftsSystem.setSelectedVipType}
+                        />
+                    )}
+
+                    {activeTab === 'badges' && (
+                        <BadgesTab
+                            targetType={badgesSystem.targetType}
+                            setTargetType={badgesSystem.setTargetType}
+                            searchQuery={badgesSystem.searchQuery}
+                            setSearchQuery={badgesSystem.setSearchQuery}
+                            description={badgesSystem.description}
+                            setDescription={badgesSystem.setDescription}
+                            selectedBadgeId={badgesSystem.selectedBadgeId}
+                            setSelectedBadgeId={badgesSystem.setSelectedBadgeId}
+                            searchResults={badgesSystem.searchResults}
+                            setSearchResults={badgesSystem.setSearchResults}
+                            badgeTemplates={badgeTemplates}
+                            selectedUsers={badgesSystem.selectedUsers}
+                            setSelectedUsers={badgesSystem.setSelectedUsers}
+                            usersWithSelectedBadge={badgesSystem.usersWithSelectedBadge}
+                            handleSendBadges={badgesSystem.handleSendBadges}
+                            handleSearch={badgesSystem.handleSearch}
                             onCreateBadgeTemplate={onCreateBadgeTemplate}
                             onUpdateBadgeTemplate={onUpdateBadgeTemplate}
-                            isLoading={giftsSystem.isLoading}
-                            selectedVipType={giftsSystem.selectedVipType}
-                            setSelectedVipType={giftsSystem.setSelectedVipType}
+                            isLoading={badgesSystem.isLoading}
                         />
                     )}
 
