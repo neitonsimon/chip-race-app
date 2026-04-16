@@ -751,7 +751,7 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                                             <button
                                                 key={b.id}
                                                 onClick={() => setSelectedBadgeId(b.id)}
-                                                className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all group ${selectedBadgeId === b.id
+                                                className={`relative p-3 rounded-xl border flex flex-col items-center gap-2 transition-all group ${selectedBadgeId === b.id
                                                     ? 'bg-white/5'
                                                     : 'bg-black/20 border-white/5 hover:border-primary/20'
                                                     }`}
