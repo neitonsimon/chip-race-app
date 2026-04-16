@@ -392,9 +392,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                 const originalDesc = template?.description || badge.description;
 
                                 const isPatrao = badgeTitle?.toLowerCase().includes('patrão') || badgeTitle?.toLowerCase().includes('patrao');
-                                const isSupreme = badgeColor === '#ff4d79' || badgeTitle?.toLowerCase().includes('supreme');
-                                const isLegendary = badgeColor === '#FFD700' || badgeTitle?.toLowerCase().includes('lendária') || badgeTitle?.toLowerCase().includes('lendaria') || badgeTitle?.toLowerCase().includes('legendary') || badgeTitle?.toLowerCase().includes('pioneiro');
-                                const isCommon = badgeColor === '#94a3b8' || badgeTitle?.toLowerCase().includes('comum');
+                                const isCelestial = badgeColor?.toLowerCase() === '#fffff0' || badgeTitle?.toLowerCase().includes('celestial');
+                                const isSupreme = badgeColor?.toLowerCase() === '#ff4d79' || badgeTitle?.toLowerCase().includes('supreme') || badgeTitle?.toLowerCase().includes('suprema');
+                                const isLegendary = badgeColor?.toLowerCase() === '#ffd700' || badgeColor?.toLowerCase() === '#eab308' || badgeTitle?.toLowerCase().includes('lendária') || badgeTitle?.toLowerCase().includes('lendaria') || badgeTitle?.toLowerCase().includes('legendary') || badgeTitle?.toLowerCase().includes('pioneiro');
+                                const isEpic = badgeColor?.toLowerCase() === '#ef4444' || badgeTitle?.toLowerCase().includes('épica') || badgeTitle?.toLowerCase().includes('epica') || badgeTitle?.toLowerCase().includes('epic');
+                                const isRare = badgeColor?.toLowerCase() === '#00e5ff' || badgeTitle?.toLowerCase().includes('rara') || badgeTitle?.toLowerCase().includes('rare');
+                                const isUncommon = badgeColor?.toLowerCase() === '#22c55e' || badgeTitle?.toLowerCase().includes('incomum') || badgeTitle?.toLowerCase().includes('uncommon');
+                                const isCommon = badgeColor?.toLowerCase() === '#9ca3af' || badgeColor?.toLowerCase() === '#94a3b8' || badgeTitle?.toLowerCase().includes('comum') || badgeTitle?.toLowerCase().includes('common');
 
                                 const supremeGradientStyle = {
                                     background: 'linear-gradient(135deg, #f9a8d4 0%, #ec4899 30%, #db2777 55%, #ea580c 80%, #c2410c 100%)',
@@ -404,21 +408,31 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
                                 return (
                                     <div key={badge.id}
-                                        className={`group relative w-14 h-14 md:w-16 md:h-16 flex items-center justify-center transition-all cursor-help transform hover:scale-110 rounded-[1.25rem] border-2 ${isPatrao ? 'badge-patrao-aura' : isSupreme ? 'badge-supreme-aura' : isLegendary ? 'badge-legendary-aura' : ''} ${isCommon ? 'opacity-20 grayscale' : ''}`}
+                                        className={`group relative w-14 h-14 md:w-16 md:h-16 flex items-center justify-center transition-all cursor-help transform hover:scale-110 rounded-[1.25rem] border-2 ${
+                                            isPatrao ? 'badge-patrao-aura' :
+                                            isCelestial ? 'badge-celestial-aura' :
+                                            isSupreme ? 'badge-supreme-aura' :
+                                            isLegendary ? 'badge-legendary-aura' :
+                                            isEpic ? 'badge-epic-aura' :
+                                            isRare ? 'badge-rare-aura' :
+                                            isUncommon ? 'badge-uncommon-aura' :
+                                            isCommon ? 'opacity-30 grayscale border-white/5' : 'border-white/10'
+                                        }`}
                                         style={isPatrao ? {
                                             borderColor: '#fff',
                                         } : isSupreme ? {
                                             borderColor: 'rgba(236,72,153,0.6)',
                                         } : isLegendary ? {
-                                            borderColor: '#FFD700',
+                                            borderColor: '#eab308',
+                                        } : isCelestial ? {
+                                            borderColor: '#fffff0',
                                         } : isCommon ? {
                                             backgroundColor: 'rgba(0,0,0,0.5)',
-                                            borderColor: 'rgba(255,255,255,0.02)',
                                             boxShadow: 'none',
                                         } : {
                                             backgroundColor: 'rgba(255,255,255,0.03)',
-                                            borderColor: `${badgeColor}22`,
-                                            boxShadow: `0 8px 20px ${badgeColor}08`,
+                                            borderColor: `${badgeColor}40`,
+                                            boxShadow: `0 8px 20px ${badgeColor}15`,
                                         }}
                                     >
                                         <div className="w-full h-full flex items-center justify-center rounded-[1.25rem] transition-all group-hover:bg-white/[0.05]">
@@ -427,7 +441,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                             ) : (
                                                 <span
                                                     className={`material-icons-outlined text-3xl ${isPatrao ? 'text-white' : ''} ${isCommon ? 'text-white/10' : ''}`}
-                                                    style={isPatrao ? { textShadow: '0 0 15px rgba(255,255,255,0.8)' } : isSupreme ? supremeGradientStyle : isLegendary ? { color: '#FFD700', textShadow: '0 0 20px rgba(255,215,0,0.8)' } : isCommon ? {} : { color: badgeColor }}
+                                                    style={isPatrao ? { textShadow: '0 0 15px rgba(255,255,255,0.8)' } : isSupreme ? supremeGradientStyle : isLegendary ? { color: '#eab308', textShadow: '0 0 20px rgba(234,179,8,0.8)' } : isCommon ? {} : { color: badgeColor }}
                                                 >{badgeIcon}</span>
                                             )}
                                         </div>
@@ -438,16 +452,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                                 <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={isSupreme ? {
                                                     background: 'linear-gradient(135deg, #f9a8d4, #ec4899, #ea580c)',
                                                     boxShadow: '0 0 8px rgba(236,72,153,0.8), 0 0 4px rgba(234,88,12,0.6)'
+                                                } : isCelestial ? {
+                                                    backgroundColor: '#fffff0',
+                                                    boxShadow: '0 0 10px #fffff0'
                                                 } : {
                                                     backgroundColor: badgeColor,
                                                     boxShadow: `0 0 10px ${badgeColor}`
                                                 }}></div>
-                                                <p className="font-black text-xs uppercase tracking-widest leading-none" style={isSupreme ? {
-                                                    background: 'linear-gradient(90deg, #f9a8d4, #ec4899, #ea580c)',
-                                                    WebkitBackgroundClip: 'text',
-                                                    WebkitTextFillColor: 'transparent',
-                                                    backgroundClip: 'text',
-                                                } : { color: badgeColor }}>{badgeTitle}</p>
+                                                <p className={`font-black text-xs uppercase tracking-widest leading-none ${isLegendary || isSupreme || isCelestial ? 'title-shimmer' : ''}`} style={(!isLegendary && !isSupreme && !isCelestial) ? { color: badgeColor } : {}}>{badgeTitle}</p>
                                             </div>
                                             <p className="text-gray-400 text-[11px] leading-relaxed font-medium break-words">{originalDesc}</p>
                                             <div className="mt-2 pt-2 border-t border-white/5 text-[9px] text-gray-600 font-black uppercase tracking-wider">
