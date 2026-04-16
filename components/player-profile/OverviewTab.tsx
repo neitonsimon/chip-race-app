@@ -402,10 +402,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                     backgroundClip: 'text',
                                 };
 
+                                const isPatrao = badgeTitle?.toLowerCase().includes('patrão') || badgeTitle?.toLowerCase().includes('patrao');
+
                                 return (
                                     <div key={badge.id}
-                                        className="group relative w-14 h-14 md:w-16 md:h-16 flex items-center justify-center transition-all cursor-help transform hover:scale-110 rounded-[1.25rem] border-2"
-                                        style={isSupreme ? {
+                                        className={`group relative w-14 h-14 md:w-16 md:h-16 flex items-center justify-center transition-all cursor-help transform hover:scale-110 rounded-[1.25rem] border-2 ${isPatrao ? 'badge-patrao-aura' : ''}`}
+                                        style={isPatrao ? {
+                                            borderColor: '#fff',
+                                        } : isSupreme ? {
                                             background: 'linear-gradient(135deg, rgba(249,168,212,0.08) 0%, rgba(236,72,153,0.12) 40%, rgba(234,88,12,0.12) 100%)',
                                             borderColor: 'rgba(236,72,153,0.45)',
                                             boxShadow: '0 0 18px rgba(236,72,153,0.25), 0 0 6px rgba(234,88,12,0.2)',
@@ -420,8 +424,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                                 <img src={badge.image_url} alt={badgeTitle} className="w-10 h-10 object-contain" />
                                             ) : (
                                                 <span
-                                                    className="material-icons-outlined text-3xl"
-                                                    style={isSupreme ? supremeGradientStyle : { color: badgeColor }}
+                                                    className={`material-icons-outlined text-3xl ${isPatrao ? 'text-white' : ''}`}
+                                                    style={isPatrao ? { textShadow: '0 0 15px rgba(255,255,255,0.8)' } : isSupreme ? supremeGradientStyle : { color: badgeColor }}
                                                 >{badgeIcon}</span>
                                             )}
                                         </div>

@@ -181,6 +181,32 @@
             -moz-appearance: textfield;
             appearance: textfield;
         }
+
+        /* CELESTIAL AURA FOR PATRAO BADGE */
+        @keyframes celestial-pulse {
+            0% { 
+                box-shadow: 0 0 10px rgba(255, 255, 255, 0.4), 0 0 20px rgba(0, 224, 255, 0.2); 
+                border-color: rgba(255, 255, 255, 0.8);
+                transform: scale(1);
+            }
+            50% { 
+                box-shadow: 0 0 25px rgba(255, 255, 255, 0.9), 0 0 50px rgba(0, 224, 255, 0.6); 
+                border-color: rgba(255, 255, 255, 1);
+                transform: scale(1.02);
+            }
+            100% { 
+                box-shadow: 0 0 10px rgba(255, 255, 255, 0.4), 0 0 20px rgba(0, 224, 255, 0.2); 
+                border-color: rgba(255, 255, 255, 0.8);
+                transform: scale(1);
+            }
+        }
+
+        .badge-patrao-aura {
+            animation: celestial-pulse 2.5s infinite ease-in-out;
+            background: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(0,224,255,0.05)) !important;
+            border-width: 3px !important;
+            z-index: 1;
+        }
     </style>
     <script type="importmap">
 {
