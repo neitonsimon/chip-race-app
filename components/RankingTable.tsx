@@ -217,36 +217,53 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                 const savedPoints = res.pointsPerRanking?.[activeRankingId];
                 const hasPointsMap = res.pointsPerRanking && Object.keys(res.pointsPerRanking).length > 0;
                 
-                let breakdown: ScoreBreakdown;
+                const mappedSchemaId = (e.rankingType && activeRanking?.scoringSchemaMap) 
+                    ? activeRanking.scoringSchemaMap[e.rankingType] 
+                    : e.scoringSchemaId;
+                    
+                const formulaBreakdown = calculatePointsWithBreakdown(
+                    (e.rankingType || 'weekly') as RankingFormula,
+                    e.results?.length || 0,
+                    (isSpecialEvent && res.buyinTotal) ? res.buyinTotal : (Number((e.buyin?.toString() || '0').replace(/[^0-9]/g, '')) || 0),
+                    res.position,
+                    res.prize || 0,
+                    res.isVip || false,
+                    mappedSchemaId,
+                    globalScoringSchemas || activeRanking?.scoringSchemas,
+                    res.rake || 0,
+                    res.profitLoss || 0,
+                    res.earlyStart || false,
+                    res.lateStay || false,
+                    res.minTime1h || false
+                );
+
+                let breakdown: ScoreBreakdown = formulaBreakdown;
 
                 if (hasPointsMap && !forceRecalc && savedPoints !== undefined) {
-                    // Even if saved, we try to reconstruct breakdown for display if possible, 
-                    // or just show it as a single "Pontos Salvos" item
-                    breakdown = { total: savedPoints, items: [{ label: 'Pontos Consolidados', value: savedPoints }] };
-                } else {
-                    const mappedSchemaId = (e.rankingType && activeRanking?.scoringSchemaMap) 
-                        ? activeRanking.scoringSchemaMap[e.rankingType] 
-                        : e.scoringSchemaId;
-                        
-                    breakdown = calculatePointsWithBreakdown(
-                        e.rankingType || 'weekly',
-                        e.results?.length || 0,
-                        (isSpecialEvent && res.buyinTotal) ? res.buyinTotal : (Number((e.buyin?.toString() || '0').replace(/[^0-9]/g, '')) || 0),
-                        res.position,
-                        res.prize,
-                        res.isVip,
-                        mappedSchemaId,
-                        globalScoringSchemas,
-                        res.rake || 0,
-                        res.profitLoss || 0,
-                        res.earlyStart || false,
-                        res.lateStay || false,
-                        res.minTime1h || false
-                    );
+                    if (Math.abs(savedPoints - formulaBreakdown.total) > 0.1) {
+                        breakdown = {
+                            total: savedPoints,
+                            items: [
+                                ...formulaBreakdown.items,
+                                { label: 'Bônus / Ajuste Manual', value: savedPoints - formulaBreakdown.total }
+                            ]
+                        };
+                    } else {
+                        breakdown = {
+                            total: savedPoints,
+                            items: formulaBreakdown.items
+                        };
+                    }
                 }
 
                 return breakdown.total > 0
-                    ? { eventName: e.name, date: e.date, points: breakdown.total, position: res.position, breakdown: breakdown.items }
+                    ? { 
+                        eventName: e.name, 
+                        date: e.date, 
+                        points: breakdown.total, 
+                        position: res.position, 
+                        breakdown: breakdown.items.filter(item => Math.abs(item.value) > 0.01) 
+                      }
                     : null;
             })
             .filter(item => item !== null)
