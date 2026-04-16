@@ -3,7 +3,7 @@ import { RankingPlayer, Event, RankingInstance, ScoringSchema, RankingFormula, B
 import { ScoringFormulaEditor } from './ScoringFormulaEditor';
 import { RankingSkeleton } from './Skeleton';
 import { RankingStages } from './RankingStages';
-import { calculatePointsWithBreakdown, ScoreBreakdown } from '../utils/scoring';
+import { calculatePoints, calculatePointsWithBreakdown, ScoreBreakdown } from '../utils/scoring';
 
 interface RankingTableProps {
     isAdmin?: boolean;
