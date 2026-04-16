@@ -391,19 +391,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                 const badgeColor = template?.color || badge.color || '#00E5FF';
                                 const originalDesc = template?.description || badge.description;
 
-                                // Detect "supreme" tier: use the specific Supreme color or title
-                                // Rare (#ec4899) must NOT be caught here anymore
+                                const isPatrao = badgeTitle?.toLowerCase().includes('patrão') || badgeTitle?.toLowerCase().includes('patrao');
                                 const isSupreme = badgeColor === '#ff4d79' || badgeTitle?.toLowerCase().includes('supreme');
+                                const isLegendary = badgeColor === '#FFD700' || badgeTitle?.toLowerCase().includes('lendária') || badgeTitle?.toLowerCase().includes('lendaria') || badgeTitle?.toLowerCase().includes('legendary');
 
                                 const supremeGradientStyle = {
                                     background: 'linear-gradient(135deg, #f9a8d4 0%, #ec4899 30%, #db2777 55%, #ea580c 80%, #c2410c 100%)',
                                     WebkitBackgroundClip: 'text',
                                     WebkitTextFillColor: 'transparent',
                                 };
-
-                                const isPatrao = badgeTitle?.toLowerCase().includes('patrão') || badgeTitle?.toLowerCase().includes('patrao');
-                                const isSupreme = badgeColor === '#ff4d79' || badgeTitle?.toLowerCase().includes('supreme');
-                                const isLegendary = badgeColor === '#FFD700' || badgeTitle?.toLowerCase().includes('lendária') || badgeTitle?.toLowerCase().includes('lendaria') || badgeTitle?.toLowerCase().includes('legendary');
 
                                 return (
                                     <div key={badge.id}
