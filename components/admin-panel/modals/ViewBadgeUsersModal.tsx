@@ -10,24 +10,46 @@ interface ViewBadgeUsersModalProps {
 export const ViewBadgeUsersModal: React.FC<ViewBadgeUsersModalProps> = ({ badge, onClose }) => {
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchUsers = async () => {
-            const { data, error } = await supabase
-                .from('user_badges')
-                .select('created_at, awarded_at, profiles(id, name, numeric_id, avatar_url)')
-                .eq('badge_template_id', badge.id);
+            setErrorMsg(null);
+            try {
+                // Try to get data with specific profile join
+                const { data, error } = await supabase
+                    .from('user_badges')
+                    .select('created_at, awarded_at, profiles!user_badges_user_id_fkey(id, name, numeric_id, avatar_url)')
+                    .eq('badge_template_id', badge.id);
 
-            if (data) {
-                const uniqueUsers = data.filter(d => d.profiles).map(d => ({
-                    ...(d.profiles as any),
-                    awarded_at: d.awarded_at || d.created_at
-                })).sort((a, b) => new Date(b.awarded_at).getTime() - new Date(a.awarded_at).getTime());
-                setUsers(uniqueUsers);
+                if (error) {
+                    console.error('Error fetching badge users:', error);
+                    setErrorMsg(error.message);
+                } else if (data) {
+                    // Map data handling both singular and potential array returns (though it should be singular)
+                    const uniqueUsers = data
+                        .filter(d => (d as any).profiles)
+                        .map(d => {
+                            const p = (d as any).profiles;
+                            const profile = Array.isArray(p) ? p[0] : p;
+                            return {
+                                ...(profile as any),
+                                awarded_at: (d as any).awarded_at || (d as any).created_at
+                            };
+                        })
+                        .filter(u => u.id) // Ensure we have a valid profile
+                        .sort((a, b) => new Date(b.awarded_at).getTime() - new Date(a.awarded_at).getTime());
+                    
+                    setUsers(uniqueUsers);
+                }
+            } catch (err: any) {
+                console.error('Unexpected error:', err);
+                setErrorMsg(err.message);
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         };
-        fetchUsers();
+        if (badge?.id) fetchUsers();
     }, [badge.id]);
 
     return (
@@ -56,6 +78,11 @@ export const ViewBadgeUsersModal: React.FC<ViewBadgeUsersModalProps> = ({ badge,
                         {loading ? (
                             <div className="flex justify-center py-8">
                                 <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                            </div>
+                        ) : errorMsg ? (
+                            <div className="text-center py-8 text-red-500 bg-red-500/5 rounded-xl border border-red-500/10">
+                                <span className="material-icons-outlined text-4xl block mb-2 opacity-30">error_outline</span>
+                                <p className="text-xs font-bold">{errorMsg}</p>
                             </div>
                         ) : users.length === 0 ? (
                             <div className="text-center py-8 text-gray-500">
