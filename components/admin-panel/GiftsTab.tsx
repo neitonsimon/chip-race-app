@@ -471,7 +471,7 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
     giftSearchQuery, setGiftSearchQuery, giftDescription, setGiftDescription,
     selectedBadgeId, setSelectedBadgeId, giftSearchResults, setGiftSearchResults,
     badgeTemplates, selectedGiftUsers, setSelectedGiftUsers, usersWithSelectedBadge,
-    handleSendGifts, handleGiftSearch, onCreateBadgeTemplate, isLoading,
+    handleSendGifts, handleGiftSearch, onCreateBadgeTemplate, onUpdateBadgeTemplate, isLoading,
     selectedVipType, setSelectedVipType
 }) => {
     const [showNewBadgeForm, setShowNewBadgeForm] = React.useState(false);
