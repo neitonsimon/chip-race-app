@@ -223,14 +223,23 @@
 
         /* LEGENDARY AURA */
         @keyframes legendary-pulse {
-            0% { box-shadow: 0 0 5px rgba(255, 215, 0, 0.2); border-color: rgba(255, 215, 0, 0.3); }
-            50% { box-shadow: 0 0 12px rgba(255, 215, 0, 0.4); border-color: rgba(255, 215, 0, 0.6); }
-            100% { box-shadow: 0 0 5px rgba(255, 215, 0, 0.2); border-color: rgba(255, 215, 0, 0.3); }
+            0% { 
+                box-shadow: 0 0 10px rgba(255, 215, 0, 0.4), 0 0 20px rgba(255, 215, 0, 0.2); 
+                border-color: rgba(255, 215, 0, 0.5); 
+            }
+            50% { 
+                box-shadow: 0 0 25px rgba(255, 215, 0, 0.8), 0 0 45px rgba(255, 215, 0, 0.5); 
+                border-color: rgba(255, 215, 0, 1); 
+            }
+            100% { 
+                box-shadow: 0 0 10px rgba(255, 215, 0, 0.4), 0 0 20px rgba(255, 215, 0, 0.2); 
+                border-color: rgba(255, 215, 0, 0.5); 
+            }
         }
 
         .badge-legendary-aura {
-            animation: legendary-pulse 4s infinite ease-in-out;
-            background: rgba(255, 215, 0, 0.05) !important;
+            animation: legendary-pulse 3.5s infinite ease-in-out;
+            background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,255,255,0.05)) !important;
             border-width: 2px !important;
         }
     </style>
