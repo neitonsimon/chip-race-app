@@ -428,7 +428,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             }
 
             setBadgeTemplates(prev => prev.map(b => b.id === id ? { ...b, ...badge } : b));
-            alert('Aviso: Insígnia atualizada com sucesso!');
+            
+            // Sync with existing user badges
+            const syncData: any = {};
+            if (badge.title) syncData.title = badge.title;
+            if (badge.icon) syncData.icon = badge.icon;
+            if (badge.color) syncData.color = badge.color;
+            if (badge.description) syncData.description = badge.description;
+
+            if (Object.keys(syncData).length > 0) {
+                const { error: syncError } = await supabase
+                    .from('user_badges')
+                    .update(syncData)
+                    .eq('badge_template_id', id);
+                
+                if (syncError) {
+                    console.error('Error syncing user badges:', syncError);
+                    // We don't throw here to not block the success of the template update
+                }
+            }
+
+            alert('Aviso: Insígnia atualizada com sucesso em todo o sistema!');
         } catch (error: any) {
             console.error('Error updating badge template:', error);
             alert('Erro ao atualizar insígnia: ' + error.message);
