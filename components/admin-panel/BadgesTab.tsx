@@ -656,120 +656,177 @@ export const BadgesTab: React.FC<BadgesTabProps> = ({
                 </div>
             )}
 
-            {/* SEND GIFTS GRID */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:items-start">
-                {/* Configuration */}
-                <div className="space-y-6">
-                    <div className="bg-black/40 border border-white/10 rounded-3xl p-5 sm:p-6">
-                        <h4 className="text-xs sm:text-sm font-black text-white uppercase mb-6 flex items-center gap-2 px-1">
-                            <span className="material-icons-outlined text-primary text-sm">settings</span>
-                            Configuração do Envio
-                        </h4>
+            {/* NEW SOVEREIGN CONTROL TOWER */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:items-start pb-12">
+                {/* 1. SELEÇÃO E CONFIGURAÇÃO (SOVEREIGN CENTER) */}
+                <div className="lg:col-span-8 space-y-8">
+                    <div className="bg-[#0c0920]/80 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 sm:p-10 shadow-2xl relative overflow-hidden group">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-secondary to-primary opacity-30"></div>
+                        
+                        <div className="flex items-center justify-between mb-8 sm:mb-10">
+                            <h4 className="text-sm sm:text-base font-black text-white uppercase tracking-[0.3em] flex items-center gap-3">
+                                <span className="material-icons text-primary text-xl">settings_suggest</span>
+                                Configuração do Envio
+                            </h4>
+                            <div className="hidden sm:flex items-center gap-2 text-[10px] text-gray-500 font-bold uppercase tracking-widest bg-white/5 px-4 py-2 rounded-full border border-white/10">
+                                <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                                ADMIN MODE
+                            </div>
+                        </div>
 
-                        <div className="space-y-5 text-left">
-                            {/* Target */}
-                            <div>
-                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Para quem?</label>
-                                <div className="flex gap-2">
-                                    <button onClick={() => setTargetType('single')} className={`flex-1 py-3 rounded-xl border text-[9px] sm:text-[10px] font-black uppercase transition-all ${targetType === 'single' ? 'bg-primary border-primary text-white shadow-neon-pink' : 'bg-white/5 border-white/10 text-gray-500 hover:text-gray-300'}`}>
+                        <div className="space-y-8 text-left">
+                            {/* Target Selection */}
+                            <div className="space-y-4">
+                                <label className="block text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1">Destinatários</label>
+                                <div className="flex p-1.5 bg-black/40 border border-white/5 rounded-2xl gap-2">
+                                    <button onClick={() => setTargetType('single')} className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${targetType === 'single' ? 'bg-primary text-white shadow-neon-pink border border-primary/50' : 'bg-transparent text-gray-500 hover:text-gray-300'}`}>
+                                        <span className="material-icons-outlined text-sm">{targetType === 'single' ? 'check_circle' : 'person'}</span>
                                         Específicos
                                     </button>
-                                    <button onClick={() => setTargetType('all')} className={`flex-1 py-3 rounded-xl border text-[9px] sm:text-[10px] font-black uppercase transition-all ${targetType === 'all' ? 'bg-red-500/20 border-red-500/50 text-red-500' : 'bg-white/5 border-white/10 text-gray-500 hover:text-gray-300'}`}>
-                                        TODOS
+                                    <button onClick={() => setTargetType('all')} className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${targetType === 'all' ? 'bg-red-500/20 border border-red-500/40 text-red-500' : 'bg-transparent text-gray-500 hover:text-gray-300'}`}>
+                                        <span className="material-icons-outlined text-sm">groups</span>
+                                        TODOS ({searchResults.length || '...'})
                                     </button>
                                 </div>
                             </div>
 
-                            {/* Badge selector */}
-                            <div className="space-y-3">
-                                    <div className="flex items-center justify-between px-1">
-                                        <label className="text-[10px] font-bold text-gray-500 uppercase">Selecionar Medalha</label>
-                                        <span className="text-[9px] text-gray-600 font-bold">{badgeTemplates.length} disponíveis</span>
-                                    </div>
-                                    {badgeTemplates.length > 3 && (
-                                        <div className="relative">
-                                            <span className="material-icons-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">search</span>
+                            {/* Badge Selection Library */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between px-1">
+                                    <label className="text-[11px] font-black text-gray-500 uppercase tracking-widest">Selecionar Medalha</label>
+                                    <div className="flex items-center gap-4">
+                                        <div className="relative group min-w-[150px]">
+                                            <span className="material-icons-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 text-xs transition-colors group-focus-within:text-primary">search</span>
                                             <input
                                                 type="text"
                                                 value={badgeSearchFilter}
                                                 onChange={e => setBadgeSearchFilter(e.target.value)}
                                                 placeholder="Filtrar..."
-                                                className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-white text-[11px] outline-none focus:border-primary/40 transition-colors"
+                                                className="w-full bg-black/60 border border-white/10 rounded-full pl-9 pr-3 py-1.5 text-white text-[10px] font-bold outline-none focus:border-primary/50 transition-all placeholder:text-gray-700"
                                             />
                                         </div>
-                                    )}
-                                    <div className="grid grid-cols-2 gap-2 max-h-52 overflow-y-auto pr-1 custom-scrollbar">
-                                        {filteredBadgeTemplates.map(b => (
-                                            <button
-                                                key={b.id}
-                                                onClick={() => setSelectedBadgeId(b.id)}
-                                                className={`relative p-3 rounded-xl border flex flex-col items-center gap-2 transition-all group ${selectedBadgeId === b.id
-                                                    ? 'bg-white/5'
-                                                    : 'bg-black/20 border-white/5 hover:border-primary/20'
-                                                    }`}
-                                                style={selectedBadgeId === b.id ? { borderColor: b.color || '#00E5FF', boxShadow: `0 0 15px ${(b.color || '#00E5FF')}40` } : {}}
-                                            >
-                                                <BadgePreview icon={b.icon || 'stars'} color={b.color} size="sm" active={selectedBadgeId === b.id} />
-                                                <span
-                                                    className="text-[9px] font-black uppercase truncate w-full text-center"
-                                                    style={selectedBadgeId === b.id ? { color: b.color || '#00E5FF' } : { color: 'white' }}
-                                                >
-                                                    {b.title}
-                                                </span>
-                                                <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button onClick={(e) => handleEditBadge(b, e)} className="w-6 h-6 rounded-md bg-black/60 border border-white/10 flex items-center justify-center hover:bg-primary/20 hover:text-primary hover:border-primary/50 text-gray-400 transition-colors">
-                                                        <span className="material-icons-outlined text-[12px]">edit</span>
-                                                    </button>
-                                                    <button onClick={(e) => handleViewBadgeUsers(b, e)} className="w-6 h-6 rounded-md bg-black/60 border border-white/10 flex items-center justify-center hover:bg-cyan-500/20 hover:text-cyan-500 hover:border-cyan-500/50 text-gray-400 transition-colors">
-                                                        <span className="material-icons-outlined text-[12px]">group</span>
-                                                    </button>
-                                                </div>
-                                            </button>
-                                        ))}
-                                        {filteredBadgeTemplates.length === 0 && (
-                                            <div className="col-span-2 text-center py-6 text-gray-600 text-xs italic">
-                                                Nenhuma medalha encontrada.
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
-                            
 
-                            {/* Description */}
-                            <div>
-                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Justificativa / Motivo</label>
-                                <input type="text" value={description} onChange={e => setDescription(e.target.value)}
-                                    placeholder={'Ex: Membro Honorário da Plataforma...'}
-                                    className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-primary outline-none" />
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pb-4">
+                                    {/* Action Card: New Badge */}
+                                    {!showNewBadgeForm && (
+                                        <button 
+                                            onClick={() => setShowNewBadgeForm(true)}
+                                            className="h-[140px] border-2 border-dashed border-white/5 rounded-3xl flex flex-col items-center justify-center gap-3 bg-white/[0.02] hover:bg-primary/5 hover:border-primary/30 transition-all group"
+                                        >
+                                            <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-500 group-hover:bg-primary/20 group-hover:text-primary transition-all">
+                                                <span className="material-icons-outlined">add</span>
+                                            </div>
+                                            <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest group-hover:text-primary">Criar Nova</span>
+                                        </button>
+                                    )}
+
+                                    {filteredBadgeTemplates.map(b => (
+                                        <div 
+                                            key={b.id}
+                                            onClick={() => setSelectedBadgeId(b.id)}
+                                            className={`relative h-[140px] rounded-[2rem] border-2 flex flex-col items-center justify-center gap-3 transition-all cursor-pointer group ${selectedBadgeId === b.id
+                                                ? 'bg-white/5 scale-105'
+                                                : 'bg-black/40 border-white/5 hover:border-white/20'
+                                                }`}
+                                            style={selectedBadgeId === b.id ? { borderColor: b.color || '#00E5FF', boxShadow: `0 15px 40px -10px ${(b.color || '#00E5FF')}30` } : {}}
+                                        >
+                                            <div className="relative">
+                                                <BadgePreview icon={b.icon || 'stars'} color={b.color} size="md" active={selectedBadgeId === b.id} />
+                                                {selectedBadgeId === b.id && (
+                                                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center border-2 border-[#0c0920] animate-in zoom-in">
+                                                        <span className="material-icons text-white text-[10px]">check</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <span 
+                                                className="text-[10px] font-black uppercase tracking-tight px-3 w-full text-center truncate"
+                                                style={selectedBadgeId === b.id ? { color: b.color || '#00E5FF' } : { color: 'white' }}
+                                            >
+                                                {b.title}
+                                            </span>
+
+                                            {/* Contextual CRUD Menu */}
+                                            <div className="absolute bottom-3 right-3 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all">
+                                                <button 
+                                                    onClick={(e) => handleViewBadgeUsers(b, e)} 
+                                                    title="Ver quem possui"
+                                                    className="w-7 h-7 rounded-lg bg-black/80 border border-white/10 flex items-center justify-center hover:bg-cyan-500/20 hover:text-cyan-500 text-gray-500 transition-all"
+                                                >
+                                                    <span className="material-icons-outlined text-sm">group</span>
+                                                </button>
+                                                <button 
+                                                    onClick={(e) => handleEditBadge(b, e)} 
+                                                    title="Editar medalha"
+                                                    className="w-7 h-7 rounded-lg bg-black/80 border border-white/10 flex items-center justify-center hover:bg-amber-500/20 hover:text-amber-500 text-gray-500 transition-all"
+                                                >
+                                                    <span className="material-icons-outlined text-sm">edit</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
 
-                            <button
-                                onClick={handleSendBadges}
-                                disabled={isLoading || !selectedBadgeId}
-                                className="w-full bg-primary hover:bg-white hover:text-black text-white font-black py-4 rounded-2xl transition-all shadow-neon-pink uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
-                            >
-                                {isLoading
-                                    ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                    : <><span className="material-icons-outlined text-sm">verified</span> Confirmar Envio</>
-                                }
-                            </button>
+                            {/* Justification & Confirm */}
+                            <div className="space-y-6 pt-4 border-t border-white/5">
+                                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
+                                    <div className="md:col-span-8">
+                                        <label className="block text-[11px] font-black text-gray-500 uppercase tracking-widest mb-3 ml-1">Justificativa / Motivo</label>
+                                        <div className="relative">
+                                            <span className="material-icons-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-700 text-base">notes</span>
+                                            <input 
+                                                type="text" 
+                                                value={description} 
+                                                onChange={e => setDescription(e.target.value)}
+                                                placeholder={'Ex: Desempenho fantástico na mesa final...'}
+                                                className="w-full bg-black/40 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-white text-sm focus:border-primary/50 outline-none transition-all" 
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="md:col-span-4">
+                                        <button
+                                            onClick={handleSendBadges}
+                                            disabled={isLoading || !selectedBadgeId || (targetType === 'single' && selectedUsers.length === 0)}
+                                            className="w-full bg-primary hover:bg-white hover:text-black hover:scale-[1.02] active:scale-95 text-white font-black py-4 rounded-2xl transition-all shadow-neon-pink uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-2 disabled:opacity-30 disabled:grayscale disabled:pointer-events-none"
+                                        >
+                                            {isLoading
+                                                ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                : <><span className="material-icons-outlined text-sm">rocket_launch</span> Confirmar</>
+                                            }
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                {/* User Selection */}
-                <div className={`space-y-6 transition-all ${targetType === 'all' ? 'opacity-20 pointer-events-none grayscale' : 'opacity-100'}`}>
-                    <div className="bg-black/40 border border-white/10 rounded-3xl p-5 sm:p-6 h-full flex flex-col">
-                        <h4 className="text-xs sm:text-sm font-black text-white uppercase mb-6 flex items-center gap-2 px-1">
-                            <span className="material-icons-outlined text-primary text-sm">person_search</span>
-                            Destinatários ({selectedUsers.length})
-                        </h4>
+                {/* 2. USER SELECTION SECTION (SIDEBAR) */}
+                <div className={`lg:col-span-4 space-y-6 transition-all duration-500 ${targetType === 'all' ? 'opacity-20 pointer-events-none scale-95 blur-sm' : 'opacity-100'}`}>
+                    <div className="bg-[#0c0920]/60 backdrop-blur-md border border-white/5 rounded-[2rem] p-6 flex flex-col h-[700px]">
+                        <div className="flex items-center justify-between mb-8">
+                            <h4 className="text-[10px] font-black text-white uppercase tracking-[0.2em] flex items-center gap-2">
+                                <span className="material-icons-outlined text-primary text-base">person_add</span>
+                                Destinatários
+                            </h4>
+                            <span className="text-[10px] font-black bg-primary/20 text-primary px-3 py-1 rounded-full">{selectedUsers.length}</span>
+                        </div>
 
-                        <div className="relative mb-6 text-left">
-                            <input type="text" value={searchQuery} onChange={e => handleSearch(e.target.value)} placeholder="Buscar por Nome ou CR#"
-                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary transition-all" />
+                        {/* Search Focus */}
+                        <div className="relative mb-8 group">
+                            <span className="material-icons-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-primary transition-colors">search</span>
+                            <input 
+                                type="text" 
+                                value={searchQuery} 
+                                onChange={e => handleSearch(e.target.value)} 
+                                placeholder="Buscar Jogador..."
+                                className="w-full bg-black/40 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-white text-xs outline-none focus:border-primary/40 focus:bg-primary/5 transition-all font-bold placeholder:text-gray-700" 
+                            />
+                            
                             {searchResults.length > 0 && (
-                                <div className="absolute top-full left-0 right-0 mt-1 bg-[#0a0720] border border-white/10 rounded-xl overflow-hidden shadow-2xl z-20 max-h-[250px] overflow-y-auto custom-scrollbar">
+                                <div className="absolute top-full left-0 right-0 mt-2 bg-[#120d2d] border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-50 max-h-72 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2">
                                     {searchResults.map(u => {
                                         const alreadyHasBadge = usersWithSelectedBadge.has(u.id);
                                         return (
@@ -779,20 +836,19 @@ export const BadgesTab: React.FC<BadgesTabProps> = ({
                                                     if (!selectedUsers.find(x => x.id === u.id)) setSelectedUsers([...selectedUsers, u]);
                                                     setSearchQuery(''); setSearchResults([]);
                                                 }}
-                                                className={`w-full flex items-center justify-between p-3 hover:bg-primary/20 text-left border-b border-white/5 last:border-0 ${alreadyHasBadge ? 'opacity-60 grayscale-[0.5]' : ''}`}
+                                                className={`w-full flex items-center justify-between p-4 hover:bg-primary/10 transition-colors border-b border-white/5 last:border-0 ${alreadyHasBadge ? 'opacity-40' : ''}`}
                                             >
                                                 <div className="flex items-center gap-3">
-                                                    <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${u.name}&background=random`} className="w-8 h-8 rounded-full object-cover shrink-0" alt="" />
-                                                    <div className="min-w-0">
-                                                        <p className="text-xs font-bold text-white truncate">{u.name}</p>
-                                                        <p className="text-[9px] text-primary font-black uppercase">CR#{String(u.numeric_id).padStart(3, '0')}</p>
+                                                    <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${u.name}&background=random`} className="w-9 h-9 rounded-full object-cover border border-white/10" alt="" />
+                                                    <div className="text-left">
+                                                        <p className="text-[10px] font-black text-white leading-none mb-1">{u.name}</p>
+                                                        <p className="text-[8px] text-primary font-black uppercase tracking-tighter">CR#{String(u.numeric_id).padStart(3, '0')}</p>
                                                     </div>
                                                 </div>
-                                                {alreadyHasBadge && (
-                                                    <div className="flex items-center gap-1 text-amber-500/80 bg-amber-500/5 px-1.5 py-0.5 rounded border border-amber-500/10 shrink-0">
-                                                        <span className="material-icons text-[10px]">info</span>
-                                                        <span className="text-[8px] font-black uppercase tracking-wider">Já tem</span>
-                                                    </div>
+                                                {alreadyHasBadge ? (
+                                                    <span className="material-icons text-amber-500 text-base">info</span>
+                                                ) : (
+                                                    <span className="material-icons text-gray-700 text-sm">add_circle_outline</span>
                                                 )}
                                             </button>
                                         );
@@ -801,24 +857,31 @@ export const BadgesTab: React.FC<BadgesTabProps> = ({
                             )}
                         </div>
 
-                        <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-1 text-left">
+                        {/* Selected List */}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-1">
                             {selectedUsers.length === 0 ? (
-                                <div className="py-12 text-center text-gray-600">
-                                    <span className="material-icons-outlined text-4xl block mb-2 opacity-20">group_add</span>
-                                    <p className="text-[10px] font-bold uppercase tracking-widest italic">Nenhum jogador selecionado</p>
+                                <div className="h-full flex flex-col items-center justify-center opacity-20 py-20 grayscale">
+                                    <span className="material-icons-outlined text-6xl mb-4">search_off</span>
+                                    <p className="text-[9px] font-black uppercase tracking-[0.2em]">Pesquise pelo nome</p>
                                 </div>
                             ) : (
                                 selectedUsers.map(u => (
-                                    <div key={u.id} className="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-2xl animate-in fade-in duration-300">
+                                    <div key={u.id} className="group flex items-center justify-between p-3.5 bg-white/[0.03] border border-white/5 rounded-2xl hover:border-white/10 transition-all animate-in fade-in slide-in-from-right-4">
                                         <div className="flex items-center gap-3">
-                                            <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${u.name}&background=random`} className="w-8 h-8 rounded-full border border-white/10 object-cover" alt="" />
-                                            <div>
-                                                <p className="text-xs font-bold text-white leading-tight">{u.name}</p>
-                                                <p className="text-[9px] text-gray-500 font-bold uppercase">CR#{String(u.numeric_id).padStart(3, '0')}</p>
+                                            <div className="relative">
+                                                <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${u.name}&background=random`} className="w-10 h-10 rounded-full border border-white/10 object-cover" alt="" />
+                                                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-[#120d2d]"></div>
+                                            </div>
+                                            <div className="text-left">
+                                                <p className="text-[10px] font-black text-white leading-none mb-1">{u.name}</p>
+                                                <p className="text-[9px] text-gray-600 font-bold uppercase">CR#{String(u.numeric_id).padStart(3, '0')}</p>
                                             </div>
                                         </div>
-                                        <button onClick={() => setSelectedUsers(selectedUsers.filter(x => x.id !== u.id))} className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-white transition-all">
-                                            <span className="material-icons-outlined text-sm">close</span>
+                                        <button 
+                                            onClick={() => setSelectedUsers(selectedUsers.filter(x => x.id !== u.id))} 
+                                            className="w-8 h-8 rounded-xl bg-red-500/0 hover:bg-red-500 text-gray-700 hover:text-white transition-all flex items-center justify-center"
+                                        >
+                                            <span className="material-icons-outlined text-sm">remove_circle</span>
                                         </button>
                                     </div>
                                 ))
@@ -828,9 +891,9 @@ export const BadgesTab: React.FC<BadgesTabProps> = ({
                         {selectedUsers.length > 0 && (
                             <button
                                 onClick={() => setSelectedUsers([])}
-                                className="text-[9px] font-black text-gray-500 hover:text-red-500 uppercase flex items-center justify-center gap-1 mt-6 h-8 transition-colors"
+                                className="w-full mt-6 py-3 border border-red-500/20 text-[9px] font-black text-red-500/60 hover:text-red-500 hover:bg-red-500/5 uppercase tracking-widest rounded-xl transition-all"
                             >
-                                <span className="material-icons-outlined text-xs">delete_sweep</span> Limpar Seleção
+                                Limpar Lista
                             </button>
                         )}
                     </div>
