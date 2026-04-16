@@ -384,42 +384,67 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         <div className="flex flex-wrap gap-4">
                             {player.badges.map((badge: any) => {
                                 const template = badge.badge_templates;
-                                const badgeColor = badge.color || template?.color || '#00E5FF';
-                                const originalDesc = template?.description;
+                                // Always prefer live template values so edits propagate immediately
+                                const badgeIcon = template?.icon || badge.icon || 'stars';
+                                const badgeTitle = template?.title || badge.title || '';
+                                const badgeColor = template?.color || badge.color || '#00E5FF';
+                                const originalDesc = template?.description || badge.description;
+
+                                // Detect "supreme" tier: our primary color or any pink/fuchsia hue
+                                const isSupreme = badgeColor === '#ff4d79' || badgeColor === '#ec4899' || badgeColor?.toLowerCase().includes('f472') || badgeTitle?.toLowerCase().includes('supreme');
+
+                                const supremeGradientStyle = {
+                                    background: 'linear-gradient(135deg, #f9a8d4 0%, #ec4899 30%, #db2777 55%, #ea580c 80%, #c2410c 100%)',
+                                    WebkitBackgroundClip: 'text',
+                                    WebkitTextFillColor: 'transparent',
+                                    backgroundClip: 'text',
+                                };
 
                                 return (
                                     <div key={badge.id}
                                         className="group relative w-14 h-14 md:w-16 md:h-16 flex items-center justify-center transition-all cursor-help transform hover:scale-110 rounded-[1.25rem] border-2"
-                                        style={{
+                                        style={isSupreme ? {
+                                            background: 'linear-gradient(135deg, rgba(249,168,212,0.08) 0%, rgba(236,72,153,0.12) 40%, rgba(234,88,12,0.12) 100%)',
+                                            borderColor: 'rgba(236,72,153,0.45)',
+                                            boxShadow: '0 0 18px rgba(236,72,153,0.25), 0 0 6px rgba(234,88,12,0.2)',
+                                        } : {
                                             backgroundColor: 'rgba(255,255,255,0.03)',
-                                            backgroundImage: badgeColor === '#ff4d79' ? 'linear-gradient(135deg, rgba(236,72,153,0.1) 0%, rgba(249,115,22,0.1) 100%)' : 'none',
                                             borderColor: `${badgeColor}22`,
                                             boxShadow: `0 8px 20px ${badgeColor}08`,
-                                            '--hover-glow': badgeColor
-                                        } as any}
+                                        }}
                                     >
-                                        <div className="w-full h-full flex items-center justify-center rounded-[1.25rem] transition-all group-hover:bg-white/[0.05] group-hover:border-white/20">
+                                        <div className="w-full h-full flex items-center justify-center rounded-[1.25rem] transition-all group-hover:bg-white/[0.05]">
                                             {badge.image_url ? (
-                                                <img src={badge.image_url} alt={badge.title} className="w-10 h-10 object-contain" />
+                                                <img src={badge.image_url} alt={badgeTitle} className="w-10 h-10 object-contain" />
                                             ) : (
-                                                <span 
-                                                    className="material-icons-outlined text-3xl" 
-                                                    style={badgeColor === '#ff4d79' ? { background: 'linear-gradient(135deg, #ec4899 0%, #f97316 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' } : { color: badgeColor }}
-                                                >{badge.icon || 'stars'}</span>
+                                                <span
+                                                    className="material-icons-outlined text-3xl"
+                                                    style={isSupreme ? supremeGradientStyle : { color: badgeColor }}
+                                                >{badgeIcon}</span>
                                             )}
                                         </div>
 
-                                        {/* Tooltip enhanced - Fixed visibility and clipping on mobile */}
+                                        {/* Tooltip */}
                                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 max-sm:-translate-x-[40%] mb-4 w-48 md:w-64 bg-[#0c0920] text-white p-4 rounded-2xl border border-white/10 invisible opacity-0 group-hover:visible group-hover:opacity-100 pointer-events-none transition-all z-[100] shadow-[0_10px_40px_rgba(0,0,0,0.8)] scale-90 group-hover:scale-100 font-sans">
                                             <div className="flex items-center gap-2 mb-2">
-                                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: badgeColor, backgroundImage: badgeColor === '#ff4d79' ? 'linear-gradient(135deg, #ec4899 0%, #f97316 100%)' : 'none', boxShadow: `0 0 10px ${badgeColor}` }}></div>
-                                                <p className="font-black text-xs uppercase tracking-widest leading-none" style={{ color: badgeColor }}>{badge.title}</p>
+                                                <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={isSupreme ? {
+                                                    background: 'linear-gradient(135deg, #f9a8d4, #ec4899, #ea580c)',
+                                                    boxShadow: '0 0 8px rgba(236,72,153,0.8), 0 0 4px rgba(234,88,12,0.6)'
+                                                } : {
+                                                    backgroundColor: badgeColor,
+                                                    boxShadow: `0 0 10px ${badgeColor}`
+                                                }}></div>
+                                                <p className="font-black text-xs uppercase tracking-widest leading-none" style={isSupreme ? {
+                                                    background: 'linear-gradient(90deg, #f9a8d4, #ec4899, #ea580c)',
+                                                    WebkitBackgroundClip: 'text',
+                                                    WebkitTextFillColor: 'transparent',
+                                                    backgroundClip: 'text',
+                                                } : { color: badgeColor }}>{badgeTitle}</p>
                                             </div>
-                                            <p className="text-gray-400 text-[11px] leading-relaxed font-medium break-words">{originalDesc || badge.description}</p>
+                                            <p className="text-gray-400 text-[11px] leading-relaxed font-medium break-words">{originalDesc}</p>
                                             <div className="mt-2 pt-2 border-t border-white/5 text-[9px] text-gray-600 font-black uppercase tracking-wider">
                                                 Ganha em: {new Date(badge.awarded_at).toLocaleDateString()}
                                             </div>
-                                            {/* Arrow properly aligned */}
                                             <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 max-sm:left-[40%] w-3 h-3 bg-[#0c0920] border-b border-r border-white/10 transform rotate-45" />
                                         </div>
                                     </div>

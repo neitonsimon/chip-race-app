@@ -463,7 +463,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             // Join with badge_templates to get the original creation description
             const { data: userBadges } = await supabase
                 .from('user_badges')
-                .select('*, badge_templates(description)')
+                .select('*, badge_templates(description, icon, color, title)')
                 .eq('user_id', targetIdRef.current)
                 .order('awarded_at', { ascending: false });
 
