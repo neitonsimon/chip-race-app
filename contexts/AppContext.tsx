@@ -69,6 +69,7 @@ interface AppContextType {
     handleMarkAsRead: (id: string) => Promise<void>;
     handleDeleteMessage: (id: string) => Promise<void>;
     handleCreateBadgeTemplate: (badge: Partial<BadgeTemplate>) => Promise<void>;
+    handleUpdateBadgeTemplate: (id: string, badge: Partial<BadgeTemplate>) => Promise<void>;
     updateContent: (section: keyof ContentDB, field: string, value: any) => Promise<void>;
     updateCategory: (index: number, field: keyof TournamentCategory, value: any) => Promise<void>;
     setNewNotification: (msg: Message | null) => void;
@@ -404,6 +405,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         } catch (error: any) {
             console.error('Error creating badge template:', error);
             alert('Erro ao criar insignia: ' + error.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleUpdateBadgeTemplate = async (id: string, badge: Partial<BadgeTemplate>) => {
+        setIsLoading(true);
+        try {
+            const { error } = await supabase
+                .from('badge_templates')
+                .update(badge)
+                .eq('id', id);
+
+            if (error) {
+                if (error.code === '23505') {
+                    alert('Erro: Esta combinação de ícone e cor já existe (Unique Constraint).');
+                } else {
+                    throw error;
+                }
+                return;
+            }
+
+            setBadgeTemplates(prev => prev.map(b => b.id === id ? { ...b, ...badge } : b));
+            alert('Aviso: Insígnia atualizada com sucesso!');
+        } catch (error: any) {
+            console.error('Error updating badge template:', error);
+            alert('Erro ao atualizar insígnia: ' + error.message);
         } finally {
             setIsLoading(false);
         }
@@ -1304,7 +1332,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             handleEventClosure, handleUpdateRankingMeta, handleUpdateGlobalSchemas, handleUpdateSystemMessageTemplate, handleCreateSystemMessageTemplate, handleAddRanking, handleDeleteRanking, handleAwardBadge,
             handleUpdateRankingPrize, handleUpdateTotalQualifiers, handleUpdateMonth, handleToggleMonthStatus,
             handleNavigateToPlayerByName, handleCreatePoll, handleVoteOnPoll, handleSendAdminMessage, handleSendMessage, handleReplyMessage,
-            handleMarkAsRead, handleDeleteMessage, handleCreateBadgeTemplate, updateContent, updateCategory, setNewNotification, getAllUniquePlayers,
+            handleMarkAsRead, handleDeleteMessage, handleCreateBadgeTemplate, handleUpdateBadgeTemplate, updateContent, updateCategory, setNewNotification, getAllUniquePlayers,
             setEvents, setExperienceLevels, setDailyRewards,
             isFlyerOpen, setIsFlyerOpen,
             refreshSupabaseData: async () => {

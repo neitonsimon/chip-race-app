@@ -28,6 +28,7 @@ interface AdminPanelProps {
     onUpdateProfile?: (id: string, stats: any) => void;
     badgeTemplates?: any[];
     onCreateBadgeTemplate?: (badge: any) => Promise<void>;
+    onUpdateBadgeTemplate?: (id: string, badge: any) => Promise<void>;
     onSendAdminMessage?: (subject: string, content: string, category: 'admin' | 'system' | 'tournament') => void;
     onCreatePoll?: (question: string, options: string[]) => void;
     onRefreshData?: () => Promise<void>;
@@ -70,9 +71,8 @@ function getOneTimeKeyFromNote(note: string): string | null {
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ 
-    onClose, currentUser, isAdmin = false, onUpdateProfile, badgeTemplates = [], 
-    onCreateBadgeTemplate, onSendAdminMessage, onCreatePoll, onRefreshData,
-    onSelectPlayer, onNavigate 
+    onClose, currentUser, onUpdateProfile, badgeTemplates = [], isAdmin = false, 
+    onCreateBadgeTemplate, onUpdateBadgeTemplate, onSendAdminMessage, onCreatePoll, onRefreshData, onSelectPlayer, onNavigate 
 }) => {
     const [activeTab, setActiveTab] = useState<'operational' | 'inventory' | 'reports' | 'launch' | 'send-gifts' | 'debts' | 'communications' | 'reservations'>('operational');
     const [events, setEvents] = useState<any[]>([]);
@@ -951,6 +951,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             handleSendGifts={giftsSystem.handleSendGifts}
                             handleGiftSearch={giftsSystem.handleGiftSearch}
                             onCreateBadgeTemplate={onCreateBadgeTemplate}
+                            onUpdateBadgeTemplate={onUpdateBadgeTemplate}
                             isLoading={giftsSystem.isLoading}
                             selectedVipType={giftsSystem.selectedVipType}
                             setSelectedVipType={giftsSystem.setSelectedVipType}

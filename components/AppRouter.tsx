@@ -40,7 +40,7 @@ export const AppRouter: React.FC = () => {
         handleVoteOnPoll, handleSendAdminMessage, handleSendMessage,
         handleReplyMessage, handleMarkAsRead, updateContent, updateCategory,
         badgeTemplates, experienceLevels, setEvents, setExperienceLevels,
-        dailyRewards, setDailyRewards, getAllUniquePlayers, handleCreateBadgeTemplate,
+        dailyRewards, setDailyRewards, getAllUniquePlayers, handleCreateBadgeTemplate, handleUpdateBadgeTemplate,
         handleDeleteMessage, userReservations, refreshSupabaseData
     } = useApp();
 
@@ -161,6 +161,7 @@ export const AppRouter: React.FC = () => {
                     onUpdateProfile={handleProfileUpdate}
                     badgeTemplates={badgeTemplates}
                     onCreateBadgeTemplate={handleCreateBadgeTemplate}
+                    onUpdateBadgeTemplate={handleUpdateBadgeTemplate}
                     onSendAdminMessage={handleSendAdminMessage}
                     onCreatePoll={handleCreatePoll}
                     onRefreshData={refreshSupabaseData}

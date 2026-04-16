@@ -1,4 +1,5 @@
 import React from 'react';
+import { ViewBadgeUsersModal } from './modals/ViewBadgeUsersModal';
 
 interface GiftsTabProps {
     giftTarget: 'single' | 'all';
@@ -24,6 +25,7 @@ interface GiftsTabProps {
     handleSendGifts: () => Promise<void>;
     handleGiftSearch: (query: string) => Promise<void>;
     onCreateBadgeTemplate?: (badge: any) => Promise<void>;
+    onUpdateBadgeTemplate?: (id: string, badge: any) => Promise<void>;
     isLoading: boolean;
 }
 
@@ -506,11 +508,15 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
     const [showIconPicker, setShowIconPicker] = React.useState(false);
     const [badgeSearchFilter, setBadgeSearchFilter] = React.useState('');
 
-    const handleCreateBadge = async () => {
-        if (!onCreateBadgeTemplate || !newBadge.title) return;
+    const [editingBadgeId, setEditingBadgeId] = React.useState<string | null>(null);
+    const [viewBadgeUsers, setViewBadgeUsers] = React.useState<any>(null);
+
+    const handleSaveBadge = async () => {
+        if (!newBadge.title) return;
 
         // Check for duplicates (same icon AND same color)
         const isDuplicate = badgeTemplates.some(b =>
+            b.id !== editingBadgeId &&
             b.icon === newBadge.icon &&
             (b.color === newBadge.color || (!b.color && newBadge.color === '#00E5FF'))
         );
@@ -520,9 +526,29 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
             return;
         }
 
-        await onCreateBadgeTemplate(newBadge);
+        if (editingBadgeId && onUpdateBadgeTemplate) {
+            await onUpdateBadgeTemplate(editingBadgeId, newBadge);
+        } else if (onCreateBadgeTemplate) {
+            await onCreateBadgeTemplate(newBadge);
+        }
+        
         setShowNewBadgeForm(false);
+        setEditingBadgeId(null);
         setNewBadge({ title: '', description: '', icon: 'stars', color: '#00E5FF' });
+    };
+
+    const handleEditBadge = (b: any, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setNewBadge({ title: b.title, description: b.description || '', icon: b.icon || 'stars', color: b.color || '#00E5FF' });
+        setEditingBadgeId(b.id);
+        setShowNewBadgeForm(true);
+        // Scroll to top to ensure form is visible
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handleViewBadgeUsers = (b: any, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setViewBadgeUsers(b);
     };
 
     const filteredBadgeTemplates = badgeSearchFilter
@@ -543,12 +569,18 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                     </div>
                 </div>
                 <button
-                    onClick={() => setShowNewBadgeForm(!showNewBadgeForm)}
+                    onClick={() => {
+                        setShowNewBadgeForm(!showNewBadgeForm);
+                        if (showNewBadgeForm) {
+                            setEditingBadgeId(null);
+                            setNewBadge({ title: '', description: '', icon: 'stars', color: '#00E5FF' });
+                        }
+                    }}
                     className={`w-full sm:w-auto px-4 py-3 sm:py-2 rounded-xl border transition-all flex items-center justify-center gap-2 text-[10px] font-black uppercase shadow-neon-pink/10 ${showNewBadgeForm ? 'bg-white/5 border-white/20 text-white' : 'bg-primary/10 border-primary/30 text-primary hover:bg-primary/20'
                         }`}
                 >
                     <span className="material-icons-outlined text-sm">{showNewBadgeForm ? 'close' : 'add_circle'}</span>
-                    {showNewBadgeForm ? 'Cancelar' : 'Nova Medalha'}
+                    {showNewBadgeForm && editingBadgeId ? 'Cancelar Edição' : showNewBadgeForm ? 'Cancelar' : 'Nova Medalha'}
                 </button>
             </div>
 
@@ -556,8 +588,8 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
             {showNewBadgeForm && (
                 <div className="bg-black/40 border border-primary/20 rounded-[2rem] sm:rounded-3xl p-4 sm:p-6 animate-in slide-in-from-top-4">
                     <h4 className="text-[11px] sm:text-sm font-black text-primary uppercase mb-6 flex items-center gap-2 px-1">
-                        <span className="material-icons-outlined text-sm">new_label</span>
-                        Lançar Nova Medalha no Banco
+                        <span className="material-icons-outlined text-sm">{editingBadgeId ? 'edit' : 'new_label'}</span>
+                        {editingBadgeId ? 'Editar Medalha Existente' : 'Lançar Nova Medalha no Banco'}
                     </h4>
 
                     {/* Preview */}
@@ -649,13 +681,13 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                     </div>
 
                     <button
-                        onClick={handleCreateBadge}
+                        onClick={handleSaveBadge}
                         disabled={isLoading || !newBadge.title}
                         className="w-full mt-6 bg-primary hover:bg-white hover:text-black text-white font-black py-4 rounded-2xl transition-all shadow-neon-pink uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                         {isLoading
                             ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            : <><span className="material-icons-outlined text-sm">save</span> Salvar Nova Medalha</>
+                            : <><span className="material-icons-outlined text-sm">save</span> {editingBadgeId ? 'Salvar Alterações' : 'Salvar Nova Medalha'}</>
                         }
                     </button>
                 </div>
@@ -761,6 +793,14 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                                                 >
                                                     {b.title}
                                                 </span>
+                                                <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={(e) => handleEditBadge(b, e)} className="w-6 h-6 rounded-md bg-black/60 border border-white/10 flex items-center justify-center hover:bg-primary/20 hover:text-primary hover:border-primary/50 text-gray-400 transition-colors">
+                                                        <span className="material-icons-outlined text-[12px]">edit</span>
+                                                    </button>
+                                                    <button onClick={(e) => handleViewBadgeUsers(b, e)} className="w-6 h-6 rounded-md bg-black/60 border border-white/10 flex items-center justify-center hover:bg-cyan-500/20 hover:text-cyan-500 hover:border-cyan-500/50 text-gray-400 transition-colors">
+                                                        <span className="material-icons-outlined text-[12px]">group</span>
+                                                    </button>
+                                                </div>
                                             </button>
                                         ))}
                                         {filteredBadgeTemplates.length === 0 && (
@@ -897,6 +937,14 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                     currentColor={newBadge.color}
                     onSelect={icon => setNewBadge({ ...newBadge, icon })}
                     onClose={() => setShowIconPicker(false)}
+                />
+            )}
+
+            {/* View Users Modal */}
+            {viewBadgeUsers && (
+                <ViewBadgeUsersModal
+                    badge={viewBadgeUsers}
+                    onClose={() => setViewBadgeUsers(null)}
                 />
             )}
         </div>
