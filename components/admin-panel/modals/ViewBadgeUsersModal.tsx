@@ -19,7 +19,7 @@ export const ViewBadgeUsersModal: React.FC<ViewBadgeUsersModalProps> = ({ badge,
                 // Try to get data with specific profile join
                 const { data, error } = await supabase
                     .from('user_badges')
-                    .select('created_at, awarded_at, profiles!user_badges_user_id_fkey(id, name, numeric_id, avatar_url)')
+                    .select('awarded_at, profiles!user_badges_user_id_fkey(id, name, numeric_id, avatar_url)')
                     .eq('badge_template_id', badge.id);
 
                 if (error) {
@@ -34,7 +34,7 @@ export const ViewBadgeUsersModal: React.FC<ViewBadgeUsersModalProps> = ({ badge,
                             const profile = Array.isArray(p) ? p[0] : p;
                             return {
                                 ...(profile as any),
-                                awarded_at: (d as any).awarded_at || (d as any).created_at
+                                awarded_at: (d as any).awarded_at
                             };
                         })
                         .filter(u => u.id) // Ensure we have a valid profile
