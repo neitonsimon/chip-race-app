@@ -352,9 +352,9 @@ const BADGE_ICONS = [
 
 
 const RARITY_COLORS = [
-    { id: 'comum', label: 'Comum', color: '#00E5FF' }, // Azul Clara / Cyan
+    { id: 'comum', label: 'Comum', color: '#9ca3af' }, // Cinza / Prata escuro
     { id: 'incomum', label: 'Incomum', color: '#22c55e' }, // Verde
-    { id: 'rara', label: 'Rara', color: '#ec4899' }, // Rosa
+    { id: 'rara', label: 'Rara', color: '#00E5FF' }, // Azul Claro
     { id: 'epica', label: 'Épica', color: '#ef4444' }, // Vermelha
     { id: 'lendaria', label: 'Lendária', color: '#eab308' }, // Dourada
     { id: 'suprema', label: 'Suprema', color: '#ff4d79' }, // Rosa mesclado laranja
