@@ -401,9 +401,24 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                 const isCommon = badgeColor?.toLowerCase() === '#9ca3af' || badgeColor?.toLowerCase() === '#94a3b8' || badgeTitle?.toLowerCase().includes('comum') || badgeTitle?.toLowerCase().includes('common');
 
                                 const supremeGradientStyle = {
-                                    background: 'linear-gradient(135deg, #f9a8d4 0%, #ec4899 30%, #db2777 55%, #ea580c 80%, #c2410c 100%)',
+                                    background: 'linear-gradient(90deg, #f9a8d4, #ec4899, #ea580c)',
                                     WebkitBackgroundClip: 'text',
                                     WebkitTextFillColor: 'transparent',
+                                    backgroundClip: 'text',
+                                };
+
+                                const legendaryGradientStyle = {
+                                    background: 'linear-gradient(90deg, #ffd700, #eab308, #fff5cc)',
+                                    WebkitBackgroundClip: 'text',
+                                    WebkitTextFillColor: 'transparent',
+                                    backgroundClip: 'text',
+                                };
+
+                                const celestialGradientStyle = {
+                                    background: 'linear-gradient(90deg, #fff, #fffff0, #00e5ff)',
+                                    WebkitBackgroundClip: 'text',
+                                    WebkitTextFillColor: 'transparent',
+                                    backgroundClip: 'text',
                                 };
 
                                 return (
@@ -459,7 +474,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                                     backgroundColor: badgeColor,
                                                     boxShadow: `0 0 10px ${badgeColor}`
                                                 }}></div>
-                                                <p className={`font-black text-xs uppercase tracking-widest leading-none ${isLegendary || isSupreme || isCelestial ? 'title-shimmer' : ''}`} style={(!isLegendary && !isSupreme && !isCelestial) ? { color: badgeColor } : {}}>{badgeTitle}</p>
+                                                <p 
+                                                    className={`font-black text-xs uppercase tracking-widest leading-none ${isLegendary || isSupreme || isCelestial ? 'title-shimmer' : ''}`} 
+                                                    style={isSupreme ? supremeGradientStyle : isLegendary ? legendaryGradientStyle : isCelestial ? celestialGradientStyle : { color: badgeColor }}
+                                                >
+                                                    {badgeTitle}
+                                                </p>
                                             </div>
                                             <p className="text-gray-200 text-[11px] leading-relaxed font-medium break-words">{originalDesc}</p>
                                             <div className="mt-2 pt-2 border-t border-white/5 text-[9px] text-gray-600 font-black uppercase tracking-wider">
