@@ -416,7 +416,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                             isEpic ? 'badge-epic-aura' :
                                             isRare ? 'badge-rare-aura' :
                                             isUncommon ? 'badge-uncommon-aura' :
-                                            isCommon ? 'opacity-30 grayscale border-white/5' : 'border-white/10'
+                                            isCommon ? 'opacity-60 grayscale border-white/5' : 'border-white/10'
                                         }`}
                                         style={isPatrao ? {
                                             borderColor: '#fff',
@@ -461,7 +461,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                                 }}></div>
                                                 <p className={`font-black text-xs uppercase tracking-widest leading-none ${isLegendary || isSupreme || isCelestial ? 'title-shimmer' : ''}`} style={(!isLegendary && !isSupreme && !isCelestial) ? { color: badgeColor } : {}}>{badgeTitle}</p>
                                             </div>
-                                            <p className="text-gray-400 text-[11px] leading-relaxed font-medium break-words">{originalDesc}</p>
+                                            <p className="text-gray-200 text-[11px] leading-relaxed font-medium break-words">{originalDesc}</p>
                                             <div className="mt-2 pt-2 border-t border-white/5 text-[9px] text-gray-600 font-black uppercase tracking-wider">
                                                 Ganha em: {new Date(badge.awarded_at).toLocaleDateString()}
                                             </div>

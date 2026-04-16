@@ -25,7 +25,7 @@ export const BadgePreview: React.FC<BadgePreviewProps> = ({ icon, color = '#00E5
                 active && isCelestial ? 'badge-celestial-aura' :
                 active && isSupreme ? 'badge-supreme-aura' :
                 active && isLegendary ? 'badge-legendary-aura' :
-                active && isCommon ? 'opacity-30 grayscale' : ''
+                active && isCommon ? 'opacity-60 grayscale' : ''
             }`}
             style={{
                 backgroundColor: active ? `${color}26` : 'rgba(255,255,255,0.05)',
