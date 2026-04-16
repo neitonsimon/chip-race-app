@@ -392,6 +392,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                         className="group relative w-14 h-14 md:w-16 md:h-16 flex items-center justify-center transition-all cursor-help transform hover:scale-110 rounded-[1.25rem] border-2"
                                         style={{
                                             backgroundColor: 'rgba(255,255,255,0.03)',
+                                            backgroundImage: badgeColor === '#ff4d79' ? 'linear-gradient(135deg, rgba(236,72,153,0.1) 0%, rgba(249,115,22,0.1) 100%)' : 'none',
                                             borderColor: `${badgeColor}22`,
                                             boxShadow: `0 8px 20px ${badgeColor}08`,
                                             '--hover-glow': badgeColor
@@ -401,14 +402,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                             {badge.image_url ? (
                                                 <img src={badge.image_url} alt={badge.title} className="w-10 h-10 object-contain" />
                                             ) : (
-                                                <span className="material-icons-outlined text-3xl" style={{ color: badgeColor }}>{badge.icon || 'stars'}</span>
+                                                <span 
+                                                    className="material-icons-outlined text-3xl" 
+                                                    style={badgeColor === '#ff4d79' ? { background: 'linear-gradient(135deg, #ec4899 0%, #f97316 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' } : { color: badgeColor }}
+                                                >{badge.icon || 'stars'}</span>
                                             )}
                                         </div>
 
                                         {/* Tooltip enhanced - Fixed visibility and clipping on mobile */}
                                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 max-sm:-translate-x-[40%] mb-4 w-48 md:w-64 bg-[#0c0920] text-white p-4 rounded-2xl border border-white/10 invisible opacity-0 group-hover:visible group-hover:opacity-100 pointer-events-none transition-all z-[100] shadow-[0_10px_40px_rgba(0,0,0,0.8)] scale-90 group-hover:scale-100 font-sans">
                                             <div className="flex items-center gap-2 mb-2">
-                                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: badgeColor, boxShadow: `0 0 10px ${badgeColor}` }}></div>
+                                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: badgeColor, backgroundImage: badgeColor === '#ff4d79' ? 'linear-gradient(135deg, #ec4899 0%, #f97316 100%)' : 'none', boxShadow: `0 0 10px ${badgeColor}` }}></div>
                                                 <p className="font-black text-xs uppercase tracking-widest leading-none" style={{ color: badgeColor }}>{badge.title}</p>
                                             </div>
                                             <p className="text-gray-400 text-[11px] leading-relaxed font-medium break-words">{originalDesc || badge.description}</p>
@@ -581,8 +585,18 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                             </div>
                                         )}
 
-                                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border-2 mt-1" style={{ backgroundColor: `${badgeColor}11`, borderColor: `${badgeColor}33` }}>
-                                            <span className="material-icons-outlined text-2xl" style={{ color: badgeColor }}>{template.icon || 'stars'}</span>
+                                        <div 
+                                            className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border-2 mt-1" 
+                                            style={{ 
+                                                backgroundColor: `${badgeColor}11`, 
+                                                backgroundImage: badgeColor === '#ff4d79' ? 'linear-gradient(135deg, rgba(236,72,153,0.1) 0%, rgba(249,115,22,0.1) 100%)' : 'none',
+                                                borderColor: `${badgeColor}33` 
+                                            }}
+                                        >
+                                            <span 
+                                                className="material-icons-outlined text-2xl" 
+                                                style={badgeColor === '#ff4d79' && isUnlocked ? { background: 'linear-gradient(135deg, #ec4899 0%, #f97316 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' } : { color: badgeColor }}
+                                            >{template.icon || 'stars'}</span>
                                         </div>
 
                                         <div className="flex-1 min-w-0 pr-6 md:pr-0">

@@ -361,16 +361,23 @@ const BadgePreview: React.FC<{ icon: string; color?: string; size?: 'sm' | 'lg';
                 } ${active ? 'border-2' : 'border border-white/10'}`}
             style={{
                 backgroundColor: active ? `${color}26` : 'rgba(255,255,255,0.05)',
+                backgroundImage: active && color === '#ff4d79' ? 'linear-gradient(135deg, rgba(236,72,153,0.3) 0%, rgba(249,115,22,0.3) 100%)' : 'none',
                 borderColor: active ? color : 'rgba(255,255,255,0.1)',
                 color: active ? color : '#9ca3af',
                 boxShadow: active ? `0 0 20px ${color}40` : 'none'
             }}
         >
-            <span className={`material-icons-outlined ${isLg ? 'text-4xl' : 'text-2xl'}`}>{icon}</span>
+            <span 
+                className={`material-icons-outlined ${isLg ? 'text-4xl' : 'text-2xl'}`}
+                style={color === '#ff4d79' && active ? { background: 'linear-gradient(135deg, #ec4899 0%, #f97316 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' } : {}}
+            >{icon}</span>
             {active && (
                 <div
                     className="absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0c0920] animate-pulse"
-                    style={{ backgroundColor: color }}
+                    style={{ 
+                        backgroundColor: color,
+                        backgroundImage: color === '#ff4d79' ? 'linear-gradient(135deg, #ec4899 0%, #f97316 100%)' : 'none'
+                    }}
                 />
             )}
         </div>
@@ -383,6 +390,8 @@ const RARITY_COLORS = [
     { id: 'rara', label: 'Rara', color: '#ec4899' }, // Rosa
     { id: 'epica', label: 'Épica', color: '#ef4444' }, // Vermelha
     { id: 'lendaria', label: 'Lendária', color: '#eab308' }, // Dourada
+    { id: 'suprema', label: 'Suprema', color: '#ff4d79' }, // Rosa mesclado laranja
+    { id: 'celestial', label: 'Celestial', color: '#fffff0' }, // Marfim
 ];
 
 // ─── Icon Picker Modal ────────────────────────────────────────────────────────
@@ -598,7 +607,11 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                                         >
                                             <div
                                                 className="w-5 h-5 sm:w-6 sm:h-6 rounded-full shadow-lg"
-                                                style={{ backgroundColor: rarity.color, boxShadow: `0 0 10px ${rarity.color}60` }}
+                                                style={{ 
+                                                    backgroundColor: rarity.color, 
+                                                    backgroundImage: rarity.color === '#ff4d79' ? 'linear-gradient(135deg, #ec4899 0%, #f97316 100%)' : rarity.color === '#8b5cf6' ? 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)' : rarity.color === '#f59e0b' ? 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)' : 'none',
+                                                    boxShadow: `0 0 10px ${rarity.color}60` 
+                                                }}
                                             />
                                             <span className="text-[7px] sm:text-[8px] font-black uppercase tracking-tighter text-gray-400 whitespace-nowrap">{rarity.label}</span>
                                         </button>
