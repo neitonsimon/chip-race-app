@@ -514,9 +514,35 @@ export const BadgesTab: React.FC<BadgesTabProps> = ({
         setViewBadgeUsers(b);
     };
 
-    const filteredBadgeTemplates = badgeSearchFilter
-        ? badgeTemplates.filter(b => b.title.toLowerCase().includes(badgeSearchFilter.toLowerCase()))
-        : badgeTemplates;
+    const getRarityRank = (color: string) => {
+        const c = (color || '#00E5FF').toLowerCase();
+        // Handle variations from BadgePreview
+        if (c === '#ffd700' || c === '#eab308') return 4; // lendaria (index 4)
+        if (c === '#9ca3af' || c === '#94a3b8') return 0; // comum (index 0)
+        
+        const index = RARITY_COLORS.findIndex(r => r.color.toLowerCase() === c);
+        return index === -1 ? 99 : index;
+    };
+
+
+    const filteredBadgeTemplates = React.useMemo(() => {
+        const filtered = badgeSearchFilter
+            ? badgeTemplates.filter(b => b.title.toLowerCase().includes(badgeSearchFilter.toLowerCase()))
+            : [...badgeTemplates];
+
+        return filtered.sort((a, b) => {
+            const iconA = a.icon || '';
+            const iconB = b.icon || '';
+            
+            // First sort by icon
+            if (iconA < iconB) return -1;
+            if (iconA > iconB) return 1;
+            
+            // Then sort by rarity rank within the same icon
+            return getRarityRank(a.color) - getRarityRank(b.color);
+        });
+    }, [badgeTemplates, badgeSearchFilter]);
+
 
     return (
         <div className="p-4 sm:p-8 max-w-4xl mx-auto space-y-8">
