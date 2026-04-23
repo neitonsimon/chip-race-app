@@ -411,7 +411,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                 </div>
                             </div>
 
-                            <div className={commandsTab === 'ativas' ? 'flex flex-col gap-1.5' : 'grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4'}>
+                            <div className={commandsTab === 'resumo' ? 'grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4' : 'flex flex-col gap-1.5'}>
                                 {commandsTab === 'resumo' && currentUserRole === 'admin' ? (
                                     <div className="lg:hidden animate-in fade-in slide-in-from-top-4 col-span-full">
                                         {/* FINANCIAL SUMMARY REPLICATED FOR MOBILE TAB */}
@@ -527,6 +527,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                         const matchCr = `cr#${String(cmd.profiles?.numeric_id).padStart(3, '0')}`.includes(searchLower) || String(cmd.profiles?.numeric_id).includes(searchLower);
                                         return matchName || matchCr;
                                     })
+                                    .sort((a, b) => (a.profiles?.name || '').localeCompare(b.profiles?.name || ''))
                                     .map(cmd => {
                                         if (commandsTab === 'ativas') {
                                             return (
@@ -596,68 +597,43 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                         }
 
                                         return (
-                                        <div
-                                            key={cmd.id}
-                                            onClick={() => {
-                                                setSelectedCommand(cmd);
-                                                if (cmd.status === 'closed') setRightMode('itens');
-                                            }}
-                                            className={`bg-surface-dark border rounded-2xl p-2.5 sm:p-3 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden flex flex-col items-center text-center ${selectedCommand?.id === cmd.id ? 'border-primary shadow-neon-pink ring-1 ring-primary' : 'border-white/5'}`}
-                                        >
-                                            {cmd.status === 'open' && currentUserRole === 'admin' && (
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); handleDeleteCommand(cmd); }}
-                                                    className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-10"
-                                                    title="Excluir Comanda"
-                                                >
-                                                    <span className="material-icons text-xs">close</span>
-                                                </button>
-                                            )}
-                                            <div className="relative mb-2 shrink-0">
-                                                <img src={cmd.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${cmd.profiles?.name}&background=random`} className="w-10 h-10 rounded-xl border border-white/10" />
-                                                {selectedCommand?.id === cmd.id && (
-                                                    <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border-2 border-[#050214] animate-pulse"></div>
-                                                )}
-                                            </div>
-                                            <div className="min-w-0 w-full mb-3">
-                                                <h5 className="text-white font-bold text-[10px] truncate leading-tight mb-1 uppercase tracking-wider">{cmd.profiles?.name}</h5>
-                                                <div className="flex items-center justify-center gap-1">
-                                                    <span className="text-[8px] text-gray-500 font-black">R$</span>
-                                                    <p className="text-primary font-display font-black text-sm shadow-neon-pink leading-none">
-                                                        {Number(cmd.total_brl).toFixed(2)}
-                                                    </p>
+                                            <div
+                                                key={cmd.id}
+                                                onClick={() => {
+                                                    setSelectedCommand(cmd);
+                                                    setRightMode('itens');
+                                                }}
+                                                className={`bg-black/40 border rounded-lg px-3 py-2 cursor-pointer transition-all hover:border-primary flex flex-wrap lg:flex-nowrap items-center gap-4 ${selectedCommand?.id === cmd.id ? 'border-primary shadow-neon-pink ring-1 ring-primary' : 'border-white/5'}`}
+                                            >
+                                                <div className="flex-1 min-w-[120px] max-w-full">
+                                                    <h5 className="text-white font-black text-sm lg:text-base truncate uppercase tracking-wider">{cmd.profiles?.name}</h5>
+                                                </div>
+
+                                                <div className="flex items-center gap-3 shrink-0 ml-auto">
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleDownloadCommandReceipt(cmd, []); }}
+                                                        className="px-4 h-8 bg-white/10 hover:bg-white/20 text-white text-[11px] font-black uppercase rounded-lg transition-all border border-white/20 active:scale-95"
+                                                    >
+                                                        Recibo
+                                                    </button>
+                                                    
+                                                    {isAdmin && (
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); reopenCommand(cmd); }}
+                                                            className="w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white flex items-center justify-center transition-all border border-red-500/20 active:scale-95"
+                                                            title="Reabrir Comanda"
+                                                        >
+                                                            <span className="material-icons text-[15px]">settings_backup_restore</span>
+                                                        </button>
+                                                    )}
+
+                                                    <div className="flex items-center shrink-0 border-l border-white/10 pl-3 md:pl-4">
+                                                        <p className="text-primary font-display font-black text-sm md:text-base shadow-neon-pink leading-none whitespace-nowrap">
+                                                            R$ {Number(cmd.total_brl).toFixed(2)}
+                                                        </p>
+                                                    </div>
                                                 </div>
                                             </div>
-
-                                            <div className="w-full mt-auto pt-2 border-t border-white/5 flex gap-1.5">
-                                                {cmd.status === 'open' ? (
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); setSelectedCommand(cmd); setShowCheckout(true); }}
-                                                        className="w-full bg-white hover:bg-primary hover:text-white text-black text-[9px] font-black uppercase py-2 rounded-lg transition-all shadow-sm active:scale-95"
-                                                    >
-                                                        Fechar
-                                                    </button>
-                                                ) : (
-                                                    <>
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); handleDownloadCommandReceipt(cmd, []); }}
-                                                            className="flex-1 bg-white/5 hover:bg-white/10 text-white text-[9px] font-black uppercase py-2 rounded-lg transition-all border border-white/10 active:scale-95 whitespace-nowrap px-1"
-                                                        >
-                                                            Recibo
-                                                        </button>
-                                                        {isAdmin && (
-                                                            <button
-                                                                onClick={(e) => { e.stopPropagation(); reopenCommand(cmd); }}
-                                                                className="px-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white text-[9px] font-black uppercase py-2 rounded-lg transition-all border border-red-500/20 active:scale-95"
-                                                                title="Reabrir Comanda"
-                                                            >
-                                                                <span className="material-icons text-xs">settings_backup_restore</span>
-                                                            </button>
-                                                        )}
-                                                    </>
-                                                )}
-                                            </div>
-                                        </div>
                                         );
                                     })
                                 )}
