@@ -38,6 +38,9 @@ export const Navigation: React.FC<NavigationProps> = ({
 }) => {
     const { contentDB } = useApp();
     const categories = contentDB?.categories || [];
+    const activeSpecialEvents = (contentDB?.special_events || [])
+        .filter(e => e.status === 'active')
+        .sort((a, b) => a.hero_order - b.hero_order);
     const [scrolled, setScrolled] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [messagesOpen, setMessagesOpen] = useState(false);
@@ -100,42 +103,49 @@ export const Navigation: React.FC<NavigationProps> = ({
                             <div className="flex items-center space-x-1">
                                 {links.map((link) => {
                                     if (link.view === 'the-chosen-details') {
+                                        // Dynamic Events Dropdown (replaces hardcoded FENACHIM/The Chosen)
+                                        const isEventActive = currentView === 'the-chosen-details' || currentView.startsWith('event-');
                                         return (
-                                            <div key="fenachim-group" className="relative group">
+                                            <div key="events-group" className="relative group">
                                                 <button
-                                                    onClick={() => onNavigate('fenachim')}
-                                                    className={`px-2 py-2 rounded-md text-sm font-medium transition-colors relative flex items-center gap-1 ${currentView === 'fenachim' || currentView === 'the-chosen-details'
-                                                        ? 'text-primary'
-                                                        : 'text-gray-300 hover:text-white'
-                                                        }`}
+                                                    onClick={() => onNavigate('the-chosen-details')}
+                                                    className={`px-2 py-2 rounded-md text-sm font-medium transition-colors relative flex items-center gap-1 ${
+                                                        isEventActive ? 'text-primary' : 'text-gray-300 hover:text-white'
+                                                    }`}
                                                 >
-                                                    <span className="material-icons-outlined text-sm text-green-500">celebration</span>
-                                                    <span>FENACHIM</span>
+                                                    <span className="material-icons-outlined text-sm text-primary">auto_awesome</span>
+                                                    <span>EVENTOS</span>
                                                     <span className="material-icons-outlined text-[14px] opacity-50">expand_more</span>
-                                                    <span className={`absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300 ${currentView === 'fenachim' || currentView === 'the-chosen-details' ? 'w-full' : 'w-0 group-hover:w-full'}`}></span>
+                                                    <span className={`absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300 ${isEventActive ? 'w-full' : 'w-0 group-hover:w-full'}`}></span>
                                                 </button>
 
-                                                {/* Dropdown Menu Desktop */}
-                                                <div className="absolute top-full left-0 mt-2 w-48 bg-[#0a061d] border border-white/10 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform origin-top-left -translate-y-2 group-hover:translate-y-0 z-50 p-2 grid grid-cols-1 gap-1">
-                                                    <button
-                                                        onClick={() => onNavigate('fenachim')}
-                                                        className={`w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-white/10 transition-colors flex items-center gap-2 group/item ${currentView === 'fenachim' ? 'bg-white/5' : ''}`}
-                                                    >
-                                                        <span className="material-icons-outlined text-sm text-green-500">celebration</span>
-                                                        <span className="text-white font-medium">FENACHIM</span>
-                                                    </button>
+                                                {/* Dynamic Dropdown Menu Desktop */}
+                                                <div className="absolute top-full left-0 mt-2 w-52 bg-[#0a061d] border border-white/10 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform origin-top-left -translate-y-2 group-hover:translate-y-0 z-50 p-2 flex flex-col gap-1">
+                                                    {/* Dynamic special events */}
+                                                    {activeSpecialEvents.map(evt => (
+                                                        <button
+                                                            key={evt.id}
+                                                            onClick={() => onNavigate(`event-${evt.slug}`)}
+                                                            className={`w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-white/10 transition-colors flex items-center gap-2 group/item ${currentView === `event-${evt.slug}` ? 'bg-white/5' : ''}`}
+                                                        >
+                                                            <span className="material-icons-outlined text-sm" style={{ color: { primary: '#e91e8c', secondary: '#00b4d8', green: '#22c55e', amber: '#f59e0b', red: '#ef4444', cyan: '#06b6d4', purple: '#a855f7' }[evt.theme_color] || '#e91e8c' }}>{evt.icon}</span>
+                                                            <span className="text-white font-medium truncate">{evt.nav_label || evt.title}</span>
+                                                        </button>
+                                                    ))}
+                                                    {/* The Chosen — always present as permanent link */}
+                                                    {activeSpecialEvents.length > 0 && <div className="my-1 border-t border-white/5" />}
                                                     <button
                                                         onClick={() => onNavigate('the-chosen-details')}
                                                         className={`w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-white/10 transition-colors flex items-center gap-2 group/item ${currentView === 'the-chosen-details' ? 'bg-white/5' : ''}`}
                                                     >
-                                                        <span className="material-icons-outlined text-sm text-primary">info</span>
+                                                        <span className="material-icons-outlined text-sm text-primary">stars</span>
                                                         <span className="text-gray-300 group-hover/item:text-white font-medium">{link.label}</span>
                                                     </button>
                                                 </div>
                                             </div>
                                         );
                                     }
-                                    
+
                                     return (
                                         <button
                                             key={link.label}
@@ -426,31 +436,34 @@ export const Navigation: React.FC<NavigationProps> = ({
                             {links.map((link) => {
                                 if (link.view === 'the-chosen-details') {
                                     return (
-                                        <div key="mob-fenachim-group" className="mt-2 border-t border-white/5 pt-2">
+                                        <div key="mob-events-group" className="mt-2 border-t border-white/5 pt-2">
                                             <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase tracking-widest bg-black/50 mx-2 rounded-md mb-2 flex items-center gap-2">
-                                                <span className="material-icons-outlined text-sm text-green-500">celebration</span>
-                                                Destaques
+                                                <span className="material-icons-outlined text-sm text-primary">auto_awesome</span>
+                                                Eventos Especiais
                                             </div>
                                             <div className="grid grid-cols-1 gap-2 px-2 pb-2">
+                                                {/* Dynamic special events */}
+                                                {activeSpecialEvents.map(evt => {
+                                                    const colorMap: Record<string, string> = { primary: '#e91e8c', secondary: '#00b4d8', green: '#22c55e', amber: '#f59e0b', red: '#ef4444', cyan: '#06b6d4', purple: '#a855f7' };
+                                                    const evtView = `event-${evt.slug}`;
+                                                    return (
+                                                        <button
+                                                            key={evt.id}
+                                                            onClick={() => { onNavigate(evtView); setMobileMenuOpen(false); }}
+                                                            className={`w-full text-left px-3 py-3 rounded-xl border border-white/5 ${currentView === evtView ? 'bg-white/10' : 'bg-white/5 hover:bg-white/10'} transition-colors flex items-center gap-3`}
+                                                        >
+                                                            <span className="material-icons-outlined text-sm" style={{ color: colorMap[evt.theme_color] || '#e91e8c' }}>{evt.icon}</span>
+                                                            <span className="text-white text-xs font-bold truncate flex-1">{evt.nav_label || evt.title}</span>
+                                                        </button>
+                                                    );
+                                                })}
+                                                {/* The Chosen — permanent link */}
                                                 <button
-                                                    onClick={() => {
-                                                        onNavigate('fenachim');
-                                                        setMobileMenuOpen(false);
-                                                    }}
-                                                    className={`w-full text-left px-3 py-3 rounded-xl border border-white/5 ${currentView === 'fenachim' ? 'bg-white/10' : 'bg-white/5 hover:bg-white/10'} transition-colors flex flex-col gap-1 items-start`}
+                                                    onClick={() => { onNavigate('the-chosen-details'); setMobileMenuOpen(false); }}
+                                                    className={`w-full text-left px-3 py-3 rounded-xl border border-white/5 ${currentView === 'the-chosen-details' ? 'bg-white/10' : 'bg-white/5 hover:bg-white/10'} transition-colors flex items-center gap-3`}
                                                 >
-                                                    <span className="material-icons-outlined text-sm text-green-500">celebration</span>
-                                                    <span className="text-white text-xs font-bold truncate w-full">FENACHIM</span>
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        onNavigate('the-chosen-details');
-                                                        setMobileMenuOpen(false);
-                                                    }}
-                                                    className={`w-full text-left px-3 py-3 rounded-xl border border-white/5 ${currentView === 'the-chosen-details' ? 'bg-white/10' : 'bg-white/5 hover:bg-white/10'} transition-colors flex flex-col gap-1 items-start`}
-                                                >
-                                                    <span className="material-icons-outlined text-sm text-primary">info</span>
-                                                    <span className="text-gray-300 hover:text-white text-xs font-medium truncate w-full">{link.label}</span>
+                                                    <span className="material-icons-outlined text-sm text-primary">stars</span>
+                                                    <span className="text-gray-300 text-xs font-medium truncate flex-1">{link.label}</span>
                                                 </button>
                                             </div>
                                         </div>
