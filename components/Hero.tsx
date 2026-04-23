@@ -32,7 +32,7 @@ export const Hero: React.FC<HeroProps> = ({
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentSlide(prev => (prev === 0 ? 1 : 0));
-    }, 5000);
+    }, 10000);
     return () => clearInterval(timer);
   }, []);
 
