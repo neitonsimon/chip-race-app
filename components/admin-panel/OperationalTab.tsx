@@ -79,6 +79,9 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
     const [selectedSubCategory, setSelectedSubCategory] = React.useState<string | null>(null);
     const [rightMode, setRightMode] = React.useState<'venda' | 'itens'>('venda');
     const [commandCardFilter, setCommandCardFilter] = React.useState('');
+    const [rightPanelWidth, setRightPanelWidth] = React.useState(500);
+    const [isResizing, setIsResizing] = React.useState(false);
+    const operationalContainerRef = React.useRef<HTMLDivElement>(null);
 
     // Filter categories that should go into 'Diversos'
     const mainCategoryKeys = ['bar', 'torneio', 'cash'];
@@ -108,8 +111,37 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
         // Use ID for bar and diversos subcategories
         return commandItems.filter(item => item.product_id === p.id).reduce((sum, item) => sum + (item.quantity || 1), 0);
     };
+    const startResizing = () => setIsResizing(true);
+
+    React.useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isResizing || !operationalContainerRef.current) return;
+            const containerRect = operationalContainerRef.current.getBoundingClientRect();
+            const newWidth = containerRect.right - e.clientX;
+            // Limit width between 300px and 800px
+            if (newWidth > 320 && newWidth < 900) {
+                setRightPanelWidth(newWidth);
+            }
+        };
+
+        const handleMouseUp = () => setIsResizing(false);
+
+        if (isResizing) {
+            window.addEventListener('mousemove', handleMouseMove);
+            window.addEventListener('mouseup', handleMouseUp);
+            document.body.style.cursor = 'col-resize';
+        } else {
+            document.body.style.cursor = 'default';
+        }
+
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isResizing]);
+
     return (
-        <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden">
+        <div ref={operationalContainerRef} className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden select-none">
             {/* Sidebar: Event Selection & Player Search */}
             <div className={`w-full lg:w-80 flex-1 lg:flex-none border-b lg:border-r border-white/5 bg-black/40 flex flex-col ${selectedEvent ? 'hidden lg:flex' : 'flex'}`}>
                 <div className="p-4 space-y-4">
@@ -643,8 +675,19 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                 </div>
             </div>
 
+            {/* DIVIDER HANDLE */}
+            <div 
+                onMouseDown={startResizing}
+                className={`hidden lg:flex w-1.5 h-full items-center justify-center cursor-col-resize z-50 group hover:bg-primary/20 transition-colors ${isResizing ? 'bg-primary/30 border-x border-primary/40' : 'bg-transparent border-x border-white/5'}`}
+            >
+                <div className={`w-[2px] h-24 rounded-full transition-all group-hover:h-32 ${isResizing ? 'bg-primary h-48 scale-x-150' : 'bg-white/10'}`}></div>
+            </div>
+
             {/* Right Panel: Selected Command Details */}
-            <div className={`w-full lg:w-[420px] xl:w-[500px] 2xl:w-[550px] flex-1 lg:flex-none border-t lg:border-l border-white/5 bg-black/40 flex flex-col min-h-0 overflow-y-auto ${selectedCommand ? 'flex pb-12' : 'hidden lg:flex'}`}>
+            <div 
+                style={{ width: (typeof window !== 'undefined' && window.innerWidth >= 1024) ? `${rightPanelWidth}px` : '100%' }}
+                className={`flex-1 lg:flex-none border-t lg:border-l border-white/5 bg-black/40 flex flex-col min-h-0 overflow-y-auto ${selectedCommand ? 'flex pb-12' : 'hidden lg:flex'}`}
+            >
                 {selectedCommand ? (
                     <>
                         <div className="p-4 sm:p-6 border-b border-white/10">
