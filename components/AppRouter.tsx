@@ -1,5 +1,6 @@
 import React from 'react';
 import { useApp } from '../contexts/AppContext';
+import { SpecialEventPage } from './SpecialEventPage';
 import { Hero } from './Hero';
 import { TournamentCategories } from './TournamentCategories';
 import { EventCalendar } from './EventCalendar';
@@ -47,23 +48,19 @@ export const AppRouter: React.FC = () => {
     } = useApp();
 
     const renderContent = () => {
+        // Handle dynamic event pages
+        if (currentView.startsWith('event-')) {
+            const slug = currentView.replace('event-', '');
+            const evt = (contentDB?.special_events || []).find(e => e.slug === slug);
+            if (evt) return <SpecialEventPage event={evt} onNavigate={handleNavigate} />;
+            // If it's the legacy fenachim view, it will fall through to the specific case if needed, 
+            // but we usually want it to go through the dynamic system first.
+        }
+
         if (currentView.startsWith('category-')) {
             const categoryId = currentView.replace('category-', '');
             const categoryInfo = contentDB?.categories?.find(c => c.id === categoryId);
             return <CategoryPage categoryId={categoryId} category={categoryInfo} onNavigate={handleNavigate} isAdmin={isAdmin} />;
-        }
-
-        // Dynamic Special Event pages: event-{slug}
-        if (currentView.startsWith('event-')) {
-            const slug = currentView.replace('event-', '');
-            const specialEvent = (contentDB?.special_events || []).find(e => e.slug === slug);
-            if (specialEvent) {
-                return <SpecialEventPage event={specialEvent} onNavigate={handleNavigate} />;
-            }
-            // Legacy fallback for 'fenachim' slug
-            if (slug === 'fenachim') {
-                return <FenachimPage isAdmin={isAdmin} content={contentDB.fenachim} onNavigate={handleNavigate} />;
-            }
         }
 
         switch (currentView) {
