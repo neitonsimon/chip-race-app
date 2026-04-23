@@ -539,8 +539,8 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                                         <h5 className="text-white font-black text-sm lg:text-base truncate uppercase tracking-wider">{cmd.profiles?.name}</h5>
                                                     </div>
 
-                                                    <div className="flex flex-wrap xl:flex-nowrap items-center gap-6 overflow-x-auto no-scrollbar shrink-0">
-                                                        <div className="flex items-center gap-2 shrink-0">
+                                                    <div className="flex flex-wrap xl:flex-nowrap items-center gap-8 overflow-x-auto no-scrollbar shrink-0">
+                                                        <div className="flex items-center gap-2.5 shrink-0">
                                                             {currentUserRole === 'admin' && (
                                                                 <button
                                                                     onClick={(e) => { e.stopPropagation(); handleDeleteCommand(cmd); }}
@@ -552,34 +552,34 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                                             )}
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); setSelectedCommand(cmd); setShowCheckout(true); }}
-                                                                className="px-4 h-8 bg-white hover:bg-primary hover:text-white text-black text-[10px] font-black uppercase rounded-lg transition-all shadow-sm active:scale-95 shrink-0"
+                                                                className="px-4 h-8 bg-white hover:bg-primary hover:text-white text-black text-[11px] sm:text-xs font-black uppercase rounded-lg transition-all shadow-sm active:scale-95 shrink-0"
                                                             >
                                                                 Fechar
                                                             </button>
                                                         </div>
 
-                                                        <div className="flex items-center gap-2 shrink-0">
+                                                        <div className="flex items-center gap-3 shrink-0">
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); setSelectedCommand(cmd); setRightMode('venda'); setProductSection('torneio'); setSelectedSubCategory(null); }}
-                                                                className={`px-3.5 h-8 rounded-lg text-[10px] font-black uppercase transition-all whitespace-nowrap text-center ${selectedCommand?.id === cmd.id && productSection === 'torneio' && rightMode === 'venda' ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-400 hover:bg-primary hover:text-white border border-white/10'}`}
+                                                                className={`px-4 h-8 rounded-lg text-[11px] sm:text-xs font-black uppercase transition-all whitespace-nowrap text-center ${selectedCommand?.id === cmd.id && productSection === 'torneio' && rightMode === 'venda' ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/10 text-white hover:bg-primary hover:text-white border border-white/20'}`}
                                                             >
                                                                 Evento
                                                             </button>
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); setSelectedCommand(cmd); setRightMode('venda'); setProductSection('bar'); setSelectedSubCategory(null); }}
-                                                                className={`px-3.5 h-8 rounded-lg text-[10px] font-black uppercase transition-all whitespace-nowrap text-center ${selectedCommand?.id === cmd.id && productSection === 'bar' && rightMode === 'venda' ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-400 hover:bg-primary hover:text-white border border-white/10'}`}
+                                                                className={`px-4 h-8 rounded-lg text-[11px] sm:text-xs font-black uppercase transition-all whitespace-nowrap text-center ${selectedCommand?.id === cmd.id && productSection === 'bar' && rightMode === 'venda' ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/10 text-white hover:bg-primary hover:text-white border border-white/20'}`}
                                                             >
                                                                 Bar
                                                             </button>
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); setSelectedCommand(cmd); setRightMode('venda'); setProductSection('cash'); setSelectedSubCategory(null); }}
-                                                                className={`px-3.5 h-8 rounded-lg text-[10px] font-black uppercase transition-all whitespace-nowrap text-center ${selectedCommand?.id === cmd.id && productSection === 'cash' && rightMode === 'venda' ? 'bg-white text-black shadow-neon-blue' : 'bg-white/5 text-gray-400 hover:bg-white hover:text-black border border-white/10'}`}
+                                                                className={`px-4 h-8 rounded-lg text-[11px] sm:text-xs font-black uppercase transition-all whitespace-nowrap text-center ${selectedCommand?.id === cmd.id && productSection === 'cash' && rightMode === 'venda' ? 'bg-white text-black shadow-neon-blue' : 'bg-white/10 text-white hover:bg-white hover:text-black border border-white/20'}`}
                                                             >
                                                                 Cash
                                                             </button>
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); setSelectedCommand(cmd); setRightMode('venda'); setProductSection('diversos'); setSelectedSubCategory(null); }}
-                                                                className={`px-3.5 h-8 rounded-lg text-[10px] font-black uppercase transition-all whitespace-nowrap text-center ${selectedCommand?.id === cmd.id && productSection === 'diversos' && rightMode === 'venda' ? 'bg-secondary text-white shadow-neon-blue' : 'bg-white/5 text-gray-400 hover:bg-secondary hover:text-white border border-white/10'}`}
+                                                                className={`px-4 h-8 rounded-lg text-[11px] sm:text-xs font-black uppercase transition-all whitespace-nowrap text-center ${selectedCommand?.id === cmd.id && productSection === 'diversos' && rightMode === 'venda' ? 'bg-secondary text-white shadow-neon-blue' : 'bg-white/10 text-white hover:bg-secondary hover:text-white border border-white/20'}`}
                                                             >
                                                                 Diversos
                                                             </button>
