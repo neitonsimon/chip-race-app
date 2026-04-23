@@ -411,7 +411,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                 </div>
                             </div>
 
-                            <div className={`gap-3 sm:gap-4 ${commandsTab === 'ativas' ? 'flex flex-col' : 'grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'}`}>
+                            <div className={commandsTab === 'ativas' ? 'flex flex-col gap-1.5' : 'grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4'}>
                                 {commandsTab === 'resumo' && currentUserRole === 'admin' ? (
                                     <div className="lg:hidden animate-in fade-in slide-in-from-top-4 col-span-full">
                                         {/* FINANCIAL SUMMARY REPLICATED FOR MOBILE TAB */}
@@ -533,65 +533,63 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                                 <div
                                                     key={cmd.id}
                                                     onClick={() => setSelectedCommand(cmd)}
-                                                    className={`bg-black/40 border rounded-xl p-3 sm:p-4 cursor-pointer transition-all hover:border-primary flex flex-col gap-3 ${selectedCommand?.id === cmd.id ? 'border-primary shadow-neon-pink ring-1 ring-primary' : 'border-white/5'}`}
+                                                    className={`bg-black/40 border rounded-lg px-3 py-2 cursor-pointer transition-all hover:border-primary flex flex-wrap lg:flex-nowrap items-center gap-2 lg:gap-4 ${selectedCommand?.id === cmd.id ? 'border-primary shadow-neon-pink ring-1 ring-primary' : 'border-white/5'}`}
                                                 >
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <div className="flex flex-col flex-1 min-w-0">
-                                                            <h5 className="text-white font-black text-lg sm:text-xl truncate leading-tight uppercase tracking-wider">{cmd.profiles?.name}</h5>
-                                                            <p className="text-[10px] text-primary font-black uppercase tracking-widest">CR#{String(cmd.profiles?.numeric_id).padStart(3, '0')}</p>
-                                                        </div>
-                                                        <div className="flex flex-col items-end shrink-0">
-                                                            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Aberto</span>
-                                                            <p className="text-primary font-display font-black text-xl sm:text-2xl shadow-neon-pink leading-none">
-                                                                R$ {Number(cmd.total_brl).toFixed(2)}
-                                                            </p>
-                                                        </div>
+                                                    <div className="flex-1 min-w-[120px] max-w-full">
+                                                        <h5 className="text-white font-black text-sm lg:text-base truncate uppercase tracking-wider">{cmd.profiles?.name}</h5>
                                                     </div>
-                                                    
-                                                    <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-white/5">
-                                                        {currentUserRole === 'admin' && (
+
+                                                    <div className="flex flex-wrap lg:flex-nowrap items-center gap-4 overflow-x-auto no-scrollbar shrink-0">
+                                                        <div className="flex items-center gap-1.5 shrink-0">
+                                                            {currentUserRole === 'admin' && (
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); handleDeleteCommand(cmd); }}
+                                                                    className="w-7 h-7 rounded-md bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all border border-red-500/20 active:scale-95 shrink-0"
+                                                                    title="Excluir Comanda"
+                                                                >
+                                                                    <span className="material-icons-outlined text-[14px]">delete</span>
+                                                                </button>
+                                                            )}
                                                             <button
-                                                                onClick={(e) => { e.stopPropagation(); handleDeleteCommand(cmd); }}
-                                                                className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all border border-red-500/20 active:scale-95 shrink-0"
-                                                                title="Excluir Comanda"
+                                                                onClick={(e) => { e.stopPropagation(); setSelectedCommand(cmd); setShowCheckout(true); }}
+                                                                className="px-3 h-7 bg-white hover:bg-primary hover:text-white text-black text-[9px] font-black uppercase rounded-md transition-all shadow-sm active:scale-95 shrink-0"
                                                             >
-                                                                <span className="material-icons-outlined text-sm sm:text-base">delete</span>
+                                                                Fechar
                                                             </button>
-                                                        )}
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); setSelectedCommand(cmd); setShowCheckout(true); }}
-                                                            className="flex-1 sm:flex-none px-3 sm:px-4 h-8 sm:h-10 bg-white hover:bg-primary hover:text-white text-black text-[10px] sm:text-xs font-black uppercase rounded-lg transition-all shadow-sm active:scale-95"
-                                                        >
-                                                            Fechar
-                                                        </button>
-                                                        
-                                                        {/* Atalhos Rápidos */}
-                                                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
+                                                        </div>
+
+                                                        <div className="flex items-center gap-1 shrink-0">
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); setSelectedCommand(cmd); setRightMode('venda'); setProductSection('torneio'); setSelectedSubCategory(null); }}
-                                                                className={`flex-1 sm:flex-none px-2 sm:px-3 h-8 sm:h-10 rounded-lg text-[9px] sm:text-[10px] font-black uppercase transition-all whitespace-nowrap text-center ${selectedCommand?.id === cmd.id && productSection === 'torneio' && rightMode === 'venda' ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-400 hover:bg-primary hover:text-white border border-white/10'}`}
+                                                                className={`px-2.5 h-7 rounded-md text-[9px] font-black uppercase transition-all whitespace-nowrap text-center ${selectedCommand?.id === cmd.id && productSection === 'torneio' && rightMode === 'venda' ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-400 hover:bg-primary hover:text-white border border-white/10'}`}
                                                             >
                                                                 Evento
                                                             </button>
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); setSelectedCommand(cmd); setRightMode('venda'); setProductSection('bar'); setSelectedSubCategory(null); }}
-                                                                className={`flex-1 sm:flex-none px-2 sm:px-3 h-8 sm:h-10 rounded-lg text-[9px] sm:text-[10px] font-black uppercase transition-all whitespace-nowrap text-center ${selectedCommand?.id === cmd.id && productSection === 'bar' && rightMode === 'venda' ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-400 hover:bg-primary hover:text-white border border-white/10'}`}
+                                                                className={`px-2.5 h-7 rounded-md text-[9px] font-black uppercase transition-all whitespace-nowrap text-center ${selectedCommand?.id === cmd.id && productSection === 'bar' && rightMode === 'venda' ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-400 hover:bg-primary hover:text-white border border-white/10'}`}
                                                             >
                                                                 Bar
                                                             </button>
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); setSelectedCommand(cmd); setRightMode('venda'); setProductSection('cash'); setSelectedSubCategory(null); }}
-                                                                className={`flex-1 sm:flex-none px-2 sm:px-3 h-8 sm:h-10 rounded-lg text-[9px] sm:text-[10px] font-black uppercase transition-all whitespace-nowrap text-center ${selectedCommand?.id === cmd.id && productSection === 'cash' && rightMode === 'venda' ? 'bg-white text-black shadow-neon-blue' : 'bg-white/5 text-gray-400 hover:bg-white hover:text-black border border-white/10'}`}
+                                                                className={`px-2.5 h-7 rounded-md text-[9px] font-black uppercase transition-all whitespace-nowrap text-center ${selectedCommand?.id === cmd.id && productSection === 'cash' && rightMode === 'venda' ? 'bg-white text-black shadow-neon-blue' : 'bg-white/5 text-gray-400 hover:bg-white hover:text-black border border-white/10'}`}
                                                             >
                                                                 Cash
                                                             </button>
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); setSelectedCommand(cmd); setRightMode('venda'); setProductSection('diversos'); setSelectedSubCategory(null); }}
-                                                                className={`flex-1 sm:flex-none px-2 sm:px-3 h-8 sm:h-10 rounded-lg text-[9px] sm:text-[10px] font-black uppercase transition-all whitespace-nowrap text-center ${selectedCommand?.id === cmd.id && productSection === 'diversos' && rightMode === 'venda' ? 'bg-secondary text-white shadow-neon-blue' : 'bg-white/5 text-gray-400 hover:bg-secondary hover:text-white border border-white/10'}`}
+                                                                className={`px-2.5 h-7 rounded-md text-[9px] font-black uppercase transition-all whitespace-nowrap text-center ${selectedCommand?.id === cmd.id && productSection === 'diversos' && rightMode === 'venda' ? 'bg-secondary text-white shadow-neon-blue' : 'bg-white/5 text-gray-400 hover:bg-secondary hover:text-white border border-white/10'}`}
                                                             >
                                                                 Diversos
                                                             </button>
                                                         </div>
+                                                    </div>
+
+                                                    <div className="flex items-center shrink-0 ml-auto border-l border-white/10 pl-3 md:pl-4">
+                                                        <p className="text-primary font-display font-black text-sm md:text-base shadow-neon-pink leading-none whitespace-nowrap">
+                                                            R$ {Number(cmd.total_brl).toFixed(2)}
+                                                        </p>
                                                     </div>
                                                 </div>
                                             );
