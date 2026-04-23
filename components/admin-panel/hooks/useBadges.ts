@@ -47,6 +47,11 @@ export function useBadges({ isAdmin, currentUser, badgeTemplates }: UseBadgesPro
         const template = badgeTemplates.find(b => b.id === selectedBadgeId);
         if (!template) return;
 
+        if (template.is_archived) {
+            alert('🚫 Esta medalha está arquivada e não pode mais ser distribuída.');
+            return;
+        }
+
         if (targetType === 'all') {
             if (!window.confirm(`Tem certeza que deseja enviar a Insígnia "${template.title}" para TODOS os jogadores?`)) return;
             setIsLoading(true);

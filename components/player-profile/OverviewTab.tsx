@@ -383,13 +383,32 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         </div>
 
                         <div className="flex flex-wrap gap-4">
-                            {player.badges.map((badge: any) => {
-                                const template = badge.badge_templates;
-                                // Always prefer live template values so edits propagate immediately
-                                const badgeIcon = template?.icon || badge.icon || 'stars';
-                                const badgeTitle = template?.title || badge.title || '';
-                                const badgeColor = template?.color || badge.color || '#00E5FF';
-                                const originalDesc = template?.description || badge.description;
+                            {(() => {
+                                const getRarityRankMain = (color: string) => {
+                                    const c = (color || '#00E5FF').toLowerCase();
+                                    if (c === '#ffd700' || c === '#eab308') return 4;
+                                    if (c === '#9ca3af' || c === '#94a3b8') return 0;
+                                    const rarityIndex = ['#9ca3af','#22c55e','#00e5ff','#ef4444','#eab308','#ff4d79','#fffff0'].indexOf(c);
+                                    return rarityIndex === -1 ? 99 : rarityIndex;
+                                };
+
+                                return [...player.badges]
+                                    .sort((a, b) => {
+                                        const iconA = a.badge_templates?.icon || a.icon || '';
+                                        const iconB = b.badge_templates?.icon || b.icon || '';
+                                        if (iconA < iconB) return -1;
+                                        if (iconA > iconB) return 1;
+                                        const colorA = a.badge_templates?.color || a.color || '';
+                                        const colorB = b.badge_templates?.color || b.color || '';
+                                        return getRarityRankMain(colorA) - getRarityRankMain(colorB);
+                                    })
+                                    .map((badge: any) => {
+                                        const template = badge.badge_templates;
+                                        // Always prefer live template values so edits propagate immediately
+                                        const badgeIcon = template?.icon || badge.icon || 'stars';
+                                        const badgeTitle = template?.title || badge.title || '';
+                                        const badgeColor = template?.color || badge.color || '#00E5FF';
+                                        const originalDesc = template?.description || badge.description;
 
                                 const isPatrao = badgeTitle?.toLowerCase().includes('patrão') || badgeTitle?.toLowerCase().includes('patrao');
                                 const isCelestial = badgeColor?.toLowerCase() === '#fffff0' || badgeTitle?.toLowerCase().includes('celestial');
@@ -485,11 +504,20 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                             <div className="mt-2 pt-2 border-t border-white/5 text-[9px] text-gray-600 font-black uppercase tracking-wider">
                                                 Ganha em: {new Date(badge.awarded_at).toLocaleDateString()}
                                             </div>
+
+                                            {template?.is_archived && (
+                                                <div className="mt-2 bg-red-500/10 border border-red-500/20 rounded-lg p-2 flex items-center gap-2">
+                                                    <span className="material-icons-outlined text-[10px] text-red-400">history_toggle_off</span>
+                                                    <p className="text-[9px] font-black text-red-300 uppercase tracking-tighter leading-tight italic">Essa medalha nunca mais será distribuída</p>
+                                                </div>
+                                            )}
+
                                             <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 max-sm:left-[40%] w-3 h-3 bg-[#0c0920] border-b border-r border-white/10 transform rotate-45" />
                                         </div>
                                     </div>
-                                );
-                            })}
+                                    );
+                                });
+                            })()}
                         </div>
                     </div>
                 )}
@@ -649,46 +677,87 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         </div>
 
                         <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {badgeTemplates.map((template) => {
-                                const isUnlocked = player.badges?.some((b: any) => b.badge_template_id === template.id);
-                                const badgeColor = template.color || '#00E5FF';
+                            {(() => {
+                                const getRarityRank = (color: string) => {
+                                    const c = (color || '#00E5FF').toLowerCase();
+                                    if (c === '#ffd700' || c === '#eab308') return 4; // lendaria
+                                    if (c === '#9ca3af' || c === '#94a3b8') return 0; // comum
+                                    
+                                    const rarityIndex = [
+                                        '#9ca3af', // comum
+                                        '#22c55e', // incomum
+                                        '#00e5ff', // rara
+                                        '#ef4444', // epica
+                                        '#eab308', // lendaria
+                                        '#ff4d79', // suprema
+                                        '#fffff0', // celestial
+                                    ].indexOf(c);
+                                    
+                                    return rarityIndex === -1 ? 99 : rarityIndex;
+                                };
 
-                                return (
-                                    <div
-                                        key={template.id}
-                                        className={`p-4 md:p-5 rounded-3xl border transition-all flex items-start gap-4 relative group ${isUnlocked ? 'bg-white/5 border-white/10' : 'bg-black/40 border-white/5 opacity-40 grayscale'}`}
-                                    >
-                                        {isUnlocked && (
-                                            <div className="absolute top-3 right-3 shrink-0">
-                                                <span className="material-icons text-primary text-sm">verified</span>
+                                return badgeTemplates
+                                    .filter(t => !t.is_archived || player.badges?.some((ub: any) => ub.badge_template_id === t.id))
+                                    .sort((a, b) => {
+                                        const iconA = a.icon || '';
+                                        const iconB = b.icon || '';
+                                        if (iconA < iconB) return -1;
+                                        if (iconA > iconB) return 1;
+                                        return getRarityRank(a.color) - getRarityRank(b.color);
+                                    })
+                                    .map((template) => {
+                                        const isUnlocked = player.badges?.some((b: any) => b.badge_template_id === template.id);
+                                        const badgeColor = template.color || '#00E5FF';
+
+                                        return (
+                                            <div
+                                                key={template.id}
+                                                className={`p-4 md:p-5 rounded-3xl border transition-all flex items-start gap-4 relative group ${isUnlocked ? 'bg-white/5 border-white/10' : 'bg-black/40 border-white/5 opacity-40 grayscale'}`}
+                                            >
+                                                {isUnlocked && (
+                                                    <div className="absolute top-3 right-3 shrink-0">
+                                                        <span className="material-icons text-primary text-sm">verified</span>
+                                                    </div>
+                                                )}
+
+                                                <div 
+                                                    className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border-2 mt-1" 
+                                                    style={{ 
+                                                        backgroundColor: `${badgeColor}11`, 
+                                                        backgroundImage: badgeColor === '#ff4d79' ? 'linear-gradient(135deg, rgba(236,72,153,0.1) 0%, rgba(249,115,22,0.1) 100%)' : 'none',
+                                                        borderColor: `${badgeColor}33` 
+                                                    }}
+                                                >
+                                                    <span 
+                                                        className="material-icons-outlined text-2xl" 
+                                                        style={badgeColor === '#ff4d79' && isUnlocked ? { background: 'linear-gradient(135deg, #ec4899 0%, #f97316 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' } : { color: badgeColor }}
+                                                    >{template.icon || 'stars'}</span>
+                                                </div>
+
+                                                <div className="flex-1 min-w-0 pr-6 md:pr-0">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <h4 className="text-sm font-black text-white uppercase tracking-wider truncate md:whitespace-normal" style={{ color: isUnlocked ? badgeColor : '#999' }}>
+                                                            {template.title}
+                                                        </h4>
+                                                        {template.is_archived && (
+                                                            <span className="material-icons-outlined text-[10px] text-red-500/60" title="Medalha Arquivada">history_toggle_off</span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-relaxed font-medium break-words">
+                                                        {template.description}
+                                                    </p>
+                                                    
+                                                    {template.is_archived && isUnlocked && (
+                                                        <p className="text-[8px] font-black text-red-400 uppercase tracking-widest mt-2 italic flex items-center gap-1">
+                                                            <span className="w-1 h-1 rounded-full bg-red-500 animate-pulse"></span>
+                                                            Essa medalha nunca mais será distribuída
+                                                        </p>
+                                                    )}
+                                                </div>
                                             </div>
-                                        )}
-
-                                        <div 
-                                            className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border-2 mt-1" 
-                                            style={{ 
-                                                backgroundColor: `${badgeColor}11`, 
-                                                backgroundImage: badgeColor === '#ff4d79' ? 'linear-gradient(135deg, rgba(236,72,153,0.1) 0%, rgba(249,115,22,0.1) 100%)' : 'none',
-                                                borderColor: `${badgeColor}33` 
-                                            }}
-                                        >
-                                            <span 
-                                                className="material-icons-outlined text-2xl" 
-                                                style={badgeColor === '#ff4d79' && isUnlocked ? { background: 'linear-gradient(135deg, #ec4899 0%, #f97316 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' } : { color: badgeColor }}
-                                            >{template.icon || 'stars'}</span>
-                                        </div>
-
-                                        <div className="flex-1 min-w-0 pr-6 md:pr-0">
-                                            <h4 className="text-sm font-black text-white uppercase tracking-wider mb-1 truncate md:whitespace-normal" style={{ color: isUnlocked ? badgeColor : '#999' }}>
-                                                {template.title}
-                                            </h4>
-                                            <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-relaxed font-medium break-words">
-                                                {template.description}
-                                            </p>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                                        );
+                                    });
+                            })()}
                         </div>
 
                         <div className="mt-8 pt-6 border-t border-white/5 text-center">

@@ -32,6 +32,7 @@ export interface Badge {
   color?: string;
   image_url?: never;
   awarded_at: string;
+  is_archived?: boolean;
 }
 
 export interface BadgeTemplate {
@@ -41,6 +42,7 @@ export interface BadgeTemplate {
   icon: string;
   color?: string;
   image_url?: never;
+  is_archived?: boolean;
 }
 
 // Interface para resultados de fechamento de evento (Movida para cima para ser usada em Event)

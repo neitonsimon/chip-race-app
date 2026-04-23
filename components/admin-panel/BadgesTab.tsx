@@ -467,7 +467,7 @@ export const BadgesTab: React.FC<BadgesTabProps> = ({
     handleSendBadges, handleSearch, onCreateBadgeTemplate, onUpdateBadgeTemplate, isLoading
 }) => {
     const [showNewBadgeForm, setShowNewBadgeForm] = React.useState(false);
-    const [newBadge, setNewBadge] = React.useState({ title: '', description: '', icon: 'stars', color: '#00E5FF' });
+    const [newBadge, setNewBadge] = React.useState({ title: '', description: '', icon: 'stars', color: '#00E5FF', is_archived: false });
     const [showIconPicker, setShowIconPicker] = React.useState(false);
     const [badgeSearchFilter, setBadgeSearchFilter] = React.useState('');
 
@@ -497,12 +497,18 @@ export const BadgesTab: React.FC<BadgesTabProps> = ({
         
         setShowNewBadgeForm(false);
         setEditingBadgeId(null);
-        setNewBadge({ title: '', description: '', icon: 'stars', color: '#00E5FF' });
+        setNewBadge({ title: '', description: '', icon: 'stars', color: '#00E5FF', is_archived: false });
     };
 
     const handleEditBadge = (b: any, e: React.MouseEvent) => {
         e.stopPropagation();
-        setNewBadge({ title: b.title, description: b.description || '', icon: b.icon || 'stars', color: b.color || '#00E5FF' });
+        setNewBadge({ 
+            title: b.title, 
+            description: b.description || '', 
+            icon: b.icon || 'stars', 
+            color: b.color || '#00E5FF',
+            is_archived: b.is_archived || false
+        });
         setEditingBadgeId(b.id);
         setShowNewBadgeForm(true);
         // Scroll to top to ensure form is visible
@@ -526,9 +532,9 @@ export const BadgesTab: React.FC<BadgesTabProps> = ({
 
 
     const filteredBadgeTemplates = React.useMemo(() => {
-        const filtered = badgeSearchFilter
-            ? badgeTemplates.filter(b => b.title.toLowerCase().includes(badgeSearchFilter.toLowerCase()))
-            : [...badgeTemplates];
+        const filtered = badgeTemplates
+            .filter(b => !b.is_archived) // Hide archived badges
+            .filter(b => badgeSearchFilter ? b.title.toLowerCase().includes(badgeSearchFilter.toLowerCase()) : true);
 
         return filtered.sort((a, b) => {
             const iconA = a.icon || '';
@@ -562,7 +568,7 @@ export const BadgesTab: React.FC<BadgesTabProps> = ({
                         setShowNewBadgeForm(!showNewBadgeForm);
                         if (showNewBadgeForm) {
                             setEditingBadgeId(null);
-                            setNewBadge({ title: '', description: '', icon: 'stars', color: '#00E5FF' });
+                            setNewBadge({ title: '', description: '', icon: 'stars', color: '#00E5FF', is_archived: false });
                         }
                     }}
                     className={`w-full sm:w-auto px-4 py-3 sm:py-2 rounded-xl border transition-all flex items-center justify-center gap-2 text-[10px] font-black uppercase shadow-neon-pink/10 ${showNewBadgeForm ? 'bg-white/5 border-white/20 text-white' : 'bg-primary/10 border-primary/30 text-primary hover:bg-primary/20'
@@ -641,32 +647,60 @@ export const BadgesTab: React.FC<BadgesTabProps> = ({
                             </div>
                         </div>
 
-                        {/* Icon picker button */}
-                        <div className="text-left">
-                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Ícone da Medalha</label>
-                            <button
-                                onClick={() => setShowIconPicker(true)}
-                                className="w-full bg-[#050214] border border-white/10 hover:border-primary/50 rounded-xl px-4 py-3 flex items-center gap-3 transition-all group h-auto sm:h-[74px]"
-                            >
-                                <BadgePreview icon={newBadge.icon} color={newBadge.color} size="sm" active />
-                                <div className="flex-1 text-left min-w-0">
-                                    <p className="text-white text-sm font-bold truncate">{BADGE_ICONS.find(i => i.id === newBadge.icon)?.label || newBadge.icon}</p>
-                                    <p className="text-gray-600 text-[8px] uppercase font-black">Alterar Ícone</p>
-                                </div>
-                                <span className="material-icons-outlined text-gray-500 group-hover:text-primary transition-colors text-sm shrink-0">open_in_new</span>
-                            </button>
+                        <div className="space-y-4">
+                            {/* Icon picker button */}
+                            <div className="text-left">
+                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Ícone da Medalha</label>
+                                <button
+                                    onClick={() => setShowIconPicker(true)}
+                                    className="w-full bg-[#050214] border border-white/10 hover:border-primary/50 rounded-xl px-4 py-3 flex items-center gap-3 transition-all group h-auto sm:h-[74px]"
+                                >
+                                    <BadgePreview icon={newBadge.icon} color={newBadge.color} size="sm" active />
+                                    <div className="flex-1 text-left min-w-0">
+                                        <p className="text-white text-sm font-bold truncate">{BADGE_ICONS.find(i => i.id === newBadge.icon)?.label || newBadge.icon}</p>
+                                        <p className="text-gray-600 text-[8px] uppercase font-black">Alterar Ícone</p>
+                                    </div>
+                                    <span className="material-icons-outlined text-gray-500 group-hover:text-primary transition-colors text-sm shrink-0">open_in_new</span>
+                                </button>
+                            </div>
+
+                            <div className="text-left">
+                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Descrição</label>
+                                <input
+                                    type="text"
+                                    value={newBadge.description}
+                                    onChange={e => setNewBadge({ ...newBadge, description: e.target.value })}
+                                    placeholder="Explique como o jogador conquista..."
+                                    className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-yellow-500 outline-none transition-all"
+                                />
+                            </div>
                         </div>
 
-                        <div className="sm:col-span-2 text-left">
-                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Descrição</label>
-                            <input
-                                type="text"
-                                value={newBadge.description}
-                                onChange={e => setNewBadge({ ...newBadge, description: e.target.value })}
-                                placeholder="Explique como o jogador conquista..."
-                                className="w-full bg-[#050214] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-yellow-500 outline-none"
-                            />
-                        </div>
+                        {editingBadgeId && (
+                            <div className="sm:col-span-2 text-left bg-red-500/5 border border-red-500/20 rounded-2xl p-4 mt-2">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${newBadge.is_archived ? 'bg-red-500 text-white' : 'bg-white/5 text-gray-500'}`}>
+                                            <span className="material-icons-outlined text-xl">{newBadge.is_archived ? 'archive' : 'unarchive'}</span>
+                                        </div>
+                                        <div>
+                                            <p className="text-white text-[11px] font-black uppercase tracking-widest leading-none mb-1">Arquivar Medalha</p>
+                                            <p className="text-gray-500 text-[9px] font-bold uppercase tracking-wider">Uma vez arquivada, não poderá mais ser enviada ou editada.</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => setNewBadge({ ...newBadge, is_archived: !newBadge.is_archived })}
+                                        className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${
+                                            newBadge.is_archived 
+                                                ? 'bg-red-500 border-red-400 text-white shadow-lg shadow-red-500/20' 
+                                                : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'
+                                        }`}
+                                    >
+                                        {newBadge.is_archived ? 'Arquivado' : 'Arquivar'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <button
