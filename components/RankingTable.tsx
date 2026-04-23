@@ -614,7 +614,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                         <span className="material-icons-outlined text-sm">trending_up</span>
                                         Projeção de Impacto: <span className="text-white">{currentUser?.name || 'Visitante'}</span>
                                     </h4>
-                                    <div className="bg-black/20 rounded-xl overflow-hidden border border-white/5">
+                                    <div className="bg-black/20 rounded-xl overflow-x-auto border border-white/5">
                                         <table className="w-full text-left text-sm">
                                             <thead className="bg-white/5 text-gray-400 font-bold uppercase text-[10px] tracking-wider">
                                                 <tr>
@@ -807,60 +807,82 @@ export const RankingTable: React.FC<RankingTableProps> = ({
 
                                                         {/* Tooltip / Popup Detalhado */}
                                                         {tooltipVisible && detailPlayer?.name === player.name && (
-                                                            <div className="absolute left-full top-0 ml-4 w-[300px] md:w-[400px] z-[100] bg-surface-dark border border-primary/30 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95 duration-200 pointer-events-none md:pointer-events-auto">
-                                                                <div className="p-4 border-b border-white/10 bg-gradient-to-r from-primary/20 to-transparent rounded-t-2xl flex items-center justify-between">
-                                                                    <div className="flex items-center gap-3">
-                                                                        <img src={player.avatar || `https://ui-avatars.com/api/?name=${player.name.replace(' ', '+')}&background=random`} className="w-8 h-8 rounded-full border border-primary/30" alt="" />
-                                                                        <div>
-                                                                            <h4 className="text-sm font-black text-white uppercase tracking-wider">{player.name}</h4>
-                                                                            <p className="text-[10px] text-primary/70 font-bold uppercase">{activeRanking?.label}</p>
+                                                            <>
+                                                                {/* Backdrop para Mobile */}
+                                                                <div 
+                                                                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[105] md:hidden"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setTooltipVisible(false);
+                                                                    }}
+                                                                />
+                                                                
+                                                                <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 md:absolute md:inset-auto md:left-full md:top-0 md:ml-4 w-auto md:w-[400px] z-[110] bg-surface-dark border border-primary/30 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95 duration-200 pointer-events-auto max-h-[80vh] flex flex-col">
+                                                                    <div className="p-4 border-b border-white/10 bg-gradient-to-r from-primary/20 to-transparent rounded-t-2xl flex items-center justify-between shrink-0">
+                                                                        <div className="flex items-center gap-3">
+                                                                            <img src={player.avatar || `https://ui-avatars.com/api/?name=${player.name.replace(' ', '+')}&background=random`} className="w-8 h-8 rounded-full border border-primary/30" alt="" />
+                                                                            <div>
+                                                                                <h4 className="text-sm font-black text-white uppercase tracking-wider">{player.name}</h4>
+                                                                                <p className="text-[10px] text-primary/70 font-bold uppercase">{activeRanking?.label}</p>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="flex items-center gap-4">
+                                                                            <div className="text-right">
+                                                                                <p className="text-[10px] text-gray-500 uppercase font-black">Score Total</p>
+                                                                                <p className="text-lg font-black text-primary font-display">{player.points.toLocaleString()} pts</p>
+                                                                            </div>
+                                                                            <button 
+                                                                                className="md:hidden text-gray-400 hover:text-white"
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setTooltipVisible(false);
+                                                                                }}
+                                                                            >
+                                                                                <span className="material-icons">close</span>
+                                                                            </button>
                                                                         </div>
                                                                     </div>
-                                                                    <div className="text-right">
-                                                                        <p className="text-[10px] text-gray-500 uppercase font-black">Score Total</p>
-                                                                        <p className="text-lg font-black text-primary font-display">{player.points.toLocaleString()} pts</p>
+                                                                    <div className="p-2 overflow-y-auto custom-scrollbar flex-1">
+                                                                        <table className="w-full text-left">
+                                                                            <thead>
+                                                                                <tr className="text-[9px] text-gray-500 border-b border-white/5 uppercase font-black">
+                                                                                    <th className="px-3 py-2">Evento / Etapa</th>
+                                                                                    <th className="px-3 py-2 text-center">Pos</th>
+                                                                                    <th className="px-3 py-2 text-right">Pts</th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody className="divide-y divide-white/5">
+                                                                                {getAllScores(player).length > 0 ? (
+                                                                                    getAllScores(player).map((s, i) => (
+                                                                                        <tr key={i} className="hover:bg-white/5 transition-colors">
+                                                                                            <td className="px-3 py-2">
+                                                                                                <p className="text-[11px] font-bold text-gray-200 truncate">{s.eventName}</p>
+                                                                                                <p className="text-[9px] text-gray-600">{s.date}</p>
+                                                                                            </td>
+                                                                                            <td className="px-3 py-2 text-center">
+                                                                                                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${
+                                                                                                    s.position === 1 ? 'bg-yellow-500/20 text-yellow-500' :
+                                                                                                    s.position <= 3 ? 'bg-gray-400/20 text-gray-300' : 'text-gray-500'
+                                                                                                }`}>
+                                                                                                    {s.position}º
+                                                                                                </span>
+                                                                                            </td>
+                                                                                            <td className="px-3 py-2 text-right font-display font-black text-primary text-xs">+{s.points}</td>
+                                                                                        </tr>
+                                                                                    ))
+                                                                                ) : (
+                                                                                    <tr>
+                                                                                        <td colSpan={3} className="px-4 py-8 text-center text-gray-600 text-[10px] uppercase font-bold tracking-widest italic">Nenhuma pontuação detalhada</td>
+                                                                                    </tr>
+                                                                                )}
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                    <div className="p-3 bg-black/20 rounded-b-2xl border-t border-white/5 shrink-0">
+                                                                        <p className="text-[9px] text-gray-500 italic text-center uppercase tracking-tighter">Detalhamento gerado automaticamente pelo sistema de pontuação.</p>
                                                                     </div>
                                                                 </div>
-                                                                <div className="p-2 max-h-[300px] overflow-y-auto custom-scrollbar">
-                                                                    <table className="w-full text-left">
-                                                                        <thead>
-                                                                            <tr className="text-[9px] text-gray-500 border-b border-white/5 uppercase font-black">
-                                                                                <th className="px-3 py-2">Evento / Etapa</th>
-                                                                                <th className="px-3 py-2 text-center">Pos</th>
-                                                                                <th className="px-3 py-2 text-right">Pts</th>
-                                                                            </tr>
-                                                                        </thead>
-                                                                        <tbody className="divide-y divide-white/5">
-                                                                            {getAllScores(player).length > 0 ? (
-                                                                                getAllScores(player).map((s, i) => (
-                                                                                    <tr key={i} className="hover:bg-white/5 transition-colors">
-                                                                                        <td className="px-3 py-2">
-                                                                                            <p className="text-[11px] font-bold text-gray-200 truncate">{s.eventName}</p>
-                                                                                            <p className="text-[9px] text-gray-600">{s.date}</p>
-                                                                                        </td>
-                                                                                        <td className="px-3 py-2 text-center">
-                                                                                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${
-                                                                                                s.position === 1 ? 'bg-yellow-500/20 text-yellow-500' :
-                                                                                                s.position <= 3 ? 'bg-gray-400/20 text-gray-300' : 'text-gray-500'
-                                                                                            }`}>
-                                                                                                {s.position}º
-                                                                                            </span>
-                                                                                        </td>
-                                                                                        <td className="px-3 py-2 text-right font-display font-black text-primary text-xs">+{s.points}</td>
-                                                                                    </tr>
-                                                                                ))
-                                                                            ) : (
-                                                                                <tr>
-                                                                                    <td colSpan={3} className="px-4 py-8 text-center text-gray-600 text-[10px] uppercase font-bold tracking-widest italic">Nenhuma pontuação detalhada</td>
-                                                                                </tr>
-                                                                            )}
-                                                                        </tbody>
-                                                                    </table>
-                                                                </div>
-                                                                <div className="p-3 bg-black/20 rounded-b-2xl border-t border-white/5">
-                                                                    <p className="text-[9px] text-gray-500 italic text-center uppercase tracking-tighter">Detalhamento gerado automaticamente pelo sistema de pontuação.</p>
-                                                                </div>
-                                                            </div>
+                                                            </>
                                                         )}
                                                     </td>
 
