@@ -720,6 +720,12 @@ export const SettingsTab: React.FC = () => {
                     label="Hero"
                 />
                 <SidebarButton
+                    active={activeSection === 'fenachim'}
+                    onClick={() => setActiveSection('fenachim')}
+                    icon="celebration"
+                    label="Fenachim"
+                />
+                <SidebarButton
                     active={activeSection === 'details'}
                     onClick={() => setActiveSection('details')}
                     icon="info"
@@ -902,6 +908,43 @@ export const SettingsTab: React.FC = () => {
 
                             <div className="flex justify-center pb-10 pt-4">
                                 <button onClick={() => handleSaveContent('details', content.details)} disabled={isSavingContent} className="btn-save-gradient w-full sm:w-auto">
+                                    <span className="material-icons-outlined text-sm">save_alt</span>
+                                    {isSavingContent ? 'Salvando...' : 'Salvar Alterações'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'fenachim' && content && (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 lg:slide-in-from-right duration-500">
+                        <SectionHeader title="Seção: Fenachim" subtitle="Conteúdo do Evento Fenachim" />
+                        <div className="space-y-6 sm:space-y-8">
+                            <ContentBlock title="Cabeçalho" color="bg-orange-500">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                                    <FormGroup label="Título Grande">
+                                        <input type="text" value={content.fenachim?.header_title || ''} onChange={e => setContent({ ...content, fenachim: { ...(content.fenachim || {} as any), header_title: e.target.value } })} className="form-input font-bold" />
+                                    </FormGroup>
+                                    <FormGroup label="Subtítulo">
+                                        <input type="text" value={content.fenachim?.header_subtitle || ''} onChange={e => setContent({ ...content, fenachim: { ...(content.fenachim || {} as any), header_subtitle: e.target.value } })} className="form-input" />
+                                    </FormGroup>
+                                    <FormGroup label="Texto do Botão Hero">
+                                        <input type="text" value={content.fenachim?.hero_btn_text || ''} onChange={e => setContent({ ...content, fenachim: { ...(content.fenachim || {} as any), hero_btn_text: e.target.value } })} className="form-input font-bold" />
+                                    </FormGroup>
+                                    <FormGroup label="Linha 1">
+                                        <input type="text" value={content.fenachim?.description_line1 || ''} onChange={e => setContent({ ...content, fenachim: { ...(content.fenachim || {} as any), description_line1: e.target.value } })} className="form-input" />
+                                    </FormGroup>
+                                    <FormGroup label="Linha 2">
+                                        <input type="text" value={content.fenachim?.description_line2 || ''} onChange={e => setContent({ ...content, fenachim: { ...(content.fenachim || {} as any), description_line2: e.target.value } })} className="form-input" />
+                                    </FormGroup>
+                                    <FormGroup label="Linha 3">
+                                        <input type="text" value={content.fenachim?.description_line3 || ''} onChange={e => setContent({ ...content, fenachim: { ...(content.fenachim || {} as any), description_line3: e.target.value } })} className="form-input" />
+                                    </FormGroup>
+                                </div>
+                            </ContentBlock>
+
+                            <div className="flex justify-center pb-10 pt-4">
+                                <button onClick={() => handleSaveContent('fenachim', content.fenachim)} disabled={isSavingContent} className="btn-save-gradient w-full sm:w-auto">
                                     <span className="material-icons-outlined text-sm">save_alt</span>
                                     {isSavingContent ? 'Salvando...' : 'Salvar Alterações'}
                                 </button>

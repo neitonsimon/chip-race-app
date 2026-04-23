@@ -24,6 +24,7 @@ import { ResponsibleGaming } from './ResponsibleGaming';
 import { OnlineCreditsPage } from './OnlineCreditsPage';
 import { CategoryPage } from './CategoryPage';
 import { DocumentLinks } from './DocumentLinks';
+import { FenachimPage } from './FenachimPage';
 
 export const AppRouter: React.FC = () => {
     const {
@@ -136,6 +137,12 @@ export const AppRouter: React.FC = () => {
                     heroContent={contentDB.hero}
                     onUpdateHeroContent={(field, val) => updateContent('hero', field, val)}
                 />;
+            case 'fenachim':
+                return <FenachimPage
+                    isAdmin={isAdmin}
+                    content={contentDB.fenachim}
+                    onNavigate={handleNavigate}
+                />;
             case 'the-chosen-regulations':
                 return <TheChosenRegulations prizeLabel={prizeLabel} onBack={() => handleNavigate('the-chosen-details')} />;
             case 'vip':
@@ -194,6 +201,7 @@ export const AppRouter: React.FC = () => {
                             onToggleStatus={handleToggleMonthStatus}
                             onNavigate={handleNavigate}
                             content={contentDB.hero}
+                            fenachimContent={contentDB.fenachim}
                             onUpdateContent={(field, val) => updateContent('hero', field, val)}
                             showTimeline={false}
                         />

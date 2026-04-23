@@ -454,6 +454,14 @@ export interface ContentDB {
     ways_title: string;
     chosen_slots?: string[];
   };
+  fenachim: {
+    header_title: string;
+    header_subtitle: string;
+    hero_btn_text?: string;
+    description_line1?: string;
+    description_line2?: string;
+    description_line3?: string;
+  };
   // Adicione mais seções conforme necessário
   categories: TournamentCategory[]; // Categories são dinâmicas agora
   faq?: { question: string; answer: string }[];

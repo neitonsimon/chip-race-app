@@ -98,7 +98,15 @@
                 "ways_title": "8 Caminhos para a Glória"
             },
             "categories": [],
-            "faq": []
+            "faq": [],
+            "fenachim": {
+                "header_title": "FENACHIM",
+                "header_subtitle": "Festa Nacional do Chimarrão",
+                "hero_btn_text": "SABER MAIS",
+                "description_line1": "Torneios oficiais na FENACHIM",
+                "description_line2": "Dias 7, 8 e 10 de maio: Canastra",
+                "description_line3": "Dia 9 de maio: Poker"
+            }
         },
         "months": [
             {

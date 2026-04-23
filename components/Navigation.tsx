@@ -98,19 +98,58 @@ export const Navigation: React.FC<NavigationProps> = ({
                         {/* Desktop Menu */}
                         <div className="hidden md:flex items-center gap-2">
                             <div className="flex items-center space-x-1">
-                                {links.map((link) => (
-                                    <button
-                                        key={link.label}
-                                        onClick={() => onNavigate(link.view)}
-                                        className={`px-2 py-2 rounded-md text-sm font-medium transition-colors relative group whitespace-nowrap ${currentView === link.view
-                                            ? 'text-primary'
-                                            : 'text-gray-300 hover:text-white'
-                                            }`}
-                                    >
-                                        {link.label}
-                                        <span className={`absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300 ${currentView === link.view ? 'w-full' : 'w-0 group-hover:w-full'}`}></span>
-                                    </button>
-                                ))}
+                                {links.map((link) => {
+                                    if (link.view === 'the-chosen-details') {
+                                        return (
+                                            <div key="fenachim-group" className="relative group">
+                                                <button
+                                                    onClick={() => onNavigate('fenachim')}
+                                                    className={`px-2 py-2 rounded-md text-sm font-medium transition-colors relative flex items-center gap-1 ${currentView === 'fenachim' || currentView === 'the-chosen-details'
+                                                        ? 'text-primary'
+                                                        : 'text-gray-300 hover:text-white'
+                                                        }`}
+                                                >
+                                                    <span className="material-icons-outlined text-sm text-green-500">celebration</span>
+                                                    <span>FENACHIM</span>
+                                                    <span className="material-icons-outlined text-[14px] opacity-50">expand_more</span>
+                                                    <span className={`absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300 ${currentView === 'fenachim' || currentView === 'the-chosen-details' ? 'w-full' : 'w-0 group-hover:w-full'}`}></span>
+                                                </button>
+
+                                                {/* Dropdown Menu Desktop */}
+                                                <div className="absolute top-full left-0 mt-2 w-48 bg-[#0a061d] border border-white/10 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform origin-top-left -translate-y-2 group-hover:translate-y-0 z-50 p-2 grid grid-cols-1 gap-1">
+                                                    <button
+                                                        onClick={() => onNavigate('fenachim')}
+                                                        className={`w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-white/10 transition-colors flex items-center gap-2 group/item ${currentView === 'fenachim' ? 'bg-white/5' : ''}`}
+                                                    >
+                                                        <span className="material-icons-outlined text-sm text-green-500">celebration</span>
+                                                        <span className="text-white font-medium">FENACHIM</span>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => onNavigate('the-chosen-details')}
+                                                        className={`w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-white/10 transition-colors flex items-center gap-2 group/item ${currentView === 'the-chosen-details' ? 'bg-white/5' : ''}`}
+                                                    >
+                                                        <span className="material-icons-outlined text-sm text-primary">info</span>
+                                                        <span className="text-gray-300 group-hover/item:text-white font-medium">{link.label}</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                    
+                                    return (
+                                        <button
+                                            key={link.label}
+                                            onClick={() => onNavigate(link.view)}
+                                            className={`px-2 py-2 rounded-md text-sm font-medium transition-colors relative group whitespace-nowrap ${currentView === link.view
+                                                ? 'text-primary'
+                                                : 'text-gray-300 hover:text-white'
+                                                }`}
+                                        >
+                                            {link.label}
+                                            <span className={`absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300 ${currentView === link.view ? 'w-full' : 'w-0 group-hover:w-full'}`}></span>
+                                        </button>
+                                    );
+                                })}
 
                                 {/* Dropdown Ecossistema */}
                                 <div className="relative group">
@@ -384,21 +423,55 @@ export const Navigation: React.FC<NavigationProps> = ({
                             <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase tracking-widest bg-black/50 mx-2 rounded-md mb-2">
                                 Menu Principal
                             </div>
-                            {links.map((link) => (
-                                <button
-                                    key={link.label}
-                                    onClick={() => {
-                                        onNavigate(link.view);
-                                        setMobileMenuOpen(false);
-                                    }}
-                                    className={`block w-full text-left px-3 py-4 text-lg font-medium border-b border-white/5 ${currentView === link.view
-                                        ? 'text-primary bg-white/5'
-                                        : 'text-gray-300 hover:text-white hover:bg-white/5'
-                                        }`}
-                                >
-                                    {link.label}
-                                </button>
-                            ))}
+                            {links.map((link) => {
+                                if (link.view === 'the-chosen-details') {
+                                    return (
+                                        <div key="mob-fenachim-group" className="mt-2 border-t border-white/5 pt-2">
+                                            <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase tracking-widest bg-black/50 mx-2 rounded-md mb-2 flex items-center gap-2">
+                                                <span className="material-icons-outlined text-sm text-green-500">celebration</span>
+                                                Destaques
+                                            </div>
+                                            <div className="grid grid-cols-1 gap-2 px-2 pb-2">
+                                                <button
+                                                    onClick={() => {
+                                                        onNavigate('fenachim');
+                                                        setMobileMenuOpen(false);
+                                                    }}
+                                                    className={`w-full text-left px-3 py-3 rounded-xl border border-white/5 ${currentView === 'fenachim' ? 'bg-white/10' : 'bg-white/5 hover:bg-white/10'} transition-colors flex flex-col gap-1 items-start`}
+                                                >
+                                                    <span className="material-icons-outlined text-sm text-green-500">celebration</span>
+                                                    <span className="text-white text-xs font-bold truncate w-full">FENACHIM</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        onNavigate('the-chosen-details');
+                                                        setMobileMenuOpen(false);
+                                                    }}
+                                                    className={`w-full text-left px-3 py-3 rounded-xl border border-white/5 ${currentView === 'the-chosen-details' ? 'bg-white/10' : 'bg-white/5 hover:bg-white/10'} transition-colors flex flex-col gap-1 items-start`}
+                                                >
+                                                    <span className="material-icons-outlined text-sm text-primary">info</span>
+                                                    <span className="text-gray-300 hover:text-white text-xs font-medium truncate w-full">{link.label}</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                }
+                                return (
+                                    <button
+                                        key={link.label}
+                                        onClick={() => {
+                                            onNavigate(link.view);
+                                            setMobileMenuOpen(false);
+                                        }}
+                                        className={`block w-full text-left px-3 py-4 text-lg font-medium border-b border-white/5 ${currentView === link.view
+                                            ? 'text-primary bg-white/5'
+                                            : 'text-gray-300 hover:text-white hover:bg-white/5'
+                                            }`}
+                                    >
+                                        {link.label}
+                                    </button>
+                                );
+                            })}
 
                             {/* Dropdown Ecossistema Mobile */}
                             <div className="mt-4 border-t border-white/5 pt-2">
