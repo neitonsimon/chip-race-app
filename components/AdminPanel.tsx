@@ -10,6 +10,7 @@ import { OperationalTab } from './admin-panel/OperationalTab';
 import { InventoryTab } from './admin-panel/InventoryTab';
 import { StockTab } from './admin-panel/StockTab';
 import { SettingsTab } from './admin-panel/SettingsTab';
+import { EventsTab } from './admin-panel/EventsTab';
 import { CheckoutModal } from './admin-panel/modals/CheckoutModal';
 import { TopUpModal } from './admin-panel/modals/TopUpModal';
 import { EditClosedCommandModal } from './admin-panel/modals/EditClosedCommandModal';
@@ -76,7 +77,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     onClose, currentUser, onUpdateProfile, badgeTemplates = [], isAdmin = false, 
     onCreateBadgeTemplate, onUpdateBadgeTemplate, onSendAdminMessage, onCreatePoll, onRefreshData, onSelectPlayer, onNavigate 
 }) => {
-    const [activeTab, setActiveTab] = useState<'operational' | 'inventory' | 'reports' | 'launch' | 'send-gifts' | 'badges' | 'debts' | 'communications' | 'reservations'>('operational');
+    const [activeTab, setActiveTab] = useState<'operational' | 'inventory' | 'reports' | 'launch' | 'send-gifts' | 'badges' | 'debts' | 'communications' | 'reservations' | 'events' | 'settings'>('operational');
     const [events, setEvents] = useState<any[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
     const [products, setProducts] = useState<any[]>([]);
@@ -763,7 +764,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             {/* Mobile Tab Navigation (Horizontal Scroll) */}
             <div className="lg:hidden flex overflow-x-auto custom-scrollbar bg-black/20 border-b border-white/10 p-2 gap-2 flex-shrink-0 no-scrollbar">
                 {[
-                    { id: 'operational', icon: 'point_of_sale', label: 'Operaç.' },
+                     { id: 'operational', icon: 'point_of_sale', label: 'Operaç.' },
                     { id: 'inventory', icon: 'inventory_2', label: 'Estoque' },
                     { id: 'launch', icon: 'add_shopping_cart', label: 'Produtos' },
                     { id: 'reports', icon: 'bar_chart', label: 'Relat.' },
@@ -772,6 +773,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     { id: 'debts', icon: 'receipt_long', label: 'Crédito' },
                     { id: 'communications', icon: 'campaign', label: 'Comunic.' },
                     { id: 'reservations', icon: 'support_agent', label: 'Atendimento' },
+                    { id: 'events', icon: 'celebration', label: 'Eventos' },
                     { id: 'settings', icon: 'settings', label: 'Site' }
                 ].filter(t => currentUser?.role !== 'staff' || t.id === 'operational').map(t => (
                     <button key={t.id} onClick={() => { setActiveTab(t.id as any); if (t.id === 'reports' && selectedEvent) fetchReport(selectedEvent.id); }}
@@ -793,6 +795,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         { id: 'debts', icon: 'receipt_long', label: 'Crédito' },
                         { id: 'communications', icon: 'campaign', label: 'Comunic.' },
                         { id: 'reservations', icon: 'support_agent', label: 'Atend.' },
+                        { id: 'events', icon: 'celebration', label: 'Eventos' },
                         { id: 'settings', icon: 'settings', label: 'Site' }
                     ].filter(t => currentUser?.role !== 'staff' || t.id === 'operational').map(t => (
                         <button key={t.id} onClick={() => { setActiveTab(t.id as any); if (t.id === 'reports' && selectedEvent) fetchReport(selectedEvent.id); }}
@@ -1029,6 +1032,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             handleSendAdminMessage={communicationsSystem.handleSendBroadcast}
                             handleCreatePollSubmit={communicationsSystem.handleCreatePollSubmit}
                         />
+                    )}
+
+                    {activeTab === 'events' && isAdmin && (
+                        <div className="p-6">
+                            <EventsTab />
+                        </div>
                     )}
 
                     {activeTab === 'settings' && (

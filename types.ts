@@ -435,7 +435,126 @@ export interface ClubTransaction {
   metadata?: any;
 }
 
-// SIMULAÇÃO DO BANCO DE DADOS DE CONTEÚDO
+// ─── SISTEMA DE EVENTOS ESPECIAIS REUTILIZÁVEIS ────────────────────────────
+
+export type EventSectionType =
+  | 'header'
+  | 'info_block'
+  | 'tournament_cards'
+  | 'countdown'
+  | 'schedule'
+  | 'prize_table'
+  | 'cta_button'
+  | 'rich_text'
+  | 'image_banner'
+  | 'nav_buttons';
+
+export interface TournamentCard {
+  name: string;
+  description: string;
+  dates: string;
+  icon: string;
+  color: string; // e.g. 'green', 'primary', 'amber'
+}
+
+export interface ScheduleItem {
+  date: string;
+  time: string;
+  description: string;
+}
+
+export interface PrizeItem {
+  position: string;
+  prize: string;
+}
+
+export interface EventNavButton {
+  label: string;
+  view: string;    // internal view name (e.g. 'calendar', 'ranking', 'vip', 'the-chosen-details')
+  icon: string;    // material icon name
+  color: string;   // 'primary' | 'secondary' | 'green' | 'amber' etc.
+  is_external?: boolean; // if true, view is treated as URL
+}
+
+export interface EventSection {
+  id: string;
+  type: EventSectionType;
+  enabled: boolean;
+  order: number;
+  data: {
+    // header
+    title?: string;
+    subtitle?: string;
+    background_image?: string;
+
+    // info_block
+    block_title?: string;
+    block_text?: string;
+    block_color?: string;   // 'green' | 'primary' | 'amber' | 'red' etc.
+
+    // tournament_cards
+    cards?: TournamentCard[];
+
+    // countdown
+    target_date?: string;
+    countdown_title?: string;
+
+    // schedule
+    items?: ScheduleItem[];
+
+    // prize_table
+    prizes?: PrizeItem[];
+
+    // cta_button
+    btn_text?: string;
+    btn_action?: string; // URL or internal view name
+    btn_action_type?: 'url' | 'internal';
+    btn_color?: string;
+    btn_icon?: string;
+
+    // rich_text
+    text?: string;
+
+    // image_banner
+    image_url?: string;
+    image_alt?: string;
+
+    // nav_buttons
+    nav_buttons?: EventNavButton[];
+    nav_buttons_title?: string;
+  };
+}
+
+export interface SpecialEvent {
+  id: string;
+  slug: string;              // unique, e.g. 'fenachim-2025'
+  title: string;             // 'FENACHIM 2025'
+  subtitle: string;          // 'Festa Nacional do Chimarrão'
+  status: 'active' | 'inactive' | 'expired';
+  expires_at?: string;       // ISO date — after this date status turns 'expired'
+
+  // Visual / meta
+  theme_color: string;       // 'green' | 'primary' | 'amber' | 'red' | 'secondary' etc.
+  icon: string;              // Material Icon name
+  nav_label: string;         // Label shown in navigation dropdown
+
+  // Hero Carousel
+  hero_enabled: boolean;
+  hero_order: number;        // Lower = earlier slide
+  hero_cta_text: string;     // CTA button text
+  hero_background_image?: string; // URL for carousel slide background
+  hero_title_override?: string;   // If set, overrides `title` in the hero slide only
+  hero_subtitle_override?: string;
+
+  // Content sections (modular, reusable)
+  sections: EventSection[];
+
+  created_at?: string;
+  updated_at?: string;
+}
+
+// ─── BANCO DE DADOS DE CONTEÚDO ────────────────────────────────────────────
+
 export interface ContentDB {
   hero: {
     title_line1: string;
@@ -462,8 +581,8 @@ export interface ContentDB {
     description_line2?: string;
     description_line3?: string;
   };
-  // Adicione mais seções conforme necessário
-  categories: TournamentCategory[]; // Categories são dinâmicas agora
+  special_events?: SpecialEvent[];
+  categories: TournamentCategory[];
   faq?: { question: string; answer: string }[];
   documents?: { title: string; subtitle: string; icon: string; url: string; color: string }[];
 }

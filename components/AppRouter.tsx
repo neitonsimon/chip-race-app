@@ -25,6 +25,7 @@ import { OnlineCreditsPage } from './OnlineCreditsPage';
 import { CategoryPage } from './CategoryPage';
 import { DocumentLinks } from './DocumentLinks';
 import { FenachimPage } from './FenachimPage';
+import { SpecialEventPage } from './SpecialEventPage';
 
 export const AppRouter: React.FC = () => {
     const {
@@ -50,6 +51,19 @@ export const AppRouter: React.FC = () => {
             const categoryId = currentView.replace('category-', '');
             const categoryInfo = contentDB?.categories?.find(c => c.id === categoryId);
             return <CategoryPage categoryId={categoryId} category={categoryInfo} onNavigate={handleNavigate} isAdmin={isAdmin} />;
+        }
+
+        // Dynamic Special Event pages: event-{slug}
+        if (currentView.startsWith('event-')) {
+            const slug = currentView.replace('event-', '');
+            const specialEvent = (contentDB?.special_events || []).find(e => e.slug === slug);
+            if (specialEvent) {
+                return <SpecialEventPage event={specialEvent} onNavigate={handleNavigate} />;
+            }
+            // Legacy fallback for 'fenachim' slug
+            if (slug === 'fenachim') {
+                return <FenachimPage isAdmin={isAdmin} content={contentDB.fenachim} onNavigate={handleNavigate} />;
+            }
         }
 
         switch (currentView) {
@@ -143,6 +157,12 @@ export const AppRouter: React.FC = () => {
                     content={contentDB.fenachim}
                     onNavigate={handleNavigate}
                 />;
+            // Also handle event-fenachim if saved under that slug
+            case 'event-fenachim': {
+                const fenEvt = (contentDB?.special_events || []).find(e => e.slug === 'fenachim');
+                if (fenEvt) return <SpecialEventPage event={fenEvt} onNavigate={handleNavigate} />;
+                return <FenachimPage isAdmin={isAdmin} content={contentDB.fenachim} onNavigate={handleNavigate} />;
+            }
             case 'the-chosen-regulations':
                 return <TheChosenRegulations prizeLabel={prizeLabel} onBack={() => handleNavigate('the-chosen-details')} />;
             case 'vip':
@@ -202,6 +222,7 @@ export const AppRouter: React.FC = () => {
                             onNavigate={handleNavigate}
                             content={contentDB.hero}
                             fenachimContent={contentDB.fenachim}
+                            specialEvents={contentDB.special_events || []}
                             onUpdateContent={(field, val) => updateContent('hero', field, val)}
                             showTimeline={false}
                         />

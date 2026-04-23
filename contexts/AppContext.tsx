@@ -255,6 +255,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     else if (item.key === 'details') setContentDB(prev => ({ ...prev, details: item.value }));
                     else if (item.key === 'faq') setContentDB(prev => ({ ...prev, faq: item.value }));
                     else if (item.key === 'fenachim') setContentDB(prev => ({ ...prev, fenachim: item.value }));
+                    else if (item.key === 'special_events') setContentDB(prev => ({ ...prev, special_events: item.value }));
                     else if (item.key === 'months') setMonths(item.value);
                     else if (item.key === 'total_qualifiers') setCustomTotalQualifiers(item.value);
                     else if (item.key === 'documents') setContentDB(prev => ({ ...prev, documents: item.value }));
