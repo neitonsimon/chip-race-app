@@ -596,7 +596,7 @@ const EventEditor: React.FC<{
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 text-xs font-mono">event-</span>
                   <input className={inputCls + ' pl-14'} value={event.slug}
                     onChange={e => upd({ slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })}
-                    placeholder="fenachim-2025" />
+                    placeholder="oktoberfest-2026" />
                 </div>
               </Fl>
               <Fl label="Status">

@@ -527,9 +527,9 @@ export interface EventSection {
 
 export interface SpecialEvent {
   id: string;
-  slug: string;              // unique, e.g. 'fenachim-2025'
-  title: string;             // 'FENACHIM 2025'
-  subtitle: string;          // 'Festa Nacional do Chimarrão'
+  slug: string;              // unique, e.g. 'oktoberfest-2026'
+  title: string;             // 'OktoberFest 2026'
+  subtitle: string;          // 'A Festa da Alegria'
   status: 'active' | 'inactive' | 'expired';
   expires_at?: string;       // ISO date — after this date status turns 'expired'
 
@@ -572,14 +572,6 @@ export interface ContentDB {
     plus_desc: string;
     ways_title: string;
     chosen_slots?: string[];
-  };
-  fenachim: {
-    header_title: string;
-    header_subtitle: string;
-    hero_btn_text?: string;
-    description_line1?: string;
-    description_line2?: string;
-    description_line3?: string;
   };
   special_events?: SpecialEvent[];
   categories: TournamentCategory[];

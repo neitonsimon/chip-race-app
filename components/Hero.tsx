@@ -9,7 +9,6 @@ interface HeroProps {
   onToggleStatus: (index: number) => void;
   onNavigate: (view: string) => void;
   content: ContentDB['hero'];
-  fenachimContent?: ContentDB['fenachim'];
   specialEvents?: SpecialEvent[];
   onUpdateContent: (field: string, value: string) => void;
   showTimeline?: boolean;
@@ -17,7 +16,7 @@ interface HeroProps {
 
 export const Hero: React.FC<HeroProps> = ({
   isAdmin, prizeLabel, months, onUpdateMonth, onToggleStatus,
-  onNavigate, content, fenachimContent, specialEvents = [],
+  onNavigate, content, specialEvents = [],
   onUpdateContent, showTimeline = true
 }) => {
   const [expandMobileTimeline, setExpandMobileTimeline] = useState(false);

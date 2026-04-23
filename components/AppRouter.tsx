@@ -25,7 +25,6 @@ import { ResponsibleGaming } from './ResponsibleGaming';
 import { OnlineCreditsPage } from './OnlineCreditsPage';
 import { CategoryPage } from './CategoryPage';
 import { DocumentLinks } from './DocumentLinks';
-import { FenachimPage } from './FenachimPage';
 import { SpecialEventPage } from './SpecialEventPage';
 
 export const AppRouter: React.FC = () => {
@@ -48,13 +47,10 @@ export const AppRouter: React.FC = () => {
     } = useApp();
 
     const renderContent = () => {
-        // Handle dynamic event pages
         if (currentView.startsWith('event-')) {
             const slug = currentView.replace('event-', '');
             const evt = (contentDB?.special_events || []).find(e => e.slug === slug);
             if (evt) return <SpecialEventPage event={evt} onNavigate={handleNavigate} />;
-            // If it's the legacy fenachim view, it will fall through to the specific case if needed, 
-            // but we usually want it to go through the dynamic system first.
         }
 
         if (currentView.startsWith('category-')) {
@@ -148,18 +144,6 @@ export const AppRouter: React.FC = () => {
                     heroContent={contentDB.hero}
                     onUpdateHeroContent={(field, val) => updateContent('hero', field, val)}
                 />;
-            case 'fenachim':
-                return <FenachimPage
-                    isAdmin={isAdmin}
-                    content={contentDB.fenachim}
-                    onNavigate={handleNavigate}
-                />;
-            // Also handle event-fenachim if saved under that slug
-            case 'event-fenachim': {
-                const fenEvt = (contentDB?.special_events || []).find(e => e.slug === 'fenachim');
-                if (fenEvt) return <SpecialEventPage event={fenEvt} onNavigate={handleNavigate} />;
-                return <FenachimPage isAdmin={isAdmin} content={contentDB.fenachim} onNavigate={handleNavigate} />;
-            }
             case 'the-chosen-regulations':
                 return <TheChosenRegulations prizeLabel={prizeLabel} onBack={() => handleNavigate('the-chosen-details')} />;
             case 'vip':
@@ -218,7 +202,6 @@ export const AppRouter: React.FC = () => {
                             onToggleStatus={handleToggleMonthStatus}
                             onNavigate={handleNavigate}
                             content={contentDB.hero}
-                            fenachimContent={contentDB.fenachim}
                             specialEvents={contentDB.special_events || []}
                             onUpdateContent={(field, val) => updateContent('hero', field, val)}
                             showTimeline={false}
