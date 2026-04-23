@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../../src/lib/supabase';
 
 interface UseOperationsProps {
@@ -29,6 +29,9 @@ export function useOperations({
     const [pendingProduct, setPendingProduct] = useState<any | null>(null);
     const [cashAmount, setCashAmount] = useState('');
     const [commandsTab, setCommandsTab] = useState<'ativas' | 'historico' | 'resumo'>('ativas');
+    const lastActionTimeRef = useRef<number>(0);
+    const COOLDOWN_MS = 800;
+
 
     const fetchOpenCommands = async (eventId: string) => {
         const { data } = await supabase.from('commands').select('*, profiles!user_id(name, numeric_id, avatar_url, is_vip, vip_status, vip_expires_at, role, balance_brl, debt_limit_brl, total_pending_debt)').eq('event_id', eventId).eq('status', 'open').order('created_at', { ascending: false });
@@ -619,24 +622,58 @@ export function useOperations({
         if (!selectedCommand) { alert('Selecione uma comanda primeiro.'); return; }
         if (selectedCommand.status === 'closed') return;
         if (isProductDisabled(product)) return;
-        if (pendingProduct?.id === product.id) { addProductToCommand(product); setPendingProduct(null); }
-        else setPendingProduct(product);
+        if (pendingProduct?.id === product.id) { 
+            const now = Date.now();
+            if (now - lastActionTimeRef.current < COOLDOWN_MS) {
+                alert('Aviso de Segurança: Confirmação muito rápida. Aguarde um instante e clique novamente para lançar o produto.');
+                return;
+            }
+            lastActionTimeRef.current = now;
+            addProductToCommand(product); 
+            setPendingProduct(null); 
+        } else { 
+            setPendingProduct(product); 
+            lastActionTimeRef.current = Date.now();
+        }
     };
 
     const handleTourItemClick = (item: any) => {
         if (!selectedCommand) { alert('Selecione uma comanda primeiro.'); return; }
         if (selectedCommand.status === 'closed') return;
         if (isTourItemDisabled(item)) return;
-        if (pendingProduct?.id === item.id) { addTournamentItemToCommand(item); setPendingProduct(null); }
-        else setPendingProduct(item);
+        if (pendingProduct?.id === item.id) { 
+            const now = Date.now();
+            if (now - lastActionTimeRef.current < COOLDOWN_MS) {
+                alert('Aviso de Segurança: Confirmação muito rápida. Aguarde um instante e clique novamente para lançar o item de evento.');
+                return;
+            }
+            lastActionTimeRef.current = now;
+            addTournamentItemToCommand(item); 
+            setPendingProduct(null); 
+        } else { 
+            setPendingProduct(item); 
+            lastActionTimeRef.current = Date.now();
+        }
     };
 
     const handleCashItemClick = (item: any) => {
         if (!selectedCommand) { alert('Selecione uma comanda primeiro.'); return; }
         if (selectedCommand.status === 'closed') return;
-        if (pendingProduct?.id === item.id) { addCashItemToCommand(item); setPendingProduct(null); }
-        else setPendingProduct(item);
+        if (pendingProduct?.id === item.id) { 
+            const now = Date.now();
+            if (now - lastActionTimeRef.current < COOLDOWN_MS) {
+                alert('Aviso de Segurança: Confirmação muito rápida. Aguarde um instante e clique novamente para lançar o item de cash.');
+                return;
+            }
+            lastActionTimeRef.current = now;
+            addCashItemToCommand(item); 
+            setPendingProduct(null); 
+        } else { 
+            setPendingProduct(item); 
+            lastActionTimeRef.current = Date.now();
+        }
     };
+
 
     useEffect(() => {
         if (!selectedEvent?.id) return;
