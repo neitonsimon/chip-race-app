@@ -19,6 +19,7 @@ interface ContentDB {
         title_line2_prefix: string;
         subtitle: string;
         btn_details: string;
+        timeline_title?: string;
     };
     details: {
         header_title: string;
@@ -28,9 +29,16 @@ interface ContentDB {
         plus_title: string;
         plus_desc: string;
         ways_title: string;
+        structure?: {
+            stack: string;
+            rebuy: string;
+            addon: string;
+            blinds: string;
+        };
     };
     faq: { question: string; answer: string }[];
     documents: { title: string; subtitle: string; icon: string; url: string; color: string }[];
+    special_events?: any[];
 }
 
 interface Month {
@@ -261,6 +269,18 @@ export const SettingsTab: React.FC = () => {
                     { title: 'TDA 2022', subtitle: 'Tournament Directors Assoc.', icon: 'gavel', url: '#', color: 'from-emerald-500 to-teal-600' }
                 ] 
             };
+            
+            // Initializing new structure and titles if missing
+            if (!newContent.details.structure) {
+                newContent.details.structure = {
+                    stack: '25K',
+                    rebuy: 'R$ 200',
+                    addon: 'R$ 200',
+                    blinds: '30'
+                };
+            }
+            if (!newContent.details.ways_title) newContent.details.ways_title = "Ecossistema Chip Race";
+            if (!newContent.hero.timeline_title) newContent.hero.timeline_title = "Cronograma de Evolução";
             const { data: catData } = await supabase.from('ecosystem_categories').select('*').order('order', { ascending: true });
             if (catData) setCategories(catData);
 
@@ -711,19 +731,19 @@ export const SettingsTab: React.FC = () => {
                     active={activeSection === 'roadmap'}
                     onClick={() => setActiveSection('roadmap')}
                     icon="map"
-                    label="Roadmap"
+                    label="Marcos do Sistema"
                 />
                 <SidebarButton
                     active={activeSection === 'hero'}
                     onClick={() => setActiveSection('hero')}
                     icon="home"
-                    label="Hero"
+                    label="Página Inicial"
                 />
                 <SidebarButton
                     active={activeSection === 'details'}
                     onClick={() => setActiveSection('details')}
                     icon="info"
-                    label="The Chosen"
+                    label="The Chosen (Geral)"
                 />
                 <SidebarButton active={activeSection === 'defaults'} onClick={() => setActiveSection('defaults')} icon="analytics" label="Estatísticas" />
                 <div className="h-px w-full bg-white/5 my-2"></div>
@@ -738,7 +758,7 @@ export const SettingsTab: React.FC = () => {
                     active={activeSection === 'months'}
                     onClick={() => setActiveSection('months')}
                     icon="calendar_month"
-                    label="Cronograma"
+                    label="Cronograma (The Chosen)"
                 />
                 <SidebarButton
                     active={activeSection === 'ecosystem'}
@@ -860,6 +880,9 @@ export const SettingsTab: React.FC = () => {
                                 <FormGroup label="Botão Ação">
                                     <input type="text" value={content.hero.btn_details} onChange={e => setContent({ ...content, hero: { ...content.hero, btn_details: e.target.value } })} className="form-input font-bold" />
                                 </FormGroup>
+                                <FormGroup label="Título do Cronograma">
+                                    <input type="text" value={content.hero.timeline_title || ''} onChange={e => setContent({ ...content, hero: { ...content.hero, timeline_title: e.target.value } })} className="form-input" />
+                                </FormGroup>
                             </div>
                             <div className="pt-6 border-t border-white/5 flex justify-end">
                                 <button onClick={() => handleSaveContent('hero', content.hero)} disabled={isSavingContent} className="btn-save shadow-neon-pink w-full sm:w-auto">
@@ -897,6 +920,52 @@ export const SettingsTab: React.FC = () => {
                                 <div className="space-y-4">
                                     <input type="text" value={content.details.plus_title} onChange={e => setContent({ ...content, details: { ...content.details, plus_title: e.target.value } })} className="form-input font-bold" />
                                     <textarea rows={4} value={content.details.plus_desc} onChange={e => setContent({ ...content, details: { ...content.details, plus_desc: e.target.value } })} className="form-input text-sm resize-none" />
+                                </div>
+                            </ContentBlock>
+
+                            <ContentBlock title="Título das Categorias" color="bg-purple-500">
+                                <FormGroup label="Texto do Cabeçalho (Ecossistema)">
+                                    <input type="text" value={content.details.ways_title} onChange={e => setContent({ ...content, details: { ...content.details, ways_title: e.target.value } })} className="form-input font-bold" />
+                                </FormGroup>
+                            </ContentBlock>
+
+                            <ContentBlock title="Estrutura do Capítulo Final" color="bg-amber-500">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <FormGroup label="Stack Inicial">
+                                        <input type="text" value={content.details.structure?.stack} onChange={e => setContent({ ...content, details: { ...content.details, structure: { ...content.details.structure, stack: e.target.value } } })} className="form-input" />
+                                    </FormGroup>
+                                    <FormGroup label="Blinds">
+                                        <input type="text" value={content.details.structure?.blinds} onChange={e => setContent({ ...content, details: { ...content.details, structure: { ...content.details.structure, blinds: e.target.value } } })} className="form-input" />
+                                    </FormGroup>
+                                    <FormGroup label="Rebuy/Re-entry">
+                                        <input type="text" value={content.details.structure?.rebuy} onChange={e => setContent({ ...content, details: { ...content.details, structure: { ...content.details.structure, rebuy: e.target.value } } })} className="form-input" />
+                                    </FormGroup>
+                                    <FormGroup label="Add-on">
+                                        <input type="text" value={content.details.structure?.addon} onChange={e => setContent({ ...content, details: { ...content.details, structure: { ...content.details.structure, addon: e.target.value } } })} className="form-input" />
+                                    </FormGroup>
+                                </div>
+                            </ContentBlock>
+
+                            <ContentBlock title="Classificados (Override)" color="bg-red-500">
+                                <div className="space-y-4">
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-tight">
+                                        Substituição manual do total de classificados. <br/>
+                                        Use para ajustes técnicos ou se o DB estiver defasado.
+                                    </p>
+                                    <div className="flex gap-4 items-center bg-black/20 p-4 rounded-xl">
+                                        <input 
+                                            type="text" 
+                                            value={totalQualifiers === null ? '' : totalQualifiers} 
+                                            onChange={e => {
+                                                const val = e.target.value.replace(/\D/g, '');
+                                                setTotalQualifiers(val === '' ? null : parseInt(val));
+                                            }} 
+                                            placeholder="Automático (DB)" 
+                                            className="flex-1 bg-transparent border-none text-white font-display text-2xl italic outline-none text-center" 
+                                        />
+                                        <button onClick={() => setTotalQualifiers(null)} className="text-gray-500 hover:text-white"><span className="material-icons-outlined">restart_alt</span></button>
+                                        <button onClick={() => handleSaveContent('total_qualifiers', totalQualifiers)} disabled={isSavingContent} className="px-4 py-2 bg-primary text-white text-[10px] font-black rounded-lg">SALVAR</button>
+                                    </div>
                                 </div>
                             </ContentBlock>
 

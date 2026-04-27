@@ -26,6 +26,7 @@ import { OnlineCreditsPage } from './OnlineCreditsPage';
 import { CategoryPage } from './CategoryPage';
 import { DocumentLinks } from './DocumentLinks';
 import { SpecialEventPage } from './SpecialEventPage';
+import { FenachimPage } from './FenachimPage';
 
 export const AppRouter: React.FC = () => {
     const {
@@ -146,6 +147,8 @@ export const AppRouter: React.FC = () => {
                 />;
             case 'the-chosen-regulations':
                 return <TheChosenRegulations prizeLabel={prizeLabel} onBack={() => handleNavigate('the-chosen-details')} />;
+            case 'fenachim':
+                return <FenachimPage onNavigate={handleNavigate} />;
             case 'vip':
                 return <VipPage
                     onNavigate={handleNavigate}

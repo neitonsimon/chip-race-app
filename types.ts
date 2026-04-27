@@ -562,6 +562,7 @@ export interface ContentDB {
     subtitle: string;
     btn_ranking: string;
     btn_details: string;
+    timeline_title?: string;
   };
   details: {
     header_title: string;
@@ -572,6 +573,12 @@ export interface ContentDB {
     plus_desc: string;
     ways_title: string;
     chosen_slots?: string[];
+    structure?: {
+      stack: string;
+      rebuy: string;
+      addon: string;
+      blinds: string;
+    };
   };
   special_events?: SpecialEvent[];
   categories: TournamentCategory[];

@@ -86,7 +86,8 @@
                 "title_line1": "THE CHOSEN",
                 "title_line2_prefix": "",
                 "subtitle": "O palco principal da Chip Race. Uma jornada de 9 meses onde a comunidade define o tamanho da glória.",
-                "btn_details": "ENTENDA O"
+                "btn_details": "ENTENDA O",
+                "timeline_title": "Cronograma de Evolução"
             },
             "details": {
                 "header_title": "THE CHOSEN",
@@ -95,7 +96,13 @@
                 "concept_desc": "Diferente de torneios abertos, o The Chosen é um evento exclusivo para quem provou seu valor durante o ano. Não é possível comprar o buy-in diretamente para o Capítulo Final. Você deve conquistar sua vaga. Isso garante um field de altíssimo nível e uma atmosfera de verdadeira final de campeonato.",
                 "plus_title": "DINÂMICA PLUS",
                 "plus_desc": "O garantido inicial é definido pela temporada, mas a Chip Race desafia a comunidade. A cada mês, se atingirmos metas de classificados, a Chip Race injeta mais dinheiro no garantido. O pote cresce junto com o engajamento dos jogadores.",
-                "ways_title": "8 Caminhos para a Glória"
+                "ways_title": "8 Caminhos para a Glória",
+                "structure": {
+                    "stack": "50.000",
+                    "rebuy": "R$ 200",
+                    "addon": "R$ 200",
+                    "blinds": "20 MIN"
+                }
             },
             "categories": [],
             "faq": []

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ContentDB, TournamentCategory } from '../types';
 import { TheChosenQualifiers } from './TheChosenQualifiers';
+import { RoadmapSection } from './RoadmapSection';
 import { supabase } from '../src/lib/supabase';
 import appConfig from '../src/config/appConfig.json';
 
@@ -590,7 +591,7 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                         {/* Stack Inicial */}
                         <div className="flex flex-col items-center bg-black/20 rounded-xl p-4 border border-white/5 relative">
                             <div className="text-2xl sm:text-3xl lg:text-4xl font-display font-black text-white mb-1 flex items-start">
-                                25K<span className="text-primary text-xl -mt-1 ml-0.5">*</span>
+                                {(content as any).structure?.stack || '25K'}<span className="text-primary text-xl -mt-1 ml-0.5">*</span>
                             </div>
                             <div className="text-xs text-gray-500 mb-2">Fichas</div>
                             <div className="text-primary font-bold uppercase text-xs lg:text-sm">Stack Inicial Base</div>
@@ -598,21 +599,27 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
 
                         {/* Rebuy */}
                         <div className="flex flex-col items-center bg-black/20 rounded-xl p-4 border border-white/5">
-                            <div className="text-2xl sm:text-3xl lg:text-4xl font-display font-black text-white mb-1">R$ 200</div>
+                            <div className="text-2xl sm:text-3xl lg:text-4xl font-display font-black text-white mb-1">
+                                {(content as any).structure?.rebuy || 'R$ 200'}
+                            </div>
                             <div className="text-sm text-gray-400 mb-2">25K Fichas <span className="text-secondary font-bold text-[10px]">+ BÔNUS</span></div>
                             <div className="text-primary font-bold uppercase text-xs lg:text-sm">Rebuy / Reentrada</div>
                         </div>
 
                         {/* Add-on */}
                         <div className="flex flex-col items-center bg-black/20 rounded-xl p-4 border border-white/5">
-                            <div className="text-2xl sm:text-3xl lg:text-4xl font-display font-black text-white mb-1">R$ 200</div>
+                            <div className="text-2xl sm:text-3xl lg:text-4xl font-display font-black text-white mb-1">
+                                {(content as any).structure?.addon || 'R$ 200'}
+                            </div>
                             <div className="text-sm text-gray-400 mb-2">50K Fichas <span className="text-secondary font-bold text-[10px]">+ BÔNUS</span></div>
                             <div className="text-primary font-bold uppercase text-xs lg:text-sm">Add-on</div>
                         </div>
 
                         {/* Blinds */}
                         <div className="flex flex-col items-center bg-black/20 rounded-xl p-4 border border-white/5">
-                            <div className="text-2xl sm:text-3xl lg:text-4xl font-display font-black text-white mb-1">30</div>
+                            <div className="text-2xl sm:text-3xl lg:text-4xl font-display font-black text-white mb-1">
+                                {(content as any).structure?.blinds || '30'}
+                            </div>
                             <div className="text-sm text-gray-500 mb-2">Minutos</div>
                             <div className="text-primary font-bold uppercase text-xs lg:text-sm">Tempo de Blind</div>
                         </div>
@@ -624,7 +631,7 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                                 <p className="text-amber-500/90 flex items-start gap-2">
                                     <span className="material-icons-outlined text-base mt-0.5">info</span>
                                     <span>
-                                        <strong>Regra de Valor Plus:</strong> O valor base de Rebuy e Add-on é de R$ 200,00.
+                                        <strong>Regra de Valor Plus:</strong> O valor base de Rebuy e Add-on é definido conforme a estrutura acima.
                                         Este valor sofre um acréscimo de <strong>R$ 5,00</strong> para cada <strong>R$ 1.000,00</strong> que forem adicionados ao prêmio garantido total.
                                         <br />
                                         <span className="text-gray-500 text-xs italic font-normal block mt-1">Ex: Se o garantido subir para 40K (10K a mais), o Rebuy custará R$ 250,00.</span>
@@ -645,6 +652,11 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
                     </div>
                 </div>
 
+            </div>
+
+            {/* ROADMAP / MARCOS DE EVOLUÇÃO */}
+            <div className="mb-20">
+                <RoadmapSection />
             </div>
 
             {/* MODAL PRODUTO / DETALHES ESPECÍFICOS */}
