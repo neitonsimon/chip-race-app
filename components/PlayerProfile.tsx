@@ -64,6 +64,9 @@ import { EditTab } from './player-profile/EditTab';
 import { InboxTab } from './player-profile/InboxTab';
 import { OverviewTab } from './player-profile/OverviewTab';
 
+// Hooks
+import { usePlayerFinancial } from '../contexts/hooks/usePlayerFinancial';
+
 export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     isAdmin,
     isLoggedIn,
@@ -101,11 +104,25 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     const [replyContent, setReplyContent] = useState('');
 
     // Encontrar nick na suprema do remetente se for conversa privada
-    const senderProfile = viewedMessage?.category === 'private'
-        ? (viewedMessage.senderId
-            ? rankingPlayers.find(p => p.id === viewedMessage.senderId)
             : rankingPlayers.find(p => p.name === viewedMessage.from))
         : null;
+
+    // --- FINANCIAL HOOK ---
+    const {
+        playerCommands, playerTransactions, userDebts, totalUserDebt,
+        isSaving: financialIsSaving, fetchPlayerCommands, fetchUserDebts,
+        handlePayOpenCommand, handlePayDebt
+    } = usePlayerFinancial({
+        userId: targetIdRef.current || (initialData?.id ?? currentUser?.id ?? null),
+        isLoggedIn: !!isLoggedIn,
+        isOwnProfile,
+        playerBalance: player.balanceBrl,
+        onUpdateProfile: (id, data) => {
+            const updated = { ...player, ...data };
+            setPlayer(updated);
+            if (onUpdateProfile) onUpdateProfile(id, data);
+        }
+    });
 
 
 
@@ -261,8 +278,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                     instagram: "",
                     whatsapp: ""
                 },
-                level: initialData.level || Math.floor(Math.random() * 20) + 1,
-                currentExp: initialData.currentExp || 500,
+                level: initialData.level || 1,
+                currentExp: initialData.currentExp || 0,
                 nextLevelExp: initialData.nextLevelExp || 1000,
                 isVip: initialData.isVip || false,
                 vipStatus: initialData.vipStatus || 'nao_vip',
@@ -372,90 +389,17 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
     }, [initialData, currentUser, events]);
 
-    // Comprovantes state
-    const [playerCommands, setPlayerCommands] = useState<any[]>([]);
-    const [playerTransactions, setPlayerTransactions] = useState<any[]>([]);
-    const [viewingReceipt, setViewingReceipt] = useState<any | null>(null);
-    const [receiptItems, setReceiptItems] = useState<any[]>([]);
-    const [lastSeenRecibos, setLastSeenRecibos] = useState<number>(() => {
-        try { return parseInt(localStorage.getItem(`cr_recibos_seen_${currentUser?.id}`) || '0', 10); } catch { return 0; }
-    });
-    // Lightweight commands list just for the badge (loaded independently of the tab)
-    const [commandsForBadge, setCommandsForBadge] = useState<{ closed_at: string | null }[]>([]);
-
-
-    // Debt State
-    const [userDebts, setUserDebts] = useState<any[]>([]);
-    const [totalUserDebt, setTotalUserDebt] = useState(0);
-
-    // Auto-update viewing receipt
-    const viewingReceiptRef = useRef<any | null>(null);
-    useEffect(() => { viewingReceiptRef.current = viewingReceipt; }, [viewingReceipt]);
-
     useEffect(() => {
-        let channel: any;
-
-        if (activeTab === 'comprovantes' && (targetIdRef.current || player.id)) {
-            // Ensure targetIdRef is synced with player.id if they differ
-            if (!targetIdRef.current && player.id) targetIdRef.current = player.id;
-
+        if (activeTab === 'comprovantes') {
             fetchPlayerCommands();
-
-            // Realtime listener
-            channel = supabase.channel('commands_realtime_profile_' + targetIdRef.current)
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'commands', filter: `user_id=eq.${targetIdRef.current}` }, () => {
-                    fetchPlayerCommands();
-                })
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'command_items' }, () => {
-                    fetchPlayerCommands();
-                    if (viewingReceiptRef.current) {
-                        handleViewReceipt(viewingReceiptRef.current, true);
-                    }
-                })
-                .subscribe();
         }
-
-        return () => {
-            if (channel) supabase.removeChannel(channel);
-        };
-    }, [activeTab, player.id]);
-
-    // Load minimal commands data for badge \u2014 runs independently of active tab
-    useEffect(() => {
-        if (!isOwnProfile || !player.id) return;
-        const userId = targetIdRef.current || player.id;
-        if (!userId) return;
-
-        const fetchForBadge = async () => {
-            const { data } = await supabase
-                .from('commands')
-                .select('closed_at')
-                .eq('user_id', userId)
-                .eq('status', 'closed')
-                .order('closed_at', { ascending: false });
-            if (data) setCommandsForBadge(data);
-        };
-        fetchForBadge();
-
-        // Realtime: update badge instantly when a new command is inserted/updated
-        const badgeChannel = supabase
-            .channel('commands_badge_' + userId)
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'commands', filter: `user_id=eq.${userId}` }, () => {
-                fetchForBadge();
-            })
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'commands', filter: `user_id=eq.${userId}` }, () => {
-                fetchForBadge();
-            })
-            .subscribe();
-
-        return () => { supabase.removeChannel(badgeChannel); };
-    }, [player.id, isOwnProfile]);
+    }, [activeTab, fetchPlayerCommands]);
 
     useEffect(() => {
-        if (activeTab === 'pendencias' && targetIdRef.current) {
+        if (activeTab === 'pendencias') {
             fetchUserDebts();
         }
-    }, [activeTab, player.id]);
+    }, [activeTab, fetchUserDebts]);
 
     useEffect(() => {
         const fetchBadges = async () => {
@@ -478,147 +422,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         }
     }, [player.id]);
 
-    const fetchPlayerCommands = async () => {
-        if (!targetIdRef.current) return;
-        const { data } = await supabase.from('commands')
-            .select('*, events(title, date)')
-            .eq('user_id', targetIdRef.current)
-            .in('status', ['open', 'closed'])
-            .order('created_at', { ascending: false });
-        if (data) setPlayerCommands(data);
-
-        // Fetch user financial transactions for receipts
-        const { data: txData } = await supabase.from('transactions')
-            .select('*')
-            .eq('user_id', targetIdRef.current)
-            .in('category', ['wallet_deposit', 'recharge', 'online_credit', 'wallet_withdrawal', 'command_profit'])
-            .order('created_at', { ascending: false });
-        if (txData) setPlayerTransactions(txData);
-    };
-
-    const fetchUserDebts = async () => {
-        if (!targetIdRef.current) return;
-        const { data } = await supabase.from('debts')
-            .select('*, events(title, date)')
-            .eq('user_id', targetIdRef.current)
-            .eq('status', 'pending')
-            .order('created_at', { ascending: false });
-
-        if (data) {
-            setUserDebts(data);
-            const total = data.reduce((acc, d) => acc + Number(d.amount_brl), 0);
-            setTotalUserDebt(total);
-        }
-    };
-
-    const handlePayOpenCommand = async (cmd: any) => {
-        if (!isLoggedIn || !isOwnProfile) return;
-        const amount = Number(cmd.total_brl);
-        if (amount <= 0) return;
-
-        if (player.balanceBrl < amount) {
-            alert('Saldo insuficiente para pagar esta comanda!');
-            return;
-        }
-
-        if (!window.confirm(`Deseja encerrar e pagar esta comanda de R$ ${amount.toFixed(2)} usando seu saldo?`)) return;
-
-        setIsSavingExp(true);
-        try {
-            // 1. Deduct balance using backend RPC
-            const { data, error: deductErr } = await supabase.rpc('secure_balance_transaction', {
-                p_user_id: player.id,
-                p_brl_amount: -amount,
-                p_chipz_amount: 0,
-                p_description: `Pagamento de comanda ${cmd.id.slice(0, 8)} (vía perfil)`,
-                p_category: 'purchase',
-                p_metadata: { command_id: cmd.id, event_id: cmd.event_id }
-            });
-
-            if (deductErr || data === false) {
-                throw new Error(deductErr?.message || 'Saldo insuficiente no aplicativo ou falha na transação.');
-            }
-
-            // 2. Close command
-            const { error: updateErr } = await supabase.from('commands').update({
-                status: 'closed',
-                closed_at: new Date().toISOString()
-            }).eq('id', cmd.id);
-            if (updateErr) throw updateErr;
-
-            // 3. Notify system
-            await supabase.from('messages').insert({
-                user_id: player.id,
-                sender: 'Sistema',
-                content: `Você encerrou sua comanda no evento ${cmd.events?.title || 'Torneio'} e pagou R$ ${amount.toFixed(2)} com seu saldo.`,
-                category: 'system',
-                is_read: false
-            });
-
-            // 4. Update local state
-            const newBalance = player.balanceBrl - amount;
-            const updatedPlayer = { ...player, balanceBrl: newBalance };
-            setPlayer(updatedPlayer);
-            if (onUpdateProfile) onUpdateProfile(player.id, { balanceBrl: newBalance } as any);
-
-            fetchPlayerCommands();
-            setViewingReceipt(null);
-            alert('Comanda paga e encerrada com sucesso!');
-        } catch (err: any) {
-            alert('Erro ao processar pagamento: ' + err.message);
-        } finally {
-            setIsSavingExp(false);
-        }
-    };
-
-    const handlePayDebt = async (debt: any, customAmount?: number) => {
-        if (!isLoggedIn || !isOwnProfile) return;
-        const fullAmount = Number(debt.amount_brl);
-        const payAmount = customAmount ?? fullAmount;
-        const isPartial = payAmount < fullAmount;
-
-        if (payAmount <= 0 || payAmount > fullAmount) {
-            alert('Valor inválido.');
-            return;
-        }
-        if (player.balanceBrl < payAmount) {
-            alert('Saldo insuficiente para este pagamento!');
-            return;
-        }
-
-        if (!window.confirm(
-            isPartial
-                ? `Pagar R$ ${payAmount.toFixed(2)} agora? R$ ${(fullAmount - payAmount).toFixed(2)} continua em aberto.`
-                : `Quitar a pendência de R$ ${fullAmount.toFixed(2)} usando seu saldo?`
-        )) return;
-
-        setIsSavingExp(true);
-        try {
-            // Use the atomic RPC for settling debt
-            const { data, error } = await supabase.rpc('settle_debt_with_balance', {
-                p_user_id: player.id,
-                p_debt_id: debt.id,
-                p_pay_amount: payAmount
-            });
-
-            if (error) throw error;
-            if (!data.success) throw new Error(data.message);
-
-            // 3. Update local player state
-            const newBalance = player.balanceBrl - payAmount;
-            const updatedPlayer = { ...player, balanceBrl: newBalance };
-            setPlayer(updatedPlayer);
-            if (onUpdateProfile) onUpdateProfile(player.id, { balanceBrl: newBalance } as any);
-
-            // 4. Refresh debts
-            fetchUserDebts();
-            alert(data.message);
-        } catch (err: any) {
-            alert('Erro ao pagar: ' + err.message);
-        } finally {
-            setIsSavingExp(false);
-        }
-    };
+    // Financial handlers removed - moved to hook usePlayerFinancial
 
     const handleActivateVipVoucher = async (cmdId: string, duration: string) => {
         if (!isLoggedIn || !isOwnProfile) return;
@@ -1769,6 +1573,115 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                 )
             }
 
+            {/* RECEIPTS (VIEWING RECEIPT MODAL) */}
+            {viewingReceipt && (
+                <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-surface-dark border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-float shadow-2xl">
+                        <div className="p-6 border-b border-white/10 flex justify-between items-center bg-black/20">
+                            <div>
+                                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                    <span className="material-icons-outlined text-primary">receipt_long</span>
+                                    Recibo do Evento
+                                </h3>
+                                <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest font-black">
+                                    {viewingReceipt.events?.title || 'Torneio'} • {viewingReceipt.events?.date || ''}
+                                </p>
+                            </div>
+                            <button onClick={() => setViewingReceipt(null)} className="text-gray-400 hover:text-white bg-white/5 p-2 rounded-lg transition-colors">
+                                <span className="material-icons-outlined">close</span>
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-black/20 p-4 rounded-xl border border-white/5">
+                                    <span className="block text-[10px] text-gray-500 uppercase font-black mb-1">Status</span>
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${viewingReceipt.status === 'open' ? 'bg-green-500/20 text-green-500' : 'bg-gray-500/20 text-gray-400'}`}>
+                                        {viewingReceipt.status === 'open' ? 'Em Aberto' : 'Encerrada'}
+                                    </span>
+                                </div>
+                                <div className="bg-black/20 p-4 rounded-xl border border-white/5">
+                                    <span className="block text-[10px] text-gray-500 uppercase font-black mb-1">ID Comanda</span>
+                                    <span className="text-sm font-mono text-white">#{viewingReceipt.id.slice(0, 8)}</span>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                    <span className="w-4 h-[1px] bg-white/10"></span>
+                                    Itens Consumidos
+                                    <span className="w-4 h-[1px] bg-white/10"></span>
+                                </h4>
+                                <div className="space-y-2">
+                                    {receiptItems.length > 0 ? receiptItems.map((item: any, i: number) => (
+                                        <div key={i} className="flex justify-between items-center py-2 border-b border-white/5 group">
+                                            <div className="flex flex-col">
+                                                <span className="text-sm text-gray-200 font-medium group-hover:text-white transition-colors">{item.products?.name || 'Item'}</span>
+                                                <span className="text-[10px] text-gray-600 uppercase font-bold">{item.products?.category || ''}</span>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="text-sm text-white font-black">R$ {Number(item.paid_brl).toFixed(2)}</span>
+                                                <span className="block text-[10px] text-gray-600">vía {item.payment_method || 'saldo'}</span>
+                                            </div>
+                                        </div>
+                                    )) : (
+                                        <p className="text-center py-8 text-gray-600 italic text-sm">Nenhum item consumido registrado.</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="bg-black/20 p-6 rounded-2xl border border-white/5 space-y-3">
+                                {Number(viewingReceipt.discount_brl) > 0 && (
+                                    <div className="flex justify-between text-xs font-bold">
+                                        <span className="text-gray-500 uppercase">Desconto</span>
+                                        <span className="text-pink-500">- R$ {Number(viewingReceipt.discount_brl).toFixed(2)}</span>
+                                    </div>
+                                )}
+                                {Number(viewingReceipt.unpaid_amount_brl) > 0 && (
+                                    <div className="flex justify-between text-xs font-bold">
+                                        <span className="text-gray-500 uppercase tracking-widest">Valor Pendurado (Fiado)</span>
+                                        <span className="text-orange-400">R$ {Number(viewingReceipt.unpaid_amount_brl).toFixed(2)}</span>
+                                    </div>
+                                )}
+                                {Number(viewingReceipt.chips_payment_brl) > 0 && (
+                                    <div className="flex justify-between text-xs font-bold">
+                                        <span className="text-gray-500 uppercase">Pago em Espécie</span>
+                                        <span className="text-cyan-400">R$ {Number(viewingReceipt.chips_payment_brl).toFixed(2)}</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="p-6 bg-black/40 border-t border-white/10">
+                            <div className="flex justify-between items-center mb-6">
+                                <span className="text-gray-400 font-bold uppercase text-xs">Total Comanda</span>
+                                <span className="text-3xl font-black text-white">R$ {Number(viewingReceipt.total_brl || 0).toFixed(2)}</span>
+                            </div>
+
+                            {viewingReceipt.status === 'open' && isOwnProfile && (
+                                <button
+                                    onClick={() => handlePayOpenCommand(viewingReceipt)}
+                                    disabled={financialIsSaving}
+                                    className="w-full py-4 bg-primary hover:bg-primary/90 text-white font-black rounded-2xl shadow-[0_10px_30px_rgba(0,224,255,0.3)] transition-all flex items-center justify-center gap-2 uppercase tracking-widest disabled:opacity-50"
+                                >
+                                    {financialIsSaving ? (
+                                        <>
+                                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                            Processando...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="material-icons-outlined">account_balance_wallet</span>
+                                            Pagar Agora com Saldo
+                                        </>
+                                    )}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* UPLOAD PHOTO MODAL (GALLERY) */}
             {
                 showUploadModal && (
@@ -2101,28 +2014,6 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                                     </span>
                                                 </div>
                                             );
-                                        })}
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="px-5 py-4 border-t border-white/10 flex-shrink-0 bg-black/20 space-y-3">
-                                {viewingReceipt.status === 'closed' && (
-                                    <div className="space-y-2 border-b border-white/5 pb-3">
-                                        {Number(viewingReceipt.discount_brl) > 0 && (
-                                            <div className="flex justify-between text-xs">
-                                                <span className="text-gray-500 uppercase font-bold">Desconto</span>
-                                                <span className="text-pink-500">- R$ {Number(viewingReceipt.discount_brl).toFixed(2)}</span>
-                                            </div>
-                                        )}
-                                        {Number(viewingReceipt.unpaid_amount_brl) > 0 && (
-                                            <div className="flex justify-between text-xs">
-                                                <span className="text-gray-500 uppercase font-bold">Pendura (Fiado)</span>
-                                                <span className="text-orange-400">R$ {Number(viewingReceipt.unpaid_amount_brl).toFixed(2)}</span>
-                                            </div>
-                                        )}
-                                        {Number(viewingReceipt.chips_payment_brl) > 0 && (
-                                            <div className="flex justify-between text-xs">
                                                 <span className="text-gray-500 uppercase font-bold">Pago em Espécie</span>
                                                 <span className="text-cyan-400">R$ {Number(viewingReceipt.chips_payment_brl).toFixed(2)}</span>
                                             </div>

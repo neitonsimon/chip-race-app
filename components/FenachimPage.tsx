@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { supabase } from '../src/lib/supabase';
 
@@ -14,6 +14,36 @@ export const FenachimPage: React.FC<FenachimPageProps> = ({ onNavigate }) => {
   const [currentReservationsCount, setCurrentReservationsCount] = useState<number>(0);
   const [reservationPlayers, setReservationPlayers] = useState<any[]>([]);
   const [showReservationPlayers, setShowReservationPlayers] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string>('');
+
+  useEffect(() => {
+    const fetchLogo = async () => {
+      const { data, error } = await supabase.from('content_db').select('value').eq('key', 'fenachim_logo').single();
+      if (!error && data) {
+        setLogoUrl(data.value);
+      }
+    };
+    fetchLogo();
+  }, []);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const base64 = event.target?.result as string;
+      setLogoUrl(base64);
+      try {
+        await supabase.from('content_db').upsert({ key: 'fenachim_logo', value: base64 }, { onConflict: 'key' });
+        alert('Logo salvo com sucesso!');
+      } catch (err) {
+        console.error('Error saving logo', err);
+        alert('Erro ao salvar logo.');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Find the event in the calendar list
   const fenachimEvent = events.find(e => 
@@ -135,8 +165,29 @@ export const FenachimPage: React.FC<FenachimPageProps> = ({ onNavigate }) => {
       <div className="relative py-20 overflow-hidden text-center bg-gradient-to-br from-[#102d20] to-background-dark">
         <div className="absolute inset-0 bg-black/40" />
         <div className="relative z-10 max-w-4xl mx-auto px-4">
-          <div className="inline-block p-4 bg-white/5 rounded-3xl backdrop-blur-sm border border-green-500/30 mb-6">
-             <span className="material-icons-outlined text-green-500 text-5xl">nature</span>
+          <div className="relative w-full max-w-4xl mx-auto mb-10 group">
+             {logoUrl ? (
+                <div className="w-full flex justify-center">
+                  <img 
+                    src={logoUrl} 
+                    alt="Fenachim Logo" 
+                    className="w-full h-auto max-h-[400px] sm:max-h-[600px] object-contain rounded-3xl" 
+                  />
+                </div>
+             ) : (
+                <div className="inline-block p-10 bg-white/5 rounded-3xl backdrop-blur-sm border border-green-500/30">
+                   <span className="material-icons-outlined text-green-500 text-7xl">nature</span>
+                </div>
+             )}
+             
+             {currentUser?.role === 'admin' && (
+                <div className="absolute inset-0 bg-black/50 rounded-3xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                   <label className="cursor-pointer bg-primary p-4 rounded-full shadow-neon-pink flex items-center justify-center relative overflow-hidden transition-transform hover:scale-110">
+                      <span className="material-icons-outlined text-white text-2xl pointer-events-none">upload</span>
+                      <input type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={handleLogoUpload} />
+                   </label>
+                </div>
+             )}
           </div>
           <h1 className="text-5xl sm:text-7xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-green-300 via-emerald-100 to-green-300 mb-6 uppercase tracking-tight">
             PROGRAMAÇÃO POKER & CANASTRA<br/><span className="text-4xl sm:text-6xl text-white">18ª FENACHIM</span>
@@ -205,7 +256,7 @@ export const FenachimPage: React.FC<FenachimPageProps> = ({ onNavigate }) => {
                 <span className="material-icons-outlined text-primary text-3xl">casino</span>
               </div>
               <div>
-                <h2 className="text-2xl font-display font-black text-white uppercase tracking-widest break-words">5K Garantido</h2>
+                <h2 className="text-2xl font-display font-black text-white uppercase tracking-tight break-words">POKER - 5K GTD</h2>
                 <span className="text-primary font-bold tracking-widest uppercase text-sm">Especial Fenachim</span>
               </div>
             </div>
@@ -261,16 +312,6 @@ export const FenachimPage: React.FC<FenachimPageProps> = ({ onNavigate }) => {
             </button>
           </div>
 
-        </div>
-
-        {/* Sponsor/Footer section */}
-        <div className="mt-16 text-center">
-          <div className="inline-flex items-center justify-center bg-white rounded-2xl p-6 shadow-2xl">
-             <img src="/fenachim.jpg" alt="Fenachim Logo" className="h-16 w-auto" onError={(e) => (e.currentTarget.style.display = 'none')} />
-          </div>
-          <p className="mt-4 text-gray-500 font-bold uppercase tracking-widest text-xs">
-            Apoio Oficial
-          </p>
         </div>
 
         {/* Gratuity Text */}
@@ -335,7 +376,7 @@ export const FenachimPage: React.FC<FenachimPageProps> = ({ onNavigate }) => {
                         <div>
                             <h3 className="text-lg font-bold text-white mb-2 mt-6">Seus Compromissos:</h3>
                             <ul className="list-disc pl-5 space-y-2 text-sm">
-                                <li>Você se compromete em comparecer ao evento <strong>{fenachimEvent.title}</strong> na data <strong>{fenachimEvent.date.split('-').reverse().join('/')}</strong>, às <strong>{fenachimEvent.time}</strong>.</li>
+                                <li>Você se compromete em comparecer ao evento <strong>{fenachimEvent.title}</strong> na data <strong>{fenachimEvent.date.split('-').reverse().join('/')}</strong>, às <strong>15:00h</strong>.</li>
                                 <li>Nós nos comprometemos a garantir que sempre haverá <strong>um(1) assento disponível</strong> para você iniciar este torneio.</li>
                                 <li>A reserva é um acordo de cavalheiros. O cancelamento sem aviso prévio nos lesa profundamente e pode afetar futuras reservas.</li>
                                 <li>O pagamento pode ser realizado presencialmente na hora ou debitado via App Poker caso você possua créditos Online.</li>

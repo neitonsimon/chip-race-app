@@ -27,7 +27,7 @@ export const Hero: React.FC<HeroProps> = ({
     .filter(e => e.status === 'active' && e.hero_enabled)
     .sort((a, b) => a.hero_order - b.hero_order);
 
-  const totalSlides = activeEventSlides.length + 1; // +1 for The Chosen
+  const totalSlides = activeEventSlides.length + 2; // +1 Fenachim, +1 The Chosen
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -38,9 +38,12 @@ export const Hero: React.FC<HeroProps> = ({
 
   // Theme color for background ambience
   const currentEventSlide = activeEventSlides[currentSlide];
+  const isFenachimSlide = currentSlide === activeEventSlides.length;
   const isTheChosenSlide = currentSlide === totalSlides - 1;
   const ambienceColor = isTheChosenSlide
     ? 'bg-primary/10'
+    : isFenachimSlide 
+    ? 'bg-green-500/20'
     : currentEventSlide?.theme_color === 'green' ? 'bg-green-500/20'
     : currentEventSlide?.theme_color === 'amber' ? 'bg-amber-500/20'
     : currentEventSlide?.theme_color === 'secondary' ? 'bg-secondary/20'
@@ -152,6 +155,29 @@ export const Hero: React.FC<HeroProps> = ({
               </div>
             );
           })}
+          {/* Fenachim Slide */}
+          <div className={`w-full transition-opacity duration-1000 ${isFenachimSlide ? 'opacity-100 relative z-10' : 'opacity-0 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none'}`}>
+            <h1 className="text-4xl sm:text-6xl lg:text-8xl font-display font-black text-white mb-6 leading-tight">
+              FENACHIM - 40 ANOS<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-300 via-emerald-100 to-green-300 text-glow">
+                POKER E CANASTRA
+              </span>
+            </h1>
+            <p className="mt-4 text-lg sm:text-2xl text-gray-300 max-w-3xl mx-auto font-light leading-relaxed">
+              O esporte da mente presente na festa com o sabor do Rio Grande!
+            </p>
+            <div className="flex justify-center mt-12 mb-4">
+              <button
+                onClick={() => onNavigate('fenachim')}
+                className="group relative bg-gradient-to-r from-green-500 via-emerald-600 to-green-700 text-white font-black py-3 px-6 sm:py-4 sm:px-10 rounded-2xl shadow-[0_0_30px_rgba(34,197,94,0.3)] hover:shadow-[0_0_50px_rgba(34,197,94,0.6)] transition-all duration-500 transform hover:-translate-y-2 flex items-center gap-2 sm:gap-4 uppercase tracking-[0.2em] text-xs sm:text-sm overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12" />
+                <span className="material-icons-outlined text-xl sm:text-2xl animate-pulse text-green-300">nature</span>
+                <span className="relative z-10">VISITE</span>
+                <span className="material-icons group-hover:translate-x-2 transition-transform relative z-10">arrow_forward</span>
+              </button>
+            </div>
+          </div>
 
           {/* The Chosen Slide (always last) */}
           <div className={`w-full transition-opacity duration-1000 ${isTheChosenSlide ? 'opacity-100 relative z-10' : 'opacity-0 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none'}`}>
@@ -189,6 +215,12 @@ export const Hero: React.FC<HeroProps> = ({
               aria-label={`Slide ${evt.title}`}
             />
           ))}
+          <button
+            onClick={() => setCurrentSlide(activeEventSlides.length)}
+            className={`h-3 rounded-full transition-all duration-300 ${isFenachimSlide ? 'w-8 bg-green-500 scale-110 shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'w-3 bg-white/20 hover:bg-white/40'}`}
+            aria-label="Slide Fenachim"
+          />
+
           <button
             onClick={() => setCurrentSlide(totalSlides - 1)}
             className={`h-3 rounded-full transition-all duration-300 ${isTheChosenSlide ? 'w-8 bg-primary scale-110' : 'w-3 bg-white/20 hover:bg-white/40'}`}

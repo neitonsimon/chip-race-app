@@ -298,8 +298,46 @@ export interface PlayerStats {
 export interface MonthData {
   name: string;
   qualifiers: number | string;
-  prize: string;
-  status: 'active' | 'completed' | 'locked';
+  prize: number | string;
+  isActive?: boolean;
+}
+
+export interface Command {
+  id: string;
+  user_id: string;
+  event_id: string;
+  status: 'open' | 'closed' | 'void';
+  total_brl: number;
+  created_at: string;
+  closed_at?: string;
+  events?: {
+    title: string;
+    date: string;
+  };
+}
+
+export interface Transaction {
+  id: string;
+  user_id: string;
+  amount_brl: number;
+  category: 'wallet_deposit' | 'recharge' | 'online_credit' | 'wallet_withdrawal' | 'command_profit' | 'purchase' | 'manual_adjustment';
+  description: string;
+  created_at: string;
+  metadata?: any;
+}
+
+export interface Debt {
+  id: string;
+  user_id: string;
+  event_id?: string;
+  amount_brl: number;
+  description: string;
+  status: 'pending' | 'settled' | 'partial';
+  created_at: string;
+  events?: {
+    title: string;
+    date: string;
+  };
 }
 
 export type MessageCategory = 'system' | 'admin' | 'private' | 'tournament' | 'poll' | 'gift' | 'support';

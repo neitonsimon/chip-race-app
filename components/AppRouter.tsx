@@ -25,7 +25,6 @@ import { ResponsibleGaming } from './ResponsibleGaming';
 import { OnlineCreditsPage } from './OnlineCreditsPage';
 import { CategoryPage } from './CategoryPage';
 import { DocumentLinks } from './DocumentLinks';
-import { SpecialEventPage } from './SpecialEventPage';
 import { FenachimPage } from './FenachimPage';
 
 export const AppRouter: React.FC = () => {
@@ -159,12 +158,32 @@ export const AppRouter: React.FC = () => {
             case 'recharge':
                 return <RechargePage currentUser={currentUser as any} onNavigate={handleNavigate} onUpdateProfile={handleProfileUpdate} />;
             case 'financial':
+                if (!isAdmin && currentUser?.role !== 'staff') {
+                    return (
+                        <div className="py-32 text-center bg-background-light dark:bg-background-dark min-h-screen">
+                            <span className="material-icons-outlined text-6xl text-red-500 mb-4 animate-pulse">gpp_bad</span>
+                            <h2 className="text-3xl font-black text-white uppercase tracking-widest mb-4">Acesso Restrito</h2>
+                            <p className="text-gray-400">Você não tem as permissões necessárias para visualizar os dados financeiros.</p>
+                            <button onClick={() => handleNavigate('home')} className="mt-8 px-6 py-2 bg-primary text-white rounded-full font-bold uppercase hover:bg-secondary transition-colors">Voltar para a Home</button>
+                        </div>
+                    );
+                }
                 return <FinancialDashboard
                     currentUser={currentUser as any}
                     onClose={() => handleNavigate('home')}
                     isAdmin={isAdmin}
                 />;
             case 'admin':
+                if (!isAdmin && currentUser?.role !== 'staff') {
+                    return (
+                        <div className="py-32 text-center bg-background-light dark:bg-background-dark min-h-screen">
+                            <span className="material-icons-outlined text-6xl text-red-500 mb-4 animate-pulse">lock</span>
+                            <h2 className="text-3xl font-black text-white uppercase tracking-widest mb-4">Acesso Restrito</h2>
+                            <p className="text-gray-400">Área exclusiva para administradores e staff do evento.</p>
+                            <button onClick={() => handleNavigate('home')} className="mt-8 px-6 py-2 bg-primary text-white rounded-full font-bold uppercase hover:bg-secondary transition-colors">Voltar para a Home</button>
+                        </div>
+                    );
+                }
                 return <AdminPanel
                     currentUser={currentUser as any}
                     onClose={() => handleNavigate('home')}

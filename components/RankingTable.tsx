@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { RankingPlayer, Event, RankingInstance, ScoringSchema, RankingFormula, BadgeTemplate } from '../types';
 import { ScoringFormulaEditor } from './ScoringFormulaEditor';
 import { RankingSkeleton } from './Skeleton';
@@ -50,6 +51,8 @@ export const RankingTable: React.FC<RankingTableProps> = ({
     isLoading,
     badgeTemplates = []
 }) => {
+    const location = useLocation();
+    const navigate = useNavigate();
     const [activeRankingId, setActiveRankingId] = useState<string>('annual');
     const [searchTerm, setSearchTerm] = useState('');
     const [showRules, setShowRules] = useState(false);
@@ -85,10 +88,26 @@ export const RankingTable: React.FC<RankingTableProps> = ({
     // Ensure activeRankingId is valid (fallback to first available if deleted or filtered)
     useEffect(() => {
         const availableInCurrentView = rankings.filter(r => (rankingView === 'active' ? r.isActive !== false : r.isActive === false));
+        
+        // Check URL for specific ranking
+        const path = location.pathname;
+        if (path.startsWith('/ranking/')) {
+            const slug = path.replace('/ranking/', '').toLowerCase();
+            const found = availableInCurrentView.find(r => 
+                r.label.toLowerCase().replace(/\s+/g, '-') === slug || 
+                r.label.toLowerCase().includes(slug) || 
+                r.id.toLowerCase() === slug
+            );
+            if (found) {
+                setActiveRankingId(found.id);
+                return;
+            }
+        }
+
         if (availableInCurrentView.length > 0 && !availableInCurrentView.find(r => r.id === activeRankingId)) {
             setActiveRankingId(availableInCurrentView[0].id);
         }
-    }, [rankings, activeRankingId, rankingView]);
+    }, [rankings, activeRankingId, rankingView, location.pathname]);
 
     const availableRankings = rankings.filter(r => (rankingView === 'active' ? r.isActive !== false : r.isActive === false));
     const activeRanking = rankings.find(r => r.id === activeRankingId) || availableRankings[0] || rankings[0];
@@ -391,7 +410,10 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                 .map(ranking => (
                                     <button
                                         key={ranking.id}
-                                        onClick={() => setActiveRankingId(ranking.id)}
+                                        onClick={() => {
+                                            setActiveRankingId(ranking.id);
+                                            navigate(`/ranking/${encodeURIComponent(ranking.label.toLowerCase().replace(/\s+/g, '-'))}`);
+                                        }}
                                         className={`px-4 sm:px-8 py-2 rounded-full text-sm sm:text-base font-bold uppercase tracking-widest transition-all duration-300 whitespace-nowrap ${activeRankingId === ranking.id
                                             ? 'bg-gradient-to-r from-primary to-accent text-white shadow-neon-pink'
                                             : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'

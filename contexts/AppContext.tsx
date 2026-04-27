@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../src/lib/supabase';
+import { useMessages } from './hooks/useMessages';
 import {
     RankingPlayer, MonthData, Message, ContentDB, TournamentCategory,
     Event, PlayerResult, PlayerStats, RankingInstance, ScoringSchema,
@@ -94,7 +96,41 @@ export const useApp = () => {
 const INITIAL_DB: ContentDB = appConfig.initialDefaults.contentDB as ContentDB;
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [currentView, setCurrentView] = useState('home');
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    // Map URL path to internal views & selected players
+    useEffect(() => {
+        const path = location.pathname;
+        if (path === '/') {
+            setCurrentView('home');
+        } else if (path.startsWith('/perfil/')) {
+            const name = decodeURIComponent(path.replace('/perfil/', ''));
+            if (name) {
+                setCurrentView('profile');
+                handleNavigateToPlayerByNameInternal(name);
+            }
+        } else if (path.startsWith('/ranking/')) {
+            setCurrentView('ranking');
+        } else if (path === '/perfil') {
+            setCurrentView('profile');
+        } else if (path === '/calendario') {
+            setCurrentView('calendar');
+        } else if (path !== '') {
+            const view = path.substring(1);
+            if (view) setCurrentView(view);
+        }
+    }, [location.pathname, allProfiles, isLoggedIn, currentUser.id, currentUser.name]);
+
+    const [currentView, setCurrentView] = useState(() => {
+        const path = window.location.pathname;
+        if (path === '/') return 'home';
+        if (path.startsWith('/perfil/')) return 'profile';
+        if (path.startsWith('/ranking/')) return 'ranking';
+        if (path === '/perfil') return 'profile';
+        if (path === '/calendario') return 'calendar';
+        return path.substring(1) || 'home';
+    });
     const [isAdmin, setIsAdmin] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -119,17 +155,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [vipPlans, setVipPlans] = useState<any[]>(appConfig.vip.plans);
     const [userReservations, setUserReservations] = useState<string[]>([]);
 
-    const [messages, setMessages] = useState<Message[]>([]);
-    const [unreadCount, setUnreadCount] = useState(0);
-    const [polls, setPolls] = useState<Poll[]>([]);
-    const [pollVotesByCurrentUser, setPollVotesByCurrentUser] = useState<Record<string, number>>({});
-    const [newNotification, setNewNotification] = useState<Message | null>(null);
     const [isFlyerOpen, setIsFlyerOpen] = useState(false);
-    const notificationTimer = useRef<any>(null);
+
+    // ── Messages & Polls hook ──────────────────────────────────────────────────
+    const {
+        messages, unreadCount, polls, pollVotesByCurrentUser, newNotification, setNewNotification,
+        handleMarkAsRead, handleDeleteMessage, handleReplyMessage,
+        handleSendMessage: hookSendMessage, handleSendAdminMessage: hookSendAdminMessage,
+        handleCreatePoll: hookCreatePoll, handleVoteOnPoll: hookVoteOnPoll
+    } = useMessages({ isLoggedIn, currentUserId, isAdmin, systemMessageTemplates });
+
+    const abortControllerRef = useRef<AbortController | null>(null);
 
     const fetchSupabaseData = async () => {
+        if (abortControllerRef.current) abortControllerRef.current.abort();
+        abortControllerRef.current = new AbortController();
+        
         setIsLoading(true);
         try {
+            const signal = abortControllerRef.current.signal;
             const [
                 { data: rankingsData },
                 { data: templatesData },
@@ -143,17 +187,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 { data: dailyRewardsData },
                 { data: templatesMsgData }
             ] = await Promise.all([
-                supabase.from('rankings').select('*'),
-                supabase.from('badge_templates').select('*'),
-                supabase.from('scoring_schemas').select('*'),
-                supabase.from('events').select('*').order('date', { ascending: true }),
-                supabase.from('content_db').select('*'),
-                supabase.from('ecosystem_categories').select('*').order('order', { ascending: true }),
+                supabase.from('rankings').select('id, label, description, rules, start_date, end_date, prize_info_title, prize_info_detail, scoring_schema_map, is_active, brl_reward, chipz_reward, badge_template_id, position_prizes, order'),
+                supabase.from('badge_templates').select('id, title, description, icon, color, category, rarity, event_trigger, is_legendary'),
+                supabase.from('scoring_schemas').select('id, name, criteria, position_points'),
+                supabase.from('events').select('id, title, date, time, type, modality, buyin, guaranteed, status, ranking_type, included_rankings, description, stack, blinds, late_reg, location, rebuy_value, rebuy_chips, addon_value, addon_chips, staff_bonus_value, staff_bonus_chips, time_chip_value, time_chip_chips, flyer_url, time_chip_addon_chips, time_chip_discount_brl, max_capacity, double_rebuy_value, double_rebuy_chips, double_addon_value, double_addon_chips, parallel_products, results, total_rebuys, total_addons, total_prize, scoring_schema_id, game_mode, cash_game_type, cash_game_blinds, cash_game_capacity, cash_game_min_max, cash_game_dinner, cash_game_open_bar, cash_game_notes, staff_expenses_brl, prize_payout_brl, is_multi_day, is_starting_day, is_final_day, final_event_id, stack_aggregation, is_hidden, is_special_event, timeline_title, structure').order('date', { ascending: true }),
+                supabase.from('content_db').select('key, value'),
+                supabase.from('ecosystem_categories').select('id, title, description, icon, color, order').order('order', { ascending: true }),
                 supabase.from('profiles_public').select('id, numeric_id, name, avatar_url, city, is_vip, vip_status, vip_expires_at, social, bio, level, current_exp, next_level_exp, gallery, play_styles, is_verified, total_pending_debt, suprema_nickname, suprema_user_id'),
-                supabase.from('user_badges').select('*, badge_templates(*)'),
-                supabase.from('experience_levels').select('*').order('level', { ascending: true }),
-                supabase.from('daily_rewards').select('*').order('day', { ascending: true }),
-                supabase.from('system_message_templates').select('*')
+                supabase.from('user_badges').select('id, user_id, badge_template_id, title, description, icon, color, awarded_at, badge_templates(id, title, description, icon, color, rarity, is_legendary)'),
+                supabase.from('experience_levels').select('id, level, min_exp, max_exp, title, perks').order('level', { ascending: true }),
+                supabase.from('daily_rewards').select('id, day, type, amount, description, icon').order('day', { ascending: true }),
+                supabase.from('system_message_templates').select('id, subject, content, category, sender, is_active, distribution_logic, updated_at')
             ]);
 
             if (rankingsData) {
@@ -301,7 +345,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
             if (templatesMsgData) setSystemMessageTemplates(templatesMsgData);
 
-        } catch (error) {
+        } catch (error: any) {
+            if (error.name === 'AbortError') return;
             console.error('Error fetching Supabase data:', error);
         } finally {
             setIsLoading(false);
@@ -310,7 +355,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const fetchProfile = async (userId: string) => {
         try {
-            const { data, error } = await supabase.from('profiles').select('*, total_pending_debt, locked_balance_brl, balance_unlock_date').eq('id', userId).single();
+            const { data, error } = await supabase.from('profiles')
+                .select('*, total_pending_debt, locked_balance_brl, balance_unlock_date')
+                .eq('id', userId)
+                .single();
             if (error) throw error;
             if (data) {
                 const userIsAdmin = data.role === 'admin';
@@ -525,64 +573,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
     };
 
-    const fetchMessages = async (userId: string) => {
-        try {
-            const { data: profile } = await supabase.from('profiles').select('role').eq('id', userId).single();
-            const isAdminRole = profile?.role === 'admin' || profile?.role === 'staff';
-
-            const { data } = await supabase.from('messages').select('*').or(`user_id.eq.${userId},user_id.is.null`).order('created_at', { ascending: false });
-            if (data) {
-                const filtered = data.filter(m => {
-                    if (m.category === 'support' && !m.user_id) return isAdminRole;
-                    return true;
-                });
-
-                const formatted: Message[] = filtered.map(m => ({
-                    id: m.id,
-                    from: m.sender || 'Chip Race',
-                    senderId: m.sender_id,
-                    subject: m.subject || 'Notificação',
-                    content: m.content || '',
-                    date: new Date(m.created_at || Date.now()).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }),
-                    read: m.is_read || false,
-                    category: m.category || 'system',
-                    pollId: m.poll_id
-                }));
-                setMessages(formatted);
-                setUnreadCount(formatted.filter(m => !m.read).length);
-            }
-        } catch (e) {
-            console.error('Error fetching messages:', e);
-        }
-    };
-
-    const fetchPolls = async () => {
-        try {
-            const { data } = await supabase.from('polls').select('*').eq('active', true);
-            if (!data) return;
-            const { data: allVotes } = await supabase.from('poll_votes').select('poll_id, option_index').in('poll_id', data.map(p => p.id));
-            const enriched = data.map(poll => {
-                const pollVotes = (allVotes || []).filter(v => v.poll_id === poll.id);
-                const opts: string[] = Array.isArray(poll.options) ? poll.options : [];
-                const vote_counts = opts.map((_, i) => pollVotes.filter(v => v.option_index === i).length);
-                return { ...poll, vote_counts };
-            });
-            setPolls(enriched);
-        } catch (e) {
-            console.error('Error fetching polls:', e);
-        }
-    };
-
-    const fetchUserPollVotes = async (userId: string) => {
-        try {
-            const { data } = await supabase.from('poll_votes').select('poll_id, option_index').eq('user_id', userId);
-            if (data) {
-                const votesMap: Record<string, number> = {};
-                data.forEach(v => { votesMap[v.poll_id] = v.option_index; });
-                setPollVotesByCurrentUser(votesMap);
-            }
-        } catch (e) { console.error('Error fetching user votes:', e); }
-    };
+    // fetchMessages/fetchPolls/fetchUserPollVotes moved to useMessages hook
 
     useEffect(() => {
         fetchSupabaseData();
@@ -644,38 +635,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     };
 
+    // Message realtime subscription is handled inside useMessages hook.
+    // Profile & Badge realtime subscriptions remain here:
     useEffect(() => {
         if (!isLoggedIn || !currentUserId) return;
-        fetchMessages(currentUserId);
-        fetchPolls();
-        fetchUserPollVotes(currentUserId);
 
-        const msgChannel = supabase.channel('realtime-messages')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, (payload) => {
-                if (payload.eventType === 'INSERT') {
-                    const m = payload.new as any;
-                    const isSupportToAdmin = m.category === 'support' && !m.user_id;
-                    const isTargetedToMe = m.user_id === currentUserId;
-                    const isGlobalNonSupport = !m.user_id && m.category !== 'support';
-
-                    if (isTargetedToMe || isGlobalNonSupport || (isAdmin && isSupportToAdmin)) {
-                        const newMsg: Message = {
-                            id: m.id, from: m.sender || 'Chip Race', senderId: m.sender_id, subject: m.subject || 'Notificação',
-                            content: m.content || '', date: new Date(m.created_at || Date.now()).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }),
-                            read: false, category: m.category || 'system', pollId: m.poll_id
-                        };
-                        if (notificationTimer.current) clearTimeout(notificationTimer.current);
-                        setNewNotification(newMsg);
-                        notificationTimer.current = setTimeout(() => setNewNotification(null), 8000);
-                    }
-                }
-                // Refresh local list for ALL events (INSERT, UPDATE, DELETE)
-                fetchMessages(currentUserId);
-            })
-            .subscribe();
-
-
-        const profileChannel = supabase.channel('realtime-profile')
+        const profileChannel = supabase.channel(`profile-ctx-${currentUserId}`)
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${currentUserId}` }, (payload) => {
                 const p = payload.new as any;
                 setCurrentUser(prev => ({
@@ -689,7 +654,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             })
             .subscribe();
 
-        const badgeChannel = supabase.channel('realtime-badges')
+        const badgeChannel = supabase.channel(`badges-ctx-${currentUserId}`)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'user_badges' }, () => {
                 fetchSupabaseData();
                 if (currentUserId) fetchProfile(currentUserId);
@@ -697,10 +662,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             .subscribe();
 
         return () => {
-            supabase.removeChannel(msgChannel);
             supabase.removeChannel(profileChannel);
             supabase.removeChannel(badgeChannel);
-            if (notificationTimer.current) clearTimeout(notificationTimer.current);
         };
     }, [isLoggedIn, currentUserId]);
 
@@ -804,7 +767,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const handleNavigate = (view: string) => {
         if (view === 'profile') setSelectedPlayer(null);
-        setCurrentView(view);
+        
+        // Map common views to Portuguese routes or standard paths
+        let path = `/${view}`;
+        if (view === 'home') path = '/';
+        else if (view === 'calendar') path = '/calendario';
+        else if (view === 'profile') path = '/perfil';
+        
+        navigate(path);
+        // window.scrollTo is handled by the browser or components, but we can do it here:
         window.scrollTo(0, 0);
     };
 
@@ -817,8 +788,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     const handlePlayerSelect = (player: RankingPlayer) => {
-        setSelectedPlayer(player);
-        setCurrentView('profile');
+        if (player.name) {
+            const urlName = encodeURIComponent(player.name.replace(/\s+/g, '-').toLowerCase());
+            navigate(`/perfil/${urlName}`);
+        } else {
+            handleNavigate('profile');
+        }
         window.scrollTo(0, 0);
     };
 
@@ -1235,96 +1210,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return Array.from(unique.values());
     };
 
-    const handleNavigateToPlayerByName = (name: string) => {
-        const player = getAllUniquePlayers().find(p => p.name.toLowerCase() === name.toLowerCase());
-        setSelectedPlayer(player || { rank: 0, name, avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`, city: '', points: 0, change: 'same' });
+    const handleNavigateToPlayerByNameInternal = (name: string) => {
+        const uniquePlayers = getAllUniquePlayers();
+        let player = uniquePlayers.find(p => 
+            p.name.toLowerCase().replace(/\s+/g, '-') === name.toLowerCase() || 
+            p.name.toLowerCase() === name.toLowerCase().replace(/-/g, ' ')
+        );
+
+        // Fallback: Se não encontrou nos perfis mas o nome bate com o usuário logado
+        if (!player && isLoggedIn && currentUser.name) {
+            const currentSlug = currentUser.name.toLowerCase().replace(/\s+/g, '-');
+            const targetSlug = name.toLowerCase();
+            if (currentSlug === targetSlug || currentUser.name.toLowerCase() === targetSlug.replace(/-/g, ' ')) {
+                player = { ...currentUser, id: currentUserId || currentUser.id };
+            }
+        }
+
+        if (!player) {
+            player = { 
+                rank: 0, 
+                name: name.replace(/-/g, ' ').split(' ').map(s => s.charAt(0).toUpperCase() + s.substring(1)).join(' '), 
+                points: 0, 
+                change: 'same', 
+                avatar: `https://ui-avatars.com/api/?name=${name.replace(/-/g, '+')}&background=random`, 
+                city: '' 
+            };
+        }
+        
+        setSelectedPlayer(player);
         setCurrentView('profile');
+    };
+
+    const handleNavigateToPlayerByName = (name: string) => {
+        const urlName = encodeURIComponent(name.replace(/\s+/g, '-').toLowerCase());
+        navigate(`/perfil/${urlName}`);
         window.scrollTo(0, 0);
     };
 
+    // Message/poll handlers — delegated to useMessages hook, wrapped here with admin guard:
     const handleCreatePoll = async (question: string, options: string[]) => {
         if (!isAdmin) return;
-        const { data } = await supabase.from('polls').insert([{ question, options, active: true }]).select();
-        if (data) { setPolls(prev => [...prev, data[0]]); handleSendAdminMessage('Nova Enquete!', `"${question}"`, 'poll', data[0].id); }
+        await hookCreatePoll(question, options);
     };
 
     const handleVoteOnPoll = async (pollId: string, optionIndex: number) => {
         if (!isLoggedIn || !currentUserId) return;
-        const { error } = await supabase.from('poll_votes').upsert([{ poll_id: pollId, user_id: currentUserId, option_index: optionIndex }], { onConflict: 'poll_id,user_id' });
-        if (!error) { setPollVotesByCurrentUser(prev => ({ ...prev, [pollId]: optionIndex })); alert('Voto OK!'); }
+        await hookVoteOnPoll(pollId, optionIndex);
     };
 
     const handleSendAdminMessage = async (subject: string, content: string, category: MessageCategory = 'admin', pollId?: string, targetUserId?: string) => {
         if (!isAdmin) return;
-        await supabase.from('messages').insert([{ sender: 'Admin', sender_id: currentUserId, subject, content, category, poll_id: pollId || null, user_id: targetUserId || null, is_read: false }]);
-        if (currentUserId) fetchMessages(currentUserId);
+        await hookSendAdminMessage(subject, content, category, pollId, targetUserId);
     };
 
     const handleSendMessage = async (toPlayerName: string, content: string, targetUserId?: string) => {
-        if (!currentUserId) return;
-        const senderName = currentUser.name || 'Jogador';
-
-        let recipientId = targetUserId;
-        if (!recipientId) {
-            const { data: recipient, error: lookupError } = await supabase
-                .from('profiles')
-                .select('id')
-                .ilike('name', toPlayerName.trim())
-                .limit(1)
-                .maybeSingle();
-
-            if (lookupError) {
-                console.error('Error looking up recipient:', lookupError);
-                return;
-            }
-            recipientId = recipient?.id;
-        }
-
-        if (recipientId) {
-            const { error: insertError } = await supabase.from('messages').insert([{
-                sender: senderName,
-                sender_id: currentUserId,
-                subject: `De ${senderName}`,
-                content,
-                category: 'private',
-                user_id: recipientId,
-                is_read: false
-            }]);
-
-            if (insertError) {
-                console.error('Error sending message:', insertError);
-                throw insertError;
-            }
-
-            fetchMessages(currentUserId);
-        } else {
-            console.error('Recipient not found:', toPlayerName);
-            throw new Error('Destinatário não encontrado.');
-        }
-    };
-
-    const handleReplyMessage = async (messageId: string, replyText: string) => {
-        const orig = messages.find(m => m.id === messageId);
-        if (orig) {
-            // Priority to senderId if available, otherwise fallback to name lookup
-            await handleSendMessage(orig.from, replyText, orig.senderId);
-        }
-    };
-
-    const handleMarkAsRead = async (id: string) => {
-        const msg = messages.find(m => m.id === id);
-        if (!msg) return;
-
-        setMessages(prev => prev.map(m => m.id === id ? { ...m, read: true } : m));
-        setUnreadCount(prev => Math.max(0, prev - 1));
-
-        await supabase.from('messages').update({ is_read: true }).eq('id', id);
-    };
-
-    const handleDeleteMessage = async (id: string) => {
-        setMessages(prev => prev.filter(m => m.id !== id));
-        const { error } = await supabase.from('messages').delete().eq('id', id);
-        if (error) console.error('Error deleting message:', error);
+        await hookSendMessage(toPlayerName, content);
     };
 
     const updateContent = async (section: keyof ContentDB, field: string, value: any) => {
