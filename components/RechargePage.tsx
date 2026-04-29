@@ -113,7 +113,10 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                     }
                 }
 
-                alert(`Pagamento de R$ ${data.amount} reconhecido com sucesso!`);
+                const bonusValue = data.amount * 0.10;
+                const totalCredited = data.amount + bonusValue;
+                alert(`Pagamento de R$ ${data.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} reconhecido! R$ ${totalCredited.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} creditados (Bônus 10% aplicado)`);
+
                 setPixData(null);
                 setCustomBrlAmount('');
                 setActiveTab('brl');
@@ -286,7 +289,14 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                                     <span className="material-icons-outlined text-3xl text-green-400">account_balance_wallet</span>
                                 </div>
 
-                                <span className="text-gray-400 text-sm font-bold uppercase tracking-widest mb-6 block">Comprar Reais</span>
+                                <span className="text-gray-400 text-sm font-bold uppercase tracking-widest mb-2 block">Comprar Reais</span>
+                                <div className="bg-green-500/20 border border-green-500/30 rounded-xl py-2 px-4 mb-6 animate-pulse">
+                                    <span className="text-green-400 text-xs font-black uppercase tracking-tighter flex items-center justify-center gap-2">
+                                        <span className="material-icons-outlined text-sm">stars</span>
+                                        BÔNUS ATIVO: +10% EM TODOS OS DEPÓSITOS
+                                    </span>
+                                </div>
+
 
                                 <div className="flex justify-center items-center mb-4">
                                     <span className="text-2xl font-black text-gray-500 mr-2 mt-2">R$</span>
@@ -300,6 +310,16 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
                                         className="w-full max-w-[200px] bg-transparent text-6xl font-black text-white text-center border-b-2 border-white/20 focus:border-green-500 outline-none transition-colors pb-2"
                                     />
                                 </div>
+
+                                {customBrlAmount && Number(customBrlAmount) > 0 && (
+                                    <div className="mb-6 flex flex-col items-center animate-in zoom-in-95 duration-300">
+                                        <span className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-1">Você Recebe:</span>
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-2xl font-black text-green-400">R$ {(Number(customBrlAmount) * 1.1).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                            <span className="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full font-bold">+10% BONUS</span>
+                                        </div>
+                                    </div>
+                                )}
 
                                 <p className="text-gray-500 text-sm mb-8 font-light">Digite o valor que deseja adicionar em sua carteira. Sem taxas adicionais.</p>
 

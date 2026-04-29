@@ -900,9 +900,9 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({
 
                                                             if (condition?.toLowerCase().includes('site') || condition?.toLowerCase().includes('garantir bonus')) {
                                                                 bonusTotal += (stack + addon);
-                                                                if (stack > 0) bonusBreakdown.push(`+${stack.toLocaleString('pt-BR')} (Tier ${tier} Stack)`);
-                                                                if (addon > 0) bonusBreakdown.push(`+${addon.toLocaleString('pt-BR')} (Tier ${tier} Addon)`);
-                                                                if (extra) bonusBreakdown.push(`${extra} (T${tier})`);
+                                                                if (stack > 0) bonusBreakdown.push(`+${stack.toLocaleString('pt-BR')} (Stack)`);
+                                                                if (addon > 0) bonusBreakdown.push(`+${addon.toLocaleString('pt-BR')} (Add-on)`);
+                                                                if (extra) bonusBreakdown.push(`${extra}`);
                                                             }
                                                         });
                                                         
@@ -913,8 +913,8 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({
                                                             const eventTAddon = parseChips(res.events?.time_chip_addon_chips);
                                                             bonusTotal = eventStaff + eventTime + eventTAddon;
                                                             if (eventStaff > 0) bonusBreakdown.push(`+${eventStaff.toLocaleString('pt-BR')} (Staff)`);
-                                                            if (eventTime > 0) bonusBreakdown.push(`+${eventTime.toLocaleString('pt-BR')} (Time)`);
-                                                            if (eventTAddon > 0) bonusBreakdown.push(`+${eventTAddon.toLocaleString('pt-BR')} (T.Addon)`);
+                                                            if (eventTime > 0) bonusBreakdown.push(`+${eventTime.toLocaleString('pt-BR')} (Stack Extra)`);
+                                                            if (eventTAddon > 0) bonusBreakdown.push(`+${eventTAddon.toLocaleString('pt-BR')} (Add-on Extra)`);
                                                         }
                                                     }
                                                     // Prioridade 3: Lógica legada (para reservas antigas)
@@ -927,8 +927,8 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({
                                                             if (res.metadata?.extra_10k_compensation) {
                                                                 bonusTotal = eventStaff + eventTime + eventTAddon + 10000;
                                                                 if (eventStaff > 0) bonusBreakdown.push(`+${eventStaff.toLocaleString('pt-BR')} (Staff)`);
-                                                                if (eventTime > 0) bonusBreakdown.push(`+${eventTime.toLocaleString('pt-BR')} (Time)`);
-                                                                if (eventTAddon > 0) bonusBreakdown.push(`+${eventTAddon.toLocaleString('pt-BR')} (T.Addon)`);
+                                                                if (eventTime > 0) bonusBreakdown.push(`+${eventTime.toLocaleString('pt-BR')} (Stack Extra)`);
+                                                                if (eventTAddon > 0) bonusBreakdown.push(`+${eventTAddon.toLocaleString('pt-BR')} (Add-on Extra)`);
                                                                 bonusBreakdown.push("+10.000 (Compensação)");
                                                             } else {
                                                                 bonusTotal = 5000;
@@ -937,8 +937,8 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({
                                                         } else {
                                                             bonusTotal = eventStaff + eventTime + eventTAddon;
                                                             if (eventStaff > 0) bonusBreakdown.push(`+${eventStaff.toLocaleString('pt-BR')} (Staff)`);
-                                                            if (eventTime > 0) bonusBreakdown.push(`+${eventTime.toLocaleString('pt-BR')} (Time)`);
-                                                            if (eventTAddon > 0) bonusBreakdown.push(`+${eventTAddon.toLocaleString('pt-BR')} (T.Addon)`);
+                                                            if (eventTime > 0) bonusBreakdown.push(`+${eventTime.toLocaleString('pt-BR')} (Stack Extra)`);
+                                                            if (eventTAddon > 0) bonusBreakdown.push(`+${eventTAddon.toLocaleString('pt-BR')} (Add-on Extra)`);
                                                         }
                                                     }
                                                     
