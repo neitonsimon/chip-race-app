@@ -372,8 +372,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
             // Recalculate summary stats from logs if displaying real data
             // For ranking players, initialData.points is authoritative, but for currentUser we calculate.
-            if (!initialData) {
-                const totalPoints = realLogs.reduce((acc, curr) => acc + curr.points, 0);
+            if (!initialData || (initialData.points === 0 && realLogs.length > 0)) {
+                const totalPoints = realLogs.reduce((acc, curr) => acc + (curr.points || 0), 0);
                 baseData.points = totalPoints;
             }
 

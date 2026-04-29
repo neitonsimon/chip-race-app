@@ -200,8 +200,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 supabase.from('profiles_public').select('id, numeric_id, name, avatar_url, city, is_vip, vip_status, vip_expires_at, social, bio, level, current_exp, next_level_exp, gallery, play_styles, is_verified, total_pending_debt, suprema_nickname, suprema_user_id'),
                 supabase.from('user_badges').select('id, user_id, badge_template_id, title, description, icon, color, awarded_at, badge_templates(id, title, description, icon, color, rarity, is_legendary)'),
                 supabase.from('experience_levels').select('id, level, min_exp, max_exp, title, perks').order('level', { ascending: true }),
-                supabase.from('daily_rewards').select('id, day, type, amount, description, icon').order('day', { ascending: true }),
-                supabase.from('system_message_templates').select('id, subject, content, category, sender, is_active, distribution_logic, updated_at')
+                supabase.from('daily_rewards').select('day, reward_type, reward_value, reward_label').order('day', { ascending: true }),
+                supabase.from('system_message_templates').select('id, subject, content, category, sender, is_active, updated_at')
             ]);
 
             if (rankingsData) {
@@ -689,7 +689,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     const mappedSchemaId = (ev.rankingType && ranking.scoringSchemaMap) ? ranking.scoringSchemaMap[ev.rankingType] : ev.scoringSchemaId;
                     ev.results.forEach((r: any) => {
                         const profile = (r.userId ? metadataByIdMap.get(r.userId) : null) || metadataMap.get(r.name.toLowerCase().trim());
-                        const playerKey = r.userId || r.name;
+                        const playerKey = r.userId || r.name.trim();
                         if (!playerMap.has(playerKey)) {
                             playerMap.set(playerKey, {
                                 id: profile?.id || r.userId, numericId: profile?.numericId, rank: 0,
@@ -1217,10 +1217,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const handleNavigateToPlayerByNameInternal = (name: string) => {
         const uniquePlayers = getAllUniquePlayers();
-        let player = uniquePlayers.find(p => 
-            p.name.toLowerCase().replace(/\s+/g, '-') === name.toLowerCase() || 
-            p.name.toLowerCase() === name.toLowerCase().replace(/-/g, ' ')
-        );
+        let player = uniquePlayers.find(p => {
+            const cleanName = p.name.toLowerCase().trim();
+            const targetName = name.toLowerCase().trim();
+            return cleanName.replace(/\s+/g, '-') === targetName || 
+                   cleanName === targetName.replace(/-/g, ' ');
+        });
 
         // Fallback: Se não encontrou nos perfis mas o nome bate com o usuário logado
         if (!player && isLoggedIn && currentUser.name) {
