@@ -479,7 +479,7 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({
                         onClick={() => setActiveSubTab('tournaments')}
                         className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeSubTab === 'tournaments' ? 'bg-white dark:bg-white/10 text-primary shadow-sm' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-white/5'}`}
                     >
-                        Torneios Físicos
+                        Bônus & Reservas (Live)
                     </button>
                     <button
                         onClick={() => setActiveSubTab('credits')}
@@ -521,8 +521,8 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({
                                 <span className="material-icons-outlined">add_task</span>
                             </div>
                             <div>
-                                <h3 className="text-lg font-black text-white uppercase tracking-tighter">Novo Lançamento de Reserva</h3>
-                                <p className="text-xs text-gray-400">Lançar reserva manualmente para jogadores presenciais ou captados via terceiros.</p>
+                                <h3 className="text-lg font-black text-white uppercase tracking-tighter">Lançamento de Bônus Manual</h3>
+                                <p className="text-xs text-gray-400">Garantir bônus manualmente para jogadores presenciais ou captados via terceiros.</p>
                             </div>
                         </div>
 
@@ -632,7 +632,7 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({
                                     ) : (
                                         <>
                                             <span className="material-icons-outlined text-sm">rocket_launch</span>
-                                            Lançar Reserva
+                                            Garantir Bônus
                                         </>
                                     )}
                                 </button>
@@ -788,8 +788,8 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({
                                 <tr className="bg-gray-50 dark:bg-white/[0.02] border-b border-gray-200 dark:border-white/10">
                                     <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Jogador</th>
                                     <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Evento</th>
-                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Data da Reserva</th>
-                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Stack / Fichas</th>
+                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Solicitado em</th>
+                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Bônus & Vantagens</th>
                                     <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
                                     <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Ações</th>
                                 </tr>
@@ -847,8 +847,16 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <div className="flex items-center gap-2 mt-0.5">
-                                                            {res.profiles?.numeric_id && <span className="text-xs text-gray-500">ID: {res.profiles.numeric_id}</span>}
+                                                        <div className="flex flex-col gap-1 mt-1">
+                                                            {res.profiles?.numeric_id && <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">ID App: {res.profiles.numeric_id}</span>}
+                                                            {res.metadata?.player_note && (
+                                                                <div className="flex items-center gap-1.5 px-2 py-1 bg-green-500/10 border border-green-500/20 rounded-md w-fit">
+                                                                    <span className="material-icons-outlined text-[12px] text-green-500">account_circle</span>
+                                                                    <span className="text-[10px] text-green-600 dark:text-green-400 font-black uppercase tracking-widest">
+                                                                        Nick: {res.metadata.player_note}
+                                                                    </span>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -904,7 +912,10 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({
                                                     if (bonusTotal === 0) return <div className="text-gray-500 text-xs italic">Sem bônus</div>;
 
                                                     return (
-                                                        <div className="flex flex-col items-center justify-center p-2 bg-yellow-500/5 rounded-lg min-w-[120px] border border-yellow-500/10 shadow-sm">
+                                                        <div className="flex flex-col items-center justify-center p-2 bg-yellow-500/5 rounded-lg min-w-[120px] border border-yellow-500/10 shadow-sm relative overflow-hidden group/bonus">
+                                                            {res.metadata?.source === 'app_bonus_claim' && (
+                                                                <div className="absolute top-0 right-0 px-1 bg-yellow-500 text-black text-[7px] font-black uppercase tracking-tighter">APP</div>
+                                                            )}
                                                             <div className="text-[15px] font-black text-yellow-500 mb-1">
                                                                 +{bonusTotal.toLocaleString('pt-BR')}
                                                                 <span className="text-[10px] ml-1 opacity-80 uppercase tracking-tighter">Bônus</span>
@@ -913,6 +924,11 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({
                                                                 {bonusBreakdown.map((b, i) => (
                                                                     <span key={i} className="text-[9px] text-gray-400 font-bold uppercase tracking-tight leading-none">{b}</span>
                                                                 ))}
+                                                                {res.events?.time_chip_discount_brl && (
+                                                                    <span className="text-[9px] text-green-500 font-black uppercase tracking-tight leading-none mt-1">
+                                                                        Desc. R$ {res.events.time_chip_discount_brl}
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     );

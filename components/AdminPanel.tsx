@@ -778,7 +778,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     { id: 'badges', icon: 'badge', label: 'Medalhas' },
                     { id: 'debts', icon: 'receipt_long', label: 'Crédito' },
                     { id: 'communications', icon: 'campaign', label: 'Comunic.' },
-                    { id: 'reservations', icon: 'support_agent', label: 'Atendimento' },
+                    { id: 'reservations', icon: 'support_agent', label: 'Bônus/Res.' },
                     { id: 'events', icon: 'celebration', label: 'Eventos' },
                     { id: 'settings', icon: 'settings', label: 'Site' }
                 ].filter(t => currentUser?.role !== 'staff' || t.id === 'operational').map(t => (
@@ -800,7 +800,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         { id: 'badges', icon: 'badge', label: 'Medalhas' },
                         { id: 'debts', icon: 'receipt_long', label: 'Crédito' },
                         { id: 'communications', icon: 'campaign', label: 'Comunic.' },
-                        { id: 'reservations', icon: 'support_agent', label: 'Atend.' },
+                        { id: 'reservations', icon: 'support_agent', label: 'Bônus/Res.' },
                         { id: 'events', icon: 'celebration', label: 'Eventos' },
                         { id: 'settings', icon: 'settings', label: 'Site' }
                     ].filter(t => currentUser?.role !== 'staff' || t.id === 'operational').map(t => (
