@@ -180,6 +180,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
     const [showReservationPlayers, setShowReservationPlayers] = useState(false);
     const [formulaType, setFormulaType] = useState<RankingFormula>('weekly');
     const [totalPlayers, setTotalPlayers] = useState<number>(0);
+    const [bonusNote, setBonusNote] = useState('');
     const [buyinValue, setBuyinValue] = useState<number>(0);
     // Novos States de Estatísticas
     const [rebuysCount, setRebuysCount] = useState<number>(0);
@@ -679,7 +680,11 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                 .insert({
                     event_id: reservingEvent.id,
                     user_id: currentUser.id,
-                    status: 'reserved'
+                    status: 'reserved',
+                    metadata: { 
+                        player_note: bonusNote,
+                        source: 'app_bonus_claim'
+                    }
                 });
 
             if (error) {
@@ -690,7 +695,8 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                     alert("Não foi possível reservar seu assento no momento.");
                 }
             } else {
-                alert("Assento reservado com sucesso! A organização foi notificada.");
+                alert("Bônus garantido com sucesso! A organização foi notificada.");
+                setBonusNote('');
                 if (onRefreshData) await onRefreshData();
             }
         } catch (err) {
@@ -1381,8 +1387,8 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
                                         </div>
 
-                                        {/* Botão de Reservar (Para todos os usuários em eventos abertos - torneios e cash games presenciais) */}
-                                        {event.status !== 'closed' && event.gameMode === 'tournament' && event.type !== 'online' && (
+                                        {/* Botão de Garantir Bônus (Para todos os usuários em eventos abertos) */}
+                                        {event.status !== 'closed' && event.gameMode === 'tournament' && (
                                             <button
                                                 onClick={(e) => { 
                                                     e.stopPropagation(); 
@@ -1394,8 +1400,8 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                         : "bg-green-600/20 text-green-500 border border-green-600/50 hover:bg-green-600 hover:text-white"
                                                 } flex items-center gap-2 md:w-auto justify-center`}
                                             >
-                                                <span className="material-icons-outlined text-sm">{userReservations.includes(event.id) ? "visibility" : "event_seat"}</span>
-                                                {userReservations.includes(event.id) ? "Ver Reserva" : "Reservar Assento"}
+                                                <span className="material-icons-outlined text-sm">{userReservations.includes(event.id) ? "redeem" : "redeem"}</span>
+                                                {userReservations.includes(event.id) ? "Ver Meu Bônus" : "Garantir Bônus"}
                                             </button>
                                         )}
 
@@ -2717,16 +2723,16 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                     <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-[60] backdrop-blur-sm overflow-y-auto">
                         <div className="bg-[#1c1c1c] border border-green-500/30 rounded-2xl w-full max-w-lg shadow-2xl animate-fade-in relative my-auto max-h-[90vh] overflow-y-auto custom-scrollbar">
                             <button
-                                onClick={() => setReservingEvent(null)}
+                                onClick={() => { setReservingEvent(null); setBonusNote(''); }}
                                 className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
                             >
                                 <span className="material-icons-outlined">close</span>
                             </button>
 
                             <div className="p-6 md:p-8">
-                                <div className={`flex items-center gap-3 ${userReservations.includes(reservingEvent.id) ? 'text-blue-500' : 'text-green-500'} mb-6`}>
-                                    <span className="material-icons-outlined text-4xl">{userReservations.includes(reservingEvent.id) ? 'info' : 'event_seat'}</span>
-                                    <h2 className="text-2xl font-bold uppercase tracking-wider">{userReservations.includes(reservingEvent.id) ? 'Informações da Reserva' : 'Confirmar Reserva'}</h2>
+                                <div className={`flex items-center gap-3 ${userReservations.includes(reservingEvent.id) ? 'text-blue-500' : 'text-green-500'} mb-4`}>
+                                    <span className="material-icons-outlined text-4xl">{userReservations.includes(reservingEvent.id) ? 'redeem' : 'redeem'}</span>
+                                    <h2 className="text-2xl font-bold uppercase tracking-wider">{userReservations.includes(reservingEvent.id) ? 'Seu Bônus Garantido' : 'Garantir Bônus'}</h2>
                                 </div>
 
                                 <div className="space-y-6 text-gray-300">
@@ -2769,44 +2775,76 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                         </div>
                                     )}
 
-                                    <div>
-                                        <h3 className="text-lg font-bold text-white mb-2 mt-6">Seus Compromissos:</h3>
-                                        <ul className="list-disc pl-5 space-y-2 text-sm">
-                                            <li>Você se compromete em comparecer ao evento <strong>{reservingEvent.title}</strong> na data <strong>{reservingEvent.date.split('-').reverse().join('/')}</strong>, Ã s <strong>{reservingEvent.time}</strong>.</li>
-                                            <li>Nós nos comprometemos a garantir que sempre haverá <strong>um(1) assento disponível</strong> para você iniciar este torneio.</li>
-                                            <li>A reserva é um acordo de cavalheiros. O cancelamento sem aviso prévio nos lesa profundamente e pode afetar futuras reservas.</li>
-                                            <li>O pagamento pode ser realizado presencialmente na hora ou debitado via App Poker caso você possua créditos Online.</li>
-                                        </ul>
+                                    {/* Destaque do Bônus */}
+                                    <div className="bg-green-500/20 border-2 border-green-500/50 p-5 rounded-2xl shadow-[0_0_15px_rgba(34,197,94,0.2)]">
+                                        <h3 className="text-xl font-black text-green-400 mb-3 flex items-center gap-2">
+                                            <span className="material-icons-outlined text-2xl">stars</span> 
+                                            BÔNUS EXCLUSIVO APP:
+                                        </h3>
+                                        
+                                        <div className="space-y-3 mb-4">
+                                            {reservingEvent.timeChipChips && (
+                                                <div className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/10">
+                                                    <span className="material-icons-outlined text-green-500">add_circle</span>
+                                                    <span className="text-lg font-bold text-white">+{reservingEvent.timeChipChips} Fichas no Buy-In</span>
+                                                </div>
+                                            )}
+                                            {reservingEvent.timeChipAddonChips && (
+                                                <div className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/10">
+                                                    <span className="material-icons-outlined text-green-500">add_circle</span>
+                                                    <span className="text-lg font-bold text-white">+{reservingEvent.timeChipAddonChips} Fichas no Add-On</span>
+                                                </div>
+                                            )}
+                                            {reservingEvent.timeChipDiscountBrl && (
+                                                <div className="flex items-center gap-3 bg-yellow-500/20 p-3 rounded-xl border border-yellow-500/30">
+                                                    <span className="material-icons-outlined text-yellow-500">confirmation_number</span>
+                                                    <span className="text-lg font-bold text-yellow-500">{String(reservingEvent.timeChipDiscountBrl).toLowerCase() === 'free' ? 'STAFF FREE (0800)' : `R$ ${reservingEvent.timeChipDiscountBrl} DE DESCONTO`}</span>
+                                                </div>
+                                            )}
+                                            {!reservingEvent.timeChipChips && !reservingEvent.timeChipAddonChips && !reservingEvent.timeChipDiscountBrl && (
+                                                <div className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/10">
+                                                    <span className="material-icons-outlined text-blue-400">info</span>
+                                                    <span className="text-lg font-bold text-white">Bônus a definir na inscrição</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <p className="text-xs font-medium text-green-300 italic leading-relaxed">
+                                            "Garanta o bônus pelo nosso site e se inscreva no torneio para adquirir um add on free."
+                                        </p>
                                     </div>
 
-                                    {(reservingEvent.timeChipChips || reservingEvent.timeChipAddonChips || reservingEvent.timeChipDiscountBrl) && (
-                                        <div className="bg-green-500/10 border border-green-500/30 p-4 rounded-xl">
-                                            <h3 className="text-lg font-bold text-green-400 mb-2 flex items-center gap-2">
-                                                <span className="material-icons-outlined">redeem</span> 
-                                                Bônus de Reserva do App:
-                                            </h3>
-                                            <ul className="space-y-1 text-sm font-semibold">
-                                                {reservingEvent.timeChipChips && (
-                                                    <li className="flex items-center gap-2 text-white">
-                                                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span> 
-                                                        +{reservingEvent.timeChipChips} Fichas extras (bônus no Buy-In).
-                                                    </li>
-                                                )}
-                                                {reservingEvent.timeChipAddonChips && (
-                                                    <li className="flex items-center gap-2 text-white">
-                                                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span> 
-                                                        +{reservingEvent.timeChipAddonChips} Fichas extras (bônus no Add-On).
-                                                    </li>
-                                                )}
-                                                {reservingEvent.timeChipDiscountBrl && (
-                                                    <li className="flex items-center gap-2 text-yellow-500 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]">
-                                                        <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full"></span> 
-                                                        Você receberá {String(reservingEvent.timeChipDiscountBrl).toLowerCase() === 'free' ? 'Staff Free' : `Desconto de R$ ${reservingEvent.timeChipDiscountBrl}`} ao iniciar a compra!
-                                                    </li>
-                                                )}
-                                            </ul>
+                                    {!userReservations.includes(reservingEvent.id) && (
+                                        <div className="bg-black/20 p-4 rounded-xl border border-white/5">
+                                            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">Seu ID ou Nick no App/Site (Opcional):</label>
+                                            <input 
+                                                type="text" 
+                                                value={bonusNote}
+                                                onChange={(e) => setBonusNote(e.target.value)}
+                                                placeholder="Ex: Vithor-Costa"
+                                                className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white text-sm focus:outline-none focus:border-green-500/50 transition-colors"
+                                            />
+                                            <p className="text-[9px] text-gray-500 mt-2">Este campo é apenas informativo para a organização.</p>
                                         </div>
                                     )}
+
+                                    <div className="bg-black/30 p-4 rounded-xl border border-white/5">
+                                        <h3 className="text-xs font-black text-gray-400 mb-3 uppercase tracking-widest">Compromisso:</h3>
+                                        <ul className="space-y-2 text-xs font-medium text-gray-400">
+                                            <li className="flex items-center gap-2">
+                                                <span className="w-1 h-1 bg-gray-600 rounded-full"></span>
+                                                Presença no evento no horário marcado.
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                <span className="w-1 h-1 bg-gray-600 rounded-full"></span>
+                                                Acordo de cavalheiros: avise se não puder vir.
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                <span className="w-1 h-1 bg-gray-600 rounded-full"></span>
+                                                Pagamento presencial ou via saldo App Poker.
+                                            </li>
+                                        </ul>
+                                    </div>
 
                                     <div className="flex flex-col sm:flex-row gap-3 pt-6">
                                         {userReservations.includes(reservingEvent.id) ? (
@@ -2837,7 +2875,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                             >
                                                 {!!reservingEvent.maxCapacity && currentReservationsCount >= Number(reservingEvent.maxCapacity) 
                                                     ? 'LIMITE DE VAGAS ATINGIDO (LOTADO)' 
-                                                    : 'EU CONCORDO E QUERO RESERVAR'
+                                                    : 'EU CONCORDO E QUERO MEU BÔNUS'
                                                 }
                                             </button>
                                         )}
