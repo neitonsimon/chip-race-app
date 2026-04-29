@@ -339,7 +339,11 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
     };
 
     const isChipField = (field: string) => {
-        const chipFields = ['stack', 'rebuyChips', 'doubleRebuyChips', 'addonChips', 'doubleAddonChips', 'staffBonusChips', 'timeChipChips', 'timeChipAddonChips'];
+        const chipFields = [
+            'stack', 'rebuyChips', 'doubleRebuyChips', 'addonChips', 'doubleAddonChips', 
+            'staffBonusChips', 'timeChipChips', 'timeChipAddonChips',
+            'bonus1_stack', 'bonus1_addon', 'bonus2_stack', 'bonus2_addon', 'bonus3_stack', 'bonus3_addon'
+        ];
         return chipFields.includes(field);
     };
 
@@ -1581,6 +1585,47 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                                 </div>
                                                             </div>
                                                         )}
+
+                                                        {/* Novos Bônus Tiers (Exibe todos no Flyer) */}
+                                                        {[1, 2, 3].map(tier => {
+                                                            const condition = viewEvent[`bonus${tier}_condition` as keyof Event] as string;
+                                                            const stack = viewEvent[`bonus${tier}_stack` as keyof Event];
+                                                            const addon = viewEvent[`bonus${tier}_addon` as keyof Event];
+                                                            const extra = viewEvent[`bonus${tier}_extra` as keyof Event];
+
+                                                            if (!condition && !stack && !addon && !extra) return null;
+
+                                                            return (
+                                                                <div key={tier} className="bg-white/[0.02] p-3 rounded-xl border border-white/5 flex flex-col gap-2 hover:bg-white/[0.05] transition-all">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className="w-5 h-5 rounded-full bg-yellow-500/20 border border-yellow-500/40 flex items-center justify-center">
+                                                                            <span className="text-[9px] font-black text-yellow-500">{tier}</span>
+                                                                        </div>
+                                                                        <span className="text-[10px] text-gray-300 font-bold uppercase tracking-wider">{condition || 'Bônus Extra'}</span>
+                                                                    </div>
+                                                                    <div className="grid grid-cols-3 gap-2">
+                                                                        {stack && (
+                                                                            <div className="text-right">
+                                                                                <span className="text-[8px] text-gray-500 uppercase font-bold block">Stack</span>
+                                                                                <span className="text-xs font-bold text-white">+{stack}</span>
+                                                                            </div>
+                                                                        )}
+                                                                        {addon && (
+                                                                            <div className="text-right border-l border-white/5 pl-2">
+                                                                                <span className="text-[8px] text-gray-500 uppercase font-bold block">Add-on</span>
+                                                                                <span className="text-xs font-bold text-white">+{addon}</span>
+                                                                            </div>
+                                                                        )}
+                                                                        {extra && (
+                                                                            <div className="text-right border-l border-white/5 pl-2 col-span-1">
+                                                                                <span className="text-[8px] text-gray-500 uppercase font-bold block">Extra</span>
+                                                                                <span className="text-xs font-bold text-yellow-500 truncate">{extra}</span>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
                                                     </>
 
                                                 )}
@@ -2585,24 +2630,71 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                         <input type="text" placeholder="Fichas" value={editingEvent.staffBonusChips || ''} onChange={(e) => handleInputChange('staffBonusChips', e.target.value)} className="w-full bg-black/30 border border-white/10 rounded p-1 text-sm text-white" />
                                                     </div>
                                                 </div>
-                                                <div className="p-2 border border-white/5 rounded">
-                                                    <div className="text-xs text-green-400 mb-2 font-bold uppercase tracking-widest">Bônus de Reserva</div>
-                                                    <div className="flex flex-col gap-2">
-                                                        <input type="text" placeholder="Gatilho/Condição (ex: Reserva App/Site)" value={editingEvent.timeChipValue || ''} onChange={(e) => handleInputChange('timeChipValue', e.target.value)} className="w-full bg-black/30 border border-white/10 rounded p-1 text-sm text-white" />
-                                                        <div className="grid grid-cols-3 gap-2">
-                                                            <div>
-                                                                <span className="text-[10px] text-gray-500 mb-1 block">Buy-in Extra</span>
-                                                                <input type="text" placeholder="Fichas" value={editingEvent.timeChipChips || ''} onChange={(e) => handleInputChange('timeChipChips', e.target.value)} className="w-full bg-black/30 border border-white/10 rounded p-1 text-[11px] text-white" />
-                                                            </div>
-                                                            <div>
-                                                                <span className="text-[10px] text-gray-500 mb-1 block">Add-on Extra</span>
-                                                                <input type="text" placeholder="Fichas" value={editingEvent.timeChipAddonChips || ''} onChange={(e) => handleInputChange('timeChipAddonChips', e.target.value)} className="w-full bg-black/30 border border-white/10 rounded p-1 text-[11px] text-white" />
-                                                            </div>
-                                                            <div>
-                                                                <span className="text-[10px] text-gray-500 mb-1 block">Desconto (R$)</span>
-                                                                <input type="text" placeholder="Ex: 10, free" value={editingEvent.timeChipDiscountBrl || ''} onChange={(e) => handleInputChange('timeChipDiscountBrl', e.target.value)} className="w-full bg-black/30 border border-white/10 rounded p-1 text-[11px] text-green-400" />
+                                                <div className="p-2 border border-white/5 rounded col-span-2">
+                                                    <div className="text-xs text-green-400 mb-3 font-black uppercase tracking-[0.2em]">Configuração de Bônus (Até 3 Tiers)</div>
+                                                    
+                                                    <div className="space-y-4">
+                                                        {/* Bonus 1 */}
+                                                        <div className="bg-black/40 p-3 rounded-lg border border-white/5">
+                                                            <div className="text-[10px] text-yellow-400 font-bold mb-2 uppercase tracking-widest">BÔNUS 1: GARANTIR PELO SITE (LISTA NO ADM)</div>
+                                                            <input 
+                                                                type="text" 
+                                                                list="bonus-conditions-list"
+                                                                placeholder="Condição (ex: Garantir bônus (confirma pelo site))" 
+                                                                value={editingEvent.bonus1_condition || ''} 
+                                                                onChange={(e) => handleInputChange('bonus1_condition', e.target.value)} 
+                                                                className="w-full bg-black/30 border border-white/10 rounded p-1.5 text-sm text-white mb-2" 
+                                                            />
+                                                            <div className="grid grid-cols-3 gap-2">
+                                                                <input type="text" placeholder="Stack (fichas)" value={editingEvent.bonus1_stack || ''} onChange={(e) => handleInputChange('bonus1_stack', e.target.value)} className="w-full bg-black/30 border border-white/10 rounded p-1 text-[11px] text-white" />
+                                                                <input type="text" placeholder="Add-on (fichas)" value={editingEvent.bonus1_addon || ''} onChange={(e) => handleInputChange('bonus1_addon', e.target.value)} className="w-full bg-black/30 border border-white/10 rounded p-1 text-[11px] text-white" />
+                                                                <input type="text" placeholder="Extra (texto)" value={editingEvent.bonus1_extra || ''} onChange={(e) => handleInputChange('bonus1_extra', e.target.value)} className="w-full bg-black/30 border border-white/10 rounded p-1 text-[11px] text-white" />
                                                             </div>
                                                         </div>
+
+                                                        {/* Bonus 2 */}
+                                                        <div className="bg-black/40 p-3 rounded-lg border border-white/5">
+                                                            <div className="text-[10px] text-gray-400 font-bold mb-2 uppercase tracking-widest">BÔNUS 2 (EXTRA)</div>
+                                                            <input 
+                                                                type="text" 
+                                                                list="bonus-conditions-list"
+                                                                placeholder="Ex: Registro até o 2º nível" 
+                                                                value={editingEvent.bonus2_condition || ''} 
+                                                                onChange={(e) => handleInputChange('bonus2_condition', e.target.value)} 
+                                                                className="w-full bg-black/30 border border-white/10 rounded p-1.5 text-sm text-white mb-2" 
+                                                            />
+                                                            <div className="grid grid-cols-3 gap-2">
+                                                                <input type="text" placeholder="Stack (fichas)" value={editingEvent.bonus2_stack || ''} onChange={(e) => handleInputChange('bonus2_stack', e.target.value)} className="w-full bg-black/30 border border-white/10 rounded p-1 text-[11px] text-white" />
+                                                                <input type="text" placeholder="Add-on (fichas)" value={editingEvent.bonus2_addon || ''} onChange={(e) => handleInputChange('bonus2_addon', e.target.value)} className="w-full bg-black/30 border border-white/10 rounded p-1 text-[11px] text-white" />
+                                                                <input type="text" placeholder="Extra (texto)" value={editingEvent.bonus2_extra || ''} onChange={(e) => handleInputChange('bonus2_extra', e.target.value)} className="w-full bg-black/30 border border-white/10 rounded p-1 text-[11px] text-white" />
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Bonus 3 */}
+                                                        <div className="bg-black/40 p-3 rounded-lg border border-white/5">
+                                                            <div className="text-[10px] text-gray-400 font-bold mb-2 uppercase tracking-widest">BÔNUS 3 (EXTRA)</div>
+                                                            <input 
+                                                                type="text" 
+                                                                list="bonus-conditions-list"
+                                                                placeholder="Ex: Medalha PIONEIRO" 
+                                                                value={editingEvent.bonus3_condition || ''} 
+                                                                onChange={(e) => handleInputChange('bonus3_condition', e.target.value)} 
+                                                                className="w-full bg-black/30 border border-white/10 rounded p-1.5 text-sm text-white mb-2" 
+                                                            />
+                                                            <div className="grid grid-cols-3 gap-2">
+                                                                <input type="text" placeholder="Stack (fichas)" value={editingEvent.bonus3_stack || ''} onChange={(e) => handleInputChange('bonus3_stack', e.target.value)} className="w-full bg-black/30 border border-white/10 rounded p-1 text-[11px] text-white" />
+                                                                <input type="text" placeholder="Add-on (fichas)" value={editingEvent.bonus3_addon || ''} onChange={(e) => handleInputChange('bonus3_addon', e.target.value)} className="w-full bg-black/30 border border-white/10 rounded p-1 text-[11px] text-white" />
+                                                                <input type="text" placeholder="Extra (texto)" value={editingEvent.bonus3_extra || ''} onChange={(e) => handleInputChange('bonus3_extra', e.target.value)} className="w-full bg-black/30 border border-white/10 rounded p-1 text-[11px] text-white" />
+                                                            </div>
+                                                        </div>
+
+                                                        <datalist id="bonus-conditions-list">
+                                                            <option value="Garantir bônus (confirma pelo site)" />
+                                                            <option value="Registro até o 2º nível" />
+                                                            <option value="Medalha PIONEIRO" />
+                                                            <option value="Time-chip (Início do torneio)" />
+                                                            <option value="Bônus de Inscrição Antecipada" />
+                                                        </datalist>
                                                     </div>
                                                 </div>
                                             </div>
@@ -2780,55 +2872,99 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                         </h3>
                                         
                                         <div className="space-y-3 mb-4">
-                                            {reservingEvent.timeChipChips && (
-                                                <div className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/10">
-                                                    <span className="material-icons-outlined text-green-500">add_circle</span>
-                                                    <span className="text-lg font-bold text-white">+{reservingEvent.timeChipChips} Fichas no Buy-In</span>
-                                                </div>
-                                            )}
-                                            {reservingEvent.timeChipAddonChips && (
-                                                <div className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/10">
-                                                    <span className="material-icons-outlined text-green-500">add_circle</span>
-                                                    <span className="text-lg font-bold text-white">+{reservingEvent.timeChipAddonChips} Fichas no Add-On</span>
-                                                </div>
-                                            )}
-                                            {reservingEvent.timeChipDiscountBrl && (
-                                                <div className="flex items-center gap-3 bg-yellow-500/20 p-3 rounded-xl border border-yellow-500/30">
-                                                    <span className="material-icons-outlined text-yellow-500">confirmation_number</span>
-                                                    <span className="text-lg font-bold text-yellow-500">{String(reservingEvent.timeChipDiscountBrl).toLowerCase() === 'free' ? 'STAFF FREE (0800)' : `R$ ${reservingEvent.timeChipDiscountBrl} DE DESCONTO`}</span>
-                                                </div>
-                                            )}
-                                            {!reservingEvent.timeChipChips && !reservingEvent.timeChipAddonChips && !reservingEvent.timeChipDiscountBrl && (
-                                                <div className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/10">
-                                                    <span className="material-icons-outlined text-blue-400">info</span>
-                                                    <span className="text-lg font-bold text-white">Bônus a definir na inscrição</span>
+                                            {/* Render Bonus Tiers (Only claimable via site) */}
+                                            {[1, 2, 3].map(tier => {
+                                                const condition = (reservingEvent[`bonus${tier}_condition` as keyof Event] as string) || '';
+                                                const stack = reservingEvent[`bonus${tier}_stack` as keyof Event];
+                                                const addon = reservingEvent[`bonus${tier}_addon` as keyof Event];
+                                                const extra = reservingEvent[`bonus${tier}_extra` as keyof Event];
+
+                                                const isClaimable = condition.toLowerCase().includes('garantir bonus') || 
+                                                                  condition.toLowerCase().includes('confirma pelo site') ||
+                                                                  condition.toLowerCase().includes('site');
+
+                                                if (!isClaimable) return null;
+                                                if (!condition && !stack && !addon && !extra) return null;
+
+                                                return (
+                                                    <div key={tier} className="bg-green-500/10 p-4 rounded-2xl border border-green-500/20 mb-3 last:mb-0 shadow-[0_4px_15px_rgba(34,197,94,0.1)]">
+                                                        <div className="flex items-start gap-3">
+                                                            <div className="w-8 h-8 rounded-full bg-green-500 border border-green-500 flex items-center justify-center shrink-0">
+                                                                <span className="text-black font-black text-xs">{tier}</span>
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <p className="text-[10px] text-green-500 font-black uppercase tracking-widest mb-1">CONDIÇÃO ATENDIDA</p>
+                                                                <p className="text-sm font-bold text-white mb-3">{condition}</p>
+                                                                
+                                                                <div className="grid grid-cols-3 gap-2">
+                                                                    {stack && (
+                                                                        <div className="bg-black/60 p-2 rounded-xl border border-white/10">
+                                                                            <span className="text-[9px] text-gray-500 block uppercase font-bold mb-0.5">Stack</span>
+                                                                            <span className="text-xs font-bold text-white">+{stack}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {addon && (
+                                                                        <div className="bg-black/60 p-2 rounded-xl border border-white/10">
+                                                                            <span className="text-[9px] text-gray-500 block uppercase font-bold mb-0.5">Add-on</span>
+                                                                            <span className="text-xs font-bold text-white">+{addon}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {extra && (
+                                                                        <div className="bg-black/60 p-2 rounded-xl border border-white/10">
+                                                                            <span className="text-[9px] text-gray-500 block uppercase font-bold mb-0.5">Extra</span>
+                                                                            <span className="text-xs font-bold text-yellow-500">{extra}</span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+
+                                            {/* FALLBACK: Se não houver nenhum tier com a palavra 'site', mostramos a mensagem padrão solicitada */}
+                                            {!(reservingEvent.bonus1_condition?.toLowerCase().includes('site') || 
+                                               reservingEvent.bonus1_condition?.toLowerCase().includes('garantir bonus') ||
+                                               reservingEvent.bonus2_condition?.toLowerCase().includes('site') || 
+                                               reservingEvent.bonus2_condition?.toLowerCase().includes('garantir bonus') ||
+                                               reservingEvent.bonus3_condition?.toLowerCase().includes('site') ||
+                                               reservingEvent.bonus3_condition?.toLowerCase().includes('garantir bonus')) && (
+                                                <div className="bg-white/5 p-4 rounded-2xl border border-white/10 text-center">
+                                                    <p className="text-gray-300 text-sm font-bold mb-2">Garanta seu benefício clicando no botão abaixo.</p>
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        {reservingEvent.timeChipChips && (
+                                                            <div className="bg-black/40 p-2 rounded-xl border border-white/5">
+                                                                <span className="text-[9px] text-gray-500 block uppercase font-bold mb-0.5">Stack Extra</span>
+                                                                <span className="text-xs font-bold text-white">+{reservingEvent.timeChipChips}</span>
+                                                            </div>
+                                                        )}
+                                                        {reservingEvent.timeChipAddonChips && (
+                                                            <div className="bg-black/40 p-2 rounded-xl border border-white/5">
+                                                                <span className="text-[9px] text-gray-500 block uppercase font-bold mb-0.5">Add-on Extra</span>
+                                                                <span className="text-xs font-bold text-white">+{reservingEvent.timeChipAddonChips}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
 
-                                        <p className="text-xs font-medium text-green-300 italic leading-relaxed">
-                                            "Garanta o bônus pelo nosso site e se inscreva no torneio para adquirir um add on free."
-                                        </p>
+                                        {reservingEvent.type === 'online' && (
+                                            <div className="mt-4 p-4 bg-green-500/10 rounded-xl border border-green-500/20 text-center">
+                                                <p className="text-xs font-black text-green-300 uppercase leading-relaxed tracking-wider">
+                                                    "Garanta o bônus pelo nosso site e se inscreva no torneio para adquirir um add on free."
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
 
 
 
                                     <div className="bg-black/30 p-4 rounded-xl border border-white/5">
-                                        <h3 className="text-xs font-black text-gray-400 mb-3 uppercase tracking-widest">Compromisso:</h3>
-                                        <ul className="space-y-2 text-xs font-medium text-gray-400">
-                                            <li className="flex items-center gap-2">
-                                                <span className="w-1 h-1 bg-gray-600 rounded-full"></span>
-                                                Presença no evento no horário marcado.
-                                            </li>
-                                            <li className="flex items-center gap-2">
-                                                <span className="w-1 h-1 bg-gray-600 rounded-full"></span>
-                                                Acordo de cavalheiros: avise se não puder vir.
-                                            </li>
-                                            <li className="flex items-center gap-2">
-                                                <span className="w-1 h-1 bg-gray-600 rounded-full"></span>
-                                                Pagamento presencial ou via saldo App Poker.
-                                            </li>
-                                        </ul>
+                                        <p className="text-[10px] text-gray-500 font-bold leading-relaxed">
+                                            Ao confirmar, você garante seu bônus no sistema. <br/>
+                                            Compareça no horário para validar o benefício presencialmente.
+                                        </p>
                                     </div>
 
                                     <div className="flex flex-col sm:flex-row gap-3 pt-6">

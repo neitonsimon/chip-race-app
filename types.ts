@@ -142,6 +142,19 @@ export interface Event {
   isFinalDay?: boolean;
   finalEventId?: string; // Link starting day to final day
   stackAggregation?: 'sum' | 'max'; // How to combine chips if user qualifies multiple times
+  // Bonus Tiers Configuration
+  bonus1_condition?: string;
+  bonus1_stack?: string;
+  bonus1_addon?: string;
+  bonus1_extra?: string;
+  bonus2_condition?: string;
+  bonus2_stack?: string;
+  bonus2_addon?: string;
+  bonus2_extra?: string;
+  bonus3_condition?: string;
+  bonus3_stack?: string;
+  bonus3_addon?: string;
+  bonus3_extra?: string;
 }
 
 export interface RankingPlayer {

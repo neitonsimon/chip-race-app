@@ -306,13 +306,26 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({
     };
 
     const filteredReservations = reservations.filter(res => {
+        // Event Filter
         if (eventFilter !== 'all' && res.event_id !== eventFilter) return false;
 
+        // Status Filter
         const isClosed = res.events?.status === 'closed';
         if (statusFilter === 'upcoming' && isClosed) return false;
         if (statusFilter === 'completed' && !isClosed) return false;
 
-        return true;
+        // NEW: Filter only 'site' related claims OR app-originated claims
+        const isAppClaim = res.metadata?.source === 'app_bonus_claim';
+        const hasSiteBonus = [1, 2, 3].some(tier => {
+            const condition = res.events?.[`bonus${tier}_condition` as keyof Event] as string;
+            return condition?.toLowerCase().includes('site') || condition?.toLowerCase().includes('garantir bonus');
+        });
+
+        // Also allow legacy/manual ones if explicitly marked with site compensation in metadata
+        const isSiteCompensation = !!res.metadata?.extra_10k_compensation;
+        const isManualLaunch = res.metadata?.manual_bonus_input !== undefined;
+
+        return isAppClaim || hasSiteBonus || isSiteCompensation || isManualLaunch;
     });
 
     // --- CREDITS LOGIC ---
@@ -595,7 +608,7 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({
                                     <option value="">Escolha um evento...</option>
                                     {events.filter(ev => 
                                         ev.status !== 'closed' && 
-                                        ev.type === 'live' && 
+                                        (ev.type === 'live' || ev.type === 'online') && 
                                         (ev.gameMode === 'tournament' || (ev as any).game_mode === 'tournament')
                                     ).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(ev => (
                                         <option key={ev.id} value={ev.id}>
@@ -877,7 +890,34 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({
                                                         bonusTotal = parseInt(res.metadata.manual_bonus_input);
                                                         bonusBreakdown.push(`+${bonusTotal.toLocaleString('pt-BR')} (Manual)`);
                                                     } 
-                                                    // Prioridade 2: Lógica legada (para reservas antigas)
+                                                    // Prioridade 2: Novos Tiers de Bônus (Check if they are site-claimable)
+                                                    else if (res.events?.bonus1_condition || res.events?.bonus2_condition || res.events?.bonus3_condition) {
+                                                        [1, 2, 3].forEach(tier => {
+                                                            const condition = res.events[`bonus${tier}_condition` as keyof Event] as string;
+                                                            const stack = parseChips(res.events[`bonus${tier}_stack` as keyof Event] as string);
+                                                            const addon = parseChips(res.events[`bonus${tier}_addon` as keyof Event] as string);
+                                                            const extra = res.events[`bonus${tier}_extra` as keyof Event] as string;
+
+                                                            if (condition?.toLowerCase().includes('site') || condition?.toLowerCase().includes('garantir bonus')) {
+                                                                bonusTotal += (stack + addon);
+                                                                if (stack > 0) bonusBreakdown.push(`+${stack.toLocaleString('pt-BR')} (Tier ${tier} Stack)`);
+                                                                if (addon > 0) bonusBreakdown.push(`+${addon.toLocaleString('pt-BR')} (Tier ${tier} Addon)`);
+                                                                if (extra) bonusBreakdown.push(`${extra} (T${tier})`);
+                                                            }
+                                                        });
+                                                        
+                                                        // Fallback to legacy fields if total is still 0
+                                                        if (bonusTotal === 0) {
+                                                            const eventStaff = parseChips(res.events?.staff_bonus_chips);
+                                                            const eventTime = parseChips(res.events?.time_chip_chips);
+                                                            const eventTAddon = parseChips(res.events?.time_chip_addon_chips);
+                                                            bonusTotal = eventStaff + eventTime + eventTAddon;
+                                                            if (eventStaff > 0) bonusBreakdown.push(`+${eventStaff.toLocaleString('pt-BR')} (Staff)`);
+                                                            if (eventTime > 0) bonusBreakdown.push(`+${eventTime.toLocaleString('pt-BR')} (Time)`);
+                                                            if (eventTAddon > 0) bonusBreakdown.push(`+${eventTAddon.toLocaleString('pt-BR')} (T.Addon)`);
+                                                        }
+                                                    }
+                                                    // Prioridade 3: Lógica legada (para reservas antigas)
                                                     else {
                                                         const eventStaff = parseChips(res.events?.staff_bonus_chips);
                                                         const eventTime = parseChips(res.events?.time_chip_chips);
