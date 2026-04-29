@@ -2968,23 +2968,27 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                                 <p className="text-[10px] text-green-500 font-black uppercase tracking-widest mb-1">CONDIÇÃO ATENDIDA</p>
                                                                 <p className="text-sm font-bold text-white mb-3">{t.condition}</p>
                                                                 
-                                                                <div className="grid grid-cols-3 gap-2">
-                                                                    {t.stack && (
-                                                                        <div className="bg-black/60 p-2 rounded-xl border border-white/10">
-                                                                            <span className="text-[9px] text-gray-500 block uppercase font-bold mb-0.5">Stack</span>
-                                                                            <span className="text-xs font-bold text-white">+{t.stack}</span>
-                                                                        </div>
-                                                                    )}
-                                                                    {t.addon && (
-                                                                        <div className="bg-black/60 p-2 rounded-xl border border-white/10">
-                                                                            <span className="text-[9px] text-gray-500 block uppercase font-bold mb-0.5">Add-on</span>
-                                                                            <span className="text-xs font-bold text-white">+{t.addon}</span>
+                                                                <div className="flex flex-col gap-2">
+                                                                    {(t.stack || t.addon) && (
+                                                                        <div className="grid grid-cols-2 gap-2">
+                                                                            {t.stack && (
+                                                                                <div className="bg-black/60 p-2 rounded-xl border border-white/10">
+                                                                                    <span className="text-[9px] text-gray-500 block uppercase font-bold mb-0.5">Stack</span>
+                                                                                    <span className="text-xs font-bold text-white">+{t.stack}</span>
+                                                                                </div>
+                                                                            )}
+                                                                            {t.addon && (
+                                                                                <div className="bg-black/60 p-2 rounded-xl border border-white/10">
+                                                                                    <span className="text-[9px] text-gray-500 block uppercase font-bold mb-0.5">Add-on</span>
+                                                                                    <span className="text-xs font-bold text-white">+{t.addon}</span>
+                                                                                </div>
+                                                                            )}
                                                                         </div>
                                                                     )}
                                                                     {t.extra && (
-                                                                        <div className="bg-black/60 p-2 rounded-xl border border-white/10">
+                                                                        <div className="bg-black/60 p-3 rounded-xl border border-white/10 w-full mt-1">
                                                                             <span className="text-[9px] text-gray-500 block uppercase font-bold mb-0.5">Extra</span>
-                                                                            <span className="text-xs font-bold text-yellow-500">{t.extra}</span>
+                                                                            <span className="text-sm font-black text-yellow-500 block">{t.extra}</span>
                                                                         </div>
                                                                     )}
                                                                 </div>
