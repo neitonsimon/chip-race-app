@@ -3010,8 +3010,10 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
                                     <div className="bg-black/30 p-4 rounded-xl border border-white/5">
                                         <p className="text-[10px] text-gray-500 font-bold leading-relaxed">
-                                            Ao confirmar, você garante seu bônus no sistema. <br/>
-                                            Compareça no horário para validar o benefício presencialmente.
+                                            Ao confirmar, você garante seu bônus no sistema.
+                                            {reservingEvent.type !== 'online' && (
+                                                <> <br/> Compareça no horário para validar o benefício presencialmente. </>
+                                            )}
                                         </p>
                                     </div>
 
