@@ -136,6 +136,9 @@ export interface Event {
   staffExpensesBrl?: number;
   prizePayoutBrl?: number;
   is_hidden?: boolean;
+  is_special_event?: boolean;
+  timeline_title?: string;
+  structure?: string;
   // Multi-day Event Fields
   isMultiDay?: boolean;
   isStartingDay?: boolean;

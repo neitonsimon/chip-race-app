@@ -572,6 +572,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                         alert('Por favor, preencha o título, data e hora do evento.');
                         return;
                     }
+                    console.log('EventCalendar calling onSaveEvent with:', editingEvent);
                     await onSaveEvent(editingEvent);
                 } else {
                     // Sempre atualizar o estado local para garantir exibição imediata (Optimistic Update)
@@ -596,6 +597,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
     };
 
     const handleInputChange = (field: keyof Event, value: string) => {
+        console.log(`Input change: ${field} = ${value}`);
         if (editingEvent) {
             let formattedValue = value;
 
@@ -1191,6 +1193,21 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                 {event.gameMode === 'cash_game' ? 'CASH GAME' : 'TORNEIO'}
                                             </span>
 
+                                            {/* Special Event Badge */}
+                                            {event.is_special_event && (
+                                                <span className="text-[10px] px-2 py-0.5 rounded uppercase font-black tracking-widest bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_0_10px_rgba(139,92,246,0.5)] animate-pulse">
+                                                    EVENTO ESPECIAL
+                                                </span>
+                                            )}
+
+                                            {/* Bonus Available Badge */}
+                                            {(event.bonus1_condition || event.bonus2_condition || event.bonus3_condition) && (
+                                                <span className="text-[10px] px-2 py-0.5 rounded uppercase font-black tracking-widest bg-yellow-500/10 text-yellow-500 border border-yellow-500/30 flex items-center gap-1">
+                                                    <span className="material-icons-outlined text-[12px]">card_giftcard</span>
+                                                    BÔNUS ATIVO
+                                                </span>
+                                            )}
+
 
                                             {event.isStartingDay && (
                                                 <span className="text-[10px] px-2 py-0.5 rounded uppercase font-black tracking-widest bg-gradient-to-r from-primary to-accent text-white shadow-neon-pink">
@@ -1388,23 +1405,32 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
                                         </div>
 
-                                        {/* Botão de Garantir Bônus (Para todos os usuários em eventos abertos) */}
-                                        {event.status !== 'closed' && event.gameMode === 'tournament' && (
-                                            <button
-                                                onClick={(e) => { 
-                                                    e.stopPropagation(); 
-                                                    handleReserveSeat(event); 
-                                                }}
-                                                className={`px-6 py-2 w-full mt-2 rounded-full font-bold text-xs uppercase tracking-widest transition-all ${
-                                                    userReservations.includes(event.id) 
-                                                        ? "bg-blue-600/20 text-blue-400 border border-blue-600/50 hover:bg-blue-600 hover:text-white" 
-                                                        : "bg-green-600/20 text-green-500 border border-green-600/50 hover:bg-green-600 hover:text-white"
-                                                } flex items-center gap-2 md:w-auto justify-center`}
-                                            >
-                                                <span className="material-icons-outlined text-sm">{userReservations.includes(event.id) ? "redeem" : "redeem"}</span>
-                                                {userReservations.includes(event.id) ? "Ver Meu Bônus" : "Garantir Bônus"}
-                                            </button>
-                                        )}
+                                        {/* Botão de Garantir Bônus (Para todos os usuários em eventos abertos - Apenas se houver bônus de site/cadastro) */}
+                                        {event.status !== 'closed' && event.gameMode === 'tournament' && (() => {
+                                            const hasClaimableBonus = [1, 2, 3].some(tier => {
+                                                const condition = (event[`bonus${tier}_condition` as keyof any] as string) || '';
+                                                return condition.toLowerCase().includes('site') || condition.toLowerCase().includes('cadastro');
+                                            });
+                                            
+                                            if (!hasClaimableBonus) return null;
+
+                                            return (
+                                                <button
+                                                    onClick={(e) => { 
+                                                        e.stopPropagation(); 
+                                                        handleReserveSeat(event); 
+                                                    }}
+                                                    className={`px-6 py-2 w-full mt-2 rounded-full font-bold text-xs uppercase tracking-widest transition-all ${
+                                                        userReservations.includes(event.id) 
+                                                            ? "bg-blue-600/20 text-blue-400 border border-blue-600/50 hover:bg-blue-600 hover:text-white" 
+                                                            : "bg-green-600/20 text-green-500 border border-green-600/50 hover:bg-green-600 hover:text-white"
+                                                    } flex items-center gap-2 md:w-auto justify-center`}
+                                                >
+                                                    <span className="material-icons-outlined text-sm">{userReservations.includes(event.id) ? "redeem" : "redeem"}</span>
+                                                    {userReservations.includes(event.id) ? "Ver Meu Bônus" : "Garantir Bônus"}
+                                                </button>
+                                            );
+                                        })()}
 
                                         {/* BOTÓO DE ENCERRAR EVENTO (ADMIN ONLY - Só se não estiver fechado) */}
                                         {isAdmin && event.status !== 'closed' && (
@@ -1557,75 +1583,57 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                         {renderStructureRow("Add-on Duplo", viewEvent.doubleAddonValue, viewEvent.doubleAddonChips, viewThemeStyles?.textSec, "auto_awesome_motion")}
                                                         {/* Staff Bonus moved to buy-in row */}
                                                         {/* Bônus de Reserva (Time Chip) */}
-                                                        {viewEvent.timeChipValue && (
-                                                            <div className="bg-white/[0.02] p-3 rounded-lg border border-white/5 flex flex-col gap-2 group hover:bg-white/[0.05] transition-all">
-                                                                <div className="flex items-center gap-2 mb-1">
-                                                                    <span className="material-icons-outlined text-sm text-green-400/60 group-hover:text-green-400 transition-colors">verified</span>
-                                                                    <span className="text-xs text-green-400 font-bold uppercase tracking-wider">{viewEvent.timeChipValue}</span>
-                                                                </div>
-                                                                <div className="grid grid-cols-3 gap-2 text-right">
-                                                                    {viewEvent.timeChipChips && (
-                                                                        <div className="flex flex-col items-end">
-                                                                            <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Buy-in Extra</span>
-                                                                            <span className="text-sm font-bold text-white">{viewEvent.timeChipChips}</span>
-                                                                        </div>
-                                                                    )}
-                                                                    {viewEvent.timeChipAddonChips && (
-                                                                        <div className="flex flex-col items-end border-l border-white/5 pl-2">
-                                                                            <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Add-on Extra</span>
-                                                                            <span className="text-sm font-bold text-white">{viewEvent.timeChipAddonChips}</span>
-                                                                        </div>
-                                                                    )}
-                                                                    {viewEvent.timeChipDiscountBrl && (
-                                                                        <div className="flex flex-col items-end border-l border-white/5 pl-2">
-                                                                            <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Desconto</span>
-                                                                            <span className="text-sm font-bold text-green-400">{viewEvent.timeChipDiscountBrl}</span>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        )}
+                                                        {/* Legacy timeChip block removed to avoid duplication with dynamic tiers */}
+
 
                                                         {/* Novos Bônus Tiers (Exibe todos no Flyer) */}
-                                                        {[1, 2, 3].map(tier => {
-                                                            const condition = viewEvent[`bonus${tier}_condition` as keyof Event] as string;
-                                                            const stack = viewEvent[`bonus${tier}_stack` as keyof Event];
-                                                            const addon = viewEvent[`bonus${tier}_addon` as keyof Event];
-                                                            const extra = viewEvent[`bonus${tier}_extra` as keyof Event];
+                                                        {(() => {
+                                                            const renderedConditions = new Set<string>();
+                                                            return [1, 2, 3].map(tier => {
+                                                                const condition = viewEvent[`bonus${tier}_condition` as keyof Event] as string;
+                                                                const stack = viewEvent[`bonus${tier}_stack` as keyof Event];
+                                                                const addon = viewEvent[`bonus${tier}_addon` as keyof Event];
+                                                                const extra = viewEvent[`bonus${tier}_extra` as keyof Event];
 
-                                                            if (!condition && !stack && !addon && !extra) return null;
+                                                                if (!condition && !stack && !addon && !extra) return null;
+                                                                
+                                                                // Avoid duplicates
+                                                                const condKey = condition?.toLowerCase().trim() || `tier-${tier}`;
+                                                                if (renderedConditions.has(condKey)) return null;
+                                                                renderedConditions.add(condKey);
 
-                                                            return (
-                                                                <div key={tier} className="bg-white/[0.02] p-3 rounded-xl border border-white/5 flex flex-col gap-2 hover:bg-white/[0.05] transition-all">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <div className="w-5 h-5 rounded-full bg-yellow-500/20 border border-yellow-500/40 flex items-center justify-center">
-                                                                            <span className="text-[9px] font-black text-yellow-500">{tier}</span>
+                                                                return (
+                                                                    <div key={tier} className="bg-white/[0.02] p-3 rounded-xl border border-white/5 flex flex-col gap-2 hover:bg-white/[0.05] transition-all">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className="w-5 h-5 rounded-full bg-yellow-500/20 border border-yellow-500/40 flex items-center justify-center">
+                                                                                <span className="text-[9px] font-black text-yellow-500">{tier}</span>
+                                                                            </div>
+                                                                            <span className="text-[10px] text-gray-300 font-bold uppercase tracking-wider">{condition || 'Bônus Extra'}</span>
                                                                         </div>
-                                                                        <span className="text-[10px] text-gray-300 font-bold uppercase tracking-wider">{condition || 'Bônus Extra'}</span>
+                                                                        <div className="grid grid-cols-3 gap-2">
+                                                                            {stack && (
+                                                                                <div className="text-right">
+                                                                                    <span className="text-[8px] text-gray-500 uppercase font-bold block">Stack</span>
+                                                                                    <span className="text-xs font-bold text-white">+{stack}</span>
+                                                                                </div>
+                                                                            )}
+                                                                            {addon && (
+                                                                                <div className="text-right border-l border-white/5 pl-2">
+                                                                                    <span className="text-[8px] text-gray-500 uppercase font-bold block">Add-on</span>
+                                                                                    <span className="text-xs font-bold text-white">+{addon}</span>
+                                                                                </div>
+                                                                            )}
+                                                                            {extra && (
+                                                                                <div className="text-right border-l border-white/5 pl-2 col-span-1">
+                                                                                    <span className="text-[8px] text-gray-500 uppercase font-bold block">Extra</span>
+                                                                                    <span className="text-xs font-bold text-yellow-500 truncate">{extra}</span>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
                                                                     </div>
-                                                                    <div className="grid grid-cols-3 gap-2">
-                                                                        {stack && (
-                                                                            <div className="text-right">
-                                                                                <span className="text-[8px] text-gray-500 uppercase font-bold block">Stack</span>
-                                                                                <span className="text-xs font-bold text-white">+{stack}</span>
-                                                                            </div>
-                                                                        )}
-                                                                        {addon && (
-                                                                            <div className="text-right border-l border-white/5 pl-2">
-                                                                                <span className="text-[8px] text-gray-500 uppercase font-bold block">Add-on</span>
-                                                                                <span className="text-xs font-bold text-white">+{addon}</span>
-                                                                            </div>
-                                                                        )}
-                                                                        {extra && (
-                                                                            <div className="text-right border-l border-white/5 pl-2 col-span-1">
-                                                                                <span className="text-[8px] text-gray-500 uppercase font-bold block">Extra</span>
-                                                                                <span className="text-xs font-bold text-yellow-500 truncate">{extra}</span>
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
+                                                                );
+                                                            });
+                                                        })()}
                                                     </>
 
                                                 )}
@@ -1789,7 +1797,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                     className="w-24 h-24 rounded-full border-4 border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.5)] object-cover relative z-10"
                                                 />
                                                 <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-yellow-400 text-black font-black text-[9px] px-3 py-0.5 rounded-full shadow-lg z-20 border-2 border-black">
-                                                    {viewClosedEvent.isStartingDay ? 'CHIP LEADER' : 'CAMPEÓO'}
+                                                    {viewClosedEvent.isStartingDay ? 'CHIP LEADER' : 'CAMPEÃO'}
                                                 </div>
                                             </div>
 
@@ -2337,6 +2345,36 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                             <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Título do Evento</label>
                                             <input type="text" value={editingEvent.title} onChange={(e) => handleInputChange('title', e.target.value)} className="w-full bg-black/20 border border-white/10 rounded p-3 text-white focus:border-primary outline-none" />
                                         </div>
+                                        <div className="md:col-span-2 flex gap-4 mb-2">
+                                            <label className="flex items-center gap-2 cursor-pointer group">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={editingEvent.is_hidden || false} 
+                                                    onChange={(e) => setEditingEvent({ ...editingEvent, is_hidden: e.target.checked })}
+                                                    className="w-4 h-4 accent-red-500 bg-black border-white/20 rounded"
+                                                />
+                                                <span className="text-[10px] text-gray-400 group-hover:text-white transition-colors uppercase font-bold">Ocultar Evento</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer group">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={editingEvent.is_special_event || false} 
+                                                    onChange={(e) => setEditingEvent({ ...editingEvent, is_special_event: e.target.checked })}
+                                                    className="w-4 h-4 accent-yellow-500 bg-black border-white/20 rounded"
+                                                />
+                                                <span className="text-[10px] text-gray-400 group-hover:text-white transition-colors uppercase font-bold">Evento Especial (Destaque)</span>
+                                            </label>
+                                        </div>
+                                        <div className="md:col-span-2">
+                                            <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Título Curto (Timeline)</label>
+                                            <input 
+                                                type="text" 
+                                                value={editingEvent.timeline_title || ''} 
+                                                onChange={(e) => setEditingEvent({ ...editingEvent, timeline_title: e.target.value })} 
+                                                className="w-full bg-black/20 border border-white/10 rounded p-3 text-white focus:border-primary outline-none text-sm" 
+                                                placeholder="Ex: Main Event Dia 1A"
+                                            />
+                                        </div>
                                         {/* NOVO: Torneio de Dias Classificatórios */}
                                         {editingEvent.gameMode === 'tournament' && (!editingEvent.id || editingEvent.id.length < 20) && (
                                             <div className="md:col-span-2 mt-2 bg-primary/10 border border-primary/30 p-4 rounded-lg mb-2">
@@ -2564,7 +2602,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                 </div>
                                                 <div>
                                                     <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Late Reg</label>
-                                                    <input type="text" value={editingEvent.lateReg || ''} onChange={(e) => handleInputChange('lateReg', e.target.value)} className="w-full bg-black/20 border border-white/10 rounded p-2 text-white focus:border-primary outline-none" placeholder="6Ã‚Âº Nível" />
+                                                    <input type="text" value={editingEvent.lateReg || ''} onChange={(e) => handleInputChange('lateReg', e.target.value)} className="w-full bg-black/20 border border-white/10 rounded p-2 text-white focus:border-primary outline-none" placeholder="6º Nível" />
                                                 </div>
                                                 <div>
                                                     <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Garantido</label>
@@ -2573,6 +2611,16 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                 <div>
                                                     <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Max Assentos</label>
                                                     <input type="number" value={editingEvent.maxCapacity || ''} onChange={(e) => setEditingEvent({ ...editingEvent, maxCapacity: e.target.value })} className="w-full bg-black/20 border border-white/10 rounded p-2 text-white focus:border-primary outline-none" placeholder="Ex: 45" />
+                                                </div>
+                                                <div className="md:col-span-4">
+                                                    <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Link da Estrutura (PDF/Imagem)</label>
+                                                    <input 
+                                                        type="text" 
+                                                        value={editingEvent.structure || ''} 
+                                                        onChange={(e) => setEditingEvent({ ...editingEvent, structure: e.target.value })} 
+                                                        className="w-full bg-black/20 border border-white/10 rounded p-3 text-white focus:border-primary outline-none" 
+                                                        placeholder="Ex: https://..."
+                                                    />
                                                 </div>
                                             </div>
                                         </div>
@@ -2832,13 +2880,13 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                     <h4 className="text-gray-400 text-sm font-bold uppercase tracking-wider mb-1">Ocupação Atual</h4>
                                                     <div className="flex items-baseline gap-2">
                                                         <span className="text-3xl font-black text-white">{currentReservationsCount}</span>
-                                                        <span className="text-gray-500 font-bold">/ {reservingEvent.maxCapacity} VAGAS MÃƒÂXIMAS</span>
+                                                        <span className="text-gray-500 font-bold">/ {reservingEvent.maxCapacity} VAGAS MÁXIMAS</span>
                                                     </div>
                                                 </div>
                                                 <button onClick={() => setShowReservationPlayers(!showReservationPlayers)} className="w-16 h-16 rounded-full border-4 border-white/10 flex items-center justify-center relative shadow-inner cursor-pointer hover:bg-white/5 transition-colors group" title="Ver Jogadores garantidos">
                                                     <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none">
                                                         <circle className="text-white/5" strokeWidth="4" stroke="currentColor" fill="transparent" r="28" cx="32" cy="32"/>
-                                                        <circle className="text-green-500 drop-shadow-[0_0_5px_rgba(34,197,94,0.5)] transition-all duration-1000" strokeWidth="4" strokeDasharray="175" strokeDashoffset={175 - (175 * Math.min(1, currentReservationsCount / Number(reservingEvent.maxCapacity)))} stroke="currentColor" fill="transparent" r="28" cx="32" cy="32"/>
+                                                        <circle className="text-green-500 drop-shadow-[0_0_5px_rgba(34,197,94,0.5)] transition-all duration-1000" strokeWidth="4" strokeDasharray="175" strokeDashoffset={175 - (175 * Math.min(1, (currentReservationsCount || 0) / (Number(reservingEvent.maxCapacity) || 1)))} stroke="currentColor" fill="transparent" r="28" cx="32" cy="32"/>
                                                     </svg>
                                                     <span className="material-icons-outlined text-green-500 z-10 text-xl group-hover:scale-110 transition-transform">people</span>
                                                     <span className="absolute bottom-1 text-[8px] font-bold text-green-500 uppercase opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap bg-black/80 px-1 rounded-sm z-20">Ver Lista</span>
@@ -2873,70 +2921,78 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                         
                                         <div className="space-y-3 mb-4">
                                             {/* Render Bonus Tiers (Only claimable via site) */}
-                                            {[1, 2, 3].map(tier => {
-                                                const condition = (reservingEvent[`bonus${tier}_condition` as keyof Event] as string) || '';
-                                                const stack = reservingEvent[`bonus${tier}_stack` as keyof Event];
-                                                const addon = reservingEvent[`bonus${tier}_addon` as keyof Event];
-                                                const extra = reservingEvent[`bonus${tier}_extra` as keyof Event];
+                                            {(() => {
+                                                const renderedConditions = new Set<string>();
+                                                const claimableTiers = [1, 2, 3].map(tier => {
+                                                    try {
+                                                        const condition = (reservingEvent[`bonus${tier}_condition` as keyof Event] as string) || '';
+                                                        const stack = reservingEvent[`bonus${tier}_stack` as keyof Event];
+                                                        const addon = reservingEvent[`bonus${tier}_addon` as keyof Event];
+                                                        const extra = reservingEvent[`bonus${tier}_extra` as keyof Event];
 
-                                                const isClaimable = condition.toLowerCase().includes('garantir bonus') || 
-                                                                  condition.toLowerCase().includes('confirma pelo site') ||
-                                                                  condition.toLowerCase().includes('site') ||
-                                                                  condition.toLowerCase().includes('cadastro');
+                                                        const condLower = condition.toLowerCase();
+                                                        const isClaimable = condLower.includes('site') || 
+                                                                          condLower.includes('cadastro');
 
-                                                if (!isClaimable) return null;
-                                                if (!condition && !stack && !addon && !extra) return null;
+                                                        if (!isClaimable) return null;
+                                                        if (!condition && !stack && !addon && !extra) return null;
+                                                    
+                                                    // Avoid duplicates
+                                                    const condKey = condition.toLowerCase().trim();
+                                                    if (renderedConditions.has(condKey)) return null;
+                                                    renderedConditions.add(condKey);
 
-                                                return (
-                                                    <div key={tier} className="bg-green-500/10 p-4 rounded-2xl border border-green-500/20 mb-3 last:mb-0 shadow-[0_4px_15px_rgba(34,197,94,0.1)]">
+                                                        return { tier, condition, stack, addon, extra };
+                                                    } catch (err) {
+                                                        console.error(`Error rendering bonus tier ${tier}:`, err);
+                                                        return null;
+                                                    }
+                                                }).filter(t => t !== null) as any[];
+
+                                                if (claimableTiers.length === 0) {
+                                                    return (
+                                                        <div className="bg-white/5 p-4 rounded-2xl border border-white/10 text-center">
+                                                            <p className="text-gray-300 text-sm font-bold mb-2">Garanta seu benefício clicando no botão abaixo.</p>
+                                                            <p className="text-[10px] text-gray-500 uppercase tracking-widest italic">Aguardando confirmação de bônus do site...</p>
+                                                        </div>
+                                                    );
+                                                }
+
+                                                return claimableTiers.map(t => (
+                                                    <div key={t.tier} className="bg-green-500/10 p-4 rounded-2xl border border-green-500/20 mb-3 last:mb-0 shadow-[0_4px_15px_rgba(34,197,94,0.1)]">
                                                         <div className="flex items-start gap-3">
                                                             <div className="w-8 h-8 rounded-full bg-green-500 border border-green-500 flex items-center justify-center shrink-0">
-                                                                <span className="text-black font-black text-xs">{tier}</span>
+                                                                <span className="text-black font-black text-xs">{t.tier}</span>
                                                             </div>
                                                             <div className="flex-1">
                                                                 <p className="text-[10px] text-green-500 font-black uppercase tracking-widest mb-1">CONDIÇÃO ATENDIDA</p>
-                                                                <p className="text-sm font-bold text-white mb-3">{condition}</p>
+                                                                <p className="text-sm font-bold text-white mb-3">{t.condition}</p>
                                                                 
                                                                 <div className="grid grid-cols-3 gap-2">
-                                                                    {stack && (
+                                                                    {t.stack && (
                                                                         <div className="bg-black/60 p-2 rounded-xl border border-white/10">
                                                                             <span className="text-[9px] text-gray-500 block uppercase font-bold mb-0.5">Stack</span>
-                                                                            <span className="text-xs font-bold text-white">+{stack}</span>
+                                                                            <span className="text-xs font-bold text-white">+{t.stack}</span>
                                                                         </div>
                                                                     )}
-                                                                    {addon && (
+                                                                    {t.addon && (
                                                                         <div className="bg-black/60 p-2 rounded-xl border border-white/10">
                                                                             <span className="text-[9px] text-gray-500 block uppercase font-bold mb-0.5">Add-on</span>
-                                                                            <span className="text-xs font-bold text-white">+{addon}</span>
+                                                                            <span className="text-xs font-bold text-white">+{t.addon}</span>
                                                                         </div>
                                                                     )}
-                                                                    {extra && (
+                                                                    {t.extra && (
                                                                         <div className="bg-black/60 p-2 rounded-xl border border-white/10">
                                                                             <span className="text-[9px] text-gray-500 block uppercase font-bold mb-0.5">Extra</span>
-                                                                            <span className="text-xs font-bold text-yellow-500">{extra}</span>
+                                                                            <span className="text-xs font-bold text-yellow-500">{t.extra}</span>
                                                                         </div>
                                                                     )}
                                                                 </div>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                );
-                                            })}
-
-                                            {!(reservingEvent.bonus1_condition?.toLowerCase().includes('site') || 
-                                               reservingEvent.bonus1_condition?.toLowerCase().includes('garantir bonus') ||
-                                               reservingEvent.bonus1_condition?.toLowerCase().includes('cadastro') ||
-                                               reservingEvent.bonus2_condition?.toLowerCase().includes('site') || 
-                                               reservingEvent.bonus2_condition?.toLowerCase().includes('garantir bonus') ||
-                                               reservingEvent.bonus2_condition?.toLowerCase().includes('cadastro') ||
-                                               reservingEvent.bonus3_condition?.toLowerCase().includes('site') ||
-                                               reservingEvent.bonus3_condition?.toLowerCase().includes('garantir bonus') ||
-                                               reservingEvent.bonus3_condition?.toLowerCase().includes('cadastro')) && (
-                                                <div className="bg-white/5 p-4 rounded-2xl border border-white/10 text-center">
-                                                    <p className="text-gray-300 text-sm font-bold mb-2">Garanta seu benefício clicando no botão abaixo.</p>
-                                                    <p className="text-[10px] text-gray-500 uppercase tracking-widest italic">Aguardando confirmação de bônus do site...</p>
-                                                </div>
-                                            )}
+                                                ));
+                                            })()}
                                         </div>
 
                                         {reservingEvent.type === 'online' && (

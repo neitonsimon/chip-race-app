@@ -194,7 +194,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 supabase.from('rankings').select('id, label, description, rules, start_date, end_date, prize_info_title, prize_info_detail, scoring_schema_map, is_active, brl_reward, chipz_reward, badge_template_id, position_prizes, order'),
                 supabase.from('badge_templates').select('id, title, description, icon, color, category, rarity, event_trigger, is_legendary'),
                 supabase.from('scoring_schemas').select('id, name, criteria, position_points'),
-                supabase.from('events').select('id, title, date, time, type, modality, buyin, guaranteed, status, ranking_type, included_rankings, description, stack, blinds, late_reg, location, rebuy_value, rebuy_chips, addon_value, addon_chips, staff_bonus_value, staff_bonus_chips, time_chip_value, time_chip_chips, flyer_url, time_chip_addon_chips, time_chip_discount_brl, max_capacity, double_rebuy_value, double_rebuy_chips, double_addon_value, double_addon_chips, parallel_products, results, total_rebuys, total_addons, total_prize, scoring_schema_id, game_mode, cash_game_type, cash_game_blinds, cash_game_capacity, cash_game_min_max, cash_game_dinner, cash_game_open_bar, cash_game_notes, staff_expenses_brl, prize_payout_brl, is_multi_day, is_starting_day, is_final_day, final_event_id, stack_aggregation, is_hidden, is_special_event, timeline_title, structure').order('date', { ascending: true }),
+                supabase.from('events').select('id, title, date, time, type, modality, buyin, guaranteed, status, ranking_type, included_rankings, description, stack, blinds, late_reg, location, rebuy_value, rebuy_chips, addon_value, addon_chips, staff_bonus_value, staff_bonus_chips, time_chip_value, time_chip_chips, flyer_url, time_chip_addon_chips, time_chip_discount_brl, max_capacity, double_rebuy_value, double_rebuy_chips, double_addon_value, double_addon_chips, parallel_products, results, total_rebuys, total_addons, total_prize, scoring_schema_id, game_mode, cash_game_type, cash_game_blinds, cash_game_capacity, cash_game_min_max, cash_game_dinner, cash_game_open_bar, cash_game_notes, staff_expenses_brl, prize_payout_brl, is_multi_day, is_starting_day, is_final_day, final_event_id, stack_aggregation, is_hidden, is_special_event, timeline_title, structure, bonus1_condition, bonus1_stack, bonus1_addon, bonus1_extra, bonus2_condition, bonus2_stack, bonus2_addon, bonus2_extra, bonus3_condition, bonus3_stack, bonus3_addon, bonus3_extra').order('date', { ascending: true }),
                 supabase.from('content_db').select('key, value'),
                 supabase.from('ecosystem_categories').select('id, title, description, icon, color, order').order('order', { ascending: true }),
                 supabase.from('profiles_public').select('id, numeric_id, name, avatar_url, city, is_vip, vip_status, vip_expires_at, social, bio, level, current_exp, next_level_exp, gallery, play_styles, is_verified, total_pending_debt, suprema_nickname, suprema_user_id'),
@@ -239,7 +239,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             }
 
             if (eventsData) {
-                setEvents(eventsData.map(e => ({
+                const mappedEvents = eventsData.map(e => ({
                     id: e.id,
                     title: e.title,
                     date: e.date,
@@ -293,8 +293,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     isStartingDay: e.is_starting_day,
                     isFinalDay: e.is_final_day,
                     finalEventId: e.final_event_id,
-                    stackAggregation: e.stack_aggregation
-                })));
+                    stackAggregation: e.stack_aggregation,
+                    bonus1_condition: e.bonus1_condition,
+                    bonus1_stack: e.bonus1_stack,
+                    bonus1_addon: e.bonus1_addon,
+                    bonus1_extra: e.bonus1_extra,
+                    bonus2_condition: e.bonus2_condition,
+                    bonus2_stack: e.bonus2_stack,
+                    bonus2_addon: e.bonus2_addon,
+                    bonus2_extra: e.bonus2_extra,
+                    bonus3_condition: e.bonus3_condition,
+                    bonus3_stack: e.bonus3_stack,
+                    bonus3_addon: e.bonus3_addon,
+                    bonus3_extra: e.bonus3_extra,
+                    is_special_event: e.is_special_event,
+                    timeline_title: e.timeline_title,
+                    structure: e.structure
+                }));
+                console.log('--- PERSISTENCE LOG: Mapped Events ---', mappedEvents.slice(0, 3));
+                setEvents(mappedEvents);
             }
 
             if (contentData) {
@@ -884,6 +901,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const handleSaveEvent = async (event: Event) => {
         if (!isAdmin) return;
+        console.log('--- PERSISTENCE LOG: Saving Event ---', event);
 
         const isNew = !events.some(e => e.id === event.id) || event.id.length < 20;
         const dbData: any = {
@@ -908,20 +926,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             is_starting_day: event.isStartingDay,
             is_final_day: event.isFinalDay,
             final_event_id: event.finalEventId,
-            stack_aggregation: event.stackAggregation
+            stack_aggregation: event.stackAggregation,
+            is_hidden: event.is_hidden || false,
+            is_special_event: event.is_special_event || false,
+            timeline_title: event.timeline_title || '',
+            structure: event.structure || null,
+            bonus1_condition: event.bonus1_condition || null,
+            bonus1_stack: event.bonus1_stack || null,
+            bonus1_addon: event.bonus1_addon || null,
+            bonus1_extra: event.bonus1_extra || null,
+            bonus2_condition: event.bonus2_condition || null,
+            bonus2_stack: event.bonus2_stack || null,
+            bonus2_addon: event.bonus2_addon || null,
+            bonus2_extra: event.bonus2_extra || null,
+            bonus3_condition: event.bonus3_condition || null,
+            bonus3_stack: event.bonus3_stack || null,
+            bonus3_addon: event.bonus3_addon || null,
+            bonus3_extra: event.bonus3_extra || null
         };
 
         try {
             if (isNew) {
                 const { data, error } = await supabase.from('events').insert([dbData]).select();
-                if (error) throw error;
+                if (error) {
+                    console.error('Supabase INSERT Error:', error);
+                    throw error;
+                }
                 const savedEvent = data && data[0] ? { ...event, id: data[0].id } : event;
                 setEvents(prev => [...prev.filter(e => e.id !== event.id), savedEvent]);
+                console.log('Successfully inserted new event:', savedEvent);
                 return savedEvent;
             } else {
-                const { error } = await supabase.from('events').update(dbData).eq('id', event.id);
-                if (error) throw error;
+                console.log('--- PERSISTENCE LOG: Updating Event ---', event.id, dbData);
+                const { error, data } = await supabase.from('events').update(dbData).eq('id', event.id).select();
+                
+                if (error) {
+                    console.error('--- PERSISTENCE ERROR: Supabase Update Failed ---', error);
+                    throw error;
+                }
+                console.log('--- PERSISTENCE SUCCESS: Supabase Response ---', data);
+                
                 setEvents(prev => prev.map(e => e.id === event.id ? event : e));
+                console.log('Successfully updated event:', event.id);
                 return event;
             }
         } catch (e) {
