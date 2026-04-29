@@ -302,19 +302,7 @@ export interface MonthData {
   isActive?: boolean;
 }
 
-export interface Command {
-  id: string;
-  user_id: string;
-  event_id: string;
-  status: 'open' | 'closed' | 'void';
-  total_brl: number;
-  created_at: string;
-  closed_at?: string;
-  events?: {
-    title: string;
-    date: string;
-  };
-}
+
 
 export interface Transaction {
   id: string;
@@ -326,19 +314,7 @@ export interface Transaction {
   metadata?: any;
 }
 
-export interface Debt {
-  id: string;
-  user_id: string;
-  event_id?: string;
-  amount_brl: number;
-  description: string;
-  status: 'pending' | 'settled' | 'partial';
-  created_at: string;
-  events?: {
-    title: string;
-    date: string;
-  };
-}
+
 
 export type MessageCategory = 'system' | 'admin' | 'private' | 'tournament' | 'poll' | 'gift' | 'support';
 
@@ -409,7 +385,7 @@ export interface Command {
   id: string;
   event_id: string;
   user_id: string;
-  status: 'open' | 'closed';
+  status: 'open' | 'closed' | 'void';
   total_brl: number;
   total_chipz?: number;
   discount_brl?: number;
@@ -428,6 +404,10 @@ export interface Command {
   profit_cash_payment_brl?: number;
   internal_notes?: string;
   profiles?: any;
+  events?: {
+    title: string;
+    date: string;
+  };
 }
 
 export interface CommandItem {
@@ -454,10 +434,15 @@ export interface Debt {
   command_id?: string;
   event_id?: string;
   amount_brl: number;
-  status: 'pending' | 'paid' | 'cancelled';
+  description?: string;
+  status: 'pending' | 'settled' | 'partial' | 'paid' | 'cancelled';
   paid_at?: string;
   created_at: string;
   profiles?: any;
+  events?: {
+    title: string;
+    date: string;
+  };
 }
 
 export interface ClubTransaction {

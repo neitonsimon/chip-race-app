@@ -97,11 +97,49 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     const [messageText, setMessageText] = useState('');
     const [messageSent, setMessageSent] = useState(false);
 
+    // Core refs and calculated properties
+    const targetIdRef = useRef<string | null>(initialData?.id || currentUser?.id || null);
+    const isOwnProfile = isLoggedIn && (!initialData || initialData.id === currentUser?.id);
+
+    const [player, setPlayer] = useState<PlayerStats>(() => ({
+        id: initialData?.id || currentUser?.id || '',
+        name: initialData?.name || currentUser?.name || 'GUEST',
+        avatar: initialData?.avatar || currentUser?.avatar || DEFAULT_AVATAR,
+        city: initialData?.city || currentUser?.city || '...',
+        bio: initialData?.bio || currentUser?.bio || '',
+        rank: initialData?.rank || 0,
+        points: initialData?.points || 0,
+        winnings: initialData?.winnings || 'R$ 0,00',
+        titles: initialData?.titles || 0,
+        itm: initialData?.itm || '0%',
+        gallery: initialData?.gallery || [],
+        playStyles: initialData?.playStyles || [],
+        social: initialData?.social || {},
+        tournamentLog: initialData?.tournamentLog || [],
+        level: initialData?.level || 1,
+        currentExp: initialData?.currentExp || 0,
+        nextLevelExp: initialData?.nextLevelExp || 100,
+        lastDailyClaim: initialData?.lastDailyClaim || null,
+        dailyStreak: initialData?.dailyStreak || 0,
+        isVip: initialData?.isVip || false,
+        vipStatus: initialData?.vipStatus || 'nao_vip',
+        vipExpiresAt: initialData?.vipExpiresAt || null,
+        balanceBrl: initialData?.balanceBrl || 0,
+        balanceChipz: initialData?.balanceChipz || 0,
+        isVerified: initialData?.isVerified || false
+    }));
+
     // States para Inbox e Mensagens
     const [inboxFilter, setInboxFilter] = useState<MessageCategory | 'all'>('all');
     const [viewedMessage, setViewedMessage] = useState<Message | null>(null);
     const [replyMode, setReplyMode] = useState(false);
     const [replyContent, setReplyContent] = useState('');
+    const [viewingReceipt, setViewingReceipt] = useState<any>(null);
+    const [receiptItems, setReceiptItems] = useState<any[]>([]);
+    const viewingReceiptRef = useRef<any>(null);
+    const [lastSeenRecibos, setLastSeenRecibos] = useState<number>(0);
+    const originalNameRef = useRef<string>('');
+    const canEdit = isAdmin || (isLoggedIn && isOwnProfile);
 
     // Encontrar nick na suprema do remetente se for conversa privada
     const senderProfile = viewedMessage
@@ -124,6 +162,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             if (onUpdateProfile) onUpdateProfile(id, data);
         }
     });
+
+    const commandsForBadge = playerCommands || [];
 
 
 
@@ -212,50 +252,18 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
     const [isSavingExp, setIsSavingExp] = useState(false);
 
-    // Ref para guardar o ID original para fins de update no "banco"
-    const targetIdRef = useRef<string>('');
-    const originalNameRef = useRef<string>('');
-
-    // Determina se é o perfil do próprio usuário logado ou de um terceiro
-    const isOwnProfile = !initialData || (currentUser?.id && initialData.id === currentUser.id);
-    // Apenas Admin ou o Próprio Dono (se logado) podem editar
-    const canEdit = isAdmin || (isLoggedIn && isOwnProfile);
-
-    // Default data (My Profile)
-    const myProfileData: PlayerStats = {
-        id: appConfig.playerProfile.defaultMyProfile.id,
-        name: appConfig.playerProfile.defaultMyProfile.name,
-        avatar: `https://ui-avatars.com/api/?name=${appConfig.playerProfile.defaultMyProfile.name.replace(' ', '+')}&background=random`,
-        city: appConfig.playerProfile.defaultMyProfile.city,
-        bio: appConfig.playerProfile.defaultMyProfile.bio,
-        rank: 0,
-        points: 0,
-        balanceBrl: 0,
-        balanceChipz: 0,
-        winnings: 'R$ 0,00',
-        titles: 0,
-        itm: '0%',
-        gallery: [],
-        playStyles: [],
-        social: { instagram: "", whatsapp: "" },
-        tournamentLog: [],
-        level: 1,
-        currentExp: 0,
-        nextLevelExp: 1000,
-        lastDailyClaim: null,
-        dailyStreak: 0,
-        isVip: false,
-        vipStatus: 'nao_vip',
-        vipExpiresAt: null,
-        badges: [],
-        isVerified: false
-    };
-
-    const [player, setPlayer] = useState<PlayerStats>(myProfileData);
 
     // Sync with selected player if passed from Ranking or use CurrentUser
     useEffect(() => {
-        let baseData = { ...myProfileData };
+        let baseData: PlayerStats = {
+            id: '', name: 'GUEST', avatar: DEFAULT_AVATAR, city: '...', bio: '',
+            rank: 0, points: 0, winnings: 'R$ 0,00', titles: 0, itm: '0%',
+            gallery: [], playStyles: [], social: {}, tournamentLog: [],
+            level: 1, currentExp: 0, nextLevelExp: 1000,
+            lastDailyClaim: null, dailyStreak: 0, isVip: false,
+            vipStatus: 'nao_vip', vipExpiresAt: null,
+            balanceBrl: 0, balanceChipz: 0, isVerified: false
+        };
 
         // 1. Determine Identity (Name, Avatar, Bio...)
         if (initialData) {

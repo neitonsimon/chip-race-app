@@ -13,6 +13,7 @@ interface NavigationProps {
     onReply?: (id: string, text: string) => void;
     balanceBrl?: number;
     balanceChipz?: number;
+    totalPendingDebt?: number;
     isAdmin?: boolean;
     currentUserRole?: string;
 }

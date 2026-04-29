@@ -99,31 +99,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const navigate = useNavigate();
     const location = useLocation();
 
-    // Map URL path to internal views & selected players
-    useEffect(() => {
-        const path = location.pathname;
-        if (path === '/') {
-            setCurrentView('home');
-        } else if (path.startsWith('/perfil/')) {
-            const name = decodeURIComponent(path.replace('/perfil/', ''));
-            if (name) {
-                setCurrentView('profile');
-                handleNavigateToPlayerByNameInternal(name);
-            }
-        } else if (path.startsWith('/ranking/')) {
-            setCurrentView('ranking');
-        } else if (path === '/perfil') {
-            setCurrentView('profile');
-        } else if (path === '/calendario') {
-            setCurrentView('calendar');
-        } else if (path === '/cadastro') {
-            setCurrentView('register');
-        } else if (path !== '') {
-            const view = path.substring(1);
-            if (view) setCurrentView(view);
-        }
-    }, [location.pathname, allProfiles, isLoggedIn, currentUser.id, currentUser.name]);
-
     const [currentView, setCurrentView] = useState(() => {
         const path = window.location.pathname;
         if (path === '/') return 'home';
@@ -131,8 +106,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (path.startsWith('/ranking/')) return 'ranking';
         if (path === '/perfil') return 'profile';
         if (path === '/calendario') return 'calendar';
-        if (path === '/cadastro') return 'register';
-        return path.substring(1) || 'home';
+        if (path === '/cadastro' || path === '/cadastro/') return 'register';
+        const view = path.replace(/\/$/, '').substring(1);
+        return view || 'home';
     });
     const [isAdmin, setIsAdmin] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -157,6 +133,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [months, setMonths] = useState<MonthData[]>(appConfig.initialDefaults.months as MonthData[]);
     const [vipPlans, setVipPlans] = useState<any[]>(appConfig.vip.plans);
     const [userReservations, setUserReservations] = useState<string[]>([]);
+
+    // Map URL path to internal views & selected players
+    useEffect(() => {
+        const path = location.pathname;
+        if (path === '/') {
+            setCurrentView('home');
+        } else if (path.startsWith('/perfil/')) {
+            const name = decodeURIComponent(path.replace('/perfil/', ''));
+            if (name) {
+                setCurrentView('profile');
+                handleNavigateToPlayerByNameInternal(name);
+            }
+        } else if (path.startsWith('/ranking/')) {
+            setCurrentView('ranking');
+        } else if (path === '/perfil') {
+            setCurrentView('profile');
+        } else if (path === '/calendario') {
+            setCurrentView('calendar');
+        } else if (path === '/cadastro') {
+            setCurrentView('register');
+        } else if (path !== '') {
+            const view = path.substring(1);
+            if (view) setCurrentView(view);
+        }
+    }, [location.pathname, allProfiles, isLoggedIn, currentUser.id, currentUser.name]);
 
     const [isFlyerOpen, setIsFlyerOpen] = useState(false);
 
