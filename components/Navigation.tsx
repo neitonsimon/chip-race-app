@@ -409,14 +409,21 @@ export const Navigation: React.FC<NavigationProps> = ({
                                         <span className="material-icons-outlined text-xl">logout</span>
                                     </button>
                                 </div>
-                            ) : (
-                                <button
-                                    onClick={() => onNavigate('login')}
-                                    className="bg-gradient-to-r from-primary to-accent hover:from-accent hover:to-primary text-white font-bold py-2 px-6 rounded-full shadow-neon-pink transition-all duration-300 transform hover:scale-105 hover:shadow-[0_0_30px_rgba(217,0,255,0.6)] flex items-center gap-2"
-                                >
-                                    <span className="material-icons-outlined text-base">person</span>
-                                    <span className="text-base tracking-wide">LOGIN</span>
-                                </button>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={() => onNavigate('register')}
+                                        className="text-gray-300 hover:text-white font-bold text-sm tracking-wide transition-colors"
+                                    >
+                                        CADASTRE-SE
+                                    </button>
+                                    <button
+                                        onClick={() => onNavigate('login')}
+                                        className="bg-gradient-to-r from-primary to-accent hover:from-accent hover:to-primary text-white font-bold py-2 px-6 rounded-full shadow-neon-pink transition-all duration-300 transform hover:scale-105 hover:shadow-[0_0_30px_rgba(217,0,255,0.6)] flex items-center gap-2"
+                                    >
+                                        <span className="material-icons-outlined text-base">person</span>
+                                        <span className="text-base tracking-wide">LOGIN</span>
+                                    </button>
+                                </div>
                             )}
                         </div>
 

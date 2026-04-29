@@ -116,6 +116,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setCurrentView('profile');
         } else if (path === '/calendario') {
             setCurrentView('calendar');
+        } else if (path === '/cadastro') {
+            setCurrentView('register');
         } else if (path !== '') {
             const view = path.substring(1);
             if (view) setCurrentView(view);
@@ -129,6 +131,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (path.startsWith('/ranking/')) return 'ranking';
         if (path === '/perfil') return 'profile';
         if (path === '/calendario') return 'calendar';
+        if (path === '/cadastro') return 'register';
         return path.substring(1) || 'home';
     });
     const [isAdmin, setIsAdmin] = useState(false);
@@ -773,6 +776,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (view === 'home') path = '/';
         else if (view === 'calendar') path = '/calendario';
         else if (view === 'profile') path = '/perfil';
+        else if (view === 'register') path = '/cadastro';
         
         navigate(path);
         // window.scrollTo is handled by the browser or components, but we can do it here:

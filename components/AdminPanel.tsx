@@ -522,11 +522,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         fetchProducts();
     };
     const deleteProduct = async (productId: string) => {
-        if (!window.confirm('⚠️ Tem certeza que deseja EXCLUIR este produto permanentemente do banco de dados?')) return;
+        if (!window.confirm('⚠️ Tem certeza que deseja EXCLUIR este produto permanentemente? \n\n(O histórico de vendas será mantido, mas o nome do produto não aparecerá mais nos relatórios antigos).')) return;
+        setIsLoading(true);
         const { error } = await supabase.from('products').delete().eq('id', productId);
-        if (error) { alert('Erro ao excluir: ' + error.message); return; }
-        fetchAllProducts();
-        fetchProducts();
+        setIsLoading(false);
+        if (error) { 
+            alert('Erro ao excluir: ' + error.message); 
+        } else {
+            alert('✅ Produto excluído com sucesso!');
+            fetchAllProducts();
+            fetchProducts();
+        }
     };
 
     const handleSaveExpenses = async () => {

@@ -55,6 +55,10 @@
             {
                 "label": "Recargas & Chipz",
                 "view": "recharge"
+            },
+            {
+                "label": "Criar Conta",
+                "view": "register"
             }
         ],
         "informacoes": [
