@@ -5,11 +5,12 @@ interface AuthProps {
     onLogin: () => void; // No args needed, session handled in App
     onCancel: () => void;
     initialMode?: AuthMode;
+    onModeChange?: (mode: AuthMode) => void;
 }
 
 type AuthMode = 'login' | 'signup' | 'forgot';
 
-export const Auth: React.FC<AuthProps> = ({ onLogin, onCancel, initialMode = 'login' }) => {
+export const Auth: React.FC<AuthProps> = ({ onLogin, onCancel, initialMode = 'login', onModeChange }) => {
     const [mode, setMode] = useState<AuthMode>(initialMode);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -17,6 +18,19 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onCancel, initialMode = 'lo
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [message, setMessage] = useState<string | null>(null);
+
+    // Sync internal mode if initialMode changes
+    React.useEffect(() => {
+        setMode(initialMode);
+    }, [initialMode]);
+
+    const handleModeChange = (newMode: AuthMode) => {
+        if (onModeChange) {
+            onModeChange(newMode);
+        } else {
+            setMode(newMode);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -45,7 +59,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onCancel, initialMode = 'lo
                 }
 
                 setMessage('Cadastro realizado com sucesso! Faça login para continuar.');
-                setMode('login');
+                handleModeChange('login');
             } else if (mode === 'login') {
                 const { error } = await supabase.auth.signInWithPassword({
                     email,
@@ -146,7 +160,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onCancel, initialMode = 'lo
                             <div className="flex justify-between items-center mb-1">
                                 <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase">Senha</label>
                                 {mode === 'login' && (
-                                    <button type="button" onClick={() => setMode('forgot')} className="text-xs text-primary hover:underline">Esqueceu?</button>
+                                    <button type="button" onClick={() => handleModeChange('forgot')} className="text-xs text-primary hover:underline">Esqueceu?</button>
                                 )}
                             </div>
                             <input
@@ -173,11 +187,11 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onCancel, initialMode = 'lo
                 <div className="mt-6 text-center text-sm sm:text-base text-gray-500">
                     {mode === 'login' ? (
                         <>
-                            Não tem uma conta? <button type="button" onClick={() => setMode('signup')} className="text-primary font-bold hover:underline">Cadastre-se</button>
+                            Não tem uma conta? <button type="button" onClick={() => handleModeChange('signup')} className="text-primary font-bold hover:underline">Cadastre-se</button>
                         </>
                     ) : (
                         <>
-                            Já tem conta? <button type="button" onClick={() => setMode('login')} className="text-primary font-bold hover:underline">Faça Login</button>
+                            Já tem conta? <button type="button" onClick={() => handleModeChange('login')} className="text-primary font-bold hover:underline">Faça Login</button>
                         </>
                     )}
                 </div>
