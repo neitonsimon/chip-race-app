@@ -340,10 +340,11 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                 .filter(e => e.status === 'closed' && e.results && !e.is_hidden)
                 .map(e => {
                     // Find result for this player (Priority to ID, Fallback to Name)
-                    const res = e.results?.find(r =>
-                        (r.userId && r.userId === targetIdRef.current) ||
-                        (!r.userId && r.name.toLowerCase() === baseData.name.toLowerCase())
-                    );
+                    const res = e.results?.find(r => {
+                        if (r.userId && r.userId === targetIdRef.current) return true;
+                        if (r.name && r.name.toLowerCase().trim() === baseData.name.toLowerCase().trim()) return true;
+                        return false;
+                    });
                     if (res) {
                         return {
                             date: e.date.split('-').reverse().join('/'), // Convert YYYY-MM-DD to DD/MM/YYYY

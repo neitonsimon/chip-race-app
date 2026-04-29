@@ -157,7 +157,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const view = path.substring(1);
             if (view) setCurrentView(view);
         }
-    }, [location.pathname, allProfiles, isLoggedIn, currentUser.id, currentUser.name]);
+    }, [location.pathname, allProfiles, rankings, isLoggedIn, currentUser.id, currentUser.name]);
 
     const [isFlyerOpen, setIsFlyerOpen] = useState(false);
 
