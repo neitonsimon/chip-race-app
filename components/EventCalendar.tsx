@@ -180,7 +180,6 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
     const [showReservationPlayers, setShowReservationPlayers] = useState(false);
     const [formulaType, setFormulaType] = useState<RankingFormula>('weekly');
     const [totalPlayers, setTotalPlayers] = useState<number>(0);
-    const [bonusNote, setBonusNote] = useState('');
     const [buyinValue, setBuyinValue] = useState<number>(0);
     // Novos States de Estatísticas
     const [rebuysCount, setRebuysCount] = useState<number>(0);
@@ -682,7 +681,6 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                     user_id: currentUser.id,
                     status: 'reserved',
                     metadata: { 
-                        player_note: bonusNote,
                         source: 'app_bonus_claim'
                     }
                 });
@@ -696,7 +694,6 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                 }
             } else {
                 alert("Bônus garantido com sucesso! A organização foi notificada.");
-                setBonusNote('');
                 if (onRefreshData) await onRefreshData();
             }
         } catch (err) {
@@ -2723,7 +2720,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                     <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-[60] backdrop-blur-sm overflow-y-auto">
                         <div className="bg-[#1c1c1c] border border-green-500/30 rounded-2xl w-full max-w-lg shadow-2xl animate-fade-in relative my-auto max-h-[90vh] overflow-y-auto custom-scrollbar">
                             <button
-                                onClick={() => { setReservingEvent(null); setBonusNote(''); }}
+                                onClick={() => setReservingEvent(null)}
                                 className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
                             >
                                 <span className="material-icons-outlined">close</span>
@@ -2814,19 +2811,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                         </p>
                                     </div>
 
-                                    {!userReservations.includes(reservingEvent.id) && (
-                                        <div className="bg-black/20 p-4 rounded-xl border border-white/5">
-                                            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">Seu ID ou Nick no App/Site (Opcional):</label>
-                                            <input 
-                                                type="text" 
-                                                value={bonusNote}
-                                                onChange={(e) => setBonusNote(e.target.value)}
-                                                placeholder="Ex: Vithor-Costa"
-                                                className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white text-sm focus:outline-none focus:border-green-500/50 transition-colors"
-                                            />
-                                            <p className="text-[9px] text-gray-500 mt-2">Este campo é apenas informativo para a organização.</p>
-                                        </div>
-                                    )}
+
 
                                     <div className="bg-black/30 p-4 rounded-xl border border-white/5">
                                         <h3 className="text-xs font-black text-gray-400 mb-3 uppercase tracking-widest">Compromisso:</h3>

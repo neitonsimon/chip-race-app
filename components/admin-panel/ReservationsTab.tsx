@@ -849,14 +849,7 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({
                                                         </div>
                                                         <div className="flex flex-col gap-1 mt-1">
                                                             {res.profiles?.numeric_id && <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">ID App: {res.profiles.numeric_id}</span>}
-                                                            {res.metadata?.player_note && (
-                                                                <div className="flex items-center gap-1.5 px-2 py-1 bg-green-500/10 border border-green-500/20 rounded-md w-fit">
-                                                                    <span className="material-icons-outlined text-[12px] text-green-500">account_circle</span>
-                                                                    <span className="text-[10px] text-green-600 dark:text-green-400 font-black uppercase tracking-widest">
-                                                                        Nick: {res.metadata.player_note}
-                                                                    </span>
-                                                                </div>
-                                                            )}
+
                                                         </div>
                                                     </div>
                                                 </div>
