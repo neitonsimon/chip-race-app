@@ -104,7 +104,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     const [replyContent, setReplyContent] = useState('');
 
     // Encontrar nick na suprema do remetente se for conversa privada
-            : rankingPlayers.find(p => p.name === viewedMessage.from))
+    const senderProfile = viewedMessage
+        ? (rankingPlayers.find(p => p.id === viewedMessage.from) || rankingPlayers.find(p => p.name === viewedMessage.from))
         : null;
 
     // --- FINANCIAL HOOK ---
@@ -2014,6 +2015,10 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                                     </span>
                                                 </div>
                                             );
+                                        })}
+
+                                        {Number(viewingReceipt.chips_payment_brl) > 0 && (
+                                            <div className="flex justify-between text-xs">
                                                 <span className="text-gray-500 uppercase font-bold">Pago em Espécie</span>
                                                 <span className="text-cyan-400">R$ {Number(viewingReceipt.chips_payment_brl).toFixed(2)}</span>
                                             </div>

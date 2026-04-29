@@ -409,6 +409,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                                         <span className="material-icons-outlined text-xl">logout</span>
                                     </button>
                                 </div>
+                            ) : (
                                 <div className="flex items-center gap-3">
                                     <button
                                         onClick={() => onNavigate('register')}
