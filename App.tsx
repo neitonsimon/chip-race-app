@@ -18,7 +18,7 @@ export default function App() {
 
     const [isSupportOpen, setIsSupportOpen] = React.useState(false);
 
-    const showFooter = ['home', 'the-chosen-details', 'calendar', 'ranking', 'vip', 'recharge', 'the-chosen-regulations', 'terms', 'privacy', 'rules', 'responsible-gaming'].includes(currentView);
+    const showFooter = ['home', 'the-chosen-details', 'calendar', 'ranking', 'vip', 'recarga', 'the-chosen-regulations', 'terms', 'privacy', 'rules', 'responsible-gaming'].includes(currentView);
 
     // OneSignal Push Notifications Setup
     React.useEffect(() => {

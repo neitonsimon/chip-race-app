@@ -2881,7 +2881,8 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
 
                                                 const isClaimable = condition.toLowerCase().includes('garantir bonus') || 
                                                                   condition.toLowerCase().includes('confirma pelo site') ||
-                                                                  condition.toLowerCase().includes('site');
+                                                                  condition.toLowerCase().includes('site') ||
+                                                                  condition.toLowerCase().includes('cadastro');
 
                                                 if (!isClaimable) return null;
                                                 if (!condition && !stack && !addon && !extra) return null;
@@ -2922,29 +2923,18 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                 );
                                             })}
 
-                                            {/* FALLBACK: Se não houver nenhum tier com a palavra 'site', mostramos a mensagem padrão solicitada */}
                                             {!(reservingEvent.bonus1_condition?.toLowerCase().includes('site') || 
                                                reservingEvent.bonus1_condition?.toLowerCase().includes('garantir bonus') ||
+                                               reservingEvent.bonus1_condition?.toLowerCase().includes('cadastro') ||
                                                reservingEvent.bonus2_condition?.toLowerCase().includes('site') || 
                                                reservingEvent.bonus2_condition?.toLowerCase().includes('garantir bonus') ||
+                                               reservingEvent.bonus2_condition?.toLowerCase().includes('cadastro') ||
                                                reservingEvent.bonus3_condition?.toLowerCase().includes('site') ||
-                                               reservingEvent.bonus3_condition?.toLowerCase().includes('garantir bonus')) && (
+                                               reservingEvent.bonus3_condition?.toLowerCase().includes('garantir bonus') ||
+                                               reservingEvent.bonus3_condition?.toLowerCase().includes('cadastro')) && (
                                                 <div className="bg-white/5 p-4 rounded-2xl border border-white/10 text-center">
                                                     <p className="text-gray-300 text-sm font-bold mb-2">Garanta seu benefício clicando no botão abaixo.</p>
-                                                    <div className="grid grid-cols-2 gap-3">
-                                                        {reservingEvent.timeChipChips && (
-                                                            <div className="bg-black/40 p-2 rounded-xl border border-white/5">
-                                                                <span className="text-[9px] text-gray-500 block uppercase font-bold mb-0.5">Stack Extra</span>
-                                                                <span className="text-xs font-bold text-white">+{reservingEvent.timeChipChips}</span>
-                                                            </div>
-                                                        )}
-                                                        {reservingEvent.timeChipAddonChips && (
-                                                            <div className="bg-black/40 p-2 rounded-xl border border-white/5">
-                                                                <span className="text-[9px] text-gray-500 block uppercase font-bold mb-0.5">Add-on Extra</span>
-                                                                <span className="text-xs font-bold text-white">+{reservingEvent.timeChipAddonChips}</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
+                                                    <p className="text-[10px] text-gray-500 uppercase tracking-widest italic">Aguardando confirmação de bônus do site...</p>
                                                 </div>
                                             )}
                                         </div>

@@ -29,7 +29,7 @@ const INTERNAL_VIEWS = [
   { value: 'calendar',           label: 'Calendário de Eventos' },
   { value: 'ranking',            label: 'Rankings' },
   { value: 'vip',                label: 'Área VIP' },
-  { value: 'recharge',           label: 'Recargas & Chipz' },
+  { value: 'recarga',            label: 'Recargas & Chipz' },
   { value: 'the-chosen-details', label: 'The Chosen' },
   { value: 'online-credits',     label: 'Créditos Online' },
   { value: 'profile',            label: 'Perfil do Jogador' },

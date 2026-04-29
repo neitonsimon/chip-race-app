@@ -155,7 +155,7 @@ export const AppRouter: React.FC = () => {
                     onUpdateProfile={handleProfileUpdate}
                     onSendAdminMessage={handleSendAdminMessage}
                 />;
-            case 'recharge':
+            case 'recarga':
                 return <RechargePage currentUser={currentUser as any} onNavigate={handleNavigate} onUpdateProfile={handleProfileUpdate} />;
             case 'financial':
                 if (!isAdmin && currentUser?.role !== 'staff') {

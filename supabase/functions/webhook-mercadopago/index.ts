@@ -99,15 +99,24 @@ serve(async (req: Request) => {
                     .update({ status: "approved" })
                     .eq("id", intent.id);
 
+                const bonusAmount = intent.amount * 0.10;
+                const totalAmount = intent.amount + bonusAmount;
+
                 // Call RPC to fulfill balance securely
-                console.log("Approving balance for user:", intent.user_id, "amount:", intent.amount);
+                console.log("Approving balance for user:", intent.user_id, "amount:", intent.amount, "bonus:", bonusAmount);
                 const { data: rpcData, error: rpcError } = await supabaseAdmin.rpc("secure_balance_transaction", {
                     p_user_id: intent.user_id,
-                    p_brl_amount: intent.amount,
+                    p_brl_amount: totalAmount,
                     p_chipz_amount: 0,
-                    p_description: `Depósito PIX (MP-${gatewayIdStr})`,
+                    p_description: `Depósito PIX + BÔNUS 10% (MP-${gatewayIdStr})`,
                     p_category: "wallet_deposit",
-                    p_metadata: { source: "MercadoPago Webhook", intent_id: intent.id, gateway_id: gatewayIdStr }
+                    p_metadata: { 
+                        source: "MercadoPago Webhook", 
+                        intent_id: intent.id, 
+                        gateway_id: gatewayIdStr,
+                        original_amount: intent.amount,
+                        bonus_applied: bonusAmount
+                    }
                 });
 
                 if (rpcError || rpcData === false) {
@@ -118,8 +127,8 @@ serve(async (req: Request) => {
                     const ONESIGNAL_REST_API_KEY = Deno.env.get('ONESIGNAL_REST_API_KEY')
 
                     if (ONESIGNAL_APP_ID && ONESIGNAL_REST_API_KEY) {
-                        const title = `💰 PIX Aprovado!`
-                        const message = `Seu depósito de R$ ${intent.amount.toFixed(2)} foi creditado com sucesso em sua carteira.`
+                        const title = `💰 PIX Aprovado + BÔNUS!`
+                        const message = `Seu depósito de R$ ${intent.amount.toFixed(2)} + R$ ${bonusAmount.toFixed(2)} (Bônus 10%) foi creditado! Total: R$ ${totalAmount.toFixed(2)}.`
 
                         await fetch('https://onesignal.com/api/v1/notifications', {
                             method: 'POST',
@@ -132,7 +141,7 @@ serve(async (req: Request) => {
                                 headings: { en: title, pt: title },
                                 contents: { en: message, pt: message },
                                 include_external_user_ids: [intent.user_id],
-                                url: 'https://chip-race-app.vercel.app/recargas',
+                                url: 'https://chip-race-app.vercel.app/recarga',
                             }),
                         })
                     }

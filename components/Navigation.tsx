@@ -248,7 +248,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                                     {/* Wallet Balances with Integrated Debt */}
                                     <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-full px-1.5 py-1 shadow-inner whitespace-nowrap">
                                         <div
-                                            onClick={() => onNavigate('recharge')}
+                                            onClick={() => onNavigate('recarga')}
                                             className="flex items-center gap-1.5 cursor-pointer hover:bg-white/5 rounded-full px-2 py-1 text-gray-200 transition-colors group"
                                         >
                                             <span className="material-icons-outlined text-green-500 text-sm">account_balance_wallet</span>
@@ -257,7 +257,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                                         </div>
                                         <div className="w-px h-4 bg-white/10"></div>
                                         <div
-                                            onClick={() => onNavigate('recharge')}
+                                            onClick={() => onNavigate('recarga')}
                                             className="flex items-center gap-1.5 cursor-pointer hover:bg-white/5 rounded-full px-2 py-1 text-gray-200 transition-colors group"
                                         >
                                             <div className="w-4 h-4 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center shadow-neon-pink group-hover:scale-110 transition-transform">
@@ -578,7 +578,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                                 <>
                                     <button
                                         onClick={() => {
-                                            onNavigate('recharge');
+                                            onNavigate('recarga');
                                             setMobileMenuOpen(false);
                                         }}
                                         className="block w-full text-left px-3 py-4 text-lg font-medium border-b border-white/5 bg-black/20"

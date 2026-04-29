@@ -365,7 +365,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 .single();
             if (error) throw error;
             if (data) {
-                const userIsAdmin = data.role === 'admin';
+                const userIsAdmin = data.role === 'admin' || data.role === 'staff';
                 setIsAdmin(userIsAdmin);
                 const userData: any = {
                     id: userId,
@@ -803,23 +803,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     const handleProfileUpdate = async (targetId: string, updatedData: any) => {
+        const sanitizedTargetId = targetId?.trim() || '';
         try {
             // Update local state for current user immediately
-            if (targetId === currentUserId) {
+            if (sanitizedTargetId === currentUserId) {
                 setCurrentUser(prev => ({ ...prev, ...updatedData }));
             }
 
             // Sync with allProfiles list
-            setAllProfiles(prev => prev.map(p => p.id === targetId ? { ...p, ...updatedData } : p));
+            setAllProfiles(prev => prev.map(p => p.id === sanitizedTargetId ? { ...p, ...updatedData } : p));
 
             // Sync with selected player if applicable
-            if (selectedPlayer?.id === targetId) {
+            if (selectedPlayer?.id === sanitizedTargetId) {
                 setSelectedPlayer(prev => prev ? ({ ...prev, ...updatedData } as any) : null);
             }
 
             // Persist to Supabase if it's a UUID and the user is an admin or it's their own profile
-            const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetId);
-            if (isUUID && (isAdmin || targetId === currentUserId)) {
+            const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sanitizedTargetId);
+            
+            if (isUUID && (isAdmin || sanitizedTargetId === currentUserId)) {
                 // Prepare a clean update object with only defined fields
                 const dbUpdate: any = {};
 
@@ -859,7 +861,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     const isSettingName = updatedData.name && isNewUser;
 
                     // Use upsert to handle new users who might not have a profile row yet
-                    const { error } = await supabase.from('profiles').upsert({ id: targetId, ...dbUpdate }, { onConflict: 'id' });
+                    const { error } = await supabase.from('profiles').upsert({ id: sanitizedTargetId, ...dbUpdate }, { onConflict: 'id' });
                     if (error) {
                         console.error('Error persisting profile update:', error);
                         throw error;
@@ -867,9 +869,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
                     // Se for a primeira vez definindo o nome, enviar boas-vindas
                     if (isSettingName) {
-                        await sendTemplatedMessage('welcome', targetId);
+                        await sendTemplatedMessage('welcome', sanitizedTargetId);
                     }
                 }
+            } else if (!isUUID && sanitizedTargetId && isAdmin) {
+                // If admin is trying to edit a non-UUID user, we should inform them why it's not saving to DB
+                throw new Error("Não é possível salvar alterações permanentes para usuários sem conta (convidados).");
             }
         } catch (error) {
             console.error('Error handling profile update:', error);
