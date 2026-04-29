@@ -353,7 +353,7 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
           {categories
-            .filter(cat => ['rank', 'bar', 'vip', 'online', 'online-credits'].includes(cat.id))
+            .filter(cat => !cat.is_hidden || isAdmin)
             .sort((a, b) => {
               const aBlocked = a.is_mystery || a.is_hidden;
               const bBlocked = b.is_mystery || b.is_hidden;
@@ -364,8 +364,10 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
             .slice(0, showAll ? categories.length : 12)
             .map((cat, index) => {
               const styles = getColors(cat.color);
-              const isBlocked = (cat.is_mystery || cat.is_hidden) && !isAdmin;
-              const isMystery = cat.is_mystery; // Keep track if it's specifically mystery
+              const isEssential = ['rank', 'ranking', 'vip'].includes(cat.id);
+              const isBlocked = (!isEssential && !isAdmin);
+              const isMystery = cat.is_mystery;
+              const displayDescription = isBlocked ? 'Em breve...' : cat.description;
 
               return (
                 <div
@@ -403,8 +405,8 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
 
                     {/* Descrição: ??? se mistério */}
                     <p className="hidden md:flex text-xs mb-4 min-h-[40px] items-center justify-center w-full px-2">
-                      <span className={isMystery ? 'text-gray-700 tracking-[0.2em] font-black text-[10px]' : 'text-gray-500 dark:text-gray-400'}>
-                        {isMystery ? '??? ??? ???' : cat.description}
+                      <span className={isMystery || isBlocked ? 'text-gray-700 tracking-[0.2em] font-black text-[10px]' : 'text-gray-500 dark:text-gray-400'}>
+                        {isMystery ? '??? ??? ???' : displayDescription}
                       </span>
                     </p>
 

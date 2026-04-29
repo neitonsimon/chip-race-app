@@ -182,26 +182,30 @@ export const Navigation: React.FC<NavigationProps> = ({
 
                                     {/* Dropdown Menu Desktop */}
                                     <div className="absolute top-full left-0 mt-2 w-56 bg-[#0a061d] border border-white/10 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform origin-top-left -translate-y-2 group-hover:translate-y-0 z-50 p-2 grid grid-cols-1 gap-1">
-                                        {categories.filter(c => ['rank', 'bar', 'vip', 'online', 'online-credits'].includes(c.id)).map(cat => (
-                                            <button
-                                                key={cat.id}
-                                                onClick={() => handleCategoryClick(cat)}
-                                                className={`w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-white/10 transition-colors flex items-center gap-2 group/item ${cat.id === 'bar' ? 'cursor-default' : 'cursor-pointer'}`}
-                                            >
-                                                <span className={`material-icons-outlined text-sm ${cat.color === 'primary' ? 'text-primary' :
-                                                    cat.color === 'secondary' ? 'text-secondary' :
-                                                        cat.color === 'cyan' ? 'text-cyan-400' :
-                                                            cat.color === 'pink' ? 'text-pink-400' :
-                                                                cat.color === 'amber' ? 'text-amber-400' :
-                                                                    cat.color === 'orange' ? 'text-orange-400' :
-                                                                        cat.color === 'emerald' ? 'text-emerald-400' :
-                                                                            cat.color === 'blue' ? 'text-blue-400' :
-                                                                                cat.color === 'purple' ? 'text-purple-400' :
-                                                                                    cat.color === 'red' ? 'text-red-400' : 'text-primary'
-                                                    }`}>{cat.icon}</span>
-                                                <span className="text-gray-300 group-hover/item:text-white truncate font-medium">{cat.title}</span>
-                                            </button>
-                                        ))}
+                                        {categories.filter(c => !c.is_hidden || isAdmin).map(cat => {
+                                            const isEssential = ['rank', 'ranking', 'vip'].includes(cat.id);
+                                            const isBlocked = !isEssential && !isAdmin;
+                                            return (
+                                                <button
+                                                    key={cat.id}
+                                                    onClick={() => !isBlocked && handleCategoryClick(cat)}
+                                                    className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors flex items-center gap-2 group/item ${isBlocked ? 'cursor-not-allowed' : 'hover:bg-white/10 cursor-pointer'}`}
+                                                >
+                                                    <span className={`material-icons-outlined text-sm ${cat.color === 'primary' ? 'text-primary' :
+                                                        cat.color === 'secondary' ? 'text-secondary' :
+                                                            cat.color === 'cyan' ? 'text-cyan-400' :
+                                                                cat.color === 'pink' ? 'text-pink-400' :
+                                                                    cat.color === 'amber' ? 'text-amber-400' :
+                                                                        cat.color === 'orange' ? 'text-orange-400' :
+                                                                            cat.color === 'emerald' ? 'text-emerald-400' :
+                                                                                cat.color === 'blue' ? 'text-blue-400' :
+                                                                                    cat.color === 'purple' ? 'text-purple-400' :
+                                                                                        cat.color === 'red' ? 'text-red-400' : 'text-primary'
+                                                        }`}>{isBlocked ? 'lock' : cat.icon}</span>
+                                                    <span className={`text-gray-300 group-hover/item:text-white truncate font-medium ${isBlocked ? 'opacity-50' : ''}`}>{isBlocked ? `${cat.title} (Breve)` : cat.title}</span>
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             </div>
@@ -516,26 +520,30 @@ export const Navigation: React.FC<NavigationProps> = ({
                                     Ecossistema
                                 </div>
                                 <div className="grid grid-cols-2 gap-2 px-2 pb-2">
-                                    {categories.filter(c => ['rank', 'bar', 'vip', 'online', 'online-credits'].includes(c.id)).map(cat => (
-                                        <button
-                                            key={`mob-${cat.id}`}
-                                            onClick={() => handleCategoryClick(cat)}
-                                            className={`w-full text-left px-3 py-3 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 transition-colors flex flex-col gap-1 items-start ${cat.id === 'bar' ? 'cursor-default' : 'cursor-pointer'}`}
-                                        >
-                                            <span className={`material-icons-outlined text-sm ${cat.color === 'primary' ? 'text-primary' :
-                                                cat.color === 'secondary' ? 'text-secondary' :
-                                                    cat.color === 'cyan' ? 'text-cyan-400' :
-                                                        cat.color === 'pink' ? 'text-pink-400' :
-                                                            cat.color === 'amber' ? 'text-amber-400' :
-                                                                cat.color === 'orange' ? 'text-orange-400' :
-                                                                    cat.color === 'emerald' ? 'text-emerald-400' :
-                                                                        cat.color === 'blue' ? 'text-blue-400' :
-                                                                            cat.color === 'purple' ? 'text-purple-400' :
-                                                                                cat.color === 'red' ? 'text-red-400' : 'text-primary'
-                                                }`}>{cat.icon}</span>
-                                            <span className="text-gray-300 text-xs font-medium truncate w-full">{cat.title}</span>
-                                        </button>
-                                    ))}
+                                    {categories.filter(c => !c.is_hidden || isAdmin).map(cat => {
+                                        const isEssential = ['rank', 'ranking', 'vip'].includes(cat.id);
+                                        const isBlocked = !isEssential && !isAdmin;
+                                        return (
+                                            <button
+                                                key={`mob-${cat.id}`}
+                                                onClick={() => !isBlocked && handleCategoryClick(cat)}
+                                                className={`w-full text-left px-3 py-3 rounded-xl border border-white/5 transition-colors flex flex-col gap-1 items-start ${isBlocked ? 'bg-black/20 cursor-not-allowed' : 'bg-white/5 hover:bg-white/10 cursor-pointer'}`}
+                                            >
+                                                <span className={`material-icons-outlined text-sm ${cat.color === 'primary' ? 'text-primary' :
+                                                    cat.color === 'secondary' ? 'text-secondary' :
+                                                        cat.color === 'cyan' ? 'text-cyan-400' :
+                                                            cat.color === 'pink' ? 'text-pink-400' :
+                                                                cat.color === 'amber' ? 'text-amber-400' :
+                                                                    cat.color === 'orange' ? 'text-orange-400' :
+                                                                        cat.color === 'emerald' ? 'text-emerald-400' :
+                                                                            cat.color === 'blue' ? 'text-blue-400' :
+                                                                                cat.color === 'purple' ? 'text-purple-400' :
+                                                                                    cat.color === 'red' ? 'text-red-400' : 'text-primary'
+                                                    }`}>{isBlocked ? 'lock' : cat.icon}</span>
+                                                <span className={`text-gray-300 text-xs font-medium truncate w-full ${isBlocked ? 'opacity-50' : ''}`}>{isBlocked ? `${cat.title} (Breve)` : cat.title}</span>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
