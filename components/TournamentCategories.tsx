@@ -353,7 +353,7 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
           {categories
-            .filter(cat => !cat.is_hidden || isAdmin)
+            .filter(cat => ['rank', 'bar', 'vip', 'online', 'online-credits'].includes(cat.id))
             .sort((a, b) => {
               const aBlocked = a.is_mystery || a.is_hidden;
               const bBlocked = b.is_mystery || b.is_hidden;

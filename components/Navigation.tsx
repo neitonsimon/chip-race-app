@@ -182,7 +182,7 @@ export const Navigation: React.FC<NavigationProps> = ({
 
                                     {/* Dropdown Menu Desktop */}
                                     <div className="absolute top-full left-0 mt-2 w-56 bg-[#0a061d] border border-white/10 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform origin-top-left -translate-y-2 group-hover:translate-y-0 z-50 p-2 grid grid-cols-1 gap-1">
-                                        {categories.filter(c => (!c.is_hidden && !c.is_mystery)).map(cat => (
+                                        {categories.filter(c => ['rank', 'bar', 'vip', 'online', 'online-credits'].includes(c.id)).map(cat => (
                                             <button
                                                 key={cat.id}
                                                 onClick={() => handleCategoryClick(cat)}
@@ -516,7 +516,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                                     Ecossistema
                                 </div>
                                 <div className="grid grid-cols-2 gap-2 px-2 pb-2">
-                                    {categories.filter(c => (!c.is_hidden && !c.is_mystery)).map(cat => (
+                                    {categories.filter(c => ['rank', 'bar', 'vip', 'online', 'online-credits'].includes(c.id)).map(cat => (
                                         <button
                                             key={`mob-${cat.id}`}
                                             onClick={() => handleCategoryClick(cat)}
