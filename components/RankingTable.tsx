@@ -779,7 +779,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                                         <div className="flex items-center gap-2 md:gap-4 h-full">
                                                             <div className="relative shrink-0">
                                                                 <img
-                                                                    src={player.avatar || `https://ui-avatars.com/api/?name=${player.name.replace(' ', '+')}&background=random`}
+                                                                    src={player.avatar || `https://ui-avatars.com/api/?name=${player.name.replace(/\s+/g, '+')}&background=random`}
                                                                     alt={player.name}
                                                                     className="w-8 h-8 md:w-12 md:h-12 rounded-full object-cover border-2 border-gray-200 dark:border-white/10 group-hover:border-primary transition-colors"
                                                                 />

@@ -143,7 +143,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
     userReservations,
     onRefreshData
 }) => {
-    const { setIsFlyerOpen } = useApp();
+    const { setIsFlyerOpen, isLoggedIn, handleNavigate } = useApp();
     const [editingEvent, setEditingEvent] = useState<Event | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [viewEvent, setViewEvent] = useState<Event | null>(null); // Modal de Flyer (Eventos Abertos)
@@ -3036,18 +3036,27 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                             </>
                                         ) : (
                                             <button
-                                                onClick={confirmReservation}
-                                                disabled={!!reservingEvent.maxCapacity && currentReservationsCount >= Number(reservingEvent.maxCapacity)}
+                                                onClick={isLoggedIn ? confirmReservation : () => {
+                                                    sessionStorage.setItem('login_redirect', 'calendar');
+                                                    handleNavigate('login');
+                                                }}
+                                                disabled={isLoggedIn && !!reservingEvent.maxCapacity && currentReservationsCount >= Number(reservingEvent.maxCapacity)}
                                                 className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest transition-all flex justify-center items-center gap-2 ${
-                                                    !!reservingEvent.maxCapacity && currentReservationsCount >= Number(reservingEvent.maxCapacity) 
+                                                    isLoggedIn && !!reservingEvent.maxCapacity && currentReservationsCount >= Number(reservingEvent.maxCapacity) 
                                                     ? 'bg-red-900/50 text-red-500 border border-red-500/30 cursor-not-allowed shadow-none' 
                                                     : 'bg-green-600 hover:bg-green-500 text-white shadow-[0_0_20px_rgba(34,197,94,0.3)] hover:shadow-[0_0_30px_rgba(34,197,94,0.5)]'
                                                 }`}
                                             >
-                                                {!!reservingEvent.maxCapacity && currentReservationsCount >= Number(reservingEvent.maxCapacity) 
-                                                    ? 'LIMITE DE VAGAS ATINGIDO (LOTADO)' 
-                                                    : 'EU CONCORDO E QUERO MEU BÔNUS'
-                                                }
+                                                {!isLoggedIn ? (
+                                                    <>
+                                                        <span className="material-icons-outlined">login</span>
+                                                        FAZER LOGIN PARA GARANTIR
+                                                    </>
+                                                ) : (
+                                                    !!reservingEvent.maxCapacity && currentReservationsCount >= Number(reservingEvent.maxCapacity) 
+                                                        ? 'LIMITE DE VAGAS ATINGIDO (LOTADO)' 
+                                                        : 'EU CONCORDO E QUERO MEU BÔNUS'
+                                                )}
                                             </button>
                                         )}
                                     </div>

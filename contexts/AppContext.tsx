@@ -335,7 +335,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     numericId: p.numeric_id,
                     rank: 0,
                     name: p.name || 'Usuário',
-                    avatar: p.avatar_url || `https://ui-avatars.com/api/?name=${p.name || 'U'}&background=random`,
+                    avatar: p.avatar_url || `https://ui-avatars.com/api/?name=${(p.name || 'U').trim().replace(/\s+/g, '+')}&background=random`,
                     city: p.city || '',
                     points: 0,
                     change: 'same',
@@ -709,7 +709,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                         const playerKey = r.userId || r.name.trim();
                         if (!playerMap.has(playerKey)) {
                             playerMap.set(playerKey, {
-                                id: profile?.id || r.userId, numericId: profile?.numericId, rank: 0,
+                                id: profile?.id || r.userId || `GUEST:${r.name}`, numericId: profile?.numericId, rank: 0,
                                 name: profile?.name || r.name, avatar: profile?.avatar || `https://ui-avatars.com/api/?name=${r.name.replace(' ', '+')}&background=random`,
                                 city: profile?.city || 'Venâncio Aires - RS', points: 0, change: 'same',
                                 isVip: profile?.isVip || r.isVip || false, vipStatus: profile?.vipStatus || 'nao_vip',
@@ -801,7 +801,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         window.scrollTo(0, 0);
     };
 
-    const handleLogin = () => handleNavigate('home');
+    const handleLogin = () => {
+        const redirect = sessionStorage.getItem('login_redirect');
+        if (redirect) {
+            handleNavigate(redirect);
+            sessionStorage.removeItem('login_redirect');
+        } else {
+            handleNavigate('home');
+        }
+    };
     const handleLogout = async () => {
         await supabase.auth.signOut();
         setIsLoggedIn(false);
@@ -811,7 +819,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const handlePlayerSelect = (player: RankingPlayer) => {
         if (player.name) {
-            const urlName = encodeURIComponent(player.name.replace(/\s+/g, '-').toLowerCase());
+            const urlName = encodeURIComponent(player.name.trim().replace(/\s+/g, '-').replace(/-+$/, '').toLowerCase());
             navigate(`/perfil/${urlName}`);
         } else {
             handleNavigate('profile');
@@ -821,77 +829,71 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const handleProfileUpdate = async (targetId: string, updatedData: any) => {
         const sanitizedTargetId = targetId?.trim() || '';
+        if (!sanitizedTargetId) return;
+
+        console.log('--- PROFILE UPDATE LOG ---', { targetId: sanitizedTargetId, isAdmin });
+
         try {
-            // Update local state for current user immediately
-            if (sanitizedTargetId === currentUserId) {
-                setCurrentUser(prev => ({ ...prev, ...updatedData }));
-            }
-
-            // Sync with allProfiles list
-            setAllProfiles(prev => prev.map(p => p.id === sanitizedTargetId ? { ...p, ...updatedData } : p));
-
-            // Sync with selected player if applicable
-            if (selectedPlayer?.id === sanitizedTargetId) {
-                setSelectedPlayer(prev => prev ? ({ ...prev, ...updatedData } as any) : null);
-            }
-
-            // Persist to Supabase if it's a UUID and the user is an admin or it's their own profile
             const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sanitizedTargetId);
+            const isGuest = sanitizedTargetId.startsWith('GUEST:') || (!isUUID && sanitizedTargetId.length > 0);
             
-            if (isUUID && (isAdmin || sanitizedTargetId === currentUserId)) {
-                // Prepare a clean update object with only defined fields
-                const dbUpdate: any = {};
+            // Prepare clean update object
+            const dbUpdate: any = {};
+            if (updatedData.name !== undefined) dbUpdate.name = updatedData.name;
+            if (updatedData.avatar !== undefined) dbUpdate.avatar_url = updatedData.avatar;
+            if (updatedData.city !== undefined) dbUpdate.city = updatedData.city;
+            if (updatedData.bio !== undefined) dbUpdate.bio = updatedData.bio;
+            if (updatedData.social !== undefined) dbUpdate.social = updatedData.social;
+            if (updatedData.playStyles !== undefined) dbUpdate.play_styles = updatedData.playStyles;
+            if (updatedData.gallery !== undefined) dbUpdate.gallery = updatedData.gallery;
+            if (updatedData.level !== undefined) dbUpdate.level = updatedData.level;
+            if (updatedData.currentExp !== undefined) dbUpdate.current_exp = updatedData.currentExp;
+            if (updatedData.suprema_nickname !== undefined) dbUpdate.suprema_nickname = updatedData.suprema_nickname;
+            if (updatedData.suprema_user_id !== undefined) dbUpdate.suprema_user_id = updatedData.suprema_user_id;
+            
+            if (updatedData.debtLimitBrl !== undefined) dbUpdate.debt_limit_brl = updatedData.debtLimitBrl;
+            if (updatedData.isVip !== undefined) dbUpdate.is_vip = updatedData.isVip;
+            if (updatedData.vipStatus !== undefined) dbUpdate.vip_status = updatedData.vipStatus;
+            if (updatedData.vipExpiresAt !== undefined) dbUpdate.vip_expires_at = updatedData.vipExpiresAt;
+            if (updatedData.isVerified !== undefined) dbUpdate.is_verified = updatedData.isVerified;
+            if (updatedData.lastDailyClaim !== undefined) dbUpdate.last_daily_claim = updatedData.lastDailyClaim;
+            if (updatedData.dailyStreak !== undefined) dbUpdate.daily_streak = updatedData.dailyStreak;
 
-                // Mapeamento de campos UI/State para Colunas DB
-                if (updatedData.name !== undefined) dbUpdate.name = updatedData.name;
-                if (updatedData.avatar !== undefined) dbUpdate.avatar_url = updatedData.avatar;
-                if (updatedData.city !== undefined) dbUpdate.city = updatedData.city;
-                if (updatedData.bio !== undefined) dbUpdate.bio = updatedData.bio;
-                if (updatedData.social !== undefined) dbUpdate.social = updatedData.social;
-                if (updatedData.playStyles !== undefined) dbUpdate.play_styles = updatedData.playStyles;
-                if (updatedData.gallery !== undefined) dbUpdate.gallery = updatedData.gallery;
-                if (updatedData.level !== undefined) dbUpdate.level = updatedData.level;
-                if (updatedData.currentExp !== undefined) dbUpdate.current_exp = updatedData.currentExp;
-                if (updatedData.suprema_nickname !== undefined) dbUpdate.suprema_nickname = updatedData.suprema_nickname;
-                if (updatedData.suprema_user_id !== undefined) dbUpdate.suprema_user_id = updatedData.suprema_user_id;
+            if (Object.keys(dbUpdate).length === 0) return;
 
-                // Campos Financeiros e de Status
-                if (updatedData.debtLimitBrl !== undefined) dbUpdate.debt_limit_brl = updatedData.debtLimitBrl;
-                if (updatedData.isVip !== undefined) dbUpdate.is_vip = updatedData.isVip;
-                if (updatedData.vipStatus !== undefined) dbUpdate.vip_status = updatedData.vipStatus;
-                if (updatedData.vipExpiresAt !== undefined) dbUpdate.vip_expires_at = updatedData.vipExpiresAt;
-                if (updatedData.isVerified !== undefined) dbUpdate.is_verified = updatedData.isVerified;
-                if (updatedData.lastDailyClaim !== undefined) dbUpdate.last_daily_claim = updatedData.lastDailyClaim;
-                if (updatedData.dailyStreak !== undefined) dbUpdate.daily_streak = updatedData.dailyStreak;
+            if (isUUID) {
+                // Regular UUID profile update
+                const { error } = await supabase.from('profiles').upsert({ id: sanitizedTargetId, ...dbUpdate }, { onConflict: 'id' });
+                if (error) throw error;
 
-                /* 
-                   IMPORTANT: We DO NOT persist balance_brl, balance_chipz or total_pending_debt 
-                   directly via UPSERT here. These fields are managed by atomic transactions 
-                   (RPCs like secure_balance_transaction or database triggers). 
-                   Direct upserts from local state can cause race conditions and overwrite 
-                   correct balances with stale ones.
-                */
-
-                // Only execute update if there's something to update
-                if (Object.keys(dbUpdate).length > 0) {
-                    const isNewUser = !currentUser.name || currentUser.name === 'Usuário' || currentUser.name === 'User';
-                    const isSettingName = updatedData.name && isNewUser;
-
-                    // Use upsert to handle new users who might not have a profile row yet
-                    const { error } = await supabase.from('profiles').upsert({ id: sanitizedTargetId, ...dbUpdate }, { onConflict: 'id' });
-                    if (error) {
-                        console.error('Error persisting profile update:', error);
-                        throw error;
-                    }
-
-                    // Se for a primeira vez definindo o nome, enviar boas-vindas
-                    if (isSettingName) {
-                        await sendTemplatedMessage('welcome', sanitizedTargetId);
-                    }
+                // Sync local state
+                setAllProfiles(prev => prev.map(p => p.id === sanitizedTargetId ? { ...p, ...updatedData } : p));
+                if (sanitizedTargetId === currentUserId) {
+                    setCurrentUser(prev => ({ ...prev, ...updatedData }));
                 }
-            } else if (!isUUID && sanitizedTargetId && isAdmin) {
-                // If admin is trying to edit a non-UUID user, we should inform them why it's not saving to DB
-                throw new Error("Não é possível salvar alterações permanentes para usuários sem conta (convidados).");
+            } else if (isGuest && isAdmin) {
+                // Promote Guest (or any non-UUID ID handled by admin) to real profile
+                const newId = crypto.randomUUID();
+                const guestName = sanitizedTargetId.replace('GUEST:', '');
+                
+                const finalDbUpdate = { 
+                    id: newId, 
+                    name: updatedData.name || guestName,
+                    ...dbUpdate 
+                };
+
+                const { error } = await supabase.from('profiles').insert(finalDbUpdate);
+                if (error) throw error;
+
+                // Fetch the new profile and add to state
+                const { data: newProfile } = await supabase.from('profiles').select('*').eq('id', newId).maybeSingle();
+                if (newProfile) {
+                    setAllProfiles(prev => [...prev.filter(p => p.id !== sanitizedTargetId), newProfile]);
+                }
+                
+                alert("Este convidado foi promovido a um Perfil Permanente com sucesso!");
+            } else {
+                throw new Error("Não é possível salvar alterações para convidados sem conta. Apenas administradores podem promover perfis.");
             }
         } catch (error) {
             console.error('Error handling profile update:', error);
@@ -1269,15 +1271,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const handleNavigateToPlayerByNameInternal = (name: string) => {
         const uniquePlayers = getAllUniquePlayers();
         let player = uniquePlayers.find(p => {
-            const cleanName = p.name.toLowerCase().trim();
-            const targetName = name.toLowerCase().trim();
-            return cleanName.replace(/\s+/g, '-') === targetName || 
-                   cleanName === targetName.replace(/-/g, ' ');
+            const dbName = p.name.toLowerCase().trim();
+            // Create a clean slug from the database name
+            const dbSlug = dbName.replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+            // Create a clean slug from the URL parameter
+            const targetSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+            
+            return dbSlug === targetSlug || dbName === targetSlug.replace(/-/g, ' ');
         });
 
         // Fallback: Se não encontrou nos perfis mas o nome bate com o usuário logado
         if (!player && isLoggedIn && currentUser.name) {
-            const currentSlug = currentUser.name.toLowerCase().replace(/\s+/g, '-');
+            const currentSlug = currentUser.name.trim().replace(/\s+/g, '-').replace(/-+$/, '').toLowerCase();
             const targetSlug = name.toLowerCase();
             if (currentSlug === targetSlug || currentUser.name.toLowerCase() === targetSlug.replace(/-/g, ' ')) {
                 player = { ...currentUser, id: currentUserId || currentUser.id };
@@ -1290,7 +1295,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 name: name.replace(/-/g, ' ').split(' ').map(s => s.charAt(0).toUpperCase() + s.substring(1)).join(' '), 
                 points: 0, 
                 change: 'same', 
-                avatar: `https://ui-avatars.com/api/?name=${name.replace(/-/g, '+')}&background=random`, 
+                avatar: `https://ui-avatars.com/api/?name=${name.trim().replace(/[-/\s]+/g, '+')}&background=random`, 
                 city: '' 
             };
         }
@@ -1300,7 +1305,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     const handleNavigateToPlayerByName = (name: string) => {
-        const urlName = encodeURIComponent(name.replace(/\s+/g, '-').toLowerCase());
+        const urlName = encodeURIComponent(name.trim().replace(/\s+/g, '-').replace(/-+$/, '').toLowerCase());
         navigate(`/perfil/${urlName}`);
         window.scrollTo(0, 0);
     };
