@@ -65,6 +65,13 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
     // Pre-fill punter for non-admins
     useEffect(() => {
         if (showPlaceBetModal && !isAdmin && isLoggedIn && currentUser) {
+            const isStaff = currentUser.role === 'staff' || currentUser.role === 'admin';
+            
+            // For normal users, only 'credits' is allowed
+            if (!isStaff) {
+                setPaymentMethod('credits');
+            }
+
             const fetchMyBalance = async () => {
                 const { data } = await supabase
                     .from('profiles')
@@ -403,7 +410,8 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                 amount: amount,
                 potential_return: potentialReturn,
                 payment_method: paymentMethod,
-                status: 'pending'
+                status: 'pending',
+                created_by: currentUser?.id
             });
 
         if (error) {
@@ -1041,7 +1049,13 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                         { id: 'pix', label: 'PIX (À Vista)', icon: 'qr_code' },
                                         { id: 'credits', label: 'Crédito App', icon: 'account_balance_wallet' },
                                         { id: 'debt', label: 'Pendura', icon: 'history_ed' }
-                                    ].map(method => (
+                                    ].filter(m => {
+                                        // Restrict to 'credits' only for normal users
+                                        if (!isAdmin && currentUser?.role !== 'staff') {
+                                            return m.id === 'credits';
+                                        }
+                                        return true;
+                                    }).map(method => (
                                         <button
                                             key={method.id}
                                             onClick={() => setPaymentMethod(method.id as any)}
