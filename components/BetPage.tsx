@@ -38,7 +38,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
     const [maxBet, setMaxBet] = useState<string>('');
     const [playerSearch, setPlayerSearch] = useState('');
     const [searchResults, setSearchResults] = useState<RankingPlayer[]>([]);
-    const [selectedPlayers, setSelectedPlayers] = useState<{ id: string; name: string; odd: number }[]>([]);
+    const [selectedPlayers, setSelectedPlayers] = useState<{ id: string; name: string; odd: number; odd_id?: string }[]>([]);
 
     const [showEditModal, setShowEditModal] = useState(false);
     const [editingBet, setEditingBet] = useState<Bet | null>(null);
@@ -231,12 +231,8 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
 
         try {
             // 1. Identify which odds should be deleted
-            const currentOddIds = selectedPlayers.map(p => {
-                const isGuest = p.id.startsWith('GUEST:');
-                const found = editingBet.bet_odds?.find(o => (isGuest ? o.guest_name === p.name : o.user_id === p.id));
-                return found?.id;
-            }).filter(Boolean);
-
+            // Odds are deleted if their primary key (odd_id) is no longer in the selectedPlayers list
+            const currentOddIds = selectedPlayers.map(p => p.odd_id).filter(Boolean);
             const oddsToDelete = editingBet.bet_odds?.filter(o => !currentOddIds.includes(o.id)) || [];
             
             for (const odd of oddsToDelete) {
@@ -244,7 +240,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                 const { count } = await supabase.from('user_bets').select('*', { count: 'exact', head: true }).eq('odd_id', odd.id);
                 if (count && count > 0) {
                     alert(`Não é possível excluir o jogador ${odd.profiles?.name || odd.guest_name} pois já existem apostas vinculadas a ele.`);
-                    // We must keep this player in the list to avoid UI inconsistency
+                    // UI will show this player again on next fetch
                     continue; 
                 }
                 await supabase.from('bet_odds').delete().eq('id', odd.id);
@@ -253,16 +249,20 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             // 2. Update existing odds and insert new ones
             for (const p of selectedPlayers) {
                 const isGuest = p.id.startsWith('GUEST:');
-                const existingOdd = editingBet.bet_odds?.find(o => (isGuest ? o.guest_name === p.name : o.user_id === p.id));
+                const oddValue = isNaN(Number(p.odd)) ? 2.0 : Number(p.odd);
                 
-                if (existingOdd) {
-                    await supabase.from('bet_odds').update({ odd_value: p.odd }).eq('id', existingOdd.id);
+                if (p.odd_id) {
+                    // Update existing by its primary key
+                    await supabase.from('bet_odds')
+                        .update({ odd_value: oddValue })
+                        .eq('id', p.odd_id);
                 } else {
+                    // Insert new
                     await supabase.from('bet_odds').insert({
                         bet_id: editingBet.id,
                         user_id: isGuest ? null : p.id,
                         guest_name: isGuest ? p.name : null,
-                        odd_value: p.odd,
+                        odd_value: oddValue,
                         status: 'active'
                     });
                 }
@@ -272,7 +272,8 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             await supabase.from('bets').update({ 
                 expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
                 max_bet: maxBet ? parseFloat(maxBet) : null,
-                category: selectedCategory
+                category: selectedCategory,
+                updated_at: new Date().toISOString()
             }).eq('id', editingBet.id);
             
             setShowEditModal(false);
@@ -527,6 +528,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                                             setSelectedCategory(bet.category);
                                                             setSelectedPlayers(bet.bet_odds?.map(o => ({
                                                                 id: o.user_id || `GUEST:${o.guest_name}`,
+                                                                odd_id: o.id,
                                                                 name: o.profiles?.name || o.guest_name || '',
                                                                 odd: o.odd_value
                                                             })) || []);
