@@ -8,6 +8,7 @@ import {
     ExperienceLevel, DailyReward, Poll, MessageCategory, BadgeTemplate, SystemMessageTemplate
 } from '../types';
 import { calculatePoints } from '../utils/scoring';
+import { createProfileSlug } from '../src/lib/slugUtils';
 import appConfig from '../src/config/appConfig.json';
 
 interface AppContextType {
@@ -140,13 +141,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (path === '/') {
             setCurrentView('home');
         } else if (path.startsWith('/perfil/')) {
-            const name = decodeURIComponent(path.replace('/perfil/', ''));
-            if (name) {
+            const rawSlug = path.replace('/perfil/', '');
+            const decodedName = decodeURIComponent(rawSlug);
+            const cleanSlug = createProfileSlug(decodedName);
+            
+            // Auto-redirect if slug is dirty (e.g. trailing hyphens) or encoded incorrectly
+            if (rawSlug !== cleanSlug && encodeURIComponent(cleanSlug) !== rawSlug) {
+                navigate(`/perfil/${cleanSlug}`, { replace: true });
+            } else if (decodedName) {
                 setCurrentView('profile');
-                handleNavigateToPlayerByNameInternal(name);
+                handleNavigateToPlayerByNameInternal(decodedName);
             }
         } else if (path.startsWith('/ranking/')) {
-            setCurrentView('ranking');
+            const rawSlug = path.replace('/ranking/', '');
+            const decodedName = decodeURIComponent(rawSlug);
+            const cleanSlug = createProfileSlug(decodedName);
+
+            if (rawSlug !== cleanSlug && encodeURIComponent(cleanSlug) !== rawSlug) {
+                navigate(`/ranking/${cleanSlug}`, { replace: true });
+            } else {
+                setCurrentView('ranking');
+            }
         } else if (path === '/perfil') {
             setCurrentView('profile');
         } else if (path === '/calendario') {
@@ -817,10 +832,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         handleNavigate('home');
     };
 
+    // --- UTILS ---
     const handlePlayerSelect = (player: RankingPlayer) => {
         if (player.name) {
-            const urlName = encodeURIComponent(player.name.trim().replace(/\s+/g, '-').replace(/-+$/, '').toLowerCase());
-            navigate(`/perfil/${urlName}`);
+            const urlSlug = createProfileSlug(player.name);
+            navigate(`/perfil/${urlSlug}`);
         } else {
             handleNavigate('profile');
         }
@@ -829,13 +845,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const handleProfileUpdate = async (targetId: string, updatedData: any) => {
         const sanitizedTargetId = targetId?.trim() || '';
-        if (!sanitizedTargetId) return;
+        if (!sanitizedTargetId) return null;
 
         console.log('--- PROFILE UPDATE LOG ---', { targetId: sanitizedTargetId, isAdmin });
 
         try {
             const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sanitizedTargetId);
-            const isGuest = sanitizedTargetId.startsWith('GUEST:') || (!isUUID && sanitizedTargetId.length > 0);
+            const isGuest = !isUUID && sanitizedTargetId.length > 0;
             
             // Prepare clean update object
             const dbUpdate: any = {};
@@ -867,10 +883,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 if (error) throw error;
 
                 // Sync local state
-                setAllProfiles(prev => prev.map(p => p.id === sanitizedTargetId ? { ...p, ...updatedData } : p));
+                const updateEffect = (p: any) => ({ ...p, ...updatedData });
+                setAllProfiles(prev => prev.map(p => p.id === sanitizedTargetId ? updateEffect(p) : p));
+                
+                if (selectedPlayer && selectedPlayer.id === sanitizedTargetId) {
+                    setSelectedPlayer(prev => prev ? updateEffect(prev) : null);
+                }
+
                 if (sanitizedTargetId === currentUserId) {
                     setCurrentUser(prev => ({ ...prev, ...updatedData }));
                 }
+                return sanitizedTargetId;
             } else if (isGuest && isAdmin) {
                 // Promote Guest (or any non-UUID ID handled by admin) to real profile
                 const newId = crypto.randomUUID();
@@ -888,10 +911,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 // Fetch the new profile and add to state
                 const { data: newProfile } = await supabase.from('profiles').select('*').eq('id', newId).maybeSingle();
                 if (newProfile) {
-                    setAllProfiles(prev => [...prev.filter(p => p.id !== sanitizedTargetId), newProfile]);
+                    const mappedProfile = {
+                        id: newProfile.id,
+                        numericId: newProfile.numeric_id,
+                        rank: 0,
+                        name: newProfile.name || 'Usuário',
+                        avatar: newProfile.avatar_url || `https://ui-avatars.com/api/?name=${(newProfile.name || 'U').trim().replace(/\s+/g, '+')}&background=random`,
+                        city: newProfile.city || '',
+                        points: 0,
+                        change: 'same',
+                        isVip: newProfile.is_vip || false,
+                        vipStatus: newProfile.vip_status || 'nao_vip',
+                        vipExpiresAt: newProfile.vip_expires_at || null,
+                        social: newProfile.social || undefined,
+                        bio: newProfile.bio || undefined,
+                        level: newProfile.level || 1,
+                        currentExp: newProfile.current_exp || 0,
+                        nextLevelExp: newProfile.next_level_exp || 1000,
+                        gallery: newProfile.gallery || undefined,
+                        playStyles: newProfile.play_styles || undefined,
+                        isVerified: newProfile.is_verified || false,
+                        totalPendingDebt: newProfile.total_pending_debt || 0,
+                        suprema_nickname: newProfile.suprema_nickname || undefined,
+                        suprema_user_id: newProfile.suprema_user_id || undefined,
+                        badges: []
+                    };
+                    setAllProfiles(prev => [...prev.filter(p => p.id !== sanitizedTargetId), mappedProfile]);
+                    
+                    // Se o admin estava vendo esse perfil, atualiza a seleção
+                    if (selectedPlayer && (selectedPlayer.id === sanitizedTargetId || selectedPlayer.name === guestName)) {
+                        setSelectedPlayer(mappedProfile);
+                    }
                 }
                 
                 alert("Este convidado foi promovido a um Perfil Permanente com sucesso!");
+                return newId;
             } else {
                 throw new Error("Não é possível salvar alterações para convidados sem conta. Apenas administradores podem promover perfis.");
             }
@@ -1270,43 +1324,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const handleNavigateToPlayerByNameInternal = (name: string) => {
         const uniquePlayers = getAllUniquePlayers();
+        const targetSlug = createProfileSlug(name);
+
         let player = uniquePlayers.find(p => {
-            const dbName = p.name.toLowerCase().trim();
-            // Create a clean slug from the database name
-            const dbSlug = dbName.replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-            // Create a clean slug from the URL parameter
-            const targetSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-            
-            return dbSlug === targetSlug || dbName === targetSlug.replace(/-/g, ' ');
+            const dbSlug = createProfileSlug(p.name);
+            return dbSlug === targetSlug || p.name.toLowerCase().trim() === targetSlug.replace(/-/g, ' ');
         });
 
         // Fallback: Se não encontrou nos perfis mas o nome bate com o usuário logado
         if (!player && isLoggedIn && currentUser.name) {
-            const currentSlug = currentUser.name.trim().replace(/\s+/g, '-').replace(/-+$/, '').toLowerCase();
-            const targetSlug = name.toLowerCase();
+            const currentSlug = createProfileSlug(currentUser.name);
             if (currentSlug === targetSlug || currentUser.name.toLowerCase() === targetSlug.replace(/-/g, ' ')) {
                 player = { ...currentUser, id: currentUserId || currentUser.id };
             }
         }
 
         if (!player) {
-            player = { 
-                rank: 0, 
-                name: name.replace(/-/g, ' ').split(' ').map(s => s.charAt(0).toUpperCase() + s.substring(1)).join(' '), 
-                points: 0, 
-                change: 'same', 
-                avatar: `https://ui-avatars.com/api/?name=${name.trim().replace(/[-/\s]+/g, '+')}&background=random`, 
-                city: '' 
-            };
+            setSelectedPlayer({ isNotFound: true, name: name.replace(/-/g, ' ') } as any);
+        } else {
+            setSelectedPlayer(player);
         }
-        
-        setSelectedPlayer(player);
         setCurrentView('profile');
     };
 
     const handleNavigateToPlayerByName = (name: string) => {
-        const urlName = encodeURIComponent(name.trim().replace(/\s+/g, '-').replace(/-+$/, '').toLowerCase());
-        navigate(`/perfil/${urlName}`);
+        const urlSlug = createProfileSlug(name);
+        navigate(`/perfil/${urlSlug}`);
         window.scrollTo(0, 0);
     };
 

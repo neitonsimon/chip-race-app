@@ -182,9 +182,15 @@ export const Navigation: React.FC<NavigationProps> = ({
 
                                     {/* Dropdown Menu Desktop */}
                                     <div className="absolute top-full left-0 mt-2 w-56 bg-[#0a061d] border border-white/10 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform origin-top-left -translate-y-2 group-hover:translate-y-0 z-50 p-2 grid grid-cols-1 gap-1">
-                                        {categories.filter(c => (['rank', 'ranking', 'vip', 'online-credits'].includes(c.id) || isAdmin) && !c.is_hidden).map(cat => {
-                                            const isEssential = ['rank', 'ranking', 'vip', 'online-credits'].includes(cat.id);
-                                            const isBlocked = !isEssential && !isAdmin;
+                                        {categories
+                                            .filter(c => ['rank', 'ranking', 'bar', 'vip', 'online-credits', 'bet'].includes(c.id) && !c.is_hidden)
+                                            .sort((a, b) => {
+                                                const order = ['rank', 'ranking', 'bar', 'vip', 'online-credits', 'bet'];
+                                                return order.indexOf(a.id) - order.indexOf(b.id);
+                                            })
+                                            .map(cat => {
+                                                const isEssential = ['rank', 'ranking', 'bar', 'vip', 'online-credits', 'bet'].includes(cat.id);
+                                                const isBlocked = !isEssential && !isAdmin;
                                             return (
                                                 <button
                                                     key={cat.id}
@@ -520,9 +526,15 @@ export const Navigation: React.FC<NavigationProps> = ({
                                     Ecossistema
                                 </div>
                                 <div className="grid grid-cols-2 gap-2 px-2 pb-2">
-                                    {categories.filter(c => (['rank', 'ranking', 'vip', 'online-credits'].includes(c.id) || isAdmin) && !c.is_hidden).map(cat => {
-                                        const isEssential = ['rank', 'ranking', 'vip', 'online-credits'].includes(cat.id);
-                                        const isBlocked = !isEssential && !isAdmin;
+                                    {categories
+                                        .filter(c => ['rank', 'ranking', 'bar', 'vip', 'online-credits', 'bet'].includes(c.id) && !c.is_hidden)
+                                        .sort((a, b) => {
+                                            const order = ['rank', 'ranking', 'bar', 'vip', 'online-credits', 'bet'];
+                                            return order.indexOf(a.id) - order.indexOf(b.id);
+                                        })
+                                        .map(cat => {
+                                            const isEssential = ['rank', 'ranking', 'bar', 'vip', 'online-credits', 'bet'].includes(cat.id);
+                                            const isBlocked = !isEssential && !isAdmin;
                                         return (
                                             <button
                                                 key={`mob-${cat.id}`}

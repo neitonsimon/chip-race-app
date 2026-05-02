@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PlayerStats, RankingPlayer, TournamentResult, Event, ExperienceLevel, Message, Poll, MessageCategory, DailyReward, RankingInstance } from '../types';
+import { createProfileSlug } from '../src/lib/slugUtils';
 import { supabase } from '../src/lib/supabase';
 import appConfig from '../src/config/appConfig.json';
 import { ProfileStatsSkeleton } from './Skeleton';
@@ -88,8 +90,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     rankings,
     rankingPlayers = [],
     events = [],
-    isLoading
 }) => {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<TabView>('overview');
     const [viewClosedEvent, setViewClosedEvent] = useState<Event | null>(null);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -327,11 +329,12 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             baseData.suprema_nickname = (currentUser as any).suprema_nickname;
             baseData.suprema_user_id = (currentUser as any).suprema_user_id;
 
-            originalNameRef.current = baseData.name;
-
             // CHECK CLAIM AVAILABILITY
             checkClaimAvailability(baseData.lastDailyClaim);
         }
+
+        originalNameRef.current = baseData.name;
+        targetIdRef.current = baseData.id;
 
         // 2. Calculate Tournament Log from Real Events (Synchronization)
         let realLogs: TournamentResult[] = [];
@@ -824,9 +827,19 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                     gallery: player.gallery,
                     suprema_nickname: player.suprema_nickname
                 };
-                await onUpdateProfile(targetIdRef.current, editableData as any);
-                // Atualiza a ref para o novo nome caso tenha mudado
-                originalNameRef.current = player.name;
+                const newId = await onUpdateProfile(targetIdRef.current, editableData as any);
+                
+                // Se o ID mudou (promoção) ou o nome mudou, redireciona para o novo slug
+                const oldSlug = createProfileSlug(originalNameRef.current);
+                const newSlug = createProfileSlug(player.name);
+                
+                if (newId && (newId !== targetIdRef.current || oldSlug !== newSlug)) {
+                    targetIdRef.current = newId;
+                    originalNameRef.current = player.name;
+                    navigate(`/perfil/${newSlug}`, { replace: true });
+                } else {
+                    originalNameRef.current = player.name;
+                }
             }
 
             alert("Perfil atualizado com sucesso!");
@@ -912,6 +925,29 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     const currentExpInTier = Math.max(0, player.currentExp - currentTierBaseExp);
 
     const xpPercentage = Math.min(100, (currentExpInTier / displayNextExp) * 100);
+
+    // 5. Handling Not Found State
+    if (initialData && (initialData as any).isNotFound) {
+        return (
+            <div className="min-h-screen pt-24 pb-12 px-4 flex flex-col items-center justify-center text-center">
+                <div className="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mb-6 border border-red-500/30">
+                    <span className="material-icons-outlined text-4xl text-red-500">person_off</span>
+                </div>
+                <h1 className="text-3xl font-bold text-white mb-2 uppercase tracking-widest">Jogador não encontrado</h1>
+                <p className="text-gray-400 mb-8 max-w-md">
+                    O perfil que você está tentando acessar não existe ou teve o nome alterado recentemente.
+                </p>
+                <button 
+                    onClick={() => navigate('/')}
+                    className="px-8 py-3 bg-gradient-to-r from-primary to-accent text-white font-bold rounded-full hover:scale-105 transition-all shadow-neon-pink"
+                >
+                    Voltar para o Início
+                </button>
+            </div>
+        );
+    }
+
+    if (isLoading) return <ProfileStatsSkeleton />;
 
     return (
         <div className="py-12 bg-background-light dark:bg-background-dark min-h-screen">

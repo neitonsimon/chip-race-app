@@ -26,6 +26,7 @@ import { OnlineCreditsPage } from './OnlineCreditsPage';
 import { CategoryPage } from './CategoryPage';
 import { DocumentLinks } from './DocumentLinks';
 import { FenachimPage } from './FenachimPage';
+import { BetPage } from './BetPage';
 
 export const AppRouter: React.FC = () => {
     const {
@@ -55,6 +56,9 @@ export const AppRouter: React.FC = () => {
 
         if (currentView.startsWith('category-')) {
             const categoryId = currentView.replace('category-', '');
+            if (categoryId === 'bet') {
+                return <BetPage isAdmin={isAdmin} onNavigate={handleNavigate} />;
+            }
             const categoryInfo = contentDB?.categories?.find(c => c.id === categoryId);
             return <CategoryPage categoryId={categoryId} category={categoryInfo} onNavigate={handleNavigate} isAdmin={isAdmin} />;
         }

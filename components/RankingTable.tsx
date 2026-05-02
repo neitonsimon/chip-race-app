@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { RankingPlayer, Event, RankingInstance, ScoringSchema, RankingFormula, BadgeTemplate } from '../types';
+import { createProfileSlug } from '../src/lib/slugUtils';
 import { ScoringFormulaEditor } from './ScoringFormulaEditor';
 import { RankingSkeleton } from './Skeleton';
 import { RankingStages } from './RankingStages';
@@ -94,7 +95,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
         if (path.startsWith('/ranking/')) {
             const slug = path.replace('/ranking/', '').toLowerCase();
             const found = availableInCurrentView.find(r => 
-                r.label.toLowerCase().replace(/\s+/g, '-') === slug || 
+                createProfileSlug(r.label) === slug || 
                 r.label.toLowerCase().includes(slug) || 
                 r.id.toLowerCase() === slug
             );
@@ -412,7 +413,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                         key={ranking.id}
                                         onClick={() => {
                                             setActiveRankingId(ranking.id);
-                                            navigate(`/ranking/${encodeURIComponent(ranking.label.toLowerCase().replace(/\s+/g, '-'))}`);
+                                            navigate(`/ranking/${createProfileSlug(ranking.label)}`);
                                         }}
                                         className={`px-4 sm:px-8 py-2 rounded-full text-sm sm:text-base font-bold uppercase tracking-widest transition-all duration-300 whitespace-nowrap ${activeRankingId === ranking.id
                                             ? 'bg-gradient-to-r from-primary to-accent text-white shadow-neon-pink'
