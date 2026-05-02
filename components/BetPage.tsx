@@ -681,21 +681,32 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                     <select 
                                         value={selectedCategory}
                                         onChange={(e) => setSelectedCategory(e.target.value as any)}
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors text-white text-sm"
+                                        className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors text-white text-sm appearance-none cursor-pointer"
                                     >
-                                        <option value="campeao">Campeão</option>
-                                        <option value="3handed">3-Handed</option>
-                                        <option value="mesa_finalista">Mesa Finalista</option>
+                                        <option value="campeao" className="bg-[#0a061d] text-white">Campeão</option>
+                                        <option value="3handed" className="bg-[#0a061d] text-white">3-Handed</option>
+                                        <option value="mesa_finalista" className="bg-[#0a061d] text-white">Mesa Finalista</option>
                                     </select>
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Fim das Apostas</label>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Horário de Encerramento</label>
                                     <input 
                                         type="datetime-local"
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors text-white text-sm"
+                                        className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors text-white text-sm cursor-pointer"
                                         value={expiresAt}
                                         onChange={(e) => setExpiresAt(e.target.value)}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Aposta Máxima (R$)</label>
+                                    <input 
+                                        type="number"
+                                        className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors text-white text-sm"
+                                        placeholder="Ilimitado"
+                                        value={maxBet}
+                                        onChange={(e) => setMaxBet(e.target.value)}
                                     />
                                 </div>
                             </div>
