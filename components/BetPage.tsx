@@ -352,7 +352,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
 
     return (
         <div className="min-h-screen bg-[#050821] text-white pt-10 pb-20 px-4">
-            <div className="max-w-6xl mx-auto">
+            <div className="max-w-[1400px] mx-auto w-full">
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-6">
                     <div>
                         <h1 className="text-4xl font-black uppercase tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 mb-2">
@@ -384,7 +384,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                         <p className="text-gray-500">Nenhum mercado de apostas disponível no momento.</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full">
                         {bets.map(bet => (
                             <div key={bet.id} className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden hover:border-cyan-500/30 transition-all group flex flex-col">
                                 <div className="p-6 border-b border-white/5 bg-gradient-to-br from-white/5 to-transparent relative">
