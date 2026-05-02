@@ -219,18 +219,18 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                             </button>
                         </div>
 
-                        <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                        <div className="p-8 space-y-6 max-h-[85vh] overflow-y-auto custom-scrollbar">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Evento Relacionado</label>
                                     <select 
                                         value={selectedEventId}
                                         onChange={(e) => setSelectedEventId(e.target.value)}
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors text-sm"
+                                        className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors text-white text-sm appearance-none cursor-pointer"
                                     >
-                                        <option value="">Selecione um evento...</option>
+                                        <option value="" className="bg-[#0a061d] text-white">Selecione um evento...</option>
                                         {events.filter(e => e.status !== 'closed').map(e => (
-                                            <option key={e.id} value={e.id}>{e.title} ({new Date(e.date).toLocaleDateString('pt-BR')})</option>
+                                            <option key={e.id} value={e.id} className="bg-[#0a061d] text-white">{e.title} ({new Date(e.date).toLocaleDateString('pt-BR')})</option>
                                         ))}
                                     </select>
                                 </div>
@@ -240,11 +240,11 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                     <select 
                                         value={selectedCategory}
                                         onChange={(e) => setSelectedCategory(e.target.value as any)}
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors text-sm"
+                                        className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors text-white text-sm appearance-none cursor-pointer"
                                     >
-                                        <option value="campeao">Campeão</option>
-                                        <option value="3handed">3-Handed</option>
-                                        <option value="mesa_finalista">Mesa Finalista</option>
+                                        <option value="campeao" className="bg-[#0a061d] text-white">Campeão</option>
+                                        <option value="3handed" className="bg-[#0a061d] text-white">3-Handed</option>
+                                        <option value="mesa_finalista" className="bg-[#0a061d] text-white">Mesa Finalista</option>
                                     </select>
                                 </div>
                             </div>
