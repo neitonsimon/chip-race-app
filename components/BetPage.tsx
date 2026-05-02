@@ -10,6 +10,7 @@ interface Bet {
     status: 'open' | 'closed' | 'settled';
     expires_at?: string;
     max_bet?: number;
+    total_wagered?: number;
     events?: { title: string; date: string };
     bet_odds?: BetOdd[];
 }
@@ -74,7 +75,17 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             .order('created_at', { ascending: false });
 
         if (!error && data) {
-            setBets(data as any);
+            // Fetch total wagered for each bet
+            const betsWithTotals = await Promise.all(data.map(async (bet: any) => {
+                const { data: wagers } = await supabase
+                    .from('user_bets')
+                    .select('amount')
+                    .eq('bet_id', bet.id);
+                
+                const total = wagers?.reduce((sum, w) => sum + (Number(w.amount) || 0), 0) || 0;
+                return { ...bet, total_wagered: total };
+            }));
+            setBets(betsWithTotals as any);
         }
         setLoading(false);
     };
@@ -407,28 +418,37 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                             </span>
                                             <CountdownTimer expiresAt={bet.expires_at} />
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            {isAdmin && (
-                                                <button 
-                                                    onClick={() => {
-                                                        setEditingBet(bet);
-                                                        setExpiresAt(bet.expires_at || '');
-                                                        setMaxBet(bet.max_bet?.toString() || '');
-                                                        setSelectedPlayers(bet.bet_odds?.map(o => ({
-                                                            id: o.user_id || `GUEST:${o.guest_name}`,
-                                                            name: o.profiles?.name || o.guest_name || '',
-                                                            odd: o.odd_value
-                                                        })) || []);
-                                                        setShowEditModal(true);
-                                                    }}
-                                                    className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"
-                                                >
-                                                    <span className="material-icons-outlined text-sm">edit</span>
-                                                </button>
-                                            )}
-                                            <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-lg ${bet.status === 'open' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                                                {bet.status === 'open' ? 'Aberto' : 'Encerrado'}
-                                            </span>
+                                        <div className="flex flex-col items-end gap-2">
+                                            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 border border-green-500/30 text-green-400 rounded-xl">
+                                                <span className="material-icons-outlined text-sm">payments</span>
+                                                <div className="flex flex-col">
+                                                    <span className="text-[8px] uppercase font-black opacity-60 leading-none">Volume Total</span>
+                                                    <span className="text-[11px] font-black tracking-tighter leading-none">R$ {bet.total_wagered?.toFixed(2) || '0.00'}</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                {isAdmin && (
+                                                    <button 
+                                                        onClick={() => {
+                                                            setEditingBet(bet);
+                                                            setExpiresAt(bet.expires_at || '');
+                                                            setMaxBet(bet.max_bet?.toString() || '');
+                                                            setSelectedPlayers(bet.bet_odds?.map(o => ({
+                                                                id: o.user_id || `GUEST:${o.guest_name}`,
+                                                                name: o.profiles?.name || o.guest_name || '',
+                                                                odd: o.odd_value
+                                                            })) || []);
+                                                            setShowEditModal(true);
+                                                        }}
+                                                        className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"
+                                                    >
+                                                        <span className="material-icons-outlined text-sm">edit</span>
+                                                    </button>
+                                                )}
+                                                <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-lg ${bet.status === 'open' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                                                    {bet.status === 'open' ? 'Aberto' : 'Encerrado'}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
                                     <h3 className="text-xl font-bold mb-1 truncate">{bet.events?.title}</h3>
@@ -455,31 +475,38 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                     ))}
                                 </div>
                                 <div className="p-2 bg-black/20 flex flex-col gap-2">
-                                    {bet.expires_at && new Date(bet.expires_at) < new Date() ? (
-                                        <div className="w-full py-4 bg-white/5 text-gray-500 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 cursor-not-allowed">
-                                            <span className="material-icons-outlined text-sm">lock</span>
-                                            MERCADO ENCERRADO
-                                        </div>
-                                    ) : (
-                                        <button 
-                                            onClick={() => {
-                                                setPlacingBetOn(bet);
-                                                setShowPlaceBetModal(true);
-                                            }}
-                                            className="w-full py-4 bg-white/5 hover:bg-cyan-500 hover:text-black font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2"
-                                        >
-                                            <span className="material-icons-outlined text-sm">confirmation_number</span>
-                                            Apostar Agora
-                                        </button>
-                                    )}
                                     {isAdmin && (
-                                        <button 
-                                            onClick={() => viewMarketBets(bet.id)}
-                                            className="w-full py-2 text-[10px] font-bold text-gray-500 hover:text-cyan-400 uppercase tracking-tighter transition-colors flex items-center justify-center gap-1"
-                                        >
-                                            <span className="material-icons-outlined text-xs">visibility</span>
-                                            Ver Apostas Realizadas
-                                        </button>
+                                        <>
+                                            {bet.expires_at && new Date(bet.expires_at) < new Date() ? (
+                                                <div className="w-full py-4 bg-white/5 text-gray-500 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 cursor-not-allowed">
+                                                    <span className="material-icons-outlined text-sm">lock</span>
+                                                    MERCADO ENCERRADO
+                                                </div>
+                                            ) : (
+                                                <button 
+                                                    onClick={() => {
+                                                        setPlacingBetOn(bet);
+                                                        setShowPlaceBetModal(true);
+                                                    }}
+                                                    className="w-full py-4 bg-white/5 hover:bg-cyan-500 hover:text-black font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2"
+                                                >
+                                                    <span className="material-icons-outlined text-sm">confirmation_number</span>
+                                                    Apostar Agora
+                                                </button>
+                                            )}
+                                            <button 
+                                                onClick={() => viewMarketBets(bet.id)}
+                                                className="w-full py-2 text-[10px] font-bold text-gray-500 hover:text-cyan-400 uppercase tracking-tighter transition-colors flex items-center justify-center gap-1"
+                                            >
+                                                <span className="material-icons-outlined text-xs">visibility</span>
+                                                Ver Apostas Realizadas
+                                            </button>
+                                        </>
+                                    )}
+                                    {!isAdmin && (
+                                        <div className="w-full py-4 text-center">
+                                            <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Consulte um Staff para Apostar</span>
+                                        </div>
                                     )}
                                 </div>
                             </div>
