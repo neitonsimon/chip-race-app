@@ -3,6 +3,7 @@ import React from 'react';
 interface ComprovantesTabProps {
     playerCommands: any[];
     playerTransactions?: any[];
+    playerBets?: any[];
     handleViewReceipt: (cmd: any) => void;
     isVip?: boolean;
     onActivateVip?: (cmdId: string, duration: string) => void;
@@ -12,6 +13,7 @@ interface ComprovantesTabProps {
 export const ComprovantesTab: React.FC<ComprovantesTabProps> = ({
     playerCommands,
     playerTransactions = [],
+    playerBets = [],
     handleViewReceipt,
     isVip,
     onActivateVip,
@@ -314,7 +316,68 @@ export const ComprovantesTab: React.FC<ComprovantesTabProps> = ({
                     </div>
                 )}
 
-                {playerCommands.length === 0 && playerTransactions.length === 0 && (
+                {/* SEÇÃO RECIBOS DE APOSTA */}
+                {playerBets && playerBets.length > 0 && (
+                    <div>
+                        <h4 className="text-sm font-bold text-yellow-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                            <span className="material-icons-outlined text-sm">local_activity</span>
+                            Bilhetes de Aposta
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {playerBets.map((bet: any) => (
+                                <div key={bet.id} className="bg-gradient-to-br from-yellow-900/10 via-surface-dark to-black border border-yellow-500/20 rounded-2xl overflow-hidden p-5 group hover:border-yellow-500/40 transition-all">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]">
+                                            <span className="material-icons-outlined text-lg">local_activity</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-[10px] text-yellow-500 font-black uppercase tracking-widest mb-1">Aposta Realizada</div>
+                                            <div className="text-2xl font-display font-black text-white">R$ {Number(bet.amount).toFixed(2)}</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <div>
+                                            <h4 className="text-sm font-bold text-white leading-tight">{bet.bets?.events?.title || 'Evento'}</h4>
+                                            <p className="text-[10px] text-gray-500 uppercase font-black">{bet.bets?.category || 'Aposta'}</p>
+                                        </div>
+
+                                        <div className="bg-black/30 rounded-xl p-3 border border-white/5 space-y-2">
+                                            <div className="flex justify-between text-[10px] font-bold">
+                                                <span className="text-gray-500 uppercase">Seleção</span>
+                                                <span className="text-yellow-400">{bet.bet_odds?.profiles?.name || bet.bet_odds?.guest_name || 'Opção'}</span>
+                                            </div>
+                                            <div className="flex justify-between text-[10px] font-bold">
+                                                <span className="text-gray-500 uppercase">Retorno Potencial</span>
+                                                <span className="text-green-400 font-black">R$ {Number(bet.potential_return).toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-[10px] font-bold">
+                                                <span className="text-gray-500 uppercase">Pagamento</span>
+                                                <span className="text-gray-300 uppercase">{bet.payment_method === 'credits' ? 'Saldo' : bet.payment_method === 'debt' ? 'Pendura' : 'PIX'}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-between pt-2">
+                                            <div className="flex items-center gap-2 text-[10px] text-gray-500 font-bold uppercase">
+                                                <span className="material-icons-outlined text-[10px]">calendar_today</span>
+                                                {new Date(bet.created_at).toLocaleDateString('pt-BR')}
+                                            </div>
+                                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                                                bet.status === 'won' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
+                                                bet.status === 'lost' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                                                'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                                            }`}>
+                                                {bet.status === 'won' ? 'Ganha' : bet.status === 'lost' ? 'Perdida' : 'Pendente'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {playerCommands.length === 0 && playerTransactions.length === 0 && playerBets.length === 0 && (
                     <div className="bg-white/5 border border-white/10 rounded-3xl p-12 text-center flex flex-col items-center justify-center mt-8">
                         <div className="w-20 h-20 bg-gray-500/10 rounded-full flex items-center justify-center mb-4">
                             <span className="material-icons-outlined text-4xl text-gray-500 block">receipt_long</span>

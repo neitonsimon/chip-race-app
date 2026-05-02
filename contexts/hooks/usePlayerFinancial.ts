@@ -13,6 +13,7 @@ interface UsePlayerFinancialProps {
 export function usePlayerFinancial({ userId, isLoggedIn, isOwnProfile, playerBalance, onUpdateProfile }: UsePlayerFinancialProps) {
     const [playerCommands, setPlayerCommands] = useState<Command[]>([]);
     const [playerTransactions, setPlayerTransactions] = useState<Transaction[]>([]);
+    const [playerBets, setPlayerBets] = useState<any[]>([]);
     const [userDebts, setUserDebts] = useState<Debt[]>([]);
     const [totalUserDebt, setTotalUserDebt] = useState(0);
     const [isSaving, setIsSaving] = useState(false);
@@ -39,6 +40,24 @@ export function usePlayerFinancial({ userId, isLoggedIn, isOwnProfile, playerBal
                 .limit(limit);
                 
             if (transactions) setPlayerTransactions(transactions);
+
+            const { data: bets } = await supabase.from('user_bets')
+                .select(`
+                    *,
+                    bets (
+                        category,
+                        events (title, date)
+                    ),
+                    bet_odds (
+                        profiles (name),
+                        guest_name
+                    )
+                `)
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false })
+                .limit(limit);
+                
+            if (bets) setPlayerBets(bets);
         } catch (e) {
             console.error('Error fetching financial data:', e);
         } finally {
@@ -187,6 +206,7 @@ export function usePlayerFinancial({ userId, isLoggedIn, isOwnProfile, playerBal
     return {
         playerCommands,
         playerTransactions,
+        playerBets,
         userDebts,
         totalUserDebt,
         viewingReceipt,

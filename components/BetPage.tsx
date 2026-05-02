@@ -324,7 +324,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
         }
 
         // Check Max Bet
-        if (placingBetOn?.max_bet && parseFloat(betAmount) > placingBetOn.max_bet) {
+        if (placingBetOn?.max_bet && amount > placingBetOn.max_bet) {
             alert(`O valor máximo permitido para este mercado é R$ ${placingBetOn.max_bet}.`);
             return;
         }
@@ -335,7 +335,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                 alert('Pagamento via crédito só é permitido para usuários cadastrados');
                 return;
             }
-            if ((selectedPunter.balanceBrl || 0) < wagerAmount) {
+            if ((selectedPunter.balanceBrl || 0) < amount) {
                 alert(`Saldo insuficiente! Saldo atual: R$ ${(selectedPunter.balanceBrl || 0).toFixed(2)}`);
                 return;
             }
@@ -343,7 +343,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             // Deduct credits
             const { error: balanceError } = await supabase
                 .from('profiles')
-                .update({ balance_brl: (selectedPunter.balanceBrl || 0) - wagerAmount })
+                .update({ balance_brl: (selectedPunter.balanceBrl || 0) - amount })
                 .eq('id', selectedPunter.id);
 
             if (balanceError) {
@@ -361,7 +361,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                 .from('debts')
                 .insert({
                     user_id: selectedPunter.id,
-                    amount_brl: wagerAmount,
+                    amount_brl: amount,
                     description: `Aposta no evento: ${placingBetOn?.events?.title} (${placingBetOn?.category})`,
                     status: 'pending',
                     event_id: placingBetOn?.event_id
@@ -373,7 +373,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             }
         }
 
-        const potentialReturn = wagerAmount * odd.odd_value;
+        const potentialReturn = amount * odd.odd_value;
 
         const { error } = await supabase
             .from('user_bets')
@@ -383,7 +383,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                 user_id: selectedPunter?.id && !selectedPunter.id.startsWith('GUEST:') ? selectedPunter.id : null,
                 punter_id: selectedPunter?.id && !selectedPunter.id.startsWith('GUEST:') ? selectedPunter.id : null,
                 punter_name: punterName,
-                amount: wagerAmount,
+                amount: amount,
                 potential_return: potentialReturn,
                 payment_method: paymentMethod,
                 status: 'pending'
@@ -396,10 +396,12 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             setShowPlaceBetModal(false);
             setPunterName('');
             setPunterSearch('');
-            setWagerAmount(0);
+            setBetAmount('');
             setSelectedOddId('');
             setSelectedPunter(null);
             setPaymentMethod('pix');
+            refreshProfiles();
+            fetchBets();
         }
     };
 
