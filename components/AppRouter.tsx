@@ -100,6 +100,10 @@ export const AppRouter: React.FC = () => {
                     isLoading={isLoading}
                 />;
             case 'profile':
+                // Guard: if no logged-in user and no selected player, redirect to login
+                if (!isLoggedIn && !selectedPlayer) {
+                    return <Auth onLogin={handleLogin} onCancel={() => handleNavigate('home')} onModeChange={(m) => handleNavigate(m === 'signup' ? 'register' : 'login')} />;
+                }
                 return <PlayerProfile
                     key={selectedPlayer ? selectedPlayer.name : 'current-user-profile'}
                     isAdmin={isAdmin}
