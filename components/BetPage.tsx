@@ -216,10 +216,11 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             }
         }
 
-        // Update expires_at and max_bet
+        // Update expires_at, max_bet and category
         await supabase.from('bets').update({ 
             expires_at: expiresAt || null,
-            max_bet: maxBet ? parseFloat(maxBet) : null
+            max_bet: maxBet ? parseFloat(maxBet) : null,
+            category: selectedCategory
         }).eq('id', editingBet.id);
         
         setShowEditModal(false);
@@ -433,6 +434,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                                             setEditingBet(bet);
                                                             setExpiresAt(bet.expires_at || '');
                                                             setMaxBet(bet.max_bet?.toString() || '');
+                                                            setSelectedCategory(bet.category);
                                                             setSelectedPlayers(bet.bet_odds?.map(o => ({
                                                                 id: o.user_id || `GUEST:${o.guest_name}`,
                                                                 name: o.profiles?.name || o.guest_name || '',
@@ -673,6 +675,31 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                         </div>
 
                         <div className="p-8 space-y-6 max-h-[85vh] overflow-y-auto custom-scrollbar">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-white/5">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Categoria do Mercado</label>
+                                    <select 
+                                        value={selectedCategory}
+                                        onChange={(e) => setSelectedCategory(e.target.value as any)}
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors text-white text-sm"
+                                    >
+                                        <option value="campeao">Campeão</option>
+                                        <option value="3handed">3-Handed</option>
+                                        <option value="mesa_finalista">Mesa Finalista</option>
+                                    </select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Fim das Apostas</label>
+                                    <input 
+                                        type="datetime-local"
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors text-white text-sm"
+                                        value={expiresAt}
+                                        onChange={(e) => setExpiresAt(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Buscar Jogadores</label>
                                 <div className="relative">
