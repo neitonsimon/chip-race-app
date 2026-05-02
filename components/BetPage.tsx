@@ -492,7 +492,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                         <p className="text-gray-500">Nenhum mercado de apostas disponível no momento.</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 w-full">
                         {bets.map(bet => (
                             <div key={bet.id} className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden hover:border-cyan-500/30 transition-all group flex flex-col">
                                 <div className="p-6 border-b border-white/5 bg-gradient-to-br from-white/5 to-transparent relative">
@@ -551,9 +551,9 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                         {new Date(bet.events?.date || '').toLocaleDateString('pt-BR')}
                                     </p>
                                 </div>
-                                <div className="p-4 space-y-2 flex-1">
+                                <div className="p-4 space-y-1.5 flex-1">
                                     {bet.bet_odds?.map(odd => (
-                                        <div key={odd.id} className="flex items-center justify-between p-3 bg-black/40 rounded-2xl hover:bg-black/60 transition-colors">
+                                        <div key={odd.id} className="flex items-center justify-between py-2 px-4 bg-black/40 rounded-2xl hover:bg-black/60 transition-colors">
                                             <div className="flex items-center gap-3">
                                                 <img 
                                                     src={odd.profiles?.avatar_url || 'https://ui-avatars.com/api/?name=' + (odd.profiles?.name || odd.guest_name)} 
