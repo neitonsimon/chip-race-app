@@ -440,23 +440,23 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }, [selectedCommand]);
 
     const fetchEvents = async () => {
-        const { data } = await supabase.from('events').select('*').order('date', { ascending: false });
+        const { data } = await supabase.from('events').select('id, title, date, time, status, staff_expenses_brl, prize_payout_brl, type, is_hidden').order('date', { ascending: false });
         if (data) setEvents(data);
     };
     const fetchProducts = async () => {
-        const { data } = await supabase.from('products').select('*').eq('active', true).order('category');
+        const { data } = await supabase.from('products').select('id, name, category, price, description, price_unit, inventory_item_id, inventory_consumption_ratio, active').eq('active', true).order('category');
         if (data) setProducts(data);
     };
     const fetchInventoryItems = async () => {
-        const { data } = await supabase.from('inventory_items').select('*').order('name');
+        const { data } = await supabase.from('inventory_items').select('id, name, current_stock, min_stock, unit, last_cost_brl').order('name');
         if (data) setInventoryItems(data);
     };
     const fetchAllProducts = async () => {
-        const { data } = await supabase.from('products').select('*').order('category');
+        const { data } = await supabase.from('products').select('id, name, category, price, description, price_unit, inventory_item_id, inventory_consumption_ratio, active').order('category');
         if (data) setAllProducts(data);
     };
     const fetchProductCategories = async () => {
-        const { data } = await supabase.from('ecosystem_categories').select('*').order('order', { ascending: true });
+        const { data } = await supabase.from('ecosystem_categories').select('id, title, icon, order').order('order', { ascending: true });
         if (data) {
             // Map table fields to frontend 'name/label' used by InventoryTab/OperationalTab
             setProductCategories(data.map(c => ({
@@ -676,7 +676,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 is_hidden: true
             };
 
-            const { data, error } = await supabase.from('events').insert(newEvent).select().single();
+            const { data, error } = await supabase.from('events').insert(newEvent).select('id, title, date, time, status, type, is_hidden, game_mode, ranking_type').single();
             if (error) throw error;
 
             alert('✅ Evento rápido criado com sucesso!');
@@ -690,9 +690,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     };
 
     const fetchReport = async (eventId: string) => {
-        const { data } = await supabase.from('command_items').select('*, products(name, category), commands!inner(event_id, profiles!user_id(name, numeric_id))').eq('commands.event_id', eventId);
+        const { data } = await supabase.from('command_items').select('id, quantity, unit_price_brl, total_price_brl, created_at, products(name, category), commands!inner(event_id, profiles!user_id(name, numeric_id))').eq('commands.event_id', eventId);
         if (data) setReportData(data);
-        const { data: cmds } = await supabase.from('commands').select('*').eq('event_id', eventId).eq('status', 'closed');
+        const { data: cmds } = await supabase.from('commands').select('id, status, total_brl, chips_payment_brl, cash_payment_brl, pix_payment_brl, credit_payment_brl, profit_cash_payment_brl, user_id, event_id, closed_at').eq('event_id', eventId).eq('status', 'closed');
         if (cmds) setReportCommandsData(cmds);
     };
     const fetchMonthlyReport = async (start: string, end: string) => {
@@ -700,14 +700,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         setIsLoading(true);
         // Fetch command items
         const { data: cmdItems } = await supabase.from('command_items')
-            .select('*, products(name, category), commands!inner(event_id, status, closed_at, profiles!user_id(name, numeric_id))')
+            .select('id, command_id, product_id, quantity, unit_price_brl, total_price_brl, created_at, products(name, category), commands!inner(event_id, status, closed_at, profiles!user_id(name, numeric_id))')
             .gte('commands.closed_at', start + 'T00:00:00.000Z')
             .lte('commands.closed_at', end + 'T23:59:59.999Z')
             .eq('commands.status', 'closed');
 
         // Fetch transactions (VIP, Chipz, etc.)
         const { data: txs } = await supabase.from('transactions')
-            .select('*, profiles(name, numeric_id)')
+            .select('id, amount_brl, amount_chipz, type, category, description, created_at, profiles(name, numeric_id)')
             .gte('created_at', start + 'T00:00:00.000Z')
             .lte('created_at', end + 'T23:59:59.999Z')
             .filter('category', 'not.in', '("wallet_deposit","gift","purchase","debt_payment","command_charge")');
@@ -715,7 +715,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         if (cmdItems) setReportData(cmdItems);
         if (txs) setExtraReportData(txs);
         const { data: cmds } = await supabase.from('commands')
-            .select('*')
+            .select('id, status, total_brl, chips_payment_brl, cash_payment_brl, pix_payment_brl, credit_payment_brl, profit_cash_payment_brl, user_id, event_id, closed_at')
             .gte('closed_at', start + 'T00:00:00.000Z')
             .lte('closed_at', end + 'T23:59:59.999Z')
             .eq('status', 'closed');
@@ -725,7 +725,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
     const fetchDebts = async () => {
         const { data } = await supabase.from('debts')
-            .select('*, profiles!user_id(name, numeric_id, avatar_url, balance_brl, debt_limit_brl, total_pending_debt), events(title)')
+            .select('id, user_id, amount_brl, status, created_at, profiles!user_id(name, numeric_id, avatar_url, balance_brl, debt_limit_brl, total_pending_debt), events(title)')
             .eq('status', 'pending')
             .order('created_at', { ascending: false });
         if (data) {

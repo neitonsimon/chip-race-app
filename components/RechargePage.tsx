@@ -25,7 +25,7 @@ export const RechargePage: React.FC<RechargePageProps> = ({ currentUser, onNavig
             try {
                 const { data, error } = await supabase
                     .from('chipz_packages')
-                    .select('*')
+                    .select('id, amount, price, bonus_percentage, active')
                     .order('amount', { ascending: true });
 
                 if (error) throw error;

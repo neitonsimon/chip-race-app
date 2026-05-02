@@ -35,6 +35,7 @@ const categoryIcon: Record<string, string> = {
     debt_payment: 'receipt_long',
     system: 'settings',
     tournament: 'emoji_events',
+    bet: 'confirmation_number',
     default: 'swap_horiz',
 };
 
@@ -49,6 +50,7 @@ const categoryColor: Record<string, string> = {
     debt_payment: 'text-orange-400',
     system: 'text-gray-400',
     tournament: 'text-blue-400',
+    bet: 'text-cyan-400',
     default: 'text-white',
 };
 

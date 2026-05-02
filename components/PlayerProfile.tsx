@@ -421,7 +421,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             // Join with badge_templates to get the original creation description
             const { data: userBadges } = await supabase
                 .from('user_badges')
-                .select('*, badge_templates(description, icon, color, title)')
+                .select('id, user_id, title, description, icon, color, awarded_at, badge_template_id, badge_templates(description, icon, color, title)')
                 .eq('user_id', targetIdRef.current)
                 .order('awarded_at', { ascending: false });
 
@@ -483,14 +483,14 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
     const handleViewReceipt = async (cmd: any, isSilentUpdate = false) => {
         const { data } = await supabase.from('command_items')
-            .select('*, products(name, category)')
+            .select('id, command_id, product_id, quantity, unit_price_brl, total_price_brl, notes, created_at, products(name, category)')
             .eq('command_id', cmd.id)
             .order('created_at', { ascending: true });
         setReceiptItems(data || []);
 
         // Atualiza os totais mais recentes
         const { data: latestCmd } = await supabase.from('commands')
-            .select('*, events(title, date)')
+            .select('id, user_id, event_id, status, total_brl, discount_brl, unpaid_amount_brl, chips_payment_brl, cash_payment_brl, pix_payment_brl, credit_payment_brl, profit_brl, cash_out_brl, closed_at, created_at, events(title, date)')
             .eq('id', cmd.id)
             .single();
 
@@ -511,7 +511,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
         const newStatus = !player.isVerified;
         try {
-            const { data, error } = await supabase.from('profiles').update({ is_verified: newStatus }).eq('id', targetIdRef.current).select();
+            const { data, error } = await supabase.from('profiles').update({ is_verified: newStatus }).eq('id', targetIdRef.current).select('id');
             if (error) throw error;
 
             if (!data || data.length === 0) {

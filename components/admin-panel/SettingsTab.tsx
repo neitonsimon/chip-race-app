@@ -241,7 +241,7 @@ export const SettingsTab: React.FC = () => {
         try {
             const { data, error } = await supabase
                 .from('roadmap_milestones')
-                .select('*')
+                .select('id, version, title, date, status, topics, display_order')
                 .order('display_order', { ascending: true });
 
             if (error) throw error;
@@ -256,7 +256,7 @@ export const SettingsTab: React.FC = () => {
     const fetchContent = async () => {
         setIsLoadingContent(true);
         try {
-            const { data, error } = await supabase.from('content_db').select('*');
+            const { data, error } = await supabase.from('content_db').select('key, value');
             if (error) throw error;
 
             const newContent: any = { 
@@ -281,7 +281,7 @@ export const SettingsTab: React.FC = () => {
             }
             if (!newContent.details.ways_title) newContent.details.ways_title = "Ecossistema Chip Race";
             if (!newContent.hero.timeline_title) newContent.hero.timeline_title = "Cronograma de Evolução";
-            const { data: catData } = await supabase.from('ecosystem_categories').select('*').order('order', { ascending: true });
+            const { data: catData } = await supabase.from('ecosystem_categories').select('id, title, description, icon, color, slots, is_mystery, is_hidden, order').order('order', { ascending: true });
             if (catData) setCategories(catData);
 
             let loadedVipPlans: any[] = [];
@@ -302,7 +302,7 @@ export const SettingsTab: React.FC = () => {
             // Enhanced VIP fetch: Always try to merge products with appConfig defaults if content_db is missing or outdated
             const { data: productsData } = await supabase
                 .from('products')
-                .select('*')
+                .select('id, name, price, price_unit, description')
                 .eq('category', 'vip')
                 .order('price', { ascending: true });
 
@@ -422,7 +422,7 @@ export const SettingsTab: React.FC = () => {
                         price_unit: plan.period,
                         description: featuresTxt,
                         active: true
-                    }).select().single();
+                    }).select('id').single();
                     if (!insertErr && newProd) {
                         plan.db_id = newProd.id;
                     }
@@ -445,7 +445,7 @@ export const SettingsTab: React.FC = () => {
     const fetchDailyRewards = async () => {
         setIsLoadingRewards(true);
         try {
-            const { data, error } = await supabase.from('daily_rewards').select('*').order('day', { ascending: true });
+            const { data, error } = await supabase.from('daily_rewards').select('day, reward_type, reward_value, reward_label').order('day', { ascending: true });
             if (error) throw error;
             setDailyRewards(data || []);
         } catch (err: any) {
@@ -457,7 +457,7 @@ export const SettingsTab: React.FC = () => {
 
     const fetchBadgeTemplates = async () => {
         try {
-            const { data } = await supabase.from('badge_templates').select('*');
+            const { data } = await supabase.from('badge_templates').select('id, title, description, icon, color, category, rarity, event_trigger, is_legendary');
             if (data) setBadgeTemplates(data);
         } catch (err) { console.error(err); }
     };

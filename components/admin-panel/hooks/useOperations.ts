@@ -34,7 +34,7 @@ export function useOperations({
 
 
     const fetchOpenCommands = async (eventId: string) => {
-        const { data } = await supabase.from('commands').select('*, profiles!user_id(name, numeric_id, avatar_url, is_vip, vip_status, vip_expires_at, role, balance_brl, debt_limit_brl, total_pending_debt)').eq('event_id', eventId).eq('status', 'open').order('created_at', { ascending: false });
+        const { data } = await supabase.from('commands').select('id, user_id, event_id, status, total_brl, created_at, profiles!user_id(name, numeric_id, avatar_url, is_vip, vip_status, vip_expires_at, role, balance_brl, debt_limit_brl, total_pending_debt)').eq('event_id', eventId).eq('status', 'open').order('created_at', { ascending: false });
         if (data) {
             setOpenCommands(data);
             setSelectedCommand(prev => {
@@ -46,7 +46,7 @@ export function useOperations({
 
     const fetchClosedCommands = async (eventId: string) => {
         const { data, error } = await supabase.from('commands')
-            .select('*, profiles!user_id(name, numeric_id, avatar_url, is_vip, vip_status, vip_expires_at, role, balance_brl, debt_limit_brl, total_pending_debt)')
+            .select('id, user_id, event_id, status, total_brl, discount_brl, unpaid_amount_brl, chips_payment_brl, cash_payment_brl, pix_payment_brl, credit_payment_brl, profit_brl, cash_out_brl, closed_at, created_at, profiles!user_id(name, numeric_id, avatar_url, is_vip, vip_status, vip_expires_at, role, balance_brl, debt_limit_brl, total_pending_debt)')
             .eq('event_id', eventId)
             .eq('status', 'closed')
             .order('created_at', { ascending: false }); // Use created_at as backup if closed_at is missing/buggy
@@ -67,7 +67,7 @@ export function useOperations({
     };
 
     const fetchCommandItems = async (commandId: string) => {
-        const { data } = await supabase.from('command_items').select('*, products(name, category, price)').eq('command_id', commandId).order('created_at', { ascending: true });
+        const { data } = await supabase.from('command_items').select('id, command_id, product_id, quantity, unit_price_brl, total_price_brl, notes, created_at, products(name, category, price)').eq('command_id', commandId).order('created_at', { ascending: true });
         if (data) setCommandItems(data);
     };
 
@@ -268,7 +268,7 @@ export function useOperations({
         try {
             const { data, error } = await supabase
                 .from('command_items')
-                .select('*, products(name, category)')
+                .select('id, command_id, product_id, quantity, unit_price_brl, total_price_brl, notes, created_at, products(name, category)')
                 .eq('command_id', cmd.id)
                 .order('created_at', { ascending: true });
 
@@ -329,7 +329,7 @@ export function useOperations({
     const handleOpenCommand = async (player: any) => {
         if (!selectedEvent) { alert('Selecione um evento primeiro.'); return; }
         if (openCommands.find(c => c.user_id === player.id)) { alert('Jogador já tem comanda aberta.'); return; }
-        const { data, error } = await supabase.from('commands').insert({ event_id: selectedEvent.id, user_id: player.id, status: 'open', opened_by: currentUser.id }).select('*, profiles!user_id(name, numeric_id, avatar_url, is_vip, vip_status, vip_expires_at, role, balance_brl, debt_limit_brl, total_pending_debt)').single();
+        const { data, error } = await supabase.from('commands').insert({ event_id: selectedEvent.id, user_id: player.id, status: 'open', opened_by: currentUser.id }).select('id, user_id, event_id, status, total_brl, created_at, profiles!user_id(name, numeric_id, avatar_url, is_vip, vip_status, vip_expires_at, role, balance_brl, debt_limit_brl, total_pending_debt)').single();
         if (error) { alert('Erro: ' + error.message); return; }
         setOpenCommands([data, ...openCommands]);
         setSearchQuery(''); setSearchResults([]);

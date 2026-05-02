@@ -59,7 +59,7 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({ currentU
             // Fetch Transactions
             const { data: txData, error: txError } = await supabase
                 .from('club_transactions')
-                .select('*')
+                .select('id, amount_brl, type, category, description, payment_method, admin_id, created_at')
                 .order('created_at', { ascending: false })
                 .limit(500);
 

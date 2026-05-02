@@ -32,7 +32,7 @@ export const StockTab: React.FC<StockTabProps> = ({ currentUser }) => {
         setIsLoading(true);
         try {
             const [invRes, prodRes] = await Promise.all([
-                supabase.from('inventory_items').select('*').order('name'),
+                supabase.from('inventory_items').select('id, name, category, unit_type, current_stock, average_cost_brl').order('name'),
                 supabase.from('products')
                     .select('id, name, inventory_item_id, category')
                     .in('category', ['bar', 'cozinha'])
@@ -96,7 +96,7 @@ export const StockTab: React.FC<StockTabProps> = ({ currentUser }) => {
                     unit_type: pUnitType,
                     current_stock: Number(pQuantity),
                     average_cost_brl: unitCost
-                }]).select().single();
+                }]).select('id').single();
                 if (errNew) throw errNew;
                 actualItemId = newItem.id;
             }
@@ -166,7 +166,7 @@ export const StockTab: React.FC<StockTabProps> = ({ currentUser }) => {
                 unit_type: 'unidade',
                 current_stock: 0,
                 average_cost_brl: 0
-            }]).select().single();
+            }]).select('id').single();
 
             if (errNew) throw errNew;
 

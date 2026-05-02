@@ -69,7 +69,7 @@ export const FenachimPage: React.FC<FenachimPageProps> = ({ onNavigate }) => {
       // Check if user already booked
       const { data: userData } = await supabase
         .from('tournament_reservations')
-        .select('*')
+        .select('id')
         .eq('event_id', fenachimEvent.id)
         .eq('user_id', currentUser.id)
         .in('status', ['reserved', 'confirmed']);

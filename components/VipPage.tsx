@@ -33,7 +33,7 @@ export const VipPage: React.FC<VipPageProps> = ({ onNavigate, currentUser, onUpd
       try {
         const { data: products, error } = await supabase
           .from('products')
-          .select('*')
+          .select('id, name, description, price, price_unit, active, category')
           .eq('category', 'vip')
           .eq('active', true)
           .order('price', { ascending: true });

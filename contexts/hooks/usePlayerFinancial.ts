@@ -24,7 +24,7 @@ export function usePlayerFinancial({ userId, isLoggedIn, isOwnProfile, playerBal
         setIsLoadingFinancial(true);
         try {
             const { data: commands } = await supabase.from('commands')
-                .select('*, events(title, date)')
+                .select('id, user_id, event_id, status, total_brl, discount_brl, unpaid_amount_brl, chips_payment_brl, cash_payment_brl, pix_payment_brl, credit_payment_brl, profit_brl, cash_out_brl, closed_at, created_at, events(title, date)')
                 .eq('user_id', userId)
                 .in('status', ['open', 'closed'])
                 .order('created_at', { ascending: false })
@@ -43,7 +43,7 @@ export function usePlayerFinancial({ userId, isLoggedIn, isOwnProfile, playerBal
 
             const { data: bets } = await supabase.from('user_bets')
                 .select(`
-                    *,
+                    id, user_id, bet_id, bet_odd_id, stake_brl, possible_gain_brl, status, created_at,
                     bets (
                         category,
                         events (title, date)
@@ -69,7 +69,7 @@ export function usePlayerFinancial({ userId, isLoggedIn, isOwnProfile, playerBal
         if (!userId) return;
         try {
             const { data } = await supabase.from('debts')
-                .select('*, events(title, date)')
+                .select('id, user_id, event_id, amount_brl, reason, status, created_at, events(title, date)')
                 .eq('user_id', userId)
                 .eq('status', 'pending')
                 .order('created_at', { ascending: false });
@@ -185,7 +185,7 @@ export function usePlayerFinancial({ userId, isLoggedIn, isOwnProfile, playerBal
     const handleViewReceipt = useCallback(async (cmd: any) => {
         try {
             const { data } = await supabase.from('command_items')
-                .select('*, products(name, category)')
+                .select('id, command_id, product_id, quantity, unit_price_brl, total_price_brl, notes, created_at, products(name, category)')
                 .eq('command_id', cmd.id)
                 .order('created_at', { ascending: true });
             
@@ -193,7 +193,7 @@ export function usePlayerFinancial({ userId, isLoggedIn, isOwnProfile, playerBal
 
             // Fetch latest totals/details
             const { data: latestCmd } = await supabase.from('commands')
-                .select('*, events(title, date)')
+                .select('id, user_id, event_id, status, total_brl, discount_brl, unpaid_amount_brl, chips_payment_brl, cash_payment_brl, pix_payment_brl, credit_payment_brl, profit_brl, cash_out_brl, closed_at, created_at, events(title, date)')
                 .eq('id', cmd.id)
                 .single();
             

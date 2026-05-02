@@ -71,7 +71,7 @@ export const RoadmapSection: React.FC = () => {
             try {
                 const { data, error } = await supabase
                     .from('roadmap_milestones')
-                    .select('*')
+                    .select('id, version, title, date, status, topics, display_order')
                     .order('display_order', { ascending: true });
 
                 if (error) throw error;

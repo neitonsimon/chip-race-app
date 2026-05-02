@@ -219,7 +219,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 { data: contentData },
                 { data: ecoCategoriesData },
                 { data: profilesData },
-                { data: allUserBadges },
+                { data: currentUserBadges },
                 { data: expLevelsData },
                 { data: dailyRewardsData },
                 { data: templatesMsgData }
@@ -227,11 +227,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 supabase.from('rankings').select('id, label, description, rules, start_date, end_date, prize_info_title, prize_info_detail, scoring_schema_map, is_active, brl_reward, chipz_reward, badge_template_id, position_prizes, order'),
                 supabase.from('badge_templates').select('id, title, description, icon, color, category, rarity, event_trigger, is_legendary'),
                 supabase.from('scoring_schemas').select('id, name, criteria, position_points'),
-                supabase.from('events').select('id, title, date, time, type, modality, buyin, guaranteed, status, ranking_type, included_rankings, description, stack, blinds, late_reg, location, rebuy_value, rebuy_chips, addon_value, addon_chips, staff_bonus_value, staff_bonus_chips, time_chip_value, time_chip_chips, flyer_url, time_chip_addon_chips, time_chip_discount_brl, max_capacity, double_rebuy_value, double_rebuy_chips, double_addon_value, double_addon_chips, parallel_products, results, total_rebuys, total_addons, total_prize, scoring_schema_id, game_mode, cash_game_type, cash_game_blinds, cash_game_capacity, cash_game_min_max, cash_game_dinner, cash_game_open_bar, cash_game_notes, staff_expenses_brl, prize_payout_brl, is_multi_day, is_starting_day, is_final_day, final_event_id, stack_aggregation, is_hidden, is_special_event, timeline_title, structure, bonus1_condition, bonus1_stack, bonus1_addon, bonus1_extra, bonus2_condition, bonus2_stack, bonus2_addon, bonus2_extra, bonus3_condition, bonus3_stack, bonus3_addon, bonus3_extra').order('date', { ascending: true }),
+                supabase.from('events').select('id, title, date, status, ranking_type, included_rankings, buyin, results, is_hidden, is_starting_day, scoring_schema_id, is_special_event, flyer_url, rebuy_value, rebuy_chips, addon_value, addon_chips, staff_bonus_value, staff_bonus_chips, time_chip_value, time_chip_chips, time_chip_addon_chips, time_chip_discount_brl, max_capacity, double_rebuy_value, double_rebuy_chips, double_addon_value, double_addon_chips, parallel_products, total_rebuys, total_addons, total_prize, game_mode, cash_game_type, cash_game_blinds, cash_game_capacity, cash_game_min_max, cash_game_dinner, cash_game_open_bar, cash_game_notes, staff_expenses_brl, prize_payout_brl, is_multi_day, is_final_day, final_event_id, stack_aggregation, bonus1_condition, bonus1_stack, bonus1_addon, bonus1_extra, bonus2_condition, bonus2_stack, bonus2_addon, bonus2_extra, bonus3_condition, bonus3_stack, bonus3_addon, bonus3_extra, timeline_title, structure').order('date', { ascending: true }),
                 supabase.from('content_db').select('key, value'),
                 supabase.from('ecosystem_categories').select('id, title, description, icon, color, order').order('order', { ascending: true }),
-                supabase.from('profiles_public').select('id, numeric_id, name, avatar_url, city, is_vip, vip_status, vip_expires_at, social, bio, level, current_exp, next_level_exp, gallery, play_styles, is_verified, total_pending_debt, suprema_nickname, suprema_user_id'),
-                supabase.from('user_badges').select('id, user_id, badge_template_id, title, description, icon, color, awarded_at, badge_templates(id, title, description, icon, color, rarity, is_legendary)'),
+                supabase.from('profiles_public').select('id, numeric_id, name, avatar_url, city, is_vip, vip_status, vip_expires_at, level, current_exp, next_level_exp, is_verified, total_pending_debt, suprema_nickname, suprema_user_id'),
+                currentUserId ? supabase.from('user_badges').select('id, user_id, badge_template_id, title, description, icon, color, awarded_at, badge_templates(id, title, description, icon, color, rarity, is_legendary)').eq('user_id', currentUserId) : Promise.resolve({ data: [] }),
                 supabase.from('experience_levels').select('level, required_exp, credit_limit').order('level', { ascending: true }),
                 supabase.from('daily_rewards').select('day, reward_type, reward_value, reward_label').order('day', { ascending: true }),
                 supabase.from('system_message_templates').select('id, subject, content, category, sender, is_active, updated_at')
@@ -273,78 +273,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
             if (eventsData) {
                 const mappedEvents = eventsData.map(e => ({
-                    id: e.id,
-                    title: e.title,
-                    date: e.date,
-                    time: e.time,
-                    type: e.type,
-                    modality: e.modality,
-                    buyin: e.buyin,
-                    guaranteed: e.guaranteed,
-                    status: e.status,
-                    rankingType: e.ranking_type,
-                    includedRankings: e.included_rankings,
-                    description: e.description,
-                    stack: e.stack,
-                    blinds: e.blinds,
-                    lateReg: e.late_reg,
-                    location: e.location,
-                    rebuyValue: e.rebuy_value,
-                    rebuyChips: e.rebuy_chips,
-                    addonValue: e.addon_value,
-                    addonChips: e.addon_chips,
-                    staffBonusValue: e.staff_bonus_value,
-                    staffBonusChips: e.staff_bonus_chips,
-                    timeChipValue: e.time_chip_value,
-                    timeChipChips: e.time_chip_chips,
-                    timeChipAddonChips: e.time_chip_addon_chips,
-                    timeChipDiscountBrl: e.time_chip_discount_brl,
-                    maxCapacity: e.max_capacity,
+                    ...e,
+                    rebuyValue: (e as any).rebuy_value,
+                    rebuyChips: (e as any).rebuy_chips,
+                    addonValue: (e as any).addon_value,
+                    addonChips: (e as any).addon_chips,
+                    staffBonusValue: (e as any).staff_bonus_value,
+                    staffBonusChips: (e as any).staff_bonus_chips,
+                    timeChipValue: (e as any).time_chip_value,
+                    timeChipChips: (e as any).time_chip_chips,
+                    timeChipAddonChips: (e as any).time_chip_addon_chips,
+                    timeChipDiscountBrl: (e as any).time_chip_discount_brl,
+                    maxCapacity: (e as any).max_capacity,
                     flyerUrl: e.flyer_url,
-                    doubleRebuyValue: e.double_rebuy_value,
-                    doubleRebuyChips: e.double_rebuy_chips,
-                    doubleAddonValue: e.double_addon_value,
-                    doubleAddonChips: e.double_addon_chips,
-                    parallelProducts: e.parallel_products,
-                    results: e.results,
-                    totalRebuys: e.total_rebuys,
-                    totalAddons: e.total_addons,
-                    totalPrize: e.total_prize,
+                    doubleRebuyValue: (e as any).double_rebuy_value,
+                    doubleRebuyChips: (e as any).double_rebuy_chips,
+                    doubleAddonValue: (e as any).double_addon_value,
+                    doubleAddonChips: (e as any).double_addon_chips,
+                    parallelProducts: (e as any).parallel_products,
+                    totalRebuys: (e as any).total_rebuys,
+                    totalAddons: (e as any).total_addons,
+                    totalPrize: (e as any).total_prize,
                     scoringSchemaId: e.scoring_schema_id,
-                    gameMode: e.game_mode,
-                    cashGameType: e.cash_game_type,
-                    cashGameBlinds: e.cash_game_blinds,
-                    cashGameCapacity: e.cash_game_capacity,
-                    cashGameMinMax: e.cash_game_min_max,
-                    cashGameDinner: e.cash_game_dinner,
-                    cashGameOpenBar: e.cash_game_open_bar,
-                    cashGameNotes: e.cash_game_notes,
-                    staffExpensesBrl: e.staff_expenses_brl || 0,
-                    prizePayoutBrl: e.prize_payout_brl || 0,
+                    gameMode: (e as any).game_mode,
+                    cashGameType: (e as any).cash_game_type,
+                    cashGameBlinds: (e as any).cash_game_blinds,
+                    cashGameCapacity: (e as any).cash_game_capacity,
+                    cashGameMinMax: (e as any).cash_game_min_max,
+                    cashGameDinner: (e as any).cash_game_dinner,
+                    cashGameOpenBar: (e as any).cash_game_open_bar,
+                    cashGameNotes: (e as any).cash_game_notes,
+                    staffExpensesBrl: (e as any).staff_expenses_brl || 0,
+                    prizePayoutBrl: (e as any).prize_payout_brl || 0,
                     is_hidden: e.is_hidden,
-                    isMultiDay: e.is_multi_day,
+                    isMultiDay: (e as any).is_multi_day,
                     isStartingDay: e.is_starting_day,
-                    isFinalDay: e.is_final_day,
-                    finalEventId: e.final_event_id,
-                    stackAggregation: e.stack_aggregation,
-                    bonus1_condition: e.bonus1_condition,
-                    bonus1_stack: e.bonus1_stack,
-                    bonus1_addon: e.bonus1_addon,
-                    bonus1_extra: e.bonus1_extra,
-                    bonus2_condition: e.bonus2_condition,
-                    bonus2_stack: e.bonus2_stack,
-                    bonus2_addon: e.bonus2_addon,
-                    bonus2_extra: e.bonus2_extra,
-                    bonus3_condition: e.bonus3_condition,
-                    bonus3_stack: e.bonus3_stack,
-                    bonus3_addon: e.bonus3_addon,
-                    bonus3_extra: e.bonus3_extra,
+                    isFinalDay: (e as any).is_final_day,
+                    finalEventId: (e as any).final_event_id,
+                    stackAggregation: (e as any).stack_aggregation,
+                    bonus1_condition: (e as any).bonus1_condition,
+                    bonus1_stack: (e as any).bonus1_stack,
+                    bonus1_addon: (e as any).bonus1_addon,
+                    bonus1_extra: (e as any).bonus1_extra,
+                    bonus2_condition: (e as any).bonus2_condition,
+                    bonus2_stack: (e as any).bonus2_stack,
+                    bonus2_addon: (e as any).bonus2_addon,
+                    bonus2_extra: (e as any).bonus2_extra,
+                    bonus3_condition: (e as any).bonus3_condition,
+                    bonus3_stack: (e as any).bonus3_stack,
+                    bonus3_addon: (e as any).bonus3_addon,
+                    bonus3_extra: (e as any).bonus3_extra,
                     is_special_event: e.is_special_event,
-                    timeline_title: e.timeline_title,
-                    structure: e.structure
+                    timeline_title: (e as any).timeline_title,
+                    structure: (e as any).structure
                 }));
-                console.log('--- PERSISTENCE LOG: Mapped Events ---', mappedEvents.slice(0, 3));
-                setEvents(mappedEvents);
+                setEvents(mappedEvents as any);
             }
 
             if (contentData) {
@@ -386,9 +369,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     totalPendingDebt: p.total_pending_debt || 0,
                     suprema_nickname: p.suprema_nickname || undefined,
                     suprema_user_id: p.suprema_user_id || undefined,
-                    badges: allUserBadges?.filter(ub => ub.user_id === p.id).map(ub => ({
+                    badges: currentUserBadges?.filter(ub => ub.user_id === p.id).map(ub => ({
                         ...ub,
-                        color: ub.color // Ensure color is passed
+                        color: ub.color 
                     })) || []
                 })));
             }
@@ -410,7 +393,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const fetchProfile = async (userId: string) => {
         try {
             const { data, error } = await supabase.from('profiles')
-                .select('*, total_pending_debt, locked_balance_brl, balance_unlock_date')
+                .select('id, numeric_id, name, avatar_url, city, bio, social, play_styles, gallery, level, current_exp, next_level_exp, last_daily_claim, daily_streak, is_vip, vip_status, vip_expires_at, balance_brl, balance_chipz, locked_balance_brl, balance_unlock_date, total_pending_debt, debt_limit_brl, is_verified, suprema_nickname, suprema_user_id, role')
                 .eq('id', userId)
                 .single();
             if (error) throw error;
@@ -447,7 +430,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     role: data.role,
                     badges: []
                 };
-                const { data: userBadges } = await supabase.from('user_badges').select('*, badge_templates(*)').eq('user_id', userId).order('awarded_at', { ascending: false });
+                const { data: userBadges } = await supabase.from('user_badges').select('id, user_id, badge_template_id, title, description, icon, color, awarded_at, badge_templates(id, title, description, icon, color, rarity, is_legendary)').eq('user_id', userId).order('awarded_at', { ascending: false });
                 if (userBadges) userData.badges = userBadges;
                 setCurrentUser(userData);
                 // Also fetch reservations for this user

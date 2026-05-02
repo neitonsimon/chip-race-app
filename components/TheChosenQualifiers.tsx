@@ -74,7 +74,7 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
         try {
             const { data, error } = await supabase
                 .from('the_chosen_qualifiers')
-                .select('*')
+                .select('id, player_name, user_id, mode, created_at')
                 .order('created_at', { ascending: false });
 
             if (error) throw error;

@@ -144,20 +144,23 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onCancel, initialMode = 'lo
                         </div>
                     )}
 
-                    <div className="space-y-1.5">
-                        <label className="block text-[10px] sm:text-xs font-black text-gray-500 uppercase ml-1">E-mail</label>
+                    <div className="space-y-1.5 transition-all duration-300">
+                        <label className={`block text-[10px] sm:text-xs font-black uppercase ml-1 transition-colors ${mode === 'forgot' ? 'text-primary' : 'text-gray-500'}`}>
+                            {mode === 'forgot' ? 'Confirme seu E-mail' : 'E-mail'}
+                        </label>
                         <input
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="seu@email.com"
-                            className="w-full bg-gray-50 dark:bg-black/40 border border-gray-300 dark:border-white/10 rounded-2xl px-4 py-3.5 sm:py-4 text-sm sm:text-base text-gray-900 dark:text-white focus:outline-none focus:border-primary transition-all font-medium"
+                            className={`w-full bg-gray-50 dark:bg-black/40 border rounded-2xl px-4 py-3.5 sm:py-4 text-sm sm:text-base text-gray-900 dark:text-white focus:outline-none focus:border-primary transition-all font-medium ${mode === 'forgot' ? 'border-primary/50 shadow-neon-blue/20' : 'border-gray-300 dark:border-white/10'}`}
                             required
+                            autoFocus={mode === 'forgot'}
                         />
                     </div>
 
                     {mode !== 'forgot' && (
-                        <div className="space-y-1.5">
+                        <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-300">
                             <label className="block text-[10px] sm:text-xs font-black text-gray-500 uppercase ml-1">Senha</label>
                             <input
                                 type="password"
@@ -178,6 +181,14 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onCancel, initialMode = 'lo
                                     </button>
                                 </div>
                             )}
+                        </div>
+                    )}
+
+                    {mode === 'forgot' && (
+                        <div className="py-6 sm:py-8 px-4 bg-gray-50 dark:bg-black/20 rounded-2xl border border-gray-200 dark:border-white/5 animate-in slide-in-from-bottom-2 duration-300">
+                            <p className="text-[12px] sm:text-[13px] text-gray-600 dark:text-gray-400 text-center font-medium leading-relaxed">
+                                Insira seu e-mail cadastrado acima. Enviaremos um link exclusivo para redefinir sua senha com segurança.
+                            </p>
                         </div>
                     )}
 

@@ -279,7 +279,7 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
         try {
             const { data } = await supabase
                 .from('products')
-                .select('*')
+                .select('id, name, description, price, stock, category, active, image_url')
                 .eq('category', categoryId)
                 .eq('active', true)
                 .limit(1)

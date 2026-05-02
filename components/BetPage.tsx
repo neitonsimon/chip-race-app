@@ -75,7 +75,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             const fetchMyBalance = async () => {
                 const { data } = await supabase
                     .from('profiles')
-                    .select('*, balance_brl')
+                    .select('id, name, avatar_url, numeric_id, role, balance_brl')
                     .eq('id', currentUser.id)
                     .single();
                 
@@ -98,10 +98,10 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
         const { data, error } = await supabase
             .from('bets')
             .select(`
-                *,
+                id, event_id, category, status, expires_at, max_bet, created_at,
                 events (title, date),
                 bet_odds (
-                    *,
+                    id, bet_id, user_id, guest_name, odd_value, status, created_at,
                     profiles (name, avatar_url)
                 )
             `)
@@ -212,7 +212,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                 max_bet: maxBet ? parseFloat(maxBet) : null,
                 status: 'open'
             })
-            .select()
+            .select('id, event_id, category, expires_at, max_bet, status')
             .single();
 
         if (betError) {
@@ -258,7 +258,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             
             for (const odd of oddsToDelete) {
                 // Check if there are bets for this odd before deleting
-                const { count } = await supabase.from('user_bets').select('*', { count: 'exact', head: true }).eq('odd_id', odd.id);
+                const { count } = await supabase.from('user_bets').select('id', { count: 'exact', head: true }).eq('odd_id', odd.id);
                 if (count && count > 0) {
                     alert(`Não é possível excluir o jogador ${odd.profiles?.name || odd.guest_name} pois já existem apostas vinculadas a ele.`);
                     // UI will show this player again on next fetch
@@ -315,7 +315,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
         if (!confirm('Tem certeza que deseja excluir este mercado permanentemente? Todas as odds serão removidas.')) return;
 
         // Check if there are bets
-        const { count } = await supabase.from('user_bets').select('*', { count: 'exact', head: true }).eq('bet_id', editingBet.id);
+        const { count } = await supabase.from('user_bets').select('id', { count: 'exact', head: true }).eq('bet_id', editingBet.id);
         if (count && count > 0) {
             alert('Não é possível excluir este mercado pois já existem apostas realizadas. Encerre o mercado em vez de excluir.');
             return;
@@ -335,6 +335,12 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
         const amount = parseFloat(betAmount);
         if (!selectedOddId || amount <= 0 || !punterSearch) {
             alert('Preencha todos os campos corretamente');
+            return;
+        }
+
+        const isStaff = isAdmin || currentUser?.role === 'staff' || currentUser?.role === 'admin';
+        if (!isStaff && paymentMethod !== 'credits') {
+            alert('Para sua segurança, apostas via App só podem ser realizadas utilizando seus créditos Chip Race.');
             return;
         }
 
@@ -417,6 +423,17 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
         if (error) {
             alert('Erro ao registrar aposta: ' + error.message);
         } else {
+            // Record financial transaction for visibility in Wallet Monitor
+            if (selectedPunter && !selectedPunter.id.startsWith('GUEST:')) {
+                await supabase.from('transactions').insert({
+                    user_id: selectedPunter.id,
+                    amount_brl: -amount,
+                    amount_chipz: 0,
+                    description: `Aposta (${paymentMethod.toUpperCase()}): ${placingBetOn?.events?.title} (${placingBetOn?.category}) - Odd: ${odd.odd_value}`,
+                    category: 'bet'
+                });
+            }
+
             alert('Bilhete emitido com sucesso!');
             setShowPlaceBetModal(false);
             setPunterName('');
@@ -424,7 +441,11 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             setBetAmount('');
             setSelectedOddId('');
             setSelectedPunter(null);
-            setPaymentMethod('pix');
+            
+            // Reset payment method based on role
+            const isStaff = isAdmin || currentUser?.role === 'staff' || currentUser?.role === 'admin';
+            setPaymentMethod(isStaff ? 'pix' : 'credits');
+            
             if (refreshSupabaseData) await refreshSupabaseData();
             fetchBets();
         }
@@ -435,10 +456,11 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
         const { data, error } = await supabase
             .from('user_bets')
             .select(`
-                *,
+                id, bet_id, odd_id, user_id, punter_id, punter_name, amount, potential_return, payment_method, status, created_at,
                 bet_odds (
+                    id,
                     guest_name,
-                    profiles (name)
+                    profiles (id, name)
                 )
             `)
             .eq('bet_id', betId)
@@ -641,7 +663,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                             {!isLoggedIn 
                                                 ? 'Fazer Login' 
                                                 : (!isAdmin && currentUser?.role !== 'staff' && (currentUser.balanceBrl || 0) <= 0) 
-                                                    ? 'Fazer Recarga' 
+                                                    ? `Saldo Insuficiente (R$ ${(currentUser.balanceBrl || 0).toFixed(2)})` 
                                                     : 'Apostar Agora'}
                                         </button>
                                     )}
@@ -1122,7 +1144,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                                 <span className="text-sm font-bold text-white">{bet.punter_name}</span>
                                                 <span className="text-[10px] text-gray-500 uppercase font-bold bg-white/5 px-2 py-0.5 rounded">apostou em</span>
                                                 <span className="text-sm font-black text-cyan-400">
-                                                    {bet.bet_odds?.profiles?.name || bet.bet_odds?.guest_name || 'N/A'}
+                                                    {(bet.bet_odds as any)?.profiles?.name || (bet.bet_odds as any)?.profiles?.[0]?.name || bet.bet_odds?.guest_name || 'N/A'}
                                                 </span>
                                                 <span className="text-[10px] px-2 py-0.5 bg-white/10 rounded text-gray-400">ID: {bet.id.slice(0, 8)}</span>
                                             </div>

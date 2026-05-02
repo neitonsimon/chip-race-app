@@ -20,7 +20,7 @@ export const CategoryPage: React.FC<CategoryPageProps> = ({ categoryId, category
             try {
                 const { data, error } = await supabase
                     .from('products')
-                    .select('*')
+                    .select('id, name, description, image_url, active, category')
                     .eq('category', categoryId)
                     .eq('active', true)
                     .limit(1)

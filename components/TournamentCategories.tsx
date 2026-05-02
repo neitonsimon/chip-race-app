@@ -173,7 +173,7 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
         upsertData.id = productDetails.id;
       }
 
-      const { data, error } = await supabase.from('products').upsert(upsertData).select().single();
+      const { data, error } = await supabase.from('products').upsert(upsertData).select('id, name, description, price, stock, image_url, active, category').single();
       if (error) throw error;
 
       setProductDetails(data);
@@ -190,7 +190,7 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select('id, name, description, price, stock, image_url, active, category')
         .eq('category', categoryId)
         .eq('active', true)
         .limit(1)

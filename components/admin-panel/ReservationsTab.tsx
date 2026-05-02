@@ -73,7 +73,7 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({
         try {
             const { data, error } = await supabase
                 .from('online_withdrawal_requests')
-                .select('*, profiles(name, avatar_url, numeric_id)')
+                .select('id, user_id, suprema_nickname, amount_brl, status, created_at, profiles(name, avatar_url, numeric_id)')
                 .order('created_at', { ascending: false });
             if (error) throw error;
             setOnlineWithdrawals(data || []);
@@ -131,7 +131,7 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({
         try {
             const { data, error } = await supabase
                 .from('withdrawal_requests')
-                .select('*, profiles(name, avatar_url, numeric_id)')
+                .select('id, user_id, amount_brl, pix_key, pix_type, status, created_at, profiles(name, avatar_url, numeric_id)')
                 .order('created_at', { ascending: false });
             if (error) throw error;
             setWithdrawals(data || []);
@@ -200,7 +200,7 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({
             const { data, error } = await supabase.rpc('create_ghost_user', { p_name: newGhostName });
             if (error) throw error;
             
-            const { data: user } = await supabase.from('profiles').select('*').eq('id', data).single();
+            const { data: user } = await supabase.from('profiles').select('id, name, numeric_id, avatar_url, role').eq('id', data).single();
             if (user) {
                 setResSelectedPlayer(user);
                 setShowGhostCreate(false);
@@ -257,7 +257,7 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({
         try {
             const { data, error } = await supabase
                 .from('tournament_reservations')
-                .select('*, profiles!user_id(id, name, numeric_id, avatar_url), events(*)')
+                .select('id, event_id, user_id, status, created_at, is_outsourced, metadata, profiles!user_id(id, name, numeric_id, avatar_url), events(id, title, date, status, bonus1_condition, bonus1_stack, bonus1_addon, bonus1_extra, bonus2_condition, bonus2_stack, bonus2_addon, bonus2_extra, bonus3_condition, bonus3_stack, bonus3_addon, bonus3_extra, staff_bonus_chips, time_chip_chips, time_chip_addon_chips, time_chip_discount_brl)')
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
@@ -334,7 +334,7 @@ export const ReservationsTab: React.FC<ReservationsTabProps> = ({
         try {
             const { data, error } = await supabase
                 .from('online_credit_requests')
-                .select('*, profiles(name, avatar_url)')
+                .select('id, user_id, suprema_nickname, suprema_user_id, amount_brl, status, created_at, profiles(name, avatar_url)')
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
