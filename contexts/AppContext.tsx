@@ -232,7 +232,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 supabase.from('ecosystem_categories').select('id, title, description, icon, color, order').order('order', { ascending: true }),
                 supabase.from('profiles_public').select('id, numeric_id, name, avatar_url, city, is_vip, vip_status, vip_expires_at, social, bio, level, current_exp, next_level_exp, gallery, play_styles, is_verified, total_pending_debt, suprema_nickname, suprema_user_id'),
                 supabase.from('user_badges').select('id, user_id, badge_template_id, title, description, icon, color, awarded_at, badge_templates(id, title, description, icon, color, rarity, is_legendary)'),
-                supabase.from('experience_levels').select('id, level, min_exp, max_exp, title, perks').order('level', { ascending: true }),
+                supabase.from('experience_levels').select('level, required_exp, credit_limit').order('level', { ascending: true }),
                 supabase.from('daily_rewards').select('day, reward_type, reward_value, reward_label').order('day', { ascending: true }),
                 supabase.from('system_message_templates').select('id, subject, content, category, sender, is_active, updated_at')
             ]);
