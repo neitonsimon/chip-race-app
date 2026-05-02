@@ -592,7 +592,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                     {((bet.expires_at && new Date(bet.expires_at) < new Date()) && !isAdmin && currentUser?.role !== 'staff') ? (
                                         <div className="w-full py-4 bg-white/5 text-gray-500 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 cursor-not-allowed">
                                             <span className="material-icons-outlined text-sm">lock</span>
-                                            MERCADO ENCERRADO [DEBUG]
+                                            MERCADO ENCERRADO
                                         </div>
                                     ) : (
                                         <button 
@@ -628,7 +628,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                                 ? 'Fazer Login' 
                                                 : (!isAdmin && currentUser?.role !== 'staff' && (currentUser.balanceBrl || 0) <= 0) 
                                                     ? 'Fazer Recarga' 
-                                                    : 'Apostar Agora [DEBUG]'}
+                                                    : 'Apostar Agora'}
                                         </button>
                                     )}
                                     {isAdmin && (
