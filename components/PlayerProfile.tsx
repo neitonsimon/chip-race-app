@@ -90,6 +90,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     rankings,
     rankingPlayers = [],
     events = [],
+    isLoading,
 }) => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<TabView>('overview');
