@@ -198,33 +198,80 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
     const handleUpdateBet = async () => {
         if (!editingBet) return;
 
-        // Update odds (this is a simplified version, usually you'd want to handle new/deleted odds too)
-        for (const p of selectedPlayers) {
-            const isGuest = p.id.startsWith('GUEST:');
-            const existingOdd = editingBet.bet_odds?.find(o => (isGuest ? o.guest_name === p.name : o.user_id === p.id));
+        try {
+            // 1. Identify which odds should be deleted
+            const currentOddIds = selectedPlayers.map(p => {
+                const isGuest = p.id.startsWith('GUEST:');
+                const found = editingBet.bet_odds?.find(o => (isGuest ? o.guest_name === p.name : o.user_id === p.id));
+                return found?.id;
+            }).filter(Boolean);
+
+            const oddsToDelete = editingBet.bet_odds?.filter(o => !currentOddIds.includes(o.id)) || [];
             
-            if (existingOdd) {
-                await supabase.from('bet_odds').update({ odd_value: p.odd }).eq('id', existingOdd.id);
-            } else {
-                await supabase.from('bet_odds').insert({
-                    bet_id: editingBet.id,
-                    user_id: isGuest ? null : p.id,
-                    guest_name: isGuest ? p.name : null,
-                    odd_value: p.odd,
-                    status: 'active'
-                });
+            for (const odd of oddsToDelete) {
+                // Check if there are bets for this odd before deleting
+                const { count } = await supabase.from('user_bets').select('*', { count: 'exact', head: true }).eq('odd_id', odd.id);
+                if (count && count > 0) {
+                    alert(`Não é possível excluir o jogador ${odd.profiles?.name || odd.guest_name} pois já existem apostas vinculadas a ele.`);
+                    // We must keep this player in the list to avoid UI inconsistency
+                    continue; 
+                }
+                await supabase.from('bet_odds').delete().eq('id', odd.id);
             }
+
+            // 2. Update existing odds and insert new ones
+            for (const p of selectedPlayers) {
+                const isGuest = p.id.startsWith('GUEST:');
+                const existingOdd = editingBet.bet_odds?.find(o => (isGuest ? o.guest_name === p.name : o.user_id === p.id));
+                
+                if (existingOdd) {
+                    await supabase.from('bet_odds').update({ odd_value: p.odd }).eq('id', existingOdd.id);
+                } else {
+                    await supabase.from('bet_odds').insert({
+                        bet_id: editingBet.id,
+                        user_id: isGuest ? null : p.id,
+                        guest_name: isGuest ? p.name : null,
+                        odd_value: p.odd,
+                        status: 'active'
+                    });
+                }
+            }
+
+            // 3. Update bet metadata
+            await supabase.from('bets').update({ 
+                expires_at: expiresAt || null,
+                max_bet: maxBet ? parseFloat(maxBet) : null,
+                category: selectedCategory
+            }).eq('id', editingBet.id);
+            
+            setShowEditModal(false);
+            fetchBets();
+        } catch (error) {
+            console.error('Error updating bet:', error);
+            alert('Erro ao atualizar o mercado.');
+        }
+    };
+
+    const handleDeleteBet = async () => {
+        if (!editingBet) return;
+        
+        if (!confirm('Tem certeza que deseja excluir este mercado permanentemente? Todas as odds serão removidas.')) return;
+
+        // Check if there are bets
+        const { count } = await supabase.from('user_bets').select('*', { count: 'exact', head: true }).eq('bet_id', editingBet.id);
+        if (count && count > 0) {
+            alert('Não é possível excluir este mercado pois já existem apostas realizadas. Encerre o mercado em vez de excluir.');
+            return;
         }
 
-        // Update expires_at, max_bet and category
-        await supabase.from('bets').update({ 
-            expires_at: expiresAt || null,
-            max_bet: maxBet ? parseFloat(maxBet) : null,
-            category: selectedCategory
-        }).eq('id', editingBet.id);
+        const { error } = await supabase.from('bets').delete().eq('id', editingBet.id);
         
-        setShowEditModal(false);
-        fetchBets();
+        if (error) {
+            alert('Erro ao excluir mercado: ' + error.message);
+        } else {
+            setShowEditModal(false);
+            fetchBets();
+        }
     };
 
     const handlePlaceBet = async () => {
@@ -784,9 +831,18 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                             )}
                         </div>
 
-                        <div className="p-8 border-t border-white/5 flex gap-4">
-                            <button onClick={() => setShowEditModal(false)} className="flex-1 py-4 bg-white/5 text-white font-bold rounded-2xl">CANCELAR</button>
-                            <button onClick={handleUpdateBet} className="flex-[2] py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black uppercase tracking-widest rounded-2xl shadow-neon-blue hover:scale-[1.02] transition-all">SALVAR ALTERAÇÕES</button>
+                        <div className="p-8 border-t border-white/5 flex flex-col gap-4">
+                            <div className="flex gap-4">
+                                <button onClick={() => setShowEditModal(false)} className="flex-1 py-4 bg-white/5 text-white font-bold rounded-2xl">CANCELAR</button>
+                                <button onClick={handleUpdateBet} className="flex-[2] py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black uppercase tracking-widest rounded-2xl shadow-neon-blue hover:scale-[1.02] transition-all">SALVAR ALTERAÇÕES</button>
+                            </div>
+                            <button 
+                                onClick={handleDeleteBet}
+                                className="w-full py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-[0.2em] rounded-xl border border-red-500/20 transition-all flex items-center justify-center gap-2 group"
+                            >
+                                <span className="material-icons-outlined text-sm group-hover:shake">delete_forever</span>
+                                EXCLUIR MERCADO PERMANENTEMENTE
+                            </button>
                         </div>
                     </div>
                 </div>
