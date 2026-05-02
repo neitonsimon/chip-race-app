@@ -56,10 +56,23 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
     const [punterResults, setPunterResults] = useState<RankingPlayer[]>([]);
     const [selectedPunter, setSelectedPunter] = useState<RankingPlayer | null>(null);
     const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credits' | 'debt'>('pix');
+    const [betAmount, setBetAmount] = useState<string>('');
 
     useEffect(() => {
         fetchBets();
     }, []);
+
+    // Pre-fill punter for non-admins
+    useEffect(() => {
+        if (showPlaceBetModal && !isAdmin && isLoggedIn && currentUser) {
+            const myProfile = allProfiles.find(p => p.id === currentUser.id);
+            if (myProfile) {
+                setSelectedPunter(myProfile);
+                setPunterSearch(myProfile.name);
+                setPunterName(myProfile.name);
+            }
+        }
+    }, [showPlaceBetModal, isAdmin, isLoggedIn, currentUser, allProfiles]);
 
     const fetchBets = async () => {
         setLoading(true);
@@ -295,7 +308,8 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
     };
 
     const handlePlaceBet = async () => {
-        if (!selectedOddId || wagerAmount <= 0 || !punterName) {
+        const amount = parseFloat(betAmount);
+        if (!selectedOddId || amount <= 0 || !punterSearch) {
             alert('Preencha todos os campos corretamente');
             return;
         }
@@ -958,10 +972,11 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                 <div className="relative">
                                     <input 
                                         type="text"
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 outline-none focus:border-cyan-500 transition-colors text-white font-bold"
+                                        className={`w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 outline-none transition-colors text-white font-bold ${!isAdmin && isLoggedIn ? 'opacity-60 cursor-not-allowed' : 'focus:border-cyan-500'}`}
                                         placeholder="Buscar ou digitar nome..."
                                         value={punterSearch}
                                         onChange={(e) => handlePunterSearch(e.target.value)}
+                                        disabled={!isAdmin && isLoggedIn}
                                     />
                                     {punterResults.length > 0 && (
                                         <div className="absolute z-[110] left-0 right-0 mt-2 bg-[#1a1633] border border-white/10 rounded-2xl shadow-2xl overflow-hidden max-h-[200px] overflow-y-auto custom-scrollbar">
@@ -1023,8 +1038,10 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                 onClick={() => {
                                     setShowPlaceBetModal(false);
                                     setSelectedOddId('');
-                                    setWagerAmount(0);
+                                    setBetAmount('');
                                     setPunterName('');
+                                    setPunterSearch('');
+                                    setSelectedPunter(null);
                                 }}
                                 className="flex-1 py-4 bg-white/5 text-white font-bold rounded-2xl"
                             >
