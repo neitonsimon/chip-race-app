@@ -150,7 +150,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 navigate(`/perfil/${cleanSlug}`, { replace: true });
             } else if (decodedName) {
                 setCurrentView('profile');
-                handleNavigateToPlayerByNameInternal(decodedName);
+                // Only attempt player lookup AFTER profiles data has loaded.
+                // If allProfiles is still empty (loading), defer — the second useEffect below handles it.
+                if (allProfiles.length > 0 || isLoggedIn) {
+                    handleNavigateToPlayerByNameInternal(decodedName);
+                }
+                // else: loading screen shown via AppRouter; lookup is triggered when allProfiles loads
             }
         } else if (path.startsWith('/ranking/')) {
             const rawSlug = path.replace('/ranking/', '');
@@ -172,7 +177,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const view = path.substring(1);
             if (view) setCurrentView(view);
         }
-    }, [location.pathname, allProfiles, rankings, isLoggedIn, currentUser.id, currentUser.name]);
+    }, [location.pathname, allProfiles.length, isLoggedIn]);
+
+    // Secondary effect: once profiles load, resolve deferred profile lookups from URL slugs
+    useEffect(() => {
+        if (allProfiles.length === 0) return;
+        const path = location.pathname;
+        if (path.startsWith('/perfil/') && currentView === 'profile' && !selectedPlayer) {
+            const rawSlug = path.replace('/perfil/', '');
+            const decodedName = decodeURIComponent(rawSlug);
+            if (decodedName) {
+                handleNavigateToPlayerByNameInternal(decodedName);
+            }
+        }
+    }, [allProfiles.length]);
 
     const [isFlyerOpen, setIsFlyerOpen] = useState(false);
 
