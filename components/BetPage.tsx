@@ -432,7 +432,14 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                                     <button 
                                                         onClick={() => {
                                                             setEditingBet(bet);
-                                                            setExpiresAt(bet.expires_at || '');
+                                                            // Format ISO date to YYYY-MM-DDTHH:MM for datetime-local input
+                                                            if (bet.expires_at) {
+                                                                const date = new Date(bet.expires_at);
+                                                                const formattedDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                                                                setExpiresAt(formattedDate);
+                                                            } else {
+                                                                setExpiresAt('');
+                                                            }
                                                             setMaxBet(bet.max_bet?.toString() || '');
                                                             setSelectedCategory(bet.category);
                                                             setSelectedPlayers(bet.bet_odds?.map(o => ({
