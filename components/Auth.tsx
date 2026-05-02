@@ -157,18 +157,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onCancel, initialMode = 'lo
 
                     {mode !== 'forgot' && (
                         <div>
-                            <div className="flex justify-between items-center mb-1">
-                                <label className="block text-xs font-bold text-gray-500 uppercase">Senha</label>
-                                {mode === 'login' && (
-                                    <button 
-                                        type="button" 
-                                        onClick={() => handleModeChange('forgot')} 
-                                        className="text-xs font-bold text-accent dark:text-primary hover:underline px-2 py-1 -mr-2"
-                                    >
-                                        Esqueceu a senha?
-                                    </button>
-                                )}
-                            </div>
+                            <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1">Senha</label>
                             <input
                                 type="password"
                                 value={password}
@@ -176,6 +165,17 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onCancel, initialMode = 'lo
                                 className="w-full bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 rounded-lg px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-900 dark:text-white focus:outline-none focus:border-primary"
                                 required
                             />
+                            {mode === 'login' && (
+                                <div className="mt-3 flex justify-center">
+                                    <button 
+                                        type="button" 
+                                        onClick={() => handleModeChange('forgot')} 
+                                        className="text-[11px] sm:text-xs font-black text-primary hover:text-white bg-primary/10 hover:bg-primary px-4 py-2 rounded-full transition-all uppercase tracking-widest border border-primary/20"
+                                    >
+                                        Esqueceu sua senha? Recuperar agora
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     )}
 

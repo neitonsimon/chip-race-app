@@ -263,7 +263,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 {isLoading ? (
                     <ProfileStatsSkeleton />
                 ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                         <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-primary/50 transition-colors">
                             <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
                                 <span className="material-icons-outlined text-4xl">leaderboard</span>
@@ -333,6 +333,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             <div className="text-sm text-gray-500 uppercase tracking-wider">ITM %</div>
                             <div className="text-[10px] mt-1 invisible h-[15px]">spacer</div>
                         </div>
+                        <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-emerald-500/50 transition-colors">
+                            <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                                <span className="material-icons-outlined text-4xl">event_available</span>
+                            </div>
+                            <div className="text-3xl font-display font-black text-emerald-500">{player.tournamentLog.length}</div>
+                            <div className="text-sm text-gray-500 uppercase tracking-wider">Eventos Jogados</div>
+                            <div className="text-[10px] mt-1 invisible h-[15px]">spacer</div>
+                        </div>
+                    </div>
                         {/* NEW: CREDIT LIMIT CARD - HIDDEN AS REQUESTED */}
                         {/* 
                         <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-green-500/50 transition-colors col-span-2 sm:col-span-4">

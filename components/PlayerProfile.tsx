@@ -152,7 +152,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     // --- FINANCIAL HOOK ---
     const {
         playerCommands, playerTransactions, playerBets, userDebts, totalUserDebt,
-        isSaving: financialIsSaving, fetchPlayerCommands, fetchUserDebts,
+        isSaving: financialIsSaving, isLoading: isLoadingFinancial, fetchPlayerCommands, fetchUserDebts,
         handlePayOpenCommand, handlePayDebt
     } = usePlayerFinancial({
         userId: targetIdRef.current || (initialData?.id ?? currentUser?.id ?? null),
@@ -1121,6 +1121,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                             isVip={player.isVip}
                             onActivateVip={handleActivateVipVoucher}
                             isProcessing={isSavingExp}
+                            isLoading={isLoadingFinancial}
                         />
                     )
                 }

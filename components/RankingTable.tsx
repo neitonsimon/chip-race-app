@@ -734,7 +734,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                     <thead className="bg-gray-5 dark:bg-white/5">
                                         <tr>
                                             <th className="px-2 md:px-6 py-3 md:py-5 text-[10px] md:text-sm font-black text-primary uppercase tracking-wider w-10 md:w-16 text-center">RANK</th>
-                                            <th className="px-2 md:px-6 py-3 md:py-5 text-[10px] md:text-sm font-black text-primary uppercase tracking-wider">COMPETIDOR</th>
+                                            <th className="px-2 md:px-6 py-3 md:py-5 text-[10px] md:text-sm font-black text-primary uppercase tracking-wider min-w-[200px] md:min-w-[300px]">COMPETIDOR</th>
                                             <th className="px-6 py-5 text-sm font-black text-primary uppercase tracking-[0.2em] hidden md:table-cell w-40">Últ. Pontos</th>
                                             <th className="px-2 md:px-6 py-3 md:py-5 text-[10px] md:text-sm font-black text-primary uppercase tracking-wider text-right w-20 md:w-28">SCORE</th>
                                             <th className="px-1 md:px-6 py-3 md:py-5 text-[10px] md:text-sm font-black text-secondary uppercase tracking-wider text-center w-16 md:w-28">PRÊMIO</th>
@@ -758,7 +758,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                                     className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group cursor-pointer"
                                                     onClick={() => onSelectPlayer && onSelectPlayer(player)}
                                                 >
-                                                    <td className="px-2 md:px-6 py-2 md:py-4 text-center">
+                                                    <td className="px-2 md:px-6 py-1.5 md:py-3 text-center">
                                                         <div className="flex items-center justify-center gap-1">
                                                             <div className={`w-7 h-7 md:w-10 md:h-10 flex items-center justify-center rounded-lg font-display font-bold text-xs md:text-lg shadow-lg group-hover:scale-110 transition-transform ${player.rank === 1 ? 'bg-gradient-to-br from-primary to-cyan-700 text-white border border-primary/50' :
                                                                 player.rank === 2 ? 'bg-gradient-to-br from-secondary to-cyan-700 text-black border border-secondary/50' :
@@ -770,7 +770,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                                         </div>
                                                     </td>
                                                     <td 
-                                                        className="px-2 md:px-6 py-2 md:py-4 min-w-0 relative group/name"
+                                                        className="px-2 md:px-6 py-1.5 md:py-3 min-w-0 relative group/name"
                                                         onMouseEnter={() => {
                                                             setDetailPlayer(player);
                                                             setTooltipVisible(true);

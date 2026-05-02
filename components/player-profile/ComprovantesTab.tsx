@@ -8,6 +8,7 @@ interface ComprovantesTabProps {
     isVip?: boolean;
     onActivateVip?: (cmdId: string, duration: string) => void;
     isProcessing?: boolean;
+    isLoading?: boolean;
 }
 
 export const ComprovantesTab: React.FC<ComprovantesTabProps> = ({
@@ -17,10 +18,20 @@ export const ComprovantesTab: React.FC<ComprovantesTabProps> = ({
     handleViewReceipt,
     isVip,
     onActivateVip,
-    isProcessing
+    isProcessing,
+    isLoading
 }) => {
     const openCommands = playerCommands.filter(c => c.status === 'open');
     const closedCommands = playerCommands.filter(c => c.status === 'closed');
+
+    if (isLoading) {
+        return (
+            <div className="py-20 flex flex-col items-center justify-center gap-4">
+                <div className="w-12 h-12 rounded-full border-4 border-yellow-500/20 border-t-yellow-500 animate-spin" />
+                <p className="text-gray-500 text-xs font-black uppercase tracking-widest animate-pulse">Buscando Recibos...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -324,6 +335,11 @@ export const ComprovantesTab: React.FC<ComprovantesTabProps> = ({
                             Bilhetes de Aposta
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {playerBets.length === 0 && !isLoading && (
+                                <div className="col-span-full py-10 text-center bg-white/5 border border-dashed border-white/10 rounded-2xl">
+                                    <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Nenhuma aposta registrada recentemente.</p>
+                                </div>
+                            )}
                             {playerBets.map((bet: any) => (
                                 <div key={bet.id} className="bg-gradient-to-br from-yellow-900/10 via-surface-dark to-black border border-yellow-500/20 rounded-2xl overflow-hidden p-5 group hover:border-yellow-500/40 transition-all">
                                     <div className="flex justify-between items-start mb-4">

@@ -26,7 +26,7 @@ interface BetOdd {
 }
 
 export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) => void }> = ({ isAdmin, onNavigate }) => {
-    const { events, getAllUniquePlayers, isLoggedIn, currentUser, allProfiles } = useApp();
+    const { events, getAllUniquePlayers, isLoggedIn, currentUser, allProfiles, refreshSupabaseData } = useApp();
     const [bets, setBets] = useState<Bet[]>([]);
     const [loading, setLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -65,14 +65,26 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
     // Pre-fill punter for non-admins
     useEffect(() => {
         if (showPlaceBetModal && !isAdmin && isLoggedIn && currentUser) {
-            const myProfile = allProfiles.find(p => p.id === currentUser.id);
-            if (myProfile) {
-                setSelectedPunter(myProfile);
-                setPunterSearch(myProfile.name);
-                setPunterName(myProfile.name);
-            }
+            const fetchMyBalance = async () => {
+                const { data } = await supabase
+                    .from('profiles')
+                    .select('*, balance_brl')
+                    .eq('id', currentUser.id)
+                    .single();
+                
+                if (data) {
+                    const myProfile = {
+                        ...data,
+                        balanceBrl: Number(data.balance_brl)
+                    };
+                    setSelectedPunter(myProfile as any);
+                    setPunterSearch(data.name);
+                    setPunterName(data.name);
+                }
+            };
+            fetchMyBalance();
         }
-    }, [showPlaceBetModal, isAdmin, isLoggedIn, currentUser, allProfiles]);
+    }, [showPlaceBetModal, isAdmin, isLoggedIn, currentUser]);
 
     const fetchBets = async () => {
         setLoading(true);
@@ -113,7 +125,9 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
 
                 return { ...bet, total_wagered: total, bet_odds: uniqueOdds };
             }));
-            setBets(betsWithTotals as any);
+            // Final deduplication of bets by ID just in case
+            const uniqueBets = Array.from(new Map(betsWithTotals.map(b => [b.id, b])).values());
+            setBets(uniqueBets as any);
         }
         setLoading(false);
     };
@@ -276,11 +290,13 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                 updated_at: new Date().toISOString()
             }).eq('id', editingBet.id);
             
+            console.log('Update successful, fetching fresh data...');
             setShowEditModal(false);
-            fetchBets();
+            await fetchBets();
+            if (refreshSupabaseData) await refreshSupabaseData();
         } catch (error) {
             console.error('Error updating bet:', error);
-            alert('Erro ao atualizar o mercado.');
+            alert('Erro ao atualizar o mercado. Verifique o console para mais detalhes.');
         } finally {
             setSaving(false);
         }
@@ -401,7 +417,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             setSelectedOddId('');
             setSelectedPunter(null);
             setPaymentMethod('pix');
-            refreshProfiles();
+            if (refreshSupabaseData) await refreshSupabaseData();
             fetchBets();
         }
     };
@@ -519,8 +535,12 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                                             // Format ISO date to YYYY-MM-DDTHH:MM for datetime-local input
                                                             if (bet.expires_at) {
                                                                 const date = new Date(bet.expires_at);
-                                                                const formattedDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-                                                                setExpiresAt(formattedDate);
+                                                                if (!isNaN(date.getTime())) {
+                                                                    const formattedDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                                                                    setExpiresAt(formattedDate);
+                                                                } else {
+                                                                    setExpiresAt('');
+                                                                }
                                                             } else {
                                                                 setExpiresAt('');
                                                             }
@@ -569,58 +589,56 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                     ))}
                                 </div>
                                 <div className="p-2 bg-black/20 flex flex-col gap-2">
-                                    {isAdmin && (
-                                        <>
-                                            {bet.expires_at && new Date(bet.expires_at) < new Date() ? (
-                                                <div className="w-full py-4 bg-white/5 text-gray-500 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 cursor-not-allowed">
-                                                    <span className="material-icons-outlined text-sm">lock</span>
-                                                    MERCADO ENCERRADO
-                                                </div>
-                                            ) : (
-                                                <button 
-                                                    onClick={() => {
-                                                        if (!isLoggedIn) {
-                                                            onNavigate('login');
-                                                            return;
-                                                        }
-                                                        if (!isAdmin && (currentUser.balanceBrl || 0) <= 0) {
-                                                            onNavigate('recarga');
-                                                            return;
-                                                        }
-                                                        setPlacingBetOn(bet);
-                                                        setShowPlaceBetModal(true);
-                                                    }}
-                                                    className={`w-full py-4 font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 ${
-                                                        !isLoggedIn 
-                                                            ? 'bg-white/5 hover:bg-white/10 text-gray-400' 
-                                                            : (!isAdmin && (currentUser.balanceBrl || 0) <= 0)
-                                                                ? 'bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-black border border-amber-500/20'
-                                                                : 'bg-white/5 hover:bg-cyan-500 hover:text-black text-white'
-                                                    }`}
-                                                >
-                                                    <span className="material-icons-outlined text-sm">
-                                                        {!isLoggedIn ? 'login' : (!isAdmin && (currentUser.balanceBrl || 0) <= 0) ? 'account_balance_wallet' : 'confirmation_number'}
-                                                    </span>
-                                                    {!isLoggedIn 
-                                                        ? 'Fazer Login' 
-                                                        : (!isAdmin && (currentUser.balanceBrl || 0) <= 0) 
-                                                            ? 'Fazer Recarga' 
-                                                            : 'Apostar Agora'}
-                                                </button>
-                                            )}
-                                            <button 
-                                                onClick={() => viewMarketBets(bet.id)}
-                                                className="w-full py-2 text-[10px] font-bold text-gray-500 hover:text-cyan-400 uppercase tracking-tighter transition-colors flex items-center justify-center gap-1"
-                                            >
-                                                <span className="material-icons-outlined text-xs">visibility</span>
-                                                Ver Apostas Realizadas
-                                            </button>
-                                        </>
-                                    )}
-                                    {!isAdmin && (
-                                        <div className="w-full py-4 text-center">
-                                            <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Consulte um Staff para Apostar</span>
+                                    {((bet.expires_at && new Date(bet.expires_at) < new Date()) && !isAdmin && currentUser?.role !== 'staff') ? (
+                                        <div className="w-full py-4 bg-white/5 text-gray-500 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 cursor-not-allowed">
+                                            <span className="material-icons-outlined text-sm">lock</span>
+                                            MERCADO ENCERRADO
                                         </div>
+                                    ) : (
+                                        <button 
+                                            onClick={() => {
+                                                if (!isLoggedIn) {
+                                                    onNavigate('login');
+                                                    return;
+                                                }
+                                                // Only check balance if not admin and not staff
+                                                if (!isAdmin && currentUser?.role !== 'staff' && (currentUser.balanceBrl || 0) <= 0) {
+                                                    onNavigate('recarga');
+                                                    return;
+                                                }
+                                                setPlacingBetOn(bet);
+                                                setShowPlaceBetModal(true);
+                                            }}
+                                            className={`w-full py-4 font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 ${
+                                                !isLoggedIn 
+                                                    ? 'bg-white/5 hover:bg-white/10 text-gray-400' 
+                                                    : (!isAdmin && currentUser?.role !== 'staff' && (currentUser.balanceBrl || 0) <= 0)
+                                                        ? 'bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-black border border-amber-500/20'
+                                                        : 'bg-white/5 hover:bg-cyan-500 hover:text-black text-white'
+                                            }`}
+                                        >
+                                            <span className="material-icons-outlined text-sm">
+                                                {!isLoggedIn 
+                                                    ? 'login' 
+                                                    : (!isAdmin && currentUser?.role !== 'staff' && (currentUser.balanceBrl || 0) <= 0) 
+                                                        ? 'account_balance_wallet' 
+                                                        : 'confirmation_number'}
+                                            </span>
+                                            {!isLoggedIn 
+                                                ? 'Fazer Login' 
+                                                : (!isAdmin && currentUser?.role !== 'staff' && (currentUser.balanceBrl || 0) <= 0) 
+                                                    ? 'Fazer Recarga' 
+                                                    : 'Apostar Agora'}
+                                        </button>
+                                    )}
+                                    {isAdmin && (
+                                        <button 
+                                            onClick={() => viewMarketBets(bet.id)}
+                                            className="w-full py-2 text-[10px] font-bold text-gray-500 hover:text-cyan-400 uppercase tracking-tighter transition-colors flex items-center justify-center gap-1"
+                                        >
+                                            <span className="material-icons-outlined text-xs">visibility</span>
+                                            Ver Apostas Realizadas
+                                        </button>
                                     )}
                                 </div>
                             </div>
