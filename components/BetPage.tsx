@@ -46,6 +46,10 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
     const [selectedOddId, setSelectedOddId] = useState('');
     const [wagerAmount, setWagerAmount] = useState<number>(0);
     const [punterName, setPunterName] = useState('');
+    const [punterSearch, setPunterSearch] = useState('');
+    const [punterResults, setPunterResults] = useState<RankingPlayer[]>([]);
+    const [selectedPunter, setSelectedPunter] = useState<RankingPlayer | null>(null);
+    const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credits' | 'debt'>('pix');
 
     useEffect(() => {
         fetchBets();
@@ -82,6 +86,38 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             p.name.toLowerCase().includes(query.toLowerCase())
         ).slice(0, 5);
         setSearchResults(filtered);
+    };
+
+    const handlePunterSearch = (query: string) => {
+        setPunterSearch(query);
+        setPunterName(query); // Allow ghost user by default
+        setSelectedPunter(null);
+        
+        if (query.length < 2) {
+            setPunterResults([]);
+            return;
+        }
+        const allPlayers = getAllUniquePlayers();
+        const filtered = allPlayers.filter(p => 
+            p.name.toLowerCase().includes(query.toLowerCase())
+        ).slice(0, 5);
+        setPunterResults(filtered);
+    };
+
+    const selectPunter = async (p: RankingPlayer) => {
+        // Fetch latest balance for this user specifically
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('balance_brl')
+            .eq('id', p.id)
+            .single();
+        
+        const latestBalance = !error && data ? Number(data.balance_brl) : 0;
+        
+        setSelectedPunter({ ...p, balanceBrl: latestBalance });
+        setPunterName(p.name);
+        setPunterSearch(p.name);
+        setPunterResults([]);
     };
 
     const addPlayerToBet = (player: RankingPlayer) => {
@@ -176,32 +212,77 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
         const odd = placingBetOn?.bet_odds?.find(o => o.id === selectedOddId);
         if (!odd) return;
 
-        const potentialReturn = wagerAmount * odd.odd_value;
+        // Payment Method Logic
+        if (paymentMethod === 'credits') {
+            if (!selectedPunter || selectedPunter.id?.startsWith('GUEST:')) {
+                alert('Pagamento via crédito só é permitido para usuários cadastrados');
+                return;
+            }
+            if ((selectedPunter.balanceBrl || 0) < wagerAmount) {
+                alert(`Saldo insuficiente! Saldo atual: R$ ${(selectedPunter.balanceBrl || 0).toFixed(2)}`);
+                return;
+            }
 
-        // Find if punter matches any profile to link it
-        const allPlayers = getAllUniquePlayers();
-        const matchedPlayer = allPlayers.find(p => p.name.toLowerCase() === punterName.toLowerCase());
+            // Deduct credits
+            const { error: balanceError } = await supabase
+                .from('profiles')
+                .update({ balance_brl: (selectedPunter.balanceBrl || 0) - wagerAmount })
+                .eq('id', selectedPunter.id);
+
+            if (balanceError) {
+                alert('Erro ao debitar créditos: ' + balanceError.message);
+                return;
+            }
+        } else if (paymentMethod === 'debt') {
+            if (!selectedPunter || selectedPunter.id?.startsWith('GUEST:')) {
+                alert('A opção "Pendura" só é permitida para usuários cadastrados');
+                return;
+            }
+
+            // Create debt
+            const { error: debtError } = await supabase
+                .from('debts')
+                .insert({
+                    user_id: selectedPunter.id,
+                    amount_brl: wagerAmount,
+                    description: `Aposta no evento: ${placingBetOn?.events?.title} (${placingBetOn?.category})`,
+                    status: 'pending',
+                    event_id: placingBetOn?.event_id
+                });
+
+            if (debtError) {
+                alert('Erro ao criar pendura: ' + debtError.message);
+                return;
+            }
+        }
+
+        const potentialReturn = wagerAmount * odd.odd_value;
 
         const { error } = await supabase
             .from('user_bets')
             .insert({
                 bet_id: placingBetOn?.id,
                 odd_id: selectedOddId,
-                user_id: matchedPlayer?.id && !matchedPlayer.id.startsWith('GUEST:') ? matchedPlayer.id : null,
+                user_id: selectedPunter?.id && !selectedPunter.id.startsWith('GUEST:') ? selectedPunter.id : null,
+                punter_id: selectedPunter?.id && !selectedPunter.id.startsWith('GUEST:') ? selectedPunter.id : null,
                 punter_name: punterName,
                 amount: wagerAmount,
                 potential_return: potentialReturn,
+                payment_method: paymentMethod,
                 status: 'pending'
             });
 
         if (error) {
             alert('Erro ao registrar aposta: ' + error.message);
         } else {
-            alert('Aposta registrada com sucesso!');
+            alert('Bilhete emitido com sucesso!');
             setShowPlaceBetModal(false);
             setPunterName('');
+            setPunterSearch('');
             setWagerAmount(0);
             setSelectedOddId('');
+            setSelectedPunter(null);
+            setPaymentMethod('pix');
         }
     };
 
@@ -590,14 +671,66 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
 
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Nome do Apostador</label>
-                                <input 
-                                    type="text"
-                                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 outline-none focus:border-cyan-500 transition-colors text-white font-bold"
-                                    placeholder="Quem está apostando?"
-                                    value={punterName}
-                                    onChange={(e) => setPunterName(e.target.value)}
-                                />
-                                <p className="text-[10px] text-gray-500 italic ml-1">O bilhete será emitido e vinculado ao perfil se o nome coincidir.</p>
+                                <div className="relative">
+                                    <input 
+                                        type="text"
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 outline-none focus:border-cyan-500 transition-colors text-white font-bold"
+                                        placeholder="Buscar ou digitar nome..."
+                                        value={punterSearch}
+                                        onChange={(e) => handlePunterSearch(e.target.value)}
+                                    />
+                                    {punterResults.length > 0 && (
+                                        <div className="absolute z-[110] left-0 right-0 mt-2 bg-[#1a1633] border border-white/10 rounded-2xl shadow-2xl overflow-hidden max-h-[200px] overflow-y-auto custom-scrollbar">
+                                            {punterResults.map(p => (
+                                                <button 
+                                                    key={p.id}
+                                                    onClick={() => selectPunter(p)}
+                                                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/10 transition-colors border-b border-white/5 last:border-0"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <img src={p.avatar} className="w-8 h-8 rounded-full border border-white/10" />
+                                                        <div className="text-left">
+                                                            <p className="text-sm font-bold text-white">{p.name}</p>
+                                                            <p className="text-[10px] text-gray-500">Saldo: R$ {(p.balance_brl || 0).toFixed(2)}</p>
+                                                        </div>
+                                                    </div>
+                                                    {p.is_vip && <span className="material-icons-outlined text-yellow-500 text-sm">verified</span>}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                {selectedPunter ? (
+                                    <div className="flex items-center gap-2 px-3 py-2 bg-cyan-500/10 border border-cyan-500/20 rounded-xl mt-1">
+                                        <span className="material-icons-outlined text-cyan-400 text-sm">person</span>
+                                        <span className="text-[10px] font-bold text-cyan-400 uppercase">Perfil Vinculado: {selectedPunter.name}</span>
+                                    </div>
+                                ) : punterSearch.length > 2 && (
+                                    <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl mt-1">
+                                        <span className="material-icons-outlined text-amber-400 text-sm">person_outline</span>
+                                        <span className="text-[10px] font-bold text-amber-400 uppercase">Usuário Fantasma (Sem Perfil)</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Método de Pagamento</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {[
+                                        { id: 'pix', label: 'PIX (À Vista)', icon: 'qr_code' },
+                                        { id: 'credits', label: 'Crédito App', icon: 'account_balance_wallet' },
+                                        { id: 'debt', label: 'Pendura', icon: 'history_ed' }
+                                    ].map(method => (
+                                        <button
+                                            key={method.id}
+                                            onClick={() => setPaymentMethod(method.id as any)}
+                                            className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all gap-1 ${paymentMethod === method.id ? 'bg-cyan-500/20 border-cyan-500/50' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}
+                                        >
+                                            <span className={`material-icons-outlined text-lg ${paymentMethod === method.id ? 'text-cyan-400' : 'text-gray-500'}`}>{method.icon}</span>
+                                            <span className={`text-[9px] font-black uppercase tracking-tighter ${paymentMethod === method.id ? 'text-white' : 'text-gray-500'}`}>{method.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
 
@@ -651,6 +784,9 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                             </p>
                                         </div>
                                         <div className="flex items-center gap-3">
+                                            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded border ${bet.payment_method === 'credits' ? 'border-cyan-500/50 text-cyan-400' : bet.payment_method === 'debt' ? 'border-amber-500/50 text-amber-400' : 'border-green-500/50 text-green-400'}`}>
+                                                {bet.payment_method || 'pix'}
+                                            </span>
                                             <span className={`text-[10px] font-black uppercase px-3 py-1 rounded-full ${bet.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' : bet.status === 'won' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
                                                 {bet.status}
                                             </span>
