@@ -158,9 +158,15 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onCancel, initialMode = 'lo
                     {mode !== 'forgot' && (
                         <div>
                             <div className="flex justify-between items-center mb-1">
-                                <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase">Senha</label>
+                                <label className="block text-xs font-bold text-gray-500 uppercase">Senha</label>
                                 {mode === 'login' && (
-                                    <button type="button" onClick={() => handleModeChange('forgot')} className="text-xs text-primary hover:underline">Esqueceu?</button>
+                                    <button 
+                                        type="button" 
+                                        onClick={() => handleModeChange('forgot')} 
+                                        className="text-xs font-bold text-accent dark:text-primary hover:underline px-2 py-1 -mr-2"
+                                    >
+                                        Esqueceu a senha?
+                                    </button>
                                 )}
                             </div>
                             <input
@@ -173,26 +179,37 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onCancel, initialMode = 'lo
                         </div>
                     )}
 
-                    <button disabled={loading} type="submit" className="w-full bg-gradient-to-r from-primary to-accent hover:from-accent hover:to-primary text-white font-bold py-2.5 sm:py-3 rounded-full shadow-lg hover:shadow-neon-pink transition-all duration-300 mt-4 disabled:opacity-50 text-sm sm:text-base">
+                    <button disabled={loading} type="submit" className="w-full bg-gradient-to-r from-primary to-accent hover:from-accent hover:to-primary text-white font-bold py-3 sm:py-3.5 rounded-full shadow-lg hover:shadow-neon-pink transition-all duration-300 mt-4 disabled:opacity-50 text-sm sm:text-base uppercase tracking-widest">
                         {loading ? 'Processando...' : (
                             <>
-                                {mode === 'login' && 'ENTRAR'}
-                                {mode === 'signup' && 'CRIAR CONTA'}
-                                {mode === 'forgot' && 'ENVIAR LINK'}
+                                {mode === 'login' && 'Entrar Agora'}
+                                {mode === 'signup' && 'Criar minha Conta'}
+                                {mode === 'forgot' && 'Enviar Link de Recuperação'}
                             </>
                         )}
                     </button>
                 </form>
 
-                <div className="mt-6 text-center text-sm sm:text-base text-gray-500">
-                    {mode === 'login' ? (
+                <div className="mt-8 text-center text-sm sm:text-base text-gray-500">
+                    {mode === 'login' && (
                         <>
                             Não tem uma conta? <button type="button" onClick={() => handleModeChange('signup')} className="text-primary font-bold hover:underline">Cadastre-se</button>
                         </>
-                    ) : (
+                    )}
+                    {mode === 'signup' && (
                         <>
                             Já tem conta? <button type="button" onClick={() => handleModeChange('login')} className="text-primary font-bold hover:underline">Faça Login</button>
                         </>
+                    )}
+                    {mode === 'forgot' && (
+                        <button 
+                            type="button" 
+                            onClick={() => handleModeChange('login')} 
+                            className="flex items-center justify-center gap-2 w-full text-primary font-bold hover:underline"
+                        >
+                            <span className="material-icons-outlined text-sm">arrow_back</span>
+                            Voltar para o Login
+                        </button>
                     )}
                 </div>
 

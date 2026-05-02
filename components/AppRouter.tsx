@@ -27,6 +27,7 @@ import { CategoryPage } from './CategoryPage';
 import { DocumentLinks } from './DocumentLinks';
 import { FenachimPage } from './FenachimPage';
 import { BetPage } from './BetPage';
+import { ResetPassword } from './ResetPassword';
 
 export const AppRouter: React.FC = () => {
     const {
@@ -143,6 +144,8 @@ export const AppRouter: React.FC = () => {
                 return isLoggedIn ? <EventRegistration isAdmin={isAdmin} /> : <Auth initialMode="signup" onLogin={handleLogin} onCancel={() => handleNavigate('home')} onModeChange={(m) => handleNavigate(m === 'signup' ? 'register' : 'login')} />;
             case 'login':
                 return <Auth onLogin={handleLogin} onCancel={() => handleNavigate('home')} onModeChange={(m) => handleNavigate(m === 'signup' ? 'register' : 'login')} />;
+            case 'reset-password':
+                return <ResetPassword onComplete={() => handleNavigate('login')} onCancel={() => handleNavigate('home')} />;
             case 'the-chosen-details':
                 return <TheChosenDetails
                     isAdmin={isAdmin}
