@@ -592,7 +592,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                     {((bet.expires_at && new Date(bet.expires_at) < new Date()) && !isAdmin && currentUser?.role !== 'staff') ? (
                                         <div className="w-full py-4 bg-white/5 text-gray-500 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 cursor-not-allowed">
                                             <span className="material-icons-outlined text-sm">lock</span>
-                                            MERCADO ENCERRADO
+                                            MERCADO ENCERRADO [DEBUG]
                                         </div>
                                     ) : (
                                         <button 
@@ -611,10 +611,10 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                             }}
                                             className={`w-full py-4 font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 ${
                                                 !isLoggedIn 
-                                                    ? 'bg-white/5 hover:bg-white/10 text-gray-400' 
+                                                    ? 'bg-white/5 hover:bg-white/10 text-gray-400 shadow-inner' 
                                                     : (!isAdmin && currentUser?.role !== 'staff' && (currentUser.balanceBrl || 0) <= 0)
-                                                        ? 'bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-black border border-amber-500/20'
-                                                        : 'bg-white/5 hover:bg-cyan-500 hover:text-black text-white'
+                                                        ? 'bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-black border border-amber-500/20 animate-pulse'
+                                                        : 'bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-500 hover:to-blue-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.5)] scale-[1.02] border-t border-white/20'
                                             }`}
                                         >
                                             <span className="material-icons-outlined text-sm">
@@ -628,7 +628,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                                 ? 'Fazer Login' 
                                                 : (!isAdmin && currentUser?.role !== 'staff' && (currentUser.balanceBrl || 0) <= 0) 
                                                     ? 'Fazer Recarga' 
-                                                    : 'Apostar Agora'}
+                                                    : 'Apostar Agora [DEBUG]'}
                                         </button>
                                     )}
                                     {isAdmin && (
