@@ -675,8 +675,10 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                         </div>
 
                         <div className="p-8 space-y-6 max-h-[85vh] overflow-y-auto custom-scrollbar">
-                            {/* NEW FIELDS GRID */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-white/5">
+                            {/* CONFIGURAÇÕES GERAIS */}
+                            <div className="space-y-4 pb-6 border-b border-white/5">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-cyan-500">Configurações do Mercado</label>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Categoria do Mercado</label>
                                     <select 
