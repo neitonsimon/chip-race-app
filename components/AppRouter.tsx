@@ -54,11 +54,12 @@ export const AppRouter: React.FC = () => {
             if (evt) return <SpecialEventPage event={evt} onNavigate={handleNavigate} />;
         }
 
+        if (currentView === 'bet') {
+            return <BetPage isAdmin={isAdmin} onNavigate={handleNavigate} />;
+        }
+
         if (currentView.startsWith('category-')) {
             const categoryId = currentView.replace('category-', '');
-            if (categoryId === 'bet') {
-                return <BetPage isAdmin={isAdmin} onNavigate={handleNavigate} />;
-            }
             const categoryInfo = contentDB?.categories?.find(c => c.id === categoryId);
             return <CategoryPage categoryId={categoryId} category={categoryInfo} onNavigate={handleNavigate} isAdmin={isAdmin} />;
         }

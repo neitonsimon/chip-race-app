@@ -261,16 +261,16 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                         onChange={(e) => handlePlayerSearch(e.target.value)}
                                     />
                                     {searchResults.length > 0 && (
-                                        <div className="absolute top-full left-0 w-full mt-2 bg-[#1a1633] border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden">
+                                        <div className="mt-2 bg-[#1a1633] border border-white/10 rounded-2xl shadow-2xl overflow-hidden max-h-[300px] overflow-y-auto custom-scrollbar">
                                             {searchResults.map(p => (
                                                 <button 
                                                     key={p.id}
                                                     onClick={() => addPlayerToBet(p)}
-                                                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/5 last:border-0"
+                                                    className="w-full flex items-center gap-3 px-4 py-4 hover:bg-white/10 transition-colors border-b border-white/5 last:border-0"
                                                 >
-                                                    <img src={p.avatar} className="w-8 h-8 rounded-full" />
+                                                    <img src={p.avatar} className="w-10 h-10 rounded-full border border-white/10" />
                                                     <div className="text-left">
-                                                        <p className="text-sm font-bold">{p.name}</p>
+                                                        <p className="text-sm font-bold text-white">{p.name}</p>
                                                         <p className="text-[10px] text-gray-500">{p.city}</p>
                                                     </div>
                                                 </button>
