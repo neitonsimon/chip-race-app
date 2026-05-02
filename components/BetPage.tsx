@@ -46,6 +46,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
     const [placingBetOn, setPlacingBetOn] = useState<Bet | null>(null);
     const [showViewBetsModal, setShowViewBetsModal] = useState(false);
     const [marketBets, setMarketBets] = useState<any[]>([]);
+    const [saving, setSaving] = useState(false);
 
     // Place bet form state
     const [selectedOddId, setSelectedOddId] = useState('');
@@ -83,7 +84,21 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                     .eq('bet_id', bet.id);
                 
                 const total = wagers?.reduce((sum, w) => sum + (Number(w.amount) || 0), 0) || 0;
-                return { ...bet, total_wagered: total };
+                
+                // Deduplicate odds by player
+                const uniqueOdds = [];
+                const seen = new Set();
+                if (bet.bet_odds) {
+                    for (const odd of bet.bet_odds) {
+                        const key = odd.user_id || `GUEST:${odd.guest_name}`;
+                        if (!seen.has(key)) {
+                            seen.add(key);
+                            uniqueOdds.push(odd);
+                        }
+                    }
+                }
+
+                return { ...bet, total_wagered: total, bet_odds: uniqueOdds };
             }));
             setBets(betsWithTotals as any);
         }
@@ -151,7 +166,8 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
     };
 
     const handleCreateBet = async () => {
-        if (!selectedEventId || selectedPlayers.length === 0) return;
+        if (!selectedEventId || selectedPlayers.length === 0 || saving) return;
+        setSaving(true);
 
         const { data: bet, error: betError } = await supabase
             .from('bets')
@@ -193,10 +209,12 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             setSelectedEventId('');
             fetchBets();
         }
+        setSaving(false);
     };
 
     const handleUpdateBet = async () => {
-        if (!editingBet) return;
+        if (!editingBet || saving) return;
+        setSaving(true);
 
         try {
             // 1. Identify which odds should be deleted
@@ -249,6 +267,8 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
         } catch (error) {
             console.error('Error updating bet:', error);
             alert('Erro ao atualizar o mercado.');
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -708,9 +728,10 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                             </button>
                             <button 
                                 onClick={handleCreateBet}
-                                className="flex-[2] py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black uppercase tracking-widest rounded-2xl shadow-neon-blue hover:scale-[1.02] active:scale-[0.98] transition-all"
+                                disabled={saving}
+                                className={`flex-[2] py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black uppercase tracking-widest rounded-2xl shadow-neon-blue hover:scale-[1.02] active:scale-[0.98] transition-all ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                                CONFIRMAR MERCADO
+                                {saving ? 'CRIANDO...' : 'CONFIRMAR MERCADO'}
                             </button>
                         </div>
                     </div>
@@ -834,7 +855,13 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                         <div className="p-8 border-t border-white/5 flex flex-col gap-4">
                             <div className="flex gap-4">
                                 <button onClick={() => setShowEditModal(false)} className="flex-1 py-4 bg-white/5 text-white font-bold rounded-2xl">CANCELAR</button>
-                                <button onClick={handleUpdateBet} className="flex-[2] py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black uppercase tracking-widest rounded-2xl shadow-neon-blue hover:scale-[1.02] transition-all">SALVAR ALTERAÇÕES</button>
+                                <button 
+                                    onClick={handleUpdateBet} 
+                                    disabled={saving}
+                                    className={`flex-[2] py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black uppercase tracking-widest rounded-2xl shadow-neon-blue hover:scale-[1.02] transition-all ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
+                                    {saving ? 'SALVANDO...' : 'SALVAR ALTERAÇÕES'}
+                                </button>
                             </div>
                             <button 
                                 onClick={handleDeleteBet}
