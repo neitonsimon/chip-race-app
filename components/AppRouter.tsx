@@ -114,7 +114,7 @@ export const AppRouter: React.FC = () => {
                 }
                 // Only redirect to login if: data loaded + not logged in + no profile slug to show
                 if (!isLoading && !isLoggedIn && !selectedPlayer) {
-                    return <Auth onLogin={handleLogin} onCancel={() => handleNavigate('home')} onModeChange={(m) => handleNavigate(m === 'signup' ? 'register' : 'login')} />;
+                    return <Auth onLogin={handleLogin} onCancel={() => handleNavigate('home')} onModeChange={(m) => handleNavigate(m === 'signup' ? 'register' : m === 'forgot' ? 'forgot-password' : 'login')} />;
                 }
                 return <PlayerProfile
                     key={selectedPlayer ? selectedPlayer.name : 'current-user-profile'}
@@ -141,9 +141,11 @@ export const AppRouter: React.FC = () => {
                     isLoading={isLoading}
                 />;
             case 'register':
-                return isLoggedIn ? <EventRegistration isAdmin={isAdmin} /> : <Auth initialMode="signup" onLogin={handleLogin} onCancel={() => handleNavigate('home')} onModeChange={(m) => handleNavigate(m === 'signup' ? 'register' : 'login')} />;
+                return isLoggedIn ? <EventRegistration isAdmin={isAdmin} /> : <Auth initialMode="signup" onLogin={handleLogin} onCancel={() => handleNavigate('home')} onModeChange={(m) => handleNavigate(m === 'signup' ? 'register' : m === 'forgot' ? 'forgot-password' : 'login')} />;
             case 'login':
-                return <Auth onLogin={handleLogin} onCancel={() => handleNavigate('home')} onModeChange={(m) => handleNavigate(m === 'signup' ? 'register' : 'login')} />;
+                return <Auth onLogin={handleLogin} onCancel={() => handleNavigate('home')} onModeChange={(m) => handleNavigate(m === 'signup' ? 'register' : m === 'forgot' ? 'forgot-password' : 'login')} />;
+            case 'forgot-password':
+                return <Auth initialMode="forgot" onLogin={handleLogin} onCancel={() => handleNavigate('home')} onModeChange={(m) => handleNavigate(m === 'signup' ? 'register' : m === 'forgot' ? 'forgot-password' : 'login')} />;
             case 'reset-password':
                 return <ResetPassword onComplete={() => handleNavigate('login')} onCancel={() => handleNavigate('home')} />;
             case 'the-chosen-details':

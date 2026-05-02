@@ -96,22 +96,22 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onCancel, initialMode = 'lo
     };
 
     return (
-        <div className="min-h-[100dvh] py-12 sm:py-24 flex items-center justify-center bg-[#050821] px-4 overflow-y-auto">
+        <div className="min-h-screen py-12 sm:py-24 flex items-center justify-center bg-[#050821] px-4 overflow-y-auto">
             <div className="w-full max-w-md bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden my-auto">
 
                 {/* Glow Effect */}
                 <div className="absolute -top-20 -right-20 w-64 h-64 bg-primary/20 rounded-full blur-[80px] pointer-events-none"></div>
 
-                <div className="relative z-10 text-center mb-8">
+                <div className="relative z-10 text-center mb-6 sm:mb-8">
                     <div className="flex items-center justify-center mb-4 sm:mb-6">
-                        <img src="/cr-logo.png" alt="Chip Race" className="h-16 sm:h-20 w-auto drop-shadow-2xl" />
+                        <img src="/cr-logo.png" alt="Chip Race" className="h-14 sm:h-20 w-auto drop-shadow-2xl" />
                     </div>
-                    <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
+                    <h2 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">
                         {mode === 'login' && 'Acesse sua Conta'}
-                        {mode === 'signup' && 'Crie sua Conta Chip Race'}
+                        {mode === 'signup' && 'Crie sua Conta'}
                         {mode === 'forgot' && 'Recuperar Senha'}
                     </h2>
-                    <p className="text-xs sm:text-sm text-gray-500 mt-2">
+                    <p className="text-[10px] sm:text-xs text-gray-500 mt-1 sm:mt-2 font-bold uppercase tracking-widest">
                         {mode === 'login' && 'Para se registrar em torneios e editar seu perfil.'}
                         {mode === 'signup' && 'Junte-se à elite do poker no sul do país.'}
                         {mode === 'forgot' && 'Enviaremos um link para seu e-mail.'}
@@ -144,35 +144,37 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onCancel, initialMode = 'lo
                         </div>
                     )}
 
-                    <div>
-                        <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1">E-mail</label>
+                    <div className="space-y-1.5">
+                        <label className="block text-[10px] sm:text-xs font-black text-gray-500 uppercase ml-1">E-mail</label>
                         <input
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 rounded-lg px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-900 dark:text-white focus:outline-none focus:border-primary"
+                            placeholder="seu@email.com"
+                            className="w-full bg-gray-50 dark:bg-black/40 border border-gray-300 dark:border-white/10 rounded-2xl px-4 py-3.5 sm:py-4 text-sm sm:text-base text-gray-900 dark:text-white focus:outline-none focus:border-primary transition-all font-medium"
                             required
                         />
                     </div>
 
                     {mode !== 'forgot' && (
-                        <div>
-                            <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1">Senha</label>
+                        <div className="space-y-1.5">
+                            <label className="block text-[10px] sm:text-xs font-black text-gray-500 uppercase ml-1">Senha</label>
                             <input
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 rounded-lg px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-900 dark:text-white focus:outline-none focus:border-primary"
+                                placeholder="••••••••"
+                                className="w-full bg-gray-50 dark:bg-black/40 border border-gray-300 dark:border-white/10 rounded-2xl px-4 py-3.5 sm:py-4 text-sm sm:text-base text-gray-900 dark:text-white focus:outline-none focus:border-primary transition-all font-medium"
                                 required
                             />
                             {mode === 'login' && (
-                                <div className="mt-3 flex justify-center">
+                                <div className="mt-4 flex justify-center">
                                     <button 
                                         type="button" 
                                         onClick={() => handleModeChange('forgot')} 
-                                        className="text-[11px] sm:text-xs font-black text-primary hover:text-white bg-primary/10 hover:bg-primary px-4 py-2 rounded-full transition-all uppercase tracking-widest border border-primary/20"
+                                        className="text-[10px] sm:text-[11px] font-black text-primary hover:text-white bg-primary/10 hover:bg-primary px-5 py-2.5 rounded-full transition-all uppercase tracking-widest border border-primary/20"
                                     >
-                                        Esqueceu sua senha? Recuperar agora
+                                        Esqueceu sua senha?
                                     </button>
                                 </div>
                             )}
