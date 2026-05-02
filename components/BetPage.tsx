@@ -8,6 +8,7 @@ interface Bet {
     event_id: string;
     category: 'campeao' | '3handed' | 'mesa_finalista';
     status: 'open' | 'closed' | 'settled';
+    expires_at?: string;
     events?: { title: string; date: string };
     bet_odds?: BetOdd[];
 }
@@ -31,6 +32,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
     // Form state
     const [selectedEventId, setSelectedEventId] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<'campeao' | '3handed' | 'mesa_finalista'>('campeao');
+    const [expiresAt, setExpiresAt] = useState('');
     const [playerSearch, setPlayerSearch] = useState('');
     const [searchResults, setSearchResults] = useState<RankingPlayer[]>([]);
     const [selectedPlayers, setSelectedPlayers] = useState<{ id: string; name: string; odd: number }[]>([]);
@@ -143,6 +145,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             .insert({
                 event_id: selectedEventId,
                 category: selectedCategory,
+                expires_at: expiresAt || null,
                 status: 'open'
             })
             .select()
@@ -198,6 +201,9 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                 });
             }
         }
+
+        // Update expires_at
+        await supabase.from('bets').update({ expires_at: expiresAt || null }).eq('id', editingBet.id);
         
         setShowEditModal(false);
         fetchBets();
@@ -211,6 +217,12 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
 
         const odd = placingBetOn?.bet_odds?.find(o => o.id === selectedOddId);
         if (!odd) return;
+
+        // Check if expired
+        if (placingBetOn?.expires_at && new Date(placingBetOn.expires_at) < new Date()) {
+            alert('Este mercado de apostas já foi encerrado.');
+            return;
+        }
 
         // Payment Method Logic
         if (paymentMethod === 'credits') {
@@ -301,6 +313,43 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
         setLoading(false);
     };
 
+    const CountdownTimer = ({ expiresAt }: { expiresAt?: string }) => {
+        const [timeLeft, setTimeLeft] = useState<string>('');
+
+        useEffect(() => {
+            if (!expiresAt) return;
+
+            const timer = setInterval(() => {
+                const now = new Date().getTime();
+                const target = new Date(expiresAt).getTime();
+                const difference = target - now;
+
+                if (difference <= 0) {
+                    setTimeLeft('ENCERRADO');
+                    clearInterval(timer);
+                    return;
+                }
+
+                const hours = Math.floor((difference / (1000 * 60 * 60)));
+                const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+                setTimeLeft(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+            }, 1000);
+
+            return () => clearInterval(timer);
+        }, [expiresAt]);
+
+        if (!expiresAt) return null;
+
+        return (
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border animate-pulse ${timeLeft === 'ENCERRADO' ? 'bg-red-500/10 border-red-500/30 text-red-500' : 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400'}`}>
+                <span className="material-icons-outlined text-sm">{timeLeft === 'ENCERRADO' ? 'timer_off' : 'timer'}</span>
+                <span className="text-[11px] font-black tracking-tighter">{timeLeft}</span>
+            </div>
+        );
+    };
+
     return (
         <div className="min-h-screen bg-[#050821] text-white pt-10 pb-20 px-4">
             <div className="max-w-6xl mx-auto">
@@ -340,14 +389,18 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                             <div key={bet.id} className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden hover:border-cyan-500/30 transition-all group flex flex-col">
                                 <div className="p-6 border-b border-white/5 bg-gradient-to-br from-white/5 to-transparent relative">
                                     <div className="flex justify-between items-start mb-4">
-                                        <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 bg-cyan-500/20 text-cyan-400 rounded-lg">
-                                            {bet.category.replace('_', ' ')}
-                                        </span>
+                                        <div className="flex flex-col gap-2">
+                                            <span className="text-[10px] w-fit font-black uppercase tracking-widest px-2 py-1 bg-cyan-500/20 text-cyan-400 rounded-lg">
+                                                {bet.category.replace('_', ' ')}
+                                            </span>
+                                            <CountdownTimer expiresAt={bet.expires_at} />
+                                        </div>
                                         <div className="flex items-center gap-2">
                                             {isAdmin && (
                                                 <button 
                                                     onClick={() => {
                                                         setEditingBet(bet);
+                                                        setExpiresAt(bet.expires_at || '');
                                                         setSelectedPlayers(bet.bet_odds?.map(o => ({
                                                             id: o.user_id || `GUEST:${o.guest_name}`,
                                                             name: o.profiles?.name || o.guest_name || '',
@@ -389,15 +442,23 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                     ))}
                                 </div>
                                 <div className="p-2 bg-black/20 flex flex-col gap-2">
-                                    <button 
-                                        onClick={() => {
-                                            setPlacingBetOn(bet);
-                                            setShowPlaceBetModal(true);
-                                        }}
-                                        className="w-full py-4 bg-white/5 hover:bg-cyan-500 hover:text-black font-black uppercase tracking-widest text-xs transition-all"
-                                    >
-                                        Apostar Agora
-                                    </button>
+                                    {bet.expires_at && new Date(bet.expires_at) < new Date() ? (
+                                        <div className="w-full py-4 bg-white/5 text-gray-500 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 cursor-not-allowed">
+                                            <span className="material-icons-outlined text-sm">lock</span>
+                                            MERCADO ENCERRADO
+                                        </div>
+                                    ) : (
+                                        <button 
+                                            onClick={() => {
+                                                setPlacingBetOn(bet);
+                                                setShowPlaceBetModal(true);
+                                            }}
+                                            className="w-full py-4 bg-white/5 hover:bg-cyan-500 hover:text-black font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <span className="material-icons-outlined text-sm">confirmation_number</span>
+                                            Apostar Agora
+                                        </button>
+                                    )}
                                     {isAdmin && (
                                         <button 
                                             onClick={() => viewMarketBets(bet.id)}
@@ -452,6 +513,16 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                         <option value="3handed" className="bg-[#0a061d] text-white">3-Handed</option>
                                         <option value="mesa_finalista" className="bg-[#0a061d] text-white">Mesa Finalista</option>
                                     </select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Horário de Encerramento</label>
+                                    <input 
+                                        type="datetime-local"
+                                        className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors text-white text-sm cursor-pointer"
+                                        value={expiresAt}
+                                        onChange={(e) => setExpiresAt(e.target.value)}
+                                    />
                                 </div>
                             </div>
 
@@ -519,7 +590,10 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
 
                         <div className="p-8 border-t border-white/5 flex gap-4">
                             <button 
-                                onClick={() => setShowCreateModal(false)}
+                                onClick={() => {
+                                    setShowCreateModal(false);
+                                    setExpiresAt('');
+                                }}
                                 className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-white font-bold rounded-2xl transition-all"
                             >
                                 CANCELAR
