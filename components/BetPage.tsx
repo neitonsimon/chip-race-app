@@ -26,7 +26,7 @@ interface BetOdd {
 }
 
 export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) => void }> = ({ isAdmin, onNavigate }) => {
-    const { events, getAllUniquePlayers, isLoggedIn, currentUser } = useApp();
+    const { events, getAllUniquePlayers, isLoggedIn, currentUser, allProfiles } = useApp();
     const [bets, setBets] = useState<Bet[]>([]);
     const [loading, setLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -915,7 +915,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                     <div className="bg-[#0a061d] border border-white/10 rounded-[32px] w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in duration-300">
                         <div className="p-8 border-b border-white/5 bg-gradient-to-r from-cyan-500/10 to-transparent">
                             <h2 className="text-2xl font-black uppercase tracking-tighter">Emitir Aposta</h2>
-                            <p className="text-xs text-gray-400 mt-1">{placingBetOn.events?.title} - {placingBetOn.category.replace('_', ' ')}</p>
+                            <p className="text-xs text-gray-400 mt-1">{(placingBetOn.events?.title) || 'Sem Evento'} - {(placingBetOn.category || '').replace('_', ' ')}</p>
                         </div>
 
                         <div className="p-8 space-y-6">
