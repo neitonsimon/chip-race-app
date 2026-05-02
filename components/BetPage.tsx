@@ -158,7 +158,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             .insert({
                 event_id: selectedEventId,
                 category: selectedCategory,
-                expires_at: expiresAt || null,
+                expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
                 max_bet: maxBet ? parseFloat(maxBet) : null,
                 status: 'open'
             })
@@ -239,7 +239,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
 
             // 3. Update bet metadata
             await supabase.from('bets').update({ 
-                expires_at: expiresAt || null,
+                expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
                 max_bet: maxBet ? parseFloat(maxBet) : null,
                 category: selectedCategory
             }).eq('id', editingBet.id);
