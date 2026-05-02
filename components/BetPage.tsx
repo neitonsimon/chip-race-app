@@ -664,7 +664,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             )}
 
             {/* Edit Bet Modal */}
-            {showEditModal && (
+            {showEditModal && editingBet && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
                     <div className="bg-[#0a061d] border border-white/10 rounded-[32px] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-300">
                         <div className="p-8 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-cyan-500/10 to-transparent">
@@ -675,6 +675,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                         </div>
 
                         <div className="p-8 space-y-6 max-h-[85vh] overflow-y-auto custom-scrollbar">
+                            {/* NEW FIELDS GRID */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-white/5">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Categoria do Mercado</label>
@@ -690,7 +691,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Horário de Encerramento</label>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Fim das Apostas</label>
                                     <input 
                                         type="datetime-local"
                                         className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors text-white text-sm cursor-pointer"
@@ -775,7 +776,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
 
                         <div className="p-8 border-t border-white/5 flex gap-4">
                             <button onClick={() => setShowEditModal(false)} className="flex-1 py-4 bg-white/5 text-white font-bold rounded-2xl">CANCELAR</button>
-                            <button onClick={handleUpdateBet} className="flex-[2] py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black uppercase tracking-widest rounded-2xl">SALVAR ALTERAÇÕES</button>
+                            <button onClick={handleUpdateBet} className="flex-[2] py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black uppercase tracking-widest rounded-2xl shadow-neon-blue hover:scale-[1.02] transition-all">SALVAR ALTERAÇÕES</button>
                         </div>
                     </div>
                 </div>
