@@ -26,7 +26,7 @@ interface BetOdd {
 }
 
 export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) => void }> = ({ isAdmin, onNavigate }) => {
-    const { events, getAllUniquePlayers } = useApp();
+    const { events, getAllUniquePlayers, isLoggedIn, currentUser } = useApp();
     const [bets, setBets] = useState<Bet[]>([]);
     const [loading, setLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -561,13 +561,33 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                             ) : (
                                                 <button 
                                                     onClick={() => {
+                                                        if (!isLoggedIn) {
+                                                            onNavigate('login');
+                                                            return;
+                                                        }
+                                                        if (!isAdmin && (currentUser.balanceBrl || 0) <= 0) {
+                                                            onNavigate('recarga');
+                                                            return;
+                                                        }
                                                         setPlacingBetOn(bet);
                                                         setShowPlaceBetModal(true);
                                                     }}
-                                                    className="w-full py-4 bg-white/5 hover:bg-cyan-500 hover:text-black font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2"
+                                                    className={`w-full py-4 font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 ${
+                                                        !isLoggedIn 
+                                                            ? 'bg-white/5 hover:bg-white/10 text-gray-400' 
+                                                            : (!isAdmin && (currentUser.balanceBrl || 0) <= 0)
+                                                                ? 'bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-black border border-amber-500/20'
+                                                                : 'bg-white/5 hover:bg-cyan-500 hover:text-black text-white'
+                                                    }`}
                                                 >
-                                                    <span className="material-icons-outlined text-sm">confirmation_number</span>
-                                                    Apostar Agora
+                                                    <span className="material-icons-outlined text-sm">
+                                                        {!isLoggedIn ? 'login' : (!isAdmin && (currentUser.balanceBrl || 0) <= 0) ? 'account_balance_wallet' : 'confirmation_number'}
+                                                    </span>
+                                                    {!isLoggedIn 
+                                                        ? 'Fazer Login' 
+                                                        : (!isAdmin && (currentUser.balanceBrl || 0) <= 0) 
+                                                            ? 'Fazer Recarga' 
+                                                            : 'Apostar Agora'}
                                                 </button>
                                             )}
                                             <button 
