@@ -948,7 +948,10 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         );
     }
 
-    if (isLoading) return <ProfileStatsSkeleton />;
+    // Use local readiness check instead of global isLoading to avoid black screen
+    // on re-fetches, refreshes, or when navigating between profiles.
+    const profileReady = !!(player.id || player.name !== 'GUEST');
+    if (!profileReady && !initialData && !currentUser?.id) return <ProfileStatsSkeleton />;
 
     return (
         <div className="py-12 bg-background-light dark:bg-background-dark min-h-screen">

@@ -678,44 +678,45 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                             {/* CONFIGURAÇÕES GERAIS */}
                             <div className="space-y-4 pb-6 border-b border-white/5">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-cyan-500">Configurações do Mercado</label>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Categoria do Mercado</label>
-                                    <select 
-                                        value={selectedCategory}
-                                        onChange={(e) => setSelectedCategory(e.target.value as any)}
-                                        className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors text-white text-sm appearance-none cursor-pointer"
-                                    >
-                                        <option value="campeao" className="bg-[#0a061d] text-white">Campeão</option>
-                                        <option value="3handed" className="bg-[#0a061d] text-white">3-Handed</option>
-                                        <option value="mesa_finalista" className="bg-[#0a061d] text-white">Mesa Finalista</option>
-                                    </select>
-                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Categoria</label>
+                                        <select 
+                                            value={selectedCategory}
+                                            onChange={(e) => setSelectedCategory(e.target.value as any)}
+                                            className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors text-white text-sm appearance-none cursor-pointer"
+                                        >
+                                            <option value="campeao" className="bg-[#0a061d] text-white">Campeão</option>
+                                            <option value="3handed" className="bg-[#0a061d] text-white">3-Handed</option>
+                                            <option value="mesa_finalista" className="bg-[#0a061d] text-white">Mesa Finalista</option>
+                                        </select>
+                                    </div>
 
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Fim das Apostas</label>
-                                    <input 
-                                        type="datetime-local"
-                                        className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors text-white text-sm cursor-pointer"
-                                        value={expiresAt}
-                                        onChange={(e) => setExpiresAt(e.target.value)}
-                                    />
-                                </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Fim das Apostas</label>
+                                        <input 
+                                            type="datetime-local"
+                                            className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors text-white text-sm cursor-pointer"
+                                            value={expiresAt}
+                                            onChange={(e) => setExpiresAt(e.target.value)}
+                                        />
+                                    </div>
 
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Aposta Máxima (R$)</label>
-                                    <input 
-                                        type="number"
-                                        className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors text-white text-sm"
-                                        placeholder="Ilimitado"
-                                        value={maxBet}
-                                        onChange={(e) => setMaxBet(e.target.value)}
-                                    />
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Aposta Máxima (R$)</label>
+                                        <input 
+                                            type="number"
+                                            className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors text-white text-sm"
+                                            placeholder="Ilimitado"
+                                            value={maxBet}
+                                            onChange={(e) => setMaxBet(e.target.value)}
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Buscar Jogadores</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Adicionar Jogador ao Mercado</label>
                                 <div className="relative">
                                     <span className="material-icons-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">search</span>
                                     <input 
