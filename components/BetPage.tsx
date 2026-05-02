@@ -809,6 +809,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                                     {selectedOddId === odd.id && <span className="material-icons-outlined text-black text-[14px] font-black">check</span>}
                                                 </div>
                                                 <span className="text-sm font-medium">{odd.profiles?.name || odd.guest_name}</span>
+                                            </div>
                                         </button>
                                     ))}
                                 </div>
