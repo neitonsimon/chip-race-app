@@ -9,6 +9,7 @@ interface Bet {
     category: 'campeao' | '3handed' | 'mesa_finalista';
     status: 'open' | 'closed' | 'settled';
     expires_at?: string;
+    max_bet?: number;
     events?: { title: string; date: string };
     bet_odds?: BetOdd[];
 }
@@ -33,6 +34,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
     const [selectedEventId, setSelectedEventId] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<'campeao' | '3handed' | 'mesa_finalista'>('campeao');
     const [expiresAt, setExpiresAt] = useState('');
+    const [maxBet, setMaxBet] = useState<string>('');
     const [playerSearch, setPlayerSearch] = useState('');
     const [searchResults, setSearchResults] = useState<RankingPlayer[]>([]);
     const [selectedPlayers, setSelectedPlayers] = useState<{ id: string; name: string; odd: number }[]>([]);
@@ -146,6 +148,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                 event_id: selectedEventId,
                 category: selectedCategory,
                 expires_at: expiresAt || null,
+                max_bet: maxBet ? parseFloat(maxBet) : null,
                 status: 'open'
             })
             .select()
@@ -202,8 +205,11 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             }
         }
 
-        // Update expires_at
-        await supabase.from('bets').update({ expires_at: expiresAt || null }).eq('id', editingBet.id);
+        // Update expires_at and max_bet
+        await supabase.from('bets').update({ 
+            expires_at: expiresAt || null,
+            max_bet: maxBet ? parseFloat(maxBet) : null
+        }).eq('id', editingBet.id);
         
         setShowEditModal(false);
         fetchBets();
@@ -221,6 +227,12 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
         // Check if expired
         if (placingBetOn?.expires_at && new Date(placingBetOn.expires_at) < new Date()) {
             alert('Este mercado de apostas já foi encerrado.');
+            return;
+        }
+
+        // Check Max Bet
+        if (placingBetOn?.max_bet && parseFloat(betAmount) > placingBetOn.max_bet) {
+            alert(`O valor máximo permitido para este mercado é R$ ${placingBetOn.max_bet}.`);
             return;
         }
 
@@ -401,6 +413,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                                     onClick={() => {
                                                         setEditingBet(bet);
                                                         setExpiresAt(bet.expires_at || '');
+                                                        setMaxBet(bet.max_bet?.toString() || '');
                                                         setSelectedPlayers(bet.bet_odds?.map(o => ({
                                                             id: o.user_id || `GUEST:${o.guest_name}`,
                                                             name: o.profiles?.name || o.guest_name || '',
@@ -524,6 +537,17 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                         onChange={(e) => setExpiresAt(e.target.value)}
                                     />
                                 </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Aposta Máxima (R$)</label>
+                                    <input 
+                                        type="number"
+                                        className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors text-white text-sm"
+                                        placeholder="Ilimitado"
+                                        value={maxBet}
+                                        onChange={(e) => setMaxBet(e.target.value)}
+                                    />
+                                </div>
                             </div>
 
                             <div className="space-y-2">
@@ -593,6 +617,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                 onClick={() => {
                                     setShowCreateModal(false);
                                     setExpiresAt('');
+                                    setMaxBet('');
                                 }}
                                 className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-white font-bold rounded-2xl transition-all"
                             >
@@ -715,8 +740,6 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                                     {selectedOddId === odd.id && <span className="material-icons-outlined text-black text-[14px] font-black">check</span>}
                                                 </div>
                                                 <span className="text-sm font-medium">{odd.profiles?.name || odd.guest_name}</span>
-                                            </div>
-                                            <span className="text-xs font-black text-cyan-400">@{odd.odd_value.toFixed(2)}</span>
                                         </button>
                                     ))}
                                 </div>
@@ -725,20 +748,27 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Valor da Aposta (R$)</label>
-                                    <input 
-                                        type="number"
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 outline-none focus:border-cyan-500 transition-colors text-white font-bold"
-                                        placeholder="0,00"
-                                        value={wagerAmount || ''}
-                                        onChange={(e) => setWagerAmount(parseFloat(e.target.value))}
-                                    />
+                                    <div className="relative">
+                                        <input 
+                                            type="number"
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 outline-none focus:border-cyan-500 transition-colors text-white font-bold text-lg"
+                                            placeholder="0,00"
+                                            value={betAmount}
+                                            onChange={(e) => setBetAmount(e.target.value)}
+                                        />
+                                        {placingBetOn?.max_bet && (
+                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-orange-400 bg-orange-400/10 px-2 py-1 rounded">
+                                                MÁX: R$ {placingBetOn.max_bet}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Retorno Potencial (Green)</label>
-                                    <div className="w-full bg-green-500/10 border border-green-500/20 rounded-2xl px-4 py-4 flex items-center">
-                                        <span className="text-green-400 font-black">
-                                            R$ {(wagerAmount * (placingBetOn.bet_odds?.find(o => o.id === selectedOddId)?.odd_value || 0)).toFixed(2)}
-                                        </span>
+                                    <div className="w-full bg-green-500/10 border border-green-500/20 rounded-2xl px-4 py-4">
+                                        <div className="text-green-400 font-black text-lg">
+                                            R$ {((parseFloat(betAmount) || 0) * (placingBetOn.bet_odds?.find(o => o.id === selectedOddId)?.odd_value || 0)).toFixed(2)}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
