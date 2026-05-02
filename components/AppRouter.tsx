@@ -100,8 +100,19 @@ export const AppRouter: React.FC = () => {
                     isLoading={isLoading}
                 />;
             case 'profile':
-                // Guard: if no logged-in user and no selected player, redirect to login
-                if (!isLoggedIn && !selectedPlayer) {
+                // During initial data load, show a loading screen to avoid race conditions
+                if (isLoading && !selectedPlayer) {
+                    return (
+                        <div className="min-h-screen bg-[#050310] flex items-center justify-center">
+                            <div className="flex flex-col items-center gap-4">
+                                <div className="w-16 h-16 rounded-full border-4 border-purple-500/30 border-t-purple-500 animate-spin" />
+                                <p className="text-gray-500 text-sm font-bold uppercase tracking-widest">Carregando...</p>
+                            </div>
+                        </div>
+                    );
+                }
+                // Only redirect to login if: data loaded + not logged in + no profile slug to show
+                if (!isLoading && !isLoggedIn && !selectedPlayer) {
                     return <Auth onLogin={handleLogin} onCancel={() => handleNavigate('home')} onModeChange={(m) => handleNavigate(m === 'signup' ? 'register' : 'login')} />;
                 }
                 return <PlayerProfile
