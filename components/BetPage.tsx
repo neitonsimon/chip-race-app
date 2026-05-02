@@ -434,7 +434,13 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
         setLoading(true);
         const { data, error } = await supabase
             .from('user_bets')
-            .select('*')
+            .select(`
+                *,
+                bet_odds (
+                    guest_name,
+                    profiles (name)
+                )
+            `)
             .eq('bet_id', betId)
             .order('created_at', { ascending: false });
 
@@ -1114,6 +1120,10 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                         <div>
                                             <div className="flex items-center gap-2 mb-1">
                                                 <span className="text-sm font-bold text-white">{bet.punter_name}</span>
+                                                <span className="text-[10px] text-gray-500 uppercase font-bold bg-white/5 px-2 py-0.5 rounded">apostou em</span>
+                                                <span className="text-sm font-black text-cyan-400">
+                                                    {bet.bet_odds?.profiles?.name || bet.bet_odds?.guest_name || 'N/A'}
+                                                </span>
                                                 <span className="text-[10px] px-2 py-0.5 bg-white/10 rounded text-gray-400">ID: {bet.id.slice(0, 8)}</span>
                                             </div>
                                             <p className="text-xs text-gray-500">
