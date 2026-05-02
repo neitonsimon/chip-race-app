@@ -35,6 +35,18 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
     const [searchResults, setSearchResults] = useState<RankingPlayer[]>([]);
     const [selectedPlayers, setSelectedPlayers] = useState<{ id: string; name: string; odd: number }[]>([]);
 
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editingBet, setEditingBet] = useState<Bet | null>(null);
+    const [showPlaceBetModal, setShowPlaceBetModal] = useState(false);
+    const [placingBetOn, setPlacingBetOn] = useState<Bet | null>(null);
+    const [showViewBetsModal, setShowViewBetsModal] = useState(false);
+    const [marketBets, setMarketBets] = useState<any[]>([]);
+
+    // Place bet form state
+    const [selectedOddId, setSelectedOddId] = useState('');
+    const [wagerAmount, setWagerAmount] = useState<number>(0);
+    const [punterName, setPunterName] = useState('');
+
     useEffect(() => {
         fetchBets();
     }, []);
@@ -130,6 +142,84 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
         }
     };
 
+    const handleUpdateBet = async () => {
+        if (!editingBet) return;
+
+        // Update odds (this is a simplified version, usually you'd want to handle new/deleted odds too)
+        for (const p of selectedPlayers) {
+            const isGuest = p.id.startsWith('GUEST:');
+            const existingOdd = editingBet.bet_odds?.find(o => (isGuest ? o.guest_name === p.name : o.user_id === p.id));
+            
+            if (existingOdd) {
+                await supabase.from('bet_odds').update({ odd_value: p.odd }).eq('id', existingOdd.id);
+            } else {
+                await supabase.from('bet_odds').insert({
+                    bet_id: editingBet.id,
+                    user_id: isGuest ? null : p.id,
+                    guest_name: isGuest ? p.name : null,
+                    odd_value: p.odd,
+                    status: 'active'
+                });
+            }
+        }
+        
+        setShowEditModal(false);
+        fetchBets();
+    };
+
+    const handlePlaceBet = async () => {
+        if (!selectedOddId || wagerAmount <= 0 || !punterName) {
+            alert('Preencha todos os campos corretamente');
+            return;
+        }
+
+        const odd = placingBetOn?.bet_odds?.find(o => o.id === selectedOddId);
+        if (!odd) return;
+
+        const potentialReturn = wagerAmount * odd.odd_value;
+
+        // Find if punter matches any profile to link it
+        const allPlayers = getAllUniquePlayers();
+        const matchedPlayer = allPlayers.find(p => p.name.toLowerCase() === punterName.toLowerCase());
+
+        const { error } = await supabase
+            .from('user_bets')
+            .insert({
+                bet_id: placingBetOn?.id,
+                odd_id: selectedOddId,
+                user_id: matchedPlayer?.id && !matchedPlayer.id.startsWith('GUEST:') ? matchedPlayer.id : null,
+                punter_name: punterName,
+                amount: wagerAmount,
+                potential_return: potentialReturn,
+                status: 'pending'
+            });
+
+        if (error) {
+            alert('Erro ao registrar aposta: ' + error.message);
+        } else {
+            alert('Aposta registrada com sucesso!');
+            setShowPlaceBetModal(false);
+            setPunterName('');
+            setWagerAmount(0);
+            setSelectedOddId('');
+        }
+    };
+
+    const viewMarketBets = async (betId: string) => {
+        setLoading(true);
+        const { data, error } = await supabase
+            .from('user_bets')
+            .select('*')
+            .eq('bet_id', betId)
+            .order('created_at', { ascending: false });
+
+        if (!error) {
+            setMarketBets(data);
+            setShowViewBetsModal(true);
+        }
+        setLoading(false);
+    };
+
     return (
         <div className="min-h-screen bg-[#050821] text-white pt-10 pb-20 px-4">
             <div className="max-w-6xl mx-auto">
@@ -154,7 +244,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                     )}
                 </div>
 
-                {loading ? (
+                {loading && !showViewBetsModal ? (
                     <div className="flex justify-center py-20">
                         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyan-500"></div>
                     </div>
@@ -166,15 +256,33 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {bets.map(bet => (
-                            <div key={bet.id} className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden hover:border-cyan-500/30 transition-all group">
-                                <div className="p-6 border-b border-white/5 bg-gradient-to-br from-white/5 to-transparent">
+                            <div key={bet.id} className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden hover:border-cyan-500/30 transition-all group flex flex-col">
+                                <div className="p-6 border-b border-white/5 bg-gradient-to-br from-white/5 to-transparent relative">
                                     <div className="flex justify-between items-start mb-4">
                                         <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 bg-cyan-500/20 text-cyan-400 rounded-lg">
                                             {bet.category.replace('_', ' ')}
                                         </span>
-                                        <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-lg ${bet.status === 'open' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                                            {bet.status === 'open' ? 'Aberto' : 'Encerrado'}
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            {isAdmin && (
+                                                <button 
+                                                    onClick={() => {
+                                                        setEditingBet(bet);
+                                                        setSelectedPlayers(bet.bet_odds?.map(o => ({
+                                                            id: o.user_id || `GUEST:${o.guest_name}`,
+                                                            name: o.profiles?.name || o.guest_name || '',
+                                                            odd: o.odd_value
+                                                        })) || []);
+                                                        setShowEditModal(true);
+                                                    }}
+                                                    className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"
+                                                >
+                                                    <span className="material-icons-outlined text-sm">edit</span>
+                                                </button>
+                                            )}
+                                            <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-lg ${bet.status === 'open' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                                                {bet.status === 'open' ? 'Aberto' : 'Encerrado'}
+                                            </span>
+                                        </div>
                                     </div>
                                     <h3 className="text-xl font-bold mb-1 truncate">{bet.events?.title}</h3>
                                     <p className="text-xs text-gray-500 flex items-center gap-1">
@@ -182,7 +290,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                         {new Date(bet.events?.date || '').toLocaleDateString('pt-BR')}
                                     </p>
                                 </div>
-                                <div className="p-4 space-y-2">
+                                <div className="p-4 space-y-2 flex-1">
                                     {bet.bet_odds?.map(odd => (
                                         <div key={odd.id} className="flex items-center justify-between p-3 bg-black/40 rounded-2xl hover:bg-black/60 transition-colors">
                                             <div className="flex items-center gap-3">
@@ -199,9 +307,26 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                         </div>
                                     ))}
                                 </div>
-                                <button className="w-full py-4 bg-white/5 hover:bg-cyan-500 hover:text-black font-black uppercase tracking-widest text-xs transition-all">
-                                    Apostar Agora
-                                </button>
+                                <div className="p-2 bg-black/20 flex flex-col gap-2">
+                                    <button 
+                                        onClick={() => {
+                                            setPlacingBetOn(bet);
+                                            setShowPlaceBetModal(true);
+                                        }}
+                                        className="w-full py-4 bg-white/5 hover:bg-cyan-500 hover:text-black font-black uppercase tracking-widest text-xs transition-all"
+                                    >
+                                        Apostar Agora
+                                    </button>
+                                    {isAdmin && (
+                                        <button 
+                                            onClick={() => viewMarketBets(bet.id)}
+                                            className="w-full py-2 text-[10px] font-bold text-gray-500 hover:text-cyan-400 uppercase tracking-tighter transition-colors flex items-center justify-center gap-1"
+                                        >
+                                            <span className="material-icons-outlined text-xs">visibility</span>
+                                            Ver Apostas Realizadas
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -324,6 +449,219 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                             >
                                 CONFIRMAR MERCADO
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Bet Modal */}
+            {showEditModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+                    <div className="bg-[#0a061d] border border-white/10 rounded-[32px] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+                        <div className="p-8 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-cyan-500/10 to-transparent">
+                            <h2 className="text-2xl font-black uppercase tracking-tighter">Editar Mercado</h2>
+                            <button onClick={() => setShowEditModal(false)} className="text-gray-500 hover:text-white transition-colors">
+                                <span className="material-icons-outlined">close</span>
+                            </button>
+                        </div>
+
+                        <div className="p-8 space-y-6 max-h-[85vh] overflow-y-auto custom-scrollbar">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Buscar Jogadores</label>
+                                <div className="relative">
+                                    <span className="material-icons-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">search</span>
+                                    <input 
+                                        type="text"
+                                        placeholder="Adicionar novo jogador..."
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-4 outline-none focus:border-cyan-500 transition-colors text-sm"
+                                        value={playerSearch}
+                                        onChange={(e) => handlePlayerSearch(e.target.value)}
+                                    />
+                                    {searchResults.length > 0 && (
+                                        <div className="mt-2 bg-[#1a1633] border border-white/10 rounded-2xl shadow-2xl overflow-hidden max-h-[300px] overflow-y-auto custom-scrollbar">
+                                            {searchResults.map(p => (
+                                                <button 
+                                                    key={p.id}
+                                                    onClick={() => addPlayerToBet(p)}
+                                                    className="w-full flex items-center gap-3 px-4 py-4 hover:bg-white/10 transition-colors border-b border-white/5 last:border-0"
+                                                >
+                                                    <img src={p.avatar} className="w-10 h-10 rounded-full border border-white/10" />
+                                                    <div className="text-left">
+                                                        <p className="text-sm font-bold text-white">{p.name}</p>
+                                                        <p className="text-[10px] text-gray-500">{p.city}</p>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {selectedPlayers.length > 0 && (
+                                <div className="space-y-4 pt-4 border-t border-white/5">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-cyan-500">Gerenciar Jogadores & Odds</label>
+                                    <div className="space-y-2">
+                                        {selectedPlayers.map(p => (
+                                            <div key={p.id} className="flex items-center gap-4 bg-white/5 p-3 rounded-2xl border border-white/5">
+                                                <div className="flex-1">
+                                                    <p className="text-sm font-bold">{p.name}</p>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex items-center bg-black/40 rounded-xl px-3 py-1.5 border border-white/10">
+                                                        <span className="text-xs text-gray-500 mr-2">ODD:</span>
+                                                        <input 
+                                                            type="number"
+                                                            step="0.1"
+                                                            value={p.odd}
+                                                            onChange={(e) => updateOdd(p.id, parseFloat(e.target.value))}
+                                                            className="bg-transparent w-16 text-sm font-black text-cyan-400 outline-none"
+                                                        />
+                                                    </div>
+                                                    <button onClick={() => removePlayerFromBet(p.id)} className="text-red-500 hover:text-red-400">
+                                                        <span className="material-icons-outlined text-xl">delete_outline</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="p-8 border-t border-white/5 flex gap-4">
+                            <button onClick={() => setShowEditModal(false)} className="flex-1 py-4 bg-white/5 text-white font-bold rounded-2xl">CANCELAR</button>
+                            <button onClick={handleUpdateBet} className="flex-[2] py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black uppercase tracking-widest rounded-2xl">SALVAR ALTERAÇÕES</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Place Bet Modal */}
+            {showPlaceBetModal && placingBetOn && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+                    <div className="bg-[#0a061d] border border-white/10 rounded-[32px] w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+                        <div className="p-8 border-b border-white/5 bg-gradient-to-r from-cyan-500/10 to-transparent">
+                            <h2 className="text-2xl font-black uppercase tracking-tighter">Emitir Aposta</h2>
+                            <p className="text-xs text-gray-400 mt-1">{placingBetOn.events?.title} - {placingBetOn.category.replace('_', ' ')}</p>
+                        </div>
+
+                        <div className="p-8 space-y-6">
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Selecione o Jogador (Apenas 1)</label>
+                                <div className="space-y-2 max-h-[200px] overflow-y-auto custom-scrollbar pr-2">
+                                    {placingBetOn.bet_odds?.map(odd => (
+                                        <button 
+                                            key={odd.id}
+                                            onClick={() => setSelectedOddId(odd.id)}
+                                            className={`w-full flex items-center justify-between p-3 rounded-2xl border transition-all ${selectedOddId === odd.id ? 'bg-cyan-500/20 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.1)]' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedOddId === odd.id ? 'border-cyan-500 bg-cyan-500' : 'border-white/20'}`}>
+                                                    {selectedOddId === odd.id && <span className="material-icons-outlined text-black text-[14px] font-black">check</span>}
+                                                </div>
+                                                <span className="text-sm font-medium">{odd.profiles?.name || odd.guest_name}</span>
+                                            </div>
+                                            <span className="text-xs font-black text-cyan-400">@{odd.odd_value.toFixed(2)}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Valor da Aposta (R$)</label>
+                                    <input 
+                                        type="number"
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 outline-none focus:border-cyan-500 transition-colors text-white font-bold"
+                                        placeholder="0,00"
+                                        value={wagerAmount || ''}
+                                        onChange={(e) => setWagerAmount(parseFloat(e.target.value))}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Retorno Potencial (Green)</label>
+                                    <div className="w-full bg-green-500/10 border border-green-500/20 rounded-2xl px-4 py-4 flex items-center">
+                                        <span className="text-green-400 font-black">
+                                            R$ {(wagerAmount * (placingBetOn.bet_odds?.find(o => o.id === selectedOddId)?.odd_value || 0)).toFixed(2)}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Nome do Apostador</label>
+                                <input 
+                                    type="text"
+                                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 outline-none focus:border-cyan-500 transition-colors text-white font-bold"
+                                    placeholder="Quem está apostando?"
+                                    value={punterName}
+                                    onChange={(e) => setPunterName(e.target.value)}
+                                />
+                                <p className="text-[10px] text-gray-500 italic ml-1">O bilhete será emitido e vinculado ao perfil se o nome coincidir.</p>
+                            </div>
+                        </div>
+
+                        <div className="p-8 pt-0 flex gap-4">
+                            <button 
+                                onClick={() => {
+                                    setShowPlaceBetModal(false);
+                                    setSelectedOddId('');
+                                    setWagerAmount(0);
+                                    setPunterName('');
+                                }}
+                                className="flex-1 py-4 bg-white/5 text-white font-bold rounded-2xl"
+                            >
+                                CANCELAR
+                            </button>
+                            <button 
+                                onClick={handlePlaceBet}
+                                className="flex-[2] py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-green-500/20"
+                            >
+                                EMITIR BILHETE
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* View Bets Modal */}
+            {showViewBetsModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+                    <div className="bg-[#0a061d] border border-white/10 rounded-[32px] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+                        <div className="p-8 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-purple-500/10 to-transparent">
+                            <h2 className="text-2xl font-black uppercase tracking-tighter">Apostas Realizadas</h2>
+                            <button onClick={() => setShowViewBetsModal(false)} className="text-gray-500 hover:text-white transition-colors">
+                                <span className="material-icons-outlined">close</span>
+                            </button>
+                        </div>
+
+                        <div className="p-8 max-h-[60vh] overflow-y-auto custom-scrollbar space-y-4">
+                            {marketBets.length === 0 ? (
+                                <p className="text-center text-gray-500 py-10">Nenhuma aposta registrada neste mercado.</p>
+                            ) : (
+                                marketBets.map(bet => (
+                                    <div key={bet.id} className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="text-sm font-bold text-white">{bet.punter_name}</span>
+                                                <span className="text-[10px] px-2 py-0.5 bg-white/10 rounded text-gray-400">ID: {bet.id.slice(0, 8)}</span>
+                                            </div>
+                                            <p className="text-xs text-gray-500">
+                                                Apostou R$ {bet.amount.toFixed(2)} para ganhar R$ {bet.potential_return.toFixed(2)}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className={`text-[10px] font-black uppercase px-3 py-1 rounded-full ${bet.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' : bet.status === 'won' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                                                {bet.status}
+                                            </span>
+                                            <span className="text-[10px] text-gray-500">{new Date(bet.created_at).toLocaleString('pt-BR')}</span>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                        <div className="p-8 border-t border-white/5">
+                            <button onClick={() => setShowViewBetsModal(false)} className="w-full py-4 bg-white/5 text-white font-bold rounded-2xl">FECHAR</button>
                         </div>
                     </div>
                 </div>
