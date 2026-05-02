@@ -263,85 +263,86 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 {isLoading ? (
                     <ProfileStatsSkeleton />
                 ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                        <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-primary/50 transition-colors">
-                            <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <span className="material-icons-outlined text-4xl">leaderboard</span>
-                            </div>
-                            <div className="text-3xl font-display font-black text-white">
-                                {(() => {
-                                    if (rankings) {
-                                        // Buscar o ranking do tipo Legado (lifetime)
-                                        const legacy = rankings.find((r: any) =>
-                                            r.id === 'legacy' ||
-                                            r.id === 'legado' ||
-                                            r.label?.toLowerCase().includes('legado')
-                                        );
-                                        if (legacy) {
-                                            const match = legacy.players.find((p: any) =>
-                                                (p.id && player.id && p.id === player.id) ||
-                                                (p.name && player.name && p.name.toLowerCase().trim() === player.name.toLowerCase().trim())
+                    <>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                            <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-primary/50 transition-colors">
+                                <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <span className="material-icons-outlined text-4xl">leaderboard</span>
+                                </div>
+                                <div className="text-3xl font-display font-black text-white">
+                                    {(() => {
+                                        if (rankings) {
+                                            // Buscar o ranking do tipo Legado (lifetime)
+                                            const legacy = rankings.find((r: any) =>
+                                                r.id === 'legacy' ||
+                                                r.id === 'legado' ||
+                                                r.label?.toLowerCase().includes('legado')
                                             );
-                                            if (match && match.rank > 0) return match.rank + 'º';
+                                            if (legacy) {
+                                                const match = legacy.players.find((p: any) =>
+                                                    (p.id && player.id && p.id === player.id) ||
+                                                    (p.name && player.name && p.name.toLowerCase().trim() === player.name.toLowerCase().trim())
+                                                );
+                                                if (match && match.rank > 0) return match.rank + 'º';
+                                            }
                                         }
-                                    }
-                                    return player.rank > 0 ? player.rank + 'º' : '-';
-                                })()}
-                            </div>
-                            <div className="text-sm text-gray-500 uppercase tracking-wider">Ranking Geral</div>
-                            <div className="text-[10px] text-primary font-black mt-1 uppercase tracking-tighter opacity-80">
-                                {(() => {
-                                    if (rankings) {
-                                        const legacy = rankings.find((r: any) =>
-                                            r.id === 'legacy' ||
-                                            r.id === 'legado' ||
-                                            r.label?.toLowerCase().includes('legado')
-                                        );
-                                        if (legacy) {
-                                            const match = legacy.players.find((p: any) =>
-                                                (p.id && player.id && p.id === player.id) ||
-                                                (p.name && player.name && p.name.toLowerCase().trim() === player.name.toLowerCase().trim())
+                                        return player.rank > 0 ? player.rank + 'º' : '-';
+                                    })()}
+                                </div>
+                                <div className="text-sm text-gray-500 uppercase tracking-wider">Ranking Geral</div>
+                                <div className="text-[10px] text-primary font-black mt-1 uppercase tracking-tighter opacity-80">
+                                    {(() => {
+                                        if (rankings) {
+                                            const legacy = rankings.find((r: any) =>
+                                                r.id === 'legacy' ||
+                                                r.id === 'legado' ||
+                                                r.label?.toLowerCase().includes('legado')
                                             );
-                                            if (match) return `${Math.floor(match.points)} PTS LIFE TIME`;
+                                            if (legacy) {
+                                                const match = legacy.players.find((p: any) =>
+                                                    (p.id && player.id && p.id === player.id) ||
+                                                    (p.name && player.name && p.name.toLowerCase().trim() === player.name.toLowerCase().trim())
+                                                );
+                                                if (match) return `${Math.floor(match.points)} PTS LIFE TIME`;
+                                            }
                                         }
-                                    }
-                                    return `${player.points || 0} PTS`;
-                                })()}
+                                        return `${player.points || 0} PTS`;
+                                    })()}
+                                </div>
+                            </div>
+                            <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-secondary/50 transition-colors">
+                                <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <span className="material-icons-outlined text-4xl">payments</span>
+                                </div>
+                                <div className="text-xl font-display font-black text-secondary truncate">{player.winnings}</div>
+                                <div className="text-sm text-gray-500 uppercase tracking-wider">Ganhos Totais</div>
+                                <div className="text-[10px] mt-1 invisible h-[15px]">spacer</div>
+                            </div>
+                            <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-cyan-500/50 transition-colors">
+                                <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <span className="material-icons-outlined text-4xl">emoji_events</span>
+                                </div>
+                                <div className="text-3xl font-display font-black text-cyan-500">{player.titles}</div>
+                                <div className="text-sm text-gray-500 uppercase tracking-wider">Títulos</div>
+                                <div className="text-[10px] mt-1 invisible h-[15px]">spacer</div>
+                            </div>
+                            <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-pink-500/50 transition-colors">
+                                <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <span className="material-icons-outlined text-4xl">pie_chart</span>
+                                </div>
+                                <div className="text-3xl font-display font-black text-pink-500">{player.itm}</div>
+                                <div className="text-sm text-gray-500 uppercase tracking-wider">ITM %</div>
+                                <div className="text-[10px] mt-1 invisible h-[15px]">spacer</div>
+                            </div>
+                            <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-emerald-500/50 transition-colors">
+                                <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <span className="material-icons-outlined text-4xl">event_available</span>
+                                </div>
+                                <div className="text-3xl font-display font-black text-emerald-500">{player.tournamentLog.length}</div>
+                                <div className="text-sm text-gray-500 uppercase tracking-wider">Eventos Jogados</div>
+                                <div className="text-[10px] mt-1 invisible h-[15px]">spacer</div>
                             </div>
                         </div>
-                        <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-secondary/50 transition-colors">
-                            <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <span className="material-icons-outlined text-4xl">payments</span>
-                            </div>
-                            <div className="text-xl font-display font-black text-secondary truncate">{player.winnings}</div>
-                            <div className="text-sm text-gray-500 uppercase tracking-wider">Ganhos Totais</div>
-                            <div className="text-[10px] mt-1 invisible h-[15px]">spacer</div>
-                        </div>
-                        <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-cyan-500/50 transition-colors">
-                            <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <span className="material-icons-outlined text-4xl">emoji_events</span>
-                            </div>
-                            <div className="text-3xl font-display font-black text-cyan-500">{player.titles}</div>
-                            <div className="text-sm text-gray-500 uppercase tracking-wider">Títulos</div>
-                            <div className="text-[10px] mt-1 invisible h-[15px]">spacer</div>
-                        </div>
-                        <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-pink-500/50 transition-colors">
-                            <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <span className="material-icons-outlined text-4xl">pie_chart</span>
-                            </div>
-                            <div className="text-3xl font-display font-black text-pink-500">{player.itm}</div>
-                            <div className="text-sm text-gray-500 uppercase tracking-wider">ITM %</div>
-                            <div className="text-[10px] mt-1 invisible h-[15px]">spacer</div>
-                        </div>
-                        <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-emerald-500/50 transition-colors">
-                            <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <span className="material-icons-outlined text-4xl">event_available</span>
-                            </div>
-                            <div className="text-3xl font-display font-black text-emerald-500">{player.tournamentLog.length}</div>
-                            <div className="text-sm text-gray-500 uppercase tracking-wider">Eventos Jogados</div>
-                            <div className="text-[10px] mt-1 invisible h-[15px]">spacer</div>
-                        </div>
-                    </div>
                         {/* NEW: CREDIT LIMIT CARD - HIDDEN AS REQUESTED */}
                         {/* 
                         <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-green-500/50 transition-colors col-span-2 sm:col-span-4">
@@ -372,8 +373,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             </div>
                         </div>
                         */}
-                    </div>
+                    </>
                 )}
+
 
                 {/* New Conquistas (Achievements) Section */}
                 {player.badges && player.badges.length > 0 && (
