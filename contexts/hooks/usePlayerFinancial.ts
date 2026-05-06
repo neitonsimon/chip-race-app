@@ -24,7 +24,7 @@ export function usePlayerFinancial({ userId, isLoggedIn, isOwnProfile, playerBal
         setIsLoadingFinancial(true);
         try {
             const { data: commands } = await supabase.from('commands')
-                .select('id, user_id, event_id, status, total_brl, discount_brl, unpaid_amount_brl, chips_payment_brl, cash_payment_brl, pix_payment_brl, credit_payment_brl, profit_brl, cash_out_brl, closed_at, created_at, events(title, date)')
+                .select('id, user_id, event_id, status, total_brl, discount_brl, unpaid_amount_brl, chips_payment_brl, profit_brl, cash_out_brl, closed_at, created_at, events(title, date)')
                 .eq('user_id', userId)
                 .in('status', ['open', 'closed'])
                 .order('created_at', { ascending: false })
@@ -32,32 +32,48 @@ export function usePlayerFinancial({ userId, isLoggedIn, isOwnProfile, playerBal
                 
             if (commands) setPlayerCommands(commands);
 
-            const { data: transactions } = await supabase.from('transactions')
-                .select('id, category, amount_brl, description, created_at, metadata')
-                .eq('user_id', userId)
-                .in('category', ['wallet_deposit', 'recharge', 'online_credit', 'wallet_withdrawal', 'command_profit'])
-                .order('created_at', { ascending: false })
-                .limit(limit);
-                
-            if (transactions) setPlayerTransactions(transactions);
+            const isGuest = userId.startsWith('GUEST:');
+            const guestName = isGuest ? userId.replace('GUEST:', '') : null;
 
-            const { data: bets } = await supabase.from('user_bets')
+            const betsQuery = supabase.from('user_bets')
                 .select(`
-                    id, user_id, bet_id, bet_odd_id, stake_brl, possible_gain_brl, status, created_at,
-                    bets (
+                    id, user_id, odd_id, amount, potential_return, status, created_at, payment_method,
+                    bets:bets!user_bets_bet_id_fkey (
                         category,
                         events (title, date)
                     ),
-                    bet_odds (
-                        profiles (name),
+                    bet_odds:bet_odds!user_bets_odd_id_fkey (
+                        profiles:profiles!bet_odds_user_id_fkey (name),
                         guest_name
                     )
-                `)
-                .eq('user_id', userId)
+                `);
+
+            if (isGuest) {
+                betsQuery.eq('punter_name', guestName);
+            } else {
+                betsQuery.eq('user_id', userId);
+            }
+
+            const { data: bets, error: betsError } = await betsQuery
                 .order('created_at', { ascending: false })
                 .limit(limit);
                 
+            if (betsError) {
+                console.error('Error fetching player bets:', betsError);
+            }
             if (bets) setPlayerBets(bets);
+
+            const { data: transactions, error: txError } = await supabase.from('transactions')
+                .select('id, category, amount_brl, description, created_at, metadata, type')
+                .eq('user_id', userId)
+                .in('category', ['wallet_deposit', 'recharge', 'online_credit', 'wallet_withdrawal', 'command_profit', 'bet'])
+                .order('created_at', { ascending: false })
+                .limit(limit);
+                
+            if (txError) {
+                console.error('Error fetching player transactions:', txError);
+            }
+            if (transactions) setPlayerTransactions(transactions);
         } catch (e) {
             console.error('Error fetching financial data:', e);
         } finally {
@@ -193,7 +209,7 @@ export function usePlayerFinancial({ userId, isLoggedIn, isOwnProfile, playerBal
 
             // Fetch latest totals/details
             const { data: latestCmd } = await supabase.from('commands')
-                .select('id, user_id, event_id, status, total_brl, discount_brl, unpaid_amount_brl, chips_payment_brl, cash_payment_brl, pix_payment_brl, credit_payment_brl, profit_brl, cash_out_brl, closed_at, created_at, events(title, date)')
+                .select('id, user_id, event_id, status, total_brl, discount_brl, unpaid_amount_brl, chips_payment_brl, profit_brl, cash_out_brl, closed_at, created_at, events(title, date)')
                 .eq('id', cmd.id)
                 .single();
             

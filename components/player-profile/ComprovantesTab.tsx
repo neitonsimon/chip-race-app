@@ -273,8 +273,9 @@ export const ComprovantesTab: React.FC<ComprovantesTabProps> = ({
                                 else if (isDeposit) title = 'Depósito';
                                 else if (isOnlineCredit) title = 'Créditos Online (Fichas)';
                                 else if (tx.category === 'recharge') title = 'Recarga Manual';
+                                else if (tx.category === 'bet') title = 'Aposta Realizada';
 
-                                const icon = isWithdrawal ? 'account_balance' : isCashOutProfit ? 'emoji_events' : 'savings';
+                                const icon = isWithdrawal ? 'account_balance' : isCashOutProfit ? 'emoji_events' : tx.category === 'bet' ? 'local_activity' : 'savings';
                                 const color = isCredit ? 'text-green-400' : 'text-red-400';
                                 const bgColor = isCashOutProfit
                                     ? 'bg-yellow-500/10 border-yellow-500/30'
@@ -328,14 +329,14 @@ export const ComprovantesTab: React.FC<ComprovantesTabProps> = ({
                 )}
 
                 {/* SEÇÃO RECIBOS DE APOSTA */}
-                {playerBets && playerBets.length > 0 && (
+                {playerBets && (
                     <div>
                         <h4 className="text-sm font-bold text-yellow-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                             <span className="material-icons-outlined text-sm">local_activity</span>
                             Bilhetes de Aposta
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {playerBets.length === 0 && !isLoading && (
+                            {playerBets.length === 0 && (
                                 <div className="col-span-full py-10 text-center bg-white/5 border border-dashed border-white/10 rounded-2xl">
                                     <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Nenhuma aposta registrada recentemente.</p>
                                 </div>

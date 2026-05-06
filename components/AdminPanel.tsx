@@ -440,7 +440,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }, [selectedCommand]);
 
     const fetchEvents = async () => {
-        const { data } = await supabase.from('events').select('id, title, date, time, status, staff_expenses_brl, prize_payout_brl, type, is_hidden').order('date', { ascending: false });
+        const { data } = await supabase.from('events').select('*').order('date', { ascending: false });
         if (data) setEvents(data);
     };
     const fetchProducts = async () => {
@@ -692,7 +692,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     const fetchReport = async (eventId: string) => {
         const { data } = await supabase.from('command_items').select('id, quantity, unit_price_brl, total_price_brl, created_at, products(name, category), commands!inner(event_id, profiles!user_id(name, numeric_id))').eq('commands.event_id', eventId);
         if (data) setReportData(data);
-        const { data: cmds } = await supabase.from('commands').select('id, status, total_brl, chips_payment_brl, cash_payment_brl, pix_payment_brl, credit_payment_brl, profit_cash_payment_brl, user_id, event_id, closed_at').eq('event_id', eventId).eq('status', 'closed');
+        const { data: cmds } = await supabase.from('commands').select('id, status, total_brl, chips_payment_brl, profit_cash_payment_brl, user_id, event_id, closed_at').eq('event_id', eventId).eq('status', 'closed');
         if (cmds) setReportCommandsData(cmds);
     };
     const fetchMonthlyReport = async (start: string, end: string) => {
@@ -715,7 +715,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         if (cmdItems) setReportData(cmdItems);
         if (txs) setExtraReportData(txs);
         const { data: cmds } = await supabase.from('commands')
-            .select('id, status, total_brl, chips_payment_brl, cash_payment_brl, pix_payment_brl, credit_payment_brl, profit_cash_payment_brl, user_id, event_id, closed_at')
+            .select('id, status, total_brl, chips_payment_brl, profit_cash_payment_brl, user_id, event_id, closed_at')
             .gte('closed_at', start + 'T00:00:00.000Z')
             .lte('closed_at', end + 'T23:59:59.999Z')
             .eq('status', 'closed');
@@ -887,7 +887,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         />
                     )}
 
-                    {activeTab === 'reports' && (
+                    {activeTab === 'reports' && isAdmin && (
                         <ReportsTab
                             reportFilter={reportFilter}
                             setReportFilter={setReportFilter}
@@ -914,7 +914,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         />
                     )}
 
-                    {activeTab === 'reservations' && (
+                    {activeTab === 'reservations' && isAdmin && (
                         <ReservationsTab 
                             events={events} 
                             currentUser={currentUser} 
@@ -925,11 +925,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         />
                     )}
 
-                    {activeTab === 'inventory' && (
+                    {activeTab === 'inventory' && isAdmin && (
                         <StockTab currentUser={currentUser as any} />
                     )}
 
-                    {activeTab === 'launch' && (
+                    {activeTab === 'launch' && isAdmin && (
                         <InventoryTab
                             newProduct={newProduct}
                             setNewProduct={setNewProduct}
@@ -947,7 +947,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             handleUpdateProduct={handleUpdateProduct}
                         />
                     )}
-                    {activeTab === 'send-gifts' && (
+                    {activeTab === 'send-gifts' && isAdmin && (
                         <GiftsTab
                             giftTarget={giftsSystem.giftTarget}
                             setGiftTarget={giftsSystem.setGiftTarget}
@@ -971,7 +971,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         />
                     )}
 
-                    {activeTab === 'badges' && (
+                    {activeTab === 'badges' && isAdmin && (
                         <BadgesTab
                             targetType={badgesSystem.targetType}
                             setTargetType={badgesSystem.setTargetType}
@@ -1023,7 +1023,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         />
                     )}
 
-                    {activeTab === 'communications' && (
+                    {activeTab === 'communications' && isAdmin && (
                         <CommunicationsTab
                             adminSubject={communicationsSystem.adminSubject}
                             setAdminSubject={communicationsSystem.setAdminSubject}
@@ -1046,7 +1046,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         </div>
                     )}
 
-                    {activeTab === 'settings' && (
+                    {activeTab === 'settings' && isAdmin && (
                         <SettingsTab />
                     )}
                 </main>

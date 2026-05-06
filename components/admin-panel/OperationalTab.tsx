@@ -1,5 +1,6 @@
 import React from 'react';
 import { Event, Command, CommandItem } from '../../types';
+import { formatCurrencyK } from '../../utils/format';
 
 interface OperationalTabProps {
     selectedEvent: Event | null;
@@ -242,9 +243,9 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                     <span className="text-gray-500 font-bold">{selectedEvent.title}</span>
                                 </h4>
                                 <div className="space-y-2">
-                                    <div className="flex justify-between text-[10px] font-black uppercase tracking-wider">
-                                        <span className="text-gray-400">Total Bruto:</span>
-                                        <span className="text-white">R$ {(openCommands.reduce((s, c) => s + Number(c.total_brl), 0) + closedCommands.reduce((s, c) => s + Number(c.total_brl), 0)).toFixed(2)}</span>
+                                    <div className="bg-black/20 rounded-xl p-2">
+                                        <div className="text-[9px] text-gray-500 uppercase font-bold tracking-wider mb-0.5">Total Bruto</div>
+                                        <div className="text-sm font-black text-white">{formatCurrencyK(openCommands.reduce((s, c) => s + Number(c.total_brl), 0) + closedCommands.reduce((s, c) => s + Number(c.total_brl), 0))}</div>
                                     </div>
                                     <div className="h-px bg-white/5 my-1"></div>
                                     <div className="space-y-1.5">
@@ -268,56 +269,55 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                         </div>
                                         <div className="flex justify-between text-[10px] font-black uppercase tracking-wider">
                                             <span className="text-red-400">Staff / Galpão:</span>
-                                            <span className="text-red-400">- R$ {Number(staffExpenses).toFixed(2)}</span>
+                                            <span className="text-red-400">- {formatCurrencyK(staffExpenses)}</span>
                                         </div>
                                         <div className="flex justify-between text-[10px] font-black uppercase tracking-wider">
                                             <span className="text-blue-400">Cash Out (Prêmios):</span>
-                                            <span className="text-blue-400">- R$ {closedCommands.reduce((s, c) => s + Number(c.cash_out_brl || 0), 0).toFixed(2)}</span>
+                                            <span className="text-blue-400">- {formatCurrencyK(closedCommands.reduce((s, c) => s + Number(c.cash_out_brl || 0), 0))}</span>
                                         </div>
                                         <div className="flex justify-between text-[10px] font-black uppercase tracking-wider">
                                             <span className="text-yellow-400">Pago em Espécie:</span>
-                                            <span className="text-yellow-400">R$ {closedCommands.reduce((s, c) => s + Number(c.chips_payment_brl || 0), 0).toFixed(2)}</span>
+                                            <span className="text-yellow-400">{formatCurrencyK(closedCommands.reduce((s, c) => s + Number(c.chips_payment_brl || 0), 0))}</span>
                                         </div>
                                         <div className="flex justify-between text-[10px] font-black uppercase tracking-wider">
                                             <span className="text-purple-400">Lucro Pago em Mãos:</span>
-                                            <span className="text-purple-400">- R$ {closedCommands.reduce((s, c) => s + Number(c.profit_cash_payment_brl || 0), 0).toFixed(2)}</span>
+                                            <span className="text-purple-400">- {formatCurrencyK(closedCommands.reduce((s, c) => s + Number(c.profit_cash_payment_brl || 0), 0))}</span>
                                         </div>
-                                        <div className="h-px bg-white/5"></div>
-                                        <div className="flex justify-between text-xs font-black uppercase tracking-wider">
-                                            <span className="text-primary">Faturamento Líquido:</span>
-                                            <span className="text-primary shadow-neon-pink">R$ {(
+                                        <div className="bg-primary/10 border border-primary/20 rounded-xl p-2 mt-1">
+                                            <div className="text-[9px] text-primary/70 uppercase font-bold tracking-wider mb-0.5">Faturamento Líquido</div>
+                                            <div className="text-base font-black text-primary">{formatCurrencyK(
                                                 openCommands.reduce((s, c) => s + Number(c.total_brl), 0) +
                                                 closedCommands.reduce((s, c) => s + Number(c.total_brl), 0) -
                                                 Number(staffExpenses) -
                                                 closedCommands.reduce((s, c) => s + Number(c.cash_out_brl || 0), 0)
-                                            ).toFixed(2)}</span>
+                                            )}</div>
                                         </div>
 
                                         <div className="pt-2 space-y-1.5 opacity-80">
                                             <div className="flex justify-between text-[9px] font-bold uppercase">
                                                 <span className="text-gray-500">Total em Desconto:</span>
-                                                <span className="text-gray-400">- R$ {closedCommands.reduce((s, c) => s + Number(c.discount_brl || 0), 0).toFixed(2)}</span>
+                                                <span className="text-gray-400">- {formatCurrencyK(closedCommands.reduce((s, c) => s + Number(c.discount_brl || 0), 0))}</span>
                                             </div>
                                             <div className="flex justify-between text-[9px] font-bold uppercase">
                                                 <span className="text-red-500/70">Total em Pendura:</span>
-                                                <span className="text-red-500/70">- R$ {closedCommands.reduce((s, c) => s + Number(c.unpaid_amount_brl || 0), 0).toFixed(2)}</span>
+                                                <span className="text-red-500/70">- {formatCurrencyK(closedCommands.reduce((s, c) => s + Number(c.unpaid_amount_brl || 0), 0))}</span>
                                             </div>
                                             <div className="flex justify-between text-[9px] font-bold uppercase">
                                                 <span className="text-cyan-500/70">Saldo App Utilizado:</span>
-                                                <span className="text-cyan-500/70">- R$ {closedCommands.reduce((s, c) => {
+                                                <span className="text-cyan-500/70">- {formatCurrencyK(closedCommands.reduce((s, c) => {
                                                     const netCost = Number(c.total_brl || 0) - Number(c.discount_brl || 0) - Number(c.unpaid_amount_brl || 0) - Number(c.chips_payment_brl || 0);
                                                     return s + (Number(c.cash_out_brl || 0) > 0 ? Math.max(0, netCost - Number(c.cash_out_brl || 0)) : Math.max(0, netCost));
-                                                }, 0).toFixed(2)}</span>
+                                                }, 0))}</span>
                                             </div>
                                         </div>
 
-                                        <div className="flex justify-between text-xs font-black uppercase tracking-wider pt-2 border-t border-white/10 mt-1">
-                                            <span className="text-green-400">Faturamento Real (Caixa):</span>
-                                            <span className="text-green-400">R$ {(
+                                        <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-2">
+                                            <div className="text-[9px] text-green-400/70 uppercase font-bold tracking-wider mb-0.5">Faturamento Real (Caixa)</div>
+                                            <div className="text-base font-black text-green-400">{formatCurrencyK(
                                                 closedCommands.reduce((s, c) => s + Number(c.chips_payment_brl || 0), 0) -
                                                 Number(staffExpenses) -
                                                 closedCommands.reduce((s, c) => s + Number(c.profit_cash_payment_brl || 0), 0)
-                                            ).toFixed(2)}</span>
+                                            )}</div>
                                         </div>
 
                                         <div className="flex justify-between text-[9px] font-bold text-gray-400 uppercase pt-2 border-t border-white/5 mt-1">
@@ -455,7 +455,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                             <div className="space-y-3">
                                                 <div className="flex justify-between text-xs font-black uppercase tracking-wider">
                                                     <span className="text-gray-400">Total Bruto:</span>
-                                                    <span className="text-white text-lg">R$ {(openCommands.reduce((s, c) => s + Number(c.total_brl), 0) + closedCommands.reduce((s, c) => s + Number(c.total_brl), 0)).toFixed(2)}</span>
+                                                    <span className="text-white text-lg">{formatCurrencyK(openCommands.reduce((s, c) => s + Number(c.total_brl), 0) + closedCommands.reduce((s, c) => s + Number(c.total_brl), 0))}</span>
                                                 </div>
                                                 <div className="h-px bg-white/5 my-2"></div>
                                                 <div className="space-y-4">
@@ -479,19 +479,19 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                                     </div>
                                                     <div className="flex justify-between text-xs font-black uppercase tracking-wider">
                                                         <span className="text-red-400">Staff / Galpão:</span>
-                                                        <span className="text-red-400 text-lg">- R$ {Number(staffExpenses).toFixed(2)}</span>
+                                                        <span className="text-red-400 text-lg">- {formatCurrencyK(staffExpenses)}</span>
                                                     </div>
                                                     <div className="flex justify-between text-xs font-black uppercase tracking-wider">
                                                         <span className="text-blue-400">Cash Out (Prêmios):</span>
-                                                        <span className="text-blue-400 text-lg">- R$ {closedCommands.reduce((s, c) => s + Number(c.cash_out_brl || 0), 0).toFixed(2)}</span>
+                                                        <span className="text-blue-400 text-lg">- {formatCurrencyK(closedCommands.reduce((s, c) => s + Number(c.cash_out_brl || 0), 0))}</span>
                                                     </div>
                                                     <div className="flex justify-between text-xs font-black uppercase tracking-wider">
                                                         <span className="text-yellow-400">Pago em Espécie:</span>
-                                                        <span className="text-yellow-400 text-lg">R$ {closedCommands.reduce((s, c) => s + Number(c.chips_payment_brl || 0), 0).toFixed(2)}</span>
+                                                        <span className="text-yellow-400 text-lg">{formatCurrencyK(closedCommands.reduce((s, c) => s + Number(c.chips_payment_brl || 0), 0))}</span>
                                                     </div>
                                                     <div className="flex justify-between text-[10px] font-black uppercase tracking-wider">
                                                         <span className="text-purple-400">Lucro Pago em Mãos:</span>
-                                                        <span className="text-purple-400">- R$ {closedCommands.reduce((s, c) => s + Number(c.profit_cash_payment_brl || 0), 0).toFixed(2)}</span>
+                                                        <span className="text-purple-400">- {formatCurrencyK(closedCommands.reduce((s, c) => s + Number(c.profit_cash_payment_brl || 0), 0))}</span>
                                                     </div>
                                                     <div className="h-px bg-white/5"></div>
                                                     <div className="flex justify-between text-sm font-black uppercase tracking-wider">
@@ -507,11 +507,11 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                                     <div className="pt-2 space-y-2 opacity-80 border-t border-white/5">
                                                         <div className="flex justify-between text-[10px] font-bold uppercase">
                                                             <span className="text-gray-500">Total em Desconto:</span>
-                                                            <span className="text-gray-400">- R$ {closedCommands.reduce((s, c) => s + Number(c.discount_brl || 0), 0).toFixed(2)}</span>
+                                                            <span className="text-gray-400">- {formatCurrencyK(closedCommands.reduce((s, c) => s + Number(c.discount_brl || 0), 0))}</span>
                                                         </div>
                                                         <div className="flex justify-between text-[10px] font-bold uppercase">
                                                             <span className="text-red-500/70">Total em Pendura:</span>
-                                                            <span className="text-red-500/70">- R$ {closedCommands.reduce((s, c) => s + Number(c.unpaid_amount_brl || 0), 0).toFixed(2)}</span>
+                                                            <span className="text-red-500/70">- {formatCurrencyK(closedCommands.reduce((s, c) => s + Number(c.unpaid_amount_brl || 0), 0))}</span>
                                                         </div>
                                                         <div className="flex justify-between text-[10px] font-bold uppercase">
                                                             <span className="text-cyan-500/70">Saldo App Utilizado:</span>

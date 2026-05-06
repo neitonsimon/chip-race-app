@@ -183,7 +183,7 @@ export const AppRouter: React.FC = () => {
             case 'recarga':
                 return <RechargePage currentUser={currentUser as any} onNavigate={handleNavigate} onUpdateProfile={handleProfileUpdate} />;
             case 'financial':
-                if (!isAdmin && currentUser?.role !== 'staff') {
+                if (!isAdmin) {
                     return (
                         <div className="py-32 text-center bg-background-light dark:bg-background-dark min-h-screen">
                             <span className="material-icons-outlined text-6xl text-red-500 mb-4 animate-pulse">gpp_bad</span>
@@ -212,7 +212,7 @@ export const AppRouter: React.FC = () => {
                 return <AdminPanel
                     currentUser={currentUser as any}
                     onClose={() => handleNavigate('home')}
-                    isAdmin={isAdmin || currentUser?.role === 'staff'}
+                    isAdmin={isAdmin}
                     onUpdateProfile={handleProfileUpdate}
                     badgeTemplates={badgeTemplates}
                     onCreateBadgeTemplate={handleCreateBadgeTemplate}

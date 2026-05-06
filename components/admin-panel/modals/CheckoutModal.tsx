@@ -166,10 +166,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                             <p className="text-[10px] text-white font-black uppercase tracking-widest">{liveHasProfit ? 'Lucro Total' : 'Saldo a cobrar'}</p>
                             <p className="text-[8px] text-gray-600 uppercase font-bold tracking-tighter">Débito do Aplicativo</p>
                         </div>
-                        <div className="text-right">
-                            <span className={`text-2xl font-display font-black shadow-neon-pink ${liveHasProfit ? 'text-green-400' : 'text-primary'}`}>
+                        <div className="text-right min-w-0">
+                            <p className={`text-xl sm:text-2xl font-display font-black shadow-neon-pink break-words leading-tight ${liveHasProfit ? 'text-green-400' : 'text-primary'}`}>
                                 R$ {(liveHasProfit ? liveProfit : liveFinalDeduct).toFixed(2)}
-                            </span>
+                            </p>
                         </div>
                     </div>
 

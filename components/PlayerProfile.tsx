@@ -490,7 +490,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
         // Atualiza os totais mais recentes
         const { data: latestCmd } = await supabase.from('commands')
-            .select('id, user_id, event_id, status, total_brl, discount_brl, unpaid_amount_brl, chips_payment_brl, cash_payment_brl, pix_payment_brl, credit_payment_brl, profit_brl, cash_out_brl, closed_at, created_at, events(title, date)')
+            .select('id, user_id, event_id, status, total_brl, discount_brl, unpaid_amount_brl, chips_payment_brl, profit_brl, cash_out_brl, closed_at, created_at, events(title, date)')
             .eq('id', cmd.id)
             .single();
 
@@ -759,7 +759,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         if (!imageRef.current) return;
 
         const canvas = document.createElement('canvas');
-        const size = 600; // Resolution enhanced for gallery
+        const isAvatar = cropTarget === 'avatar';
+        const size = isAvatar ? 256 : 800; 
         canvas.width = size;
         canvas.height = size;
         const ctx = canvas.getContext('2d');
@@ -784,7 +785,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                 imageRef.current.height * scaleFactor
             );
 
-            const croppedBase64 = canvas.toDataURL('image/jpeg', 0.9);
+            const croppedBase64 = canvas.toDataURL('image/jpeg', 0.7);
             handleUpdate('avatar', croppedBase64);
             setEditorImage(null);
         }

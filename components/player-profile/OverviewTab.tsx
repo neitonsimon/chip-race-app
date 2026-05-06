@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import appConfig from '../../src/config/appConfig.json';
 import { ProfileStatsSkeleton } from '../Skeleton';
+import { formatK, formatCurrencyK } from '../../utils/format';
 
 const PLAY_STYLE_DEFINITIONS: Record<string, string> = appConfig.playerProfile.playStyleDefinitions;
 
@@ -48,7 +49,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     setSelectedImage,
     setPlayer
 }) => {
-    const { badgeTemplates } = useApp();
+    const { badgeTemplates, badgeDistribution } = useApp();
     const [showAllBadges, setShowAllBadges] = useState(false);
     const [expandedHistory, setExpandedHistory] = useState(false);
 
@@ -264,83 +265,109 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                     <ProfileStatsSkeleton />
                 ) : (
                     <>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                            <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-primary/50 transition-colors">
-                                <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                                    <span className="material-icons-outlined text-4xl">leaderboard</span>
+                        <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+                            {/* Card: Ranking */}
+                            <div className="bg-surface-dark border border-white/5 rounded-2xl relative overflow-hidden group hover:border-primary/50 transition-colors flex flex-col justify-between p-3 sm:p-4 min-w-0">
+                                <div className="absolute right-1 top-1 p-1 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
+                                    <span className="material-icons-outlined text-3xl">leaderboard</span>
                                 </div>
-                                <div className="text-3xl font-display font-black text-white">
-                                    {(() => {
-                                        if (rankings) {
-                                            // Buscar o ranking do tipo Legado (lifetime)
-                                            const legacy = rankings.find((r: any) =>
-                                                r.id === 'legacy' ||
-                                                r.id === 'legado' ||
-                                                r.label?.toLowerCase().includes('legado')
-                                            );
-                                            if (legacy) {
-                                                const match = legacy.players.find((p: any) =>
-                                                    (p.id && player.id && p.id === player.id) ||
-                                                    (p.name && player.name && p.name.toLowerCase().trim() === player.name.toLowerCase().trim())
+                                <div className="pr-6 min-w-0">
+                                    <div className="text-2xl lg:text-3xl font-display font-black text-white leading-none truncate">
+                                        {(() => {
+                                            if (rankings) {
+                                                const legacy = rankings.find((r: any) =>
+                                                    r.id === 'legacy' ||
+                                                    r.id === 'legado' ||
+                                                    r.label?.toLowerCase().includes('legado')
                                                 );
-                                                if (match && match.rank > 0) return match.rank + 'º';
+                                                if (legacy) {
+                                                    const match = legacy.players.find((p: any) =>
+                                                        (p.id && player.id && p.id === player.id) ||
+                                                        (p.name && player.name && p.name.toLowerCase().trim() === player.name.toLowerCase().trim())
+                                                    );
+                                                    if (match && match.rank > 0) return match.rank + 'º';
+                                                }
                                             }
-                                        }
-                                        return player.rank > 0 ? player.rank + 'º' : '-';
-                                    })()}
+                                            return player.rank > 0 ? player.rank + 'º' : '-';
+                                        })()}
+                                    </div>
                                 </div>
-                                <div className="text-sm text-gray-500 uppercase tracking-wider">Ranking Geral</div>
-                                <div className="text-[10px] text-primary font-black mt-1 uppercase tracking-tighter opacity-80">
-                                    {(() => {
-                                        if (rankings) {
-                                            const legacy = rankings.find((r: any) =>
-                                                r.id === 'legacy' ||
-                                                r.id === 'legado' ||
-                                                r.label?.toLowerCase().includes('legado')
-                                            );
-                                            if (legacy) {
-                                                const match = legacy.players.find((p: any) =>
-                                                    (p.id && player.id && p.id === player.id) ||
-                                                    (p.name && player.name && p.name.toLowerCase().trim() === player.name.toLowerCase().trim())
+                                <div className="mt-2 min-w-0">
+                                    <div className="text-[10px] text-gray-500 uppercase tracking-wide leading-tight">Ranking Geral</div>
+                                    <div className="text-[9px] text-primary font-black mt-0.5 uppercase leading-tight opacity-80 truncate">
+                                        {(() => {
+                                            if (rankings) {
+                                                const legacy = rankings.find((r: any) =>
+                                                    r.id === 'legacy' ||
+                                                    r.id === 'legado' ||
+                                                    r.label?.toLowerCase().includes('legado')
                                                 );
-                                                if (match) return `${Math.floor(match.points)} PTS LIFE TIME`;
+                                                if (legacy) {
+                                                    const match = legacy.players.find((p: any) =>
+                                                        (p.id && player.id && p.id === player.id) ||
+                                                        (p.name && player.name && p.name.toLowerCase().trim() === player.name.toLowerCase().trim())
+                                                    );
+                                                    if (match) return `${formatK(Math.floor(match.points))} PTS LIFE`;
+                                                }
                                             }
-                                        }
-                                        return `${player.points || 0} PTS`;
-                                    })()}
+                                            return `${formatK(player.points || 0)} PTS`;
+                                        })()}
+                                    </div>
                                 </div>
                             </div>
-                            <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-secondary/50 transition-colors">
-                                <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                                    <span className="material-icons-outlined text-4xl">payments</span>
+
+                            {/* Card: Ganhos Totais */}
+                            <div className="bg-surface-dark border border-white/5 rounded-2xl relative overflow-hidden group hover:border-secondary/50 transition-colors flex flex-col justify-between p-3 sm:p-4 min-w-0">
+                                <div className="absolute right-1 top-1 p-1 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
+                                    <span className="material-icons-outlined text-3xl">payments</span>
                                 </div>
-                                <div className="text-xl font-display font-black text-secondary truncate">{player.winnings}</div>
-                                <div className="text-sm text-gray-500 uppercase tracking-wider">Ganhos Totais</div>
-                                <div className="text-[10px] mt-1 invisible h-[15px]">spacer</div>
+                                <div className="pr-6 min-w-0">
+                                    <div className="text-base sm:text-lg lg:text-xl font-display font-black text-secondary leading-tight whitespace-nowrap">
+                                        {formatCurrencyK(player.winnings)}
+                                    </div>
+                                </div>
+                                <div className="mt-2 min-w-0">
+                                    <div className="text-[10px] text-gray-500 uppercase tracking-wide leading-tight">Ganhos Totais</div>
+                                </div>
                             </div>
-                            <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-cyan-500/50 transition-colors">
-                                <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                                    <span className="material-icons-outlined text-4xl">emoji_events</span>
+
+                            {/* Card: Títulos */}
+                            <div className="bg-surface-dark border border-white/5 rounded-2xl relative overflow-hidden group hover:border-cyan-500/50 transition-colors flex flex-col justify-between p-3 sm:p-4 min-w-0">
+                                <div className="absolute right-1 top-1 p-1 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
+                                    <span className="material-icons-outlined text-3xl">emoji_events</span>
                                 </div>
-                                <div className="text-3xl font-display font-black text-cyan-500">{player.titles}</div>
-                                <div className="text-sm text-gray-500 uppercase tracking-wider">Títulos</div>
-                                <div className="text-[10px] mt-1 invisible h-[15px]">spacer</div>
+                                <div className="pr-6 min-w-0">
+                                    <div className="text-2xl lg:text-3xl font-display font-black text-cyan-500 leading-none">{player.titles}</div>
+                                </div>
+                                <div className="mt-2 min-w-0">
+                                    <div className="text-[10px] text-gray-500 uppercase tracking-wide leading-tight">Títulos</div>
+                                </div>
                             </div>
-                            <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-pink-500/50 transition-colors">
-                                <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                                    <span className="material-icons-outlined text-4xl">pie_chart</span>
+
+                            {/* Card: ITM % */}
+                            <div className="bg-surface-dark border border-white/5 rounded-2xl relative overflow-hidden group hover:border-pink-500/50 transition-colors flex flex-col justify-between p-3 sm:p-4 min-w-0">
+                                <div className="absolute right-1 top-1 p-1 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
+                                    <span className="material-icons-outlined text-3xl">pie_chart</span>
                                 </div>
-                                <div className="text-3xl font-display font-black text-pink-500">{player.itm}</div>
-                                <div className="text-sm text-gray-500 uppercase tracking-wider">ITM %</div>
-                                <div className="text-[10px] mt-1 invisible h-[15px]">spacer</div>
+                                <div className="pr-6 min-w-0">
+                                    <div className="text-2xl lg:text-3xl font-display font-black text-pink-500 leading-none">{player.itm}</div>
+                                </div>
+                                <div className="mt-2 min-w-0">
+                                    <div className="text-[10px] text-gray-500 uppercase tracking-wide leading-tight">ITM %</div>
+                                </div>
                             </div>
-                            <div className="bg-surface-dark border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-emerald-500/50 transition-colors">
-                                <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                                    <span className="material-icons-outlined text-4xl">event_available</span>
+
+                            {/* Card: Eventos Jogados */}
+                            <div className="bg-surface-dark border border-white/5 rounded-2xl relative overflow-hidden group hover:border-emerald-500/50 transition-colors flex flex-col justify-between p-3 sm:p-4 min-w-0 col-span-3 sm:col-span-1">
+                                <div className="absolute right-1 top-1 p-1 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
+                                    <span className="material-icons-outlined text-3xl">event_available</span>
                                 </div>
-                                <div className="text-3xl font-display font-black text-emerald-500">{player.tournamentLog.length}</div>
-                                <div className="text-sm text-gray-500 uppercase tracking-wider">Eventos Jogados</div>
-                                <div className="text-[10px] mt-1 invisible h-[15px]">spacer</div>
+                                <div className="pr-6 min-w-0">
+                                    <div className="text-2xl lg:text-3xl font-display font-black text-emerald-500 leading-none">{player.tournamentLog.length}</div>
+                                </div>
+                                <div className="mt-2 min-w-0">
+                                    <div className="text-[10px] text-gray-500 uppercase tracking-wide leading-tight">Eventos Jogados</div>
+                                </div>
                             </div>
                         </div>
                         {/* NEW: CREDIT LIMIT CARD - HIDDEN AS REQUESTED */}
@@ -512,8 +539,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                                 </p>
                                             </div>
                                             <p className="text-gray-200 text-[11px] leading-relaxed font-medium break-words">{originalDesc}</p>
-                                            <div className="mt-2 pt-2 border-t border-white/5 text-[9px] text-gray-600 font-black uppercase tracking-wider">
-                                                Ganha em: {new Date(badge.awarded_at).toLocaleDateString()}
+                                            <div className="mt-2 pt-2 border-t border-white/5 flex flex-col gap-1">
+                                                <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-wider">
+                                                    <span className="text-gray-600">Ganha em:</span>
+                                                    <span className="text-gray-400">{new Date(badge.awarded_at).toLocaleDateString()}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-wider">
+                                                    <span className="text-primary/60">Total distribuída:</span>
+                                                    <span className="text-primary">{formatK(badgeDistribution[template?.id] || 0)}</span>
+                                                </div>
                                             </div>
 
                                             {template?.is_archived && (
@@ -574,7 +608,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                                     {log.position === 0 ? 'Não Classif.' : (log.isStartingDay && log.position === 1) ? 'CLASSIF.' : `${log.position}º`}
                                                 </span>
                                             </td>
-                                            <td className="px-3 md:px-6 py-4 text-right text-white text-xs md:text-base">{log.prize}</td>
+                                            <td className="px-2 md:px-6 py-4 text-right text-white text-[11px] md:text-base whitespace-nowrap font-bold">{log.prize}</td>
                                         </tr>
                                     ))
                                 ) : (
@@ -758,12 +792,21 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                                         {template.description}
                                                     </p>
                                                     
-                                                    {template.is_archived && isUnlocked && (
-                                                        <p className="text-[8px] font-black text-red-400 uppercase tracking-widest mt-2 italic flex items-center gap-1">
-                                                            <span className="w-1 h-1 rounded-full bg-red-500 animate-pulse"></span>
-                                                            Essa medalha nunca mais será distribuída
-                                                        </p>
-                                                    )}
+                                                    <div className="mt-2 flex items-center gap-3">
+                                                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-primary/10 rounded-full border border-primary/20">
+                                                            <span className="material-icons text-[10px] text-primary">analytics</span>
+                                                            <span className="text-[9px] font-black text-primary uppercase tracking-tighter">
+                                                                {formatK(badgeDistribution[template.id] || 0)} distribuídas
+                                                            </span>
+                                                        </div>
+
+                                                        {template.is_archived && isUnlocked && (
+                                                            <p className="text-[8px] font-black text-red-400 uppercase tracking-widest italic flex items-center gap-1">
+                                                                <span className="w-1 h-1 rounded-full bg-red-500 animate-pulse"></span>
+                                                                Arquivada
+                                                            </p>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         );

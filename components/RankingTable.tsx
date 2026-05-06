@@ -6,6 +6,7 @@ import { ScoringFormulaEditor } from './ScoringFormulaEditor';
 import { RankingSkeleton } from './Skeleton';
 import { RankingStages } from './RankingStages';
 import { calculatePoints, calculatePointsWithBreakdown, ScoreBreakdown } from '../utils/scoring';
+import { formatK } from '../utils/format';
 
 interface RankingTableProps {
     isAdmin?: boolean;
@@ -67,6 +68,8 @@ export const RankingTable: React.FC<RankingTableProps> = ({
     const [tooltipVisible, setTooltipVisible] = useState(false);
     const [showBreakdown, setShowBreakdown] = useState(false);
     const [breakdownData, setBreakdownData] = useState<{player: RankingPlayer, scores: any[]} | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 10;
 
 
     // Admin Editing State
@@ -207,6 +210,15 @@ export const RankingTable: React.FC<RankingTableProps> = ({
 
         return matchesSearch;
     }) || [];
+
+    // Reset pagination when ranking or search changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeRankingId, searchTerm, rankingView]);
+
+    const totalPages = Math.ceil(filteredRanking.length / ITEMS_PER_PAGE);
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const paginatedRanking = isRetracted ? filteredRanking.slice(0, 10) : filteredRanking.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
     // Get current user points for projection
     const userCurrentPoints = currentUser?.name ? (activeRanking?.players.find(p => p.name === currentUser.name)?.points || 0) : 0;
@@ -650,9 +662,9 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                             <tbody className="divide-y divide-white/5">
                                                 <tr className="hover:bg-white/5 transition-colors">
                                                     <td className="px-4 py-3 font-bold text-primary">{activeRanking?.label}</td>
-                                                    <td className="px-4 py-3 text-right text-gray-300">{userCurrentPoints.toLocaleString()}</td>
-                                                    <td className="px-4 py-3 text-right text-secondary font-bold">+{simResult}</td>
-                                                    <td className="px-4 py-3 text-right text-white font-black font-display text-lg">{(userCurrentPoints + simResult).toLocaleString()}</td>
+                                                    <td className="px-4 py-3 text-right text-gray-300">{formatK(userCurrentPoints)}</td>
+                                                    <td className="px-4 py-3 text-right text-secondary font-bold">+{formatK(simResult)}</td>
+                                                    <td className="px-4 py-3 text-right text-white font-black font-display text-lg">{formatK(userCurrentPoints + simResult)}</td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -752,7 +764,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                                 </td>
                                             </tr>
                                         ) : (
-                                            (isRetracted ? filteredRanking.slice(0, 10) : filteredRanking).map((player) => (
+                                            paginatedRanking.map((player) => (
                                                 <tr
                                                     key={player.name + player.rank} // Key composta para evitar erros
                                                     className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group cursor-pointer"
@@ -852,7 +864,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                                                         <div className="flex items-center gap-4">
                                                                             <div className="text-right">
                                                                                 <p className="text-[10px] text-gray-500 uppercase font-black">Score Total</p>
-                                                                                <p className="text-lg font-black text-primary font-display">{player.points.toLocaleString()} pts</p>
+                                                                                <p className="text-lg font-black text-primary font-display">{formatK(player.points)} pts</p>
                                                                             </div>
                                                                             <button 
                                                                                 className="md:hidden text-gray-400 hover:text-white"
@@ -890,7 +902,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                                                                                     {s.position}º
                                                                                                 </span>
                                                                                             </td>
-                                                                                            <td className="px-3 py-2 text-right font-display font-black text-primary text-xs">+{s.points}</td>
+                                                                                            <td className="px-3 py-2 text-right font-display font-black text-primary text-xs">+{formatK(s.points)}</td>
                                                                                         </tr>
                                                                                     ))
                                                                                 ) : (
@@ -916,7 +928,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                                                 getLastScores(player).map((score, idx) => (
                                                                     <div key={idx} className="flex flex-col items-center">
                                                                         <span className="bg-white/5 border border-white/10 px-2 py-1 rounded text-xs font-bold text-secondary group-hover:bg-secondary group-hover:text-black transition-colors min-w-[32px] text-center">
-                                                                            {score?.points}
+                                                                            {formatK(score?.points)}
                                                                         </span>
                                                                     </div>
                                                                 ))
@@ -928,7 +940,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
 
                                                     <td className="px-1 md:px-6 py-2 md:py-4 text-right">
                                                         <span className="font-display font-black text-sm md:text-xl text-primary text-glow">
-                                                            {player.points.toLocaleString()}
+                                                            {formatK(player.points)}
                                                         </span>
                                                         <span className="text-[9px] md:text-xs uppercase text-gray-500 ml-0.5">pts</span>
                                                     </td>
@@ -957,6 +969,62 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                             {filteredRanking.length === 0 && (
                                 <div className="p-8 text-center text-gray-500 italic">
                                     Nenhum jogador encontrado com este nome.
+                                </div>
+                            )}
+
+                            {/* Pagination Controls */}
+                            {!isRetracted && totalPages > 1 && (
+                                <div className="p-4 bg-white/50 dark:bg-black/20 backdrop-blur-sm border-t border-gray-200/50 dark:border-white/5 flex items-center justify-between">
+                                    <div className="flex flex-col gap-0.5">
+                                        <div className="text-[10px] md:text-[11px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest leading-none">
+                                            Página {currentPage} de {totalPages}
+                                        </div>
+                                        <div className="text-[9px] text-gray-400 dark:text-gray-500 font-medium">
+                                            {filteredRanking.length} competidores no total
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-1 md:gap-2">
+                                        <button
+                                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                            disabled={currentPage === 1}
+                                            className={`w-8 h-8 flex items-center justify-center rounded-xl transition-all duration-300 ${currentPage === 1 ? 'text-gray-300 dark:text-gray-700 cursor-not-allowed opacity-50' : 'text-primary hover:bg-primary/10 active:scale-90'}`}
+                                        >
+                                            <span className="material-icons !text-lg">chevron_left</span>
+                                        </button>
+                                        
+                                        <div className="flex items-center gap-1">
+                                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                                let pageNum = currentPage;
+                                                if (totalPages <= 5) pageNum = i + 1;
+                                                else if (currentPage <= 3) pageNum = i + 1;
+                                                else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                                                else pageNum = currentPage - 2 + i;
+
+                                                const isActive = currentPage === pageNum;
+
+                                                return (
+                                                    <button
+                                                        key={pageNum}
+                                                        onClick={() => setCurrentPage(pageNum)}
+                                                        className={`w-8 h-8 rounded-xl text-[11px] font-black transition-all duration-300 relative group overflow-hidden ${isActive ? 'bg-primary text-white shadow-lg shadow-primary/25 scale-110 z-10' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'}`}
+                                                    >
+                                                        {pageNum}
+                                                        {isActive && (
+                                                            <div className="absolute inset-0 bg-white/20 animate-pulse-slow"></div>
+                                                        )}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+
+                                        <button
+                                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                            disabled={currentPage === totalPages}
+                                            className={`w-8 h-8 flex items-center justify-center rounded-xl transition-all duration-300 ${currentPage === totalPages ? 'text-gray-300 dark:text-gray-700 cursor-not-allowed opacity-50' : 'text-primary hover:bg-primary/10 active:scale-90'}`}
+                                        >
+                                            <span className="material-icons !text-lg">chevron_right</span>
+                                        </button>
+                                    </div>
                                 </div>
                             )}
                         </div>

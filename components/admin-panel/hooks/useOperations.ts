@@ -46,7 +46,7 @@ export function useOperations({
 
     const fetchClosedCommands = async (eventId: string) => {
         const { data, error } = await supabase.from('commands')
-            .select('id, user_id, event_id, status, total_brl, discount_brl, unpaid_amount_brl, chips_payment_brl, cash_payment_brl, pix_payment_brl, credit_payment_brl, profit_brl, cash_out_brl, closed_at, created_at, profiles!user_id(name, numeric_id, avatar_url, is_vip, vip_status, vip_expires_at, role, balance_brl, debt_limit_brl, total_pending_debt)')
+            .select('id, user_id, event_id, status, total_brl, discount_brl, unpaid_amount_brl, chips_payment_brl, profit_brl, cash_out_brl, closed_at, created_at, profiles!user_id(name, numeric_id, avatar_url, is_vip, vip_status, vip_expires_at, role, balance_brl, debt_limit_brl, total_pending_debt)')
             .eq('event_id', eventId)
             .eq('status', 'closed')
             .order('created_at', { ascending: false }); // Use created_at as backup if closed_at is missing/buggy

@@ -65,6 +65,7 @@ export const WalletMonitorTab: React.FC = () => {
     const [balanceSearch, setBalanceSearch] = useState('');
     const [balanceSortBy, setBalanceSortBy] = useState<'name' | 'brl' | 'chipz' | 'debt'>('brl');
     const [txLimit, setTxLimit] = useState(50);
+    const [totalBetVolume, setTotalBetVolume] = useState(0);
 
     const fetchTransactions = useCallback(async () => {
         setIsLoading(true);
@@ -79,8 +80,18 @@ export const WalletMonitorTab: React.FC = () => {
             }
             if (data) {
                 console.log('Transactions Data:', data.length);
-                // Include all transactions, including cash/pix
                 setTransactions(data as any);
+                
+                // Fetch total bet volume for the summary
+                const { data: volData } = await supabase
+                    .from('transactions')
+                    .select('amount_brl')
+                    .eq('category', 'bet');
+                
+                if (volData) {
+                    const total = volData.reduce((s, t) => s + Math.abs(Number(t.amount_brl || 0)), 0);
+                    setTotalBetVolume(total);
+                }
             }
             setLastUpdated(new Date());
         } catch (err) {
@@ -105,6 +116,70 @@ export const WalletMonitorTab: React.FC = () => {
             setIsLoading(false);
         }
     }, []);
+    
+    const migrateAvatars = async () => {
+        if (!confirm('Deseja iniciar a migração de avatares Base64 para Storage? Isso ajudará a reduzir o consumo de dados (Egress).')) return;
+        setIsLoading(true);
+        try {
+            const { data: profiles } = await supabase
+                .from('profiles')
+                .select('id, avatar_url')
+                .like('avatar_url', 'data:image%');
+            
+            if (!profiles || profiles.length === 0) {
+                alert('Nenhum avatar Base64 encontrado para migração.');
+                return;
+            }
+            
+            alert(`Encontrados ${profiles.length} avatares para migração. Iniciando...`);
+            
+            let success = 0;
+            for (const profile of profiles) {
+                try {
+                    const base64Data = profile.avatar_url;
+                    const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+                    if (!matches) continue;
+                    
+                    const type = matches[1];
+                    const b64 = matches[2];
+                    const binaryString = window.atob(b64);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    
+                    const fileName = `${profile.id}-${Date.now()}.${type.split('/')[1]}`;
+                    
+                    const { error: uploadError } = await supabase.storage
+                        .from('avatars')
+                        .upload(fileName, bytes.buffer, { contentType: type, upsert: true });
+                    
+                    if (uploadError) throw uploadError;
+                    
+                    const { data: { publicUrl } } = supabase.storage
+                        .from('avatars')
+                        .getPublicUrl(fileName);
+                    
+                    const { error: updateError } = await supabase
+                        .from('profiles')
+                        .update({ avatar_url: publicUrl })
+                        .eq('id', profile.id);
+                        
+                    if (updateError) throw updateError;
+                    success++;
+                } catch (e) {
+                    console.error(`Failed to migrate avatar for ${profile.id}:`, e);
+                }
+            }
+            alert(`Migração concluída! ${success} de ${profiles.length} avatares migrados com sucesso.`);
+            fetchUserBalances();
+        } catch (err) {
+            console.error('Migration error:', err);
+            alert('Erro durante a migração. Verifique o console.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     useEffect(() => {
         if (subView === 'transactions') fetchTransactions();
@@ -193,13 +268,22 @@ export const WalletMonitorTab: React.FC = () => {
                             <span className="material-icons-outlined text-xs sm:text-sm">account_balance_wallet</span>
                             <span>Saldos</span>
                         </button>
+                        <button
+                            onClick={migrateAvatars}
+                            className="hidden xs:flex flex-1 sm:flex-none items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-orange-500 hover:bg-orange-500/10 transition-all border border-orange-500/30"
+                            title="Migrar Avatares Base64 para Storage (Reduz Consumo)"
+                        >
+                            <span className="material-icons-outlined text-xs sm:text-sm">cloud_upload</span>
+                            <span>Migrar</span>
+                        </button>
                     </div>
-                    <button
+                    <button 
                         onClick={() => subView === 'transactions' ? fetchTransactions() : fetchUserBalances()}
                         disabled={isLoading}
-                        className="w-9 h-9 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center hover:bg-primary/20 hover:border-primary/50 transition-all shrink-0"
+                        className="bg-white/5 hover:bg-white/10 border border-white/10 text-white p-2 sm:px-4 sm:py-2 rounded-xl transition-all disabled:opacity-50 flex items-center gap-2 text-[10px] font-black uppercase"
                     >
-                        <span className={`material-icons-outlined text-sm text-gray-400 ${isLoading ? 'animate-spin' : ''}`}>refresh</span>
+                        <span className={`material-icons-outlined text-sm ${isLoading ? 'animate-spin' : ''}`}>refresh</span>
+                        <span className="hidden xs:inline">Atualizar</span>
                     </button>
                 </div>
             </div>
@@ -261,6 +345,11 @@ export const WalletMonitorTab: React.FC = () => {
                                     icon: 'token', label: 'Chipz Creditados',
                                     val: `${filteredTx.filter(t => Number(t.amount_chipz) > 0).reduce((s, t) => s + Number(t.amount_chipz), 0).toLocaleString('pt-BR')}`,
                                     color: 'text-primary', bg: 'border-primary/20 bg-primary/5'
+                                },
+                                {
+                                    icon: 'confirmation_number', label: 'Volume de Apostas',
+                                    val: `R$ ${totalBetVolume.toFixed(2)}`,
+                                    color: 'text-cyan-400', bg: 'border-cyan-500/20 bg-cyan-500/5'
                                 },
                                 {
                                     icon: 'receipt_long', label: 'Transações',

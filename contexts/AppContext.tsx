@@ -15,6 +15,7 @@ interface AppContextType {
     currentView: string;
     setCurrentView: (view: string) => void;
     isAdmin: boolean;
+    isStaff: boolean;
     isLoggedIn: boolean;
     currentUserId: string | null;
     currentUser: Partial<PlayerStats>;
@@ -73,6 +74,7 @@ interface AppContextType {
     handleDeleteMessage: (id: string) => Promise<void>;
     handleCreateBadgeTemplate: (badge: Partial<BadgeTemplate>) => Promise<void>;
     handleUpdateBadgeTemplate: (id: string, badge: Partial<BadgeTemplate>) => Promise<void>;
+    badgeDistribution: Record<string, number>;
     updateContent: (section: keyof ContentDB, field: string, value: any) => Promise<void>;
     updateCategory: (index: number, field: keyof TournamentCategory, value: any) => Promise<void>;
     setNewNotification: (msg: Message | null) => void;
@@ -112,6 +114,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return view || 'home';
     });
     const [isAdmin, setIsAdmin] = useState(false);
+    const [isStaff, setIsStaff] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const [currentUser, setCurrentUser] = useState<Partial<PlayerStats>>({});
@@ -124,6 +127,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [experienceLevels, setExperienceLevels] = useState<ExperienceLevel[]>([]);
     const [dailyRewards, setDailyRewards] = useState<DailyReward[]>([]);
     const [badgeTemplates, setBadgeTemplates] = useState<BadgeTemplate[]>([]);
+    const [badgeDistribution, setBadgeDistribution] = useState<Record<string, number>>({});
     const [systemMessageTemplates, setSystemMessageTemplates] = useState<SystemMessageTemplate[]>([]);
     const [selectedPlayer, setSelectedPlayer] = useState<RankingPlayer | null>(null);
 
@@ -134,6 +138,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [months, setMonths] = useState<MonthData[]>(appConfig.initialDefaults.months as MonthData[]);
     const [vipPlans, setVipPlans] = useState<any[]>(appConfig.vip.plans);
     const [userReservations, setUserReservations] = useState<string[]>([]);
+
+    // Simple cache for Supabase data to reduce egress
+    const cacheRef = useRef<{
+        data: any;
+        timestamp: number;
+    } | null>(null);
+    const CACHE_DURATION = 1000 * 60 * 5; // 5 minutes
 
     // Map URL path to internal views & selected players
     useEffect(() => {
@@ -204,38 +215,83 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const abortControllerRef = useRef<AbortController | null>(null);
 
-    const fetchSupabaseData = async () => {
+    const fetchSupabaseData = async (force: boolean = false) => {
         if (abortControllerRef.current) abortControllerRef.current.abort();
         abortControllerRef.current = new AbortController();
         
+        const CACHE_KEY = 'cr_app_raw_data_cache_v2';
+        
+        // Check cache unless forced refresh
+        if (!force && cacheRef.current && (Date.now() - cacheRef.current.timestamp < CACHE_DURATION)) {
+            console.log('Using cached Supabase data...');
+            setIsLoading(false);
+            return;
+        }
+
         setIsLoading(true);
         try {
             const signal = abortControllerRef.current.signal;
-            const [
-                { data: rankingsData },
-                { data: templatesData },
-                { data: schemasData },
-                { data: eventsData },
-                { data: contentData },
-                { data: ecoCategoriesData },
-                { data: profilesData },
-                { data: currentUserBadges },
-                { data: expLevelsData },
-                { data: dailyRewardsData },
-                { data: templatesMsgData }
-            ] = await Promise.all([
-                supabase.from('rankings').select('id, label, description, rules, start_date, end_date, prize_info_title, prize_info_detail, scoring_schema_map, is_active, brl_reward, chipz_reward, badge_template_id, position_prizes, order'),
-                supabase.from('badge_templates').select('id, title, description, icon, color, category, rarity, event_trigger, is_legendary'),
-                supabase.from('scoring_schemas').select('id, name, criteria, position_points'),
-                supabase.from('events').select('id, title, date, status, ranking_type, included_rankings, buyin, results, is_hidden, is_starting_day, scoring_schema_id, is_special_event, flyer_url, rebuy_value, rebuy_chips, addon_value, addon_chips, staff_bonus_value, staff_bonus_chips, time_chip_value, time_chip_chips, time_chip_addon_chips, time_chip_discount_brl, max_capacity, double_rebuy_value, double_rebuy_chips, double_addon_value, double_addon_chips, parallel_products, total_rebuys, total_addons, total_prize, game_mode, cash_game_type, cash_game_blinds, cash_game_capacity, cash_game_min_max, cash_game_dinner, cash_game_open_bar, cash_game_notes, staff_expenses_brl, prize_payout_brl, is_multi_day, is_final_day, final_event_id, stack_aggregation, bonus1_condition, bonus1_stack, bonus1_addon, bonus1_extra, bonus2_condition, bonus2_stack, bonus2_addon, bonus2_extra, bonus3_condition, bonus3_stack, bonus3_addon, bonus3_extra, timeline_title, structure').order('date', { ascending: true }),
-                supabase.from('content_db').select('key, value'),
-                supabase.from('ecosystem_categories').select('id, title, description, icon, color, order').order('order', { ascending: true }),
-                supabase.from('profiles_public').select('id, numeric_id, name, avatar_url, city, is_vip, vip_status, vip_expires_at, level, current_exp, next_level_exp, is_verified, total_pending_debt, suprema_nickname, suprema_user_id'),
-                currentUserId ? supabase.from('user_badges').select('id, user_id, badge_template_id, title, description, icon, color, awarded_at, badge_templates(id, title, description, icon, color, rarity, is_legendary)').eq('user_id', currentUserId) : Promise.resolve({ data: [] }),
-                supabase.from('experience_levels').select('level, required_exp, credit_limit').order('level', { ascending: true }),
-                supabase.from('daily_rewards').select('day, reward_type, reward_value, reward_label').order('day', { ascending: true }),
-                supabase.from('system_message_templates').select('id, subject, content, category, sender, is_active, updated_at')
-            ]);
+            let rankingsData, templatesData, schemasData, eventsData, contentData, ecoCategoriesData, profilesData, currentUserBadges, expLevelsData, dailyRewardsData, templatesMsgData, allUserBadges;
+
+            let useCache = false;
+            if (!force) {
+                try {
+                    const sessionData = sessionStorage.getItem(CACHE_KEY);
+                    if (sessionData) {
+                        const parsed = JSON.parse(sessionData);
+                        // Make sure the cache matches the current user to avoid showing wrong user's badges
+                        if (Date.now() - parsed.timestamp < CACHE_DURATION && parsed.currentUserId === currentUserId) {
+                            console.log('Using sessionStorage cached Supabase data...');
+                            ({ rankingsData, templatesData, schemasData, eventsData, contentData, ecoCategoriesData, profilesData, currentUserBadges, expLevelsData, dailyRewardsData, templatesMsgData, allUserBadges } = parsed);
+                            useCache = true;
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error reading session cache', e);
+                }
+            }
+
+            if (!useCache) {
+                const results = await Promise.all([
+                    supabase.from('rankings').select('id, label, description, rules, start_date, end_date, prize_info_title, prize_info_detail, scoring_schema_map, is_active, brl_reward, chipz_reward, badge_template_id, position_prizes, order'),
+                    supabase.from('badge_templates').select('id, title, description, icon, color, category, rarity, event_trigger, is_legendary'),
+                    supabase.from('scoring_schemas').select('id, name, criteria, position_points'),
+                    supabase.from('events').select('id, title, date, time, type, buyin, guaranteed, status, ranking_type, included_rankings, description, modality, stack, blinds, late_reg, location, results, is_hidden, is_starting_day, scoring_schema_id, is_special_event, flyer_url, rebuy_value, rebuy_chips, addon_value, addon_chips, staff_bonus_value, staff_bonus_chips, time_chip_value, time_chip_chips, time_chip_addon_chips, time_chip_discount_brl, max_capacity, double_rebuy_value, double_rebuy_chips, double_addon_value, double_addon_chips, parallel_products, total_rebuys, total_addons, total_prize, game_mode, cash_game_type, cash_game_blinds, cash_game_capacity, cash_game_min_max, cash_game_dinner, cash_game_open_bar, cash_game_notes, staff_expenses_brl, prize_payout_brl, is_multi_day, is_final_day, final_event_id, stack_aggregation, bonus1_condition, bonus1_stack, bonus1_addon, bonus1_extra, bonus2_condition, bonus2_stack, bonus2_addon, bonus2_extra, bonus3_condition, bonus3_stack, bonus3_addon, bonus3_extra, timeline_title, structure').order('date', { ascending: true }),
+                    supabase.from('content_db').select('key, value'),
+                    supabase.from('ecosystem_categories').select('id, title, description, icon, color, order').order('order', { ascending: true }),
+                    supabase.from('profiles_public').select('id, numeric_id, name, avatar_url, city, is_vip, vip_status, vip_expires_at, level, current_exp, next_level_exp, is_verified, total_pending_debt, suprema_nickname, suprema_user_id'),
+                    currentUserId ? supabase.from('user_badges').select('id, user_id, badge_template_id, title, description, icon, color, awarded_at, badge_templates(id, title, description, icon, color, rarity, is_legendary)').eq('user_id', currentUserId) : Promise.resolve({ data: [] }),
+                    supabase.from('experience_levels').select('level, required_exp, credit_limit').order('level', { ascending: true }),
+                    supabase.from('daily_rewards').select('day, reward_type, reward_value, reward_label').order('day', { ascending: true }),
+                    supabase.from('system_message_templates').select('id, subject, content, category, sender, is_active, updated_at'),
+                    supabase.from('user_badges').select('badge_template_id')
+                ]);
+
+                rankingsData = results[0].data;
+                templatesData = results[1].data;
+                schemasData = results[2].data;
+                eventsData = results[3].data;
+                contentData = results[4].data;
+                ecoCategoriesData = results[5].data;
+                profilesData = results[6].data;
+                currentUserBadges = results[7].data;
+                expLevelsData = results[8].data;
+                dailyRewardsData = results[9].data;
+                templatesMsgData = results[10].data;
+                allUserBadges = results[11].data;
+
+                try {
+                    sessionStorage.setItem(CACHE_KEY, JSON.stringify({
+                        timestamp: Date.now(),
+                        currentUserId,
+                        rankingsData, templatesData, schemasData, eventsData, contentData,
+                        ecoCategoriesData, profilesData, currentUserBadges, expLevelsData,
+                        dailyRewardsData, templatesMsgData, allUserBadges
+                    }));
+                } catch (e) {
+                    console.warn('Could not save to sessionStorage (quota exceeded?)', e);
+                }
+            }
 
             if (rankingsData) {
                 const mappedRankings = rankingsData.map(r => ({
@@ -272,8 +328,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             }
 
             if (eventsData) {
-                const mappedEvents = eventsData.map(e => ({
-                    ...e,
+                const mappedEvents: Event[] = eventsData.map(e => ({
+                    id: e.id,
+                    title: e.title,
+                    date: e.date,
+                    time: e.time,
+                    type: e.type,
+                    buyin: e.buyin,
+                    guaranteed: e.guaranteed,
+                    status: e.status,
+                    description: e.description,
+                    modality: e.modality,
+                    stack: e.stack,
+                    blinds: e.blinds,
+                    lateReg: (e as any).late_reg,
+                    location: e.location,
+                    results: e.results,
                     rebuyValue: (e as any).rebuy_value,
                     rebuyChips: (e as any).rebuy_chips,
                     addonValue: (e as any).addon_value,
@@ -294,6 +364,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     totalRebuys: (e as any).total_rebuys,
                     totalAddons: (e as any).total_addons,
                     totalPrize: (e as any).total_prize,
+                    rankingType: (e as any).ranking_type,
+                    includedRankings: (e as any).included_rankings,
                     scoringSchemaId: e.scoring_schema_id,
                     gameMode: (e as any).game_mode,
                     cashGameType: (e as any).cash_game_type,
@@ -382,6 +454,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
             if (templatesMsgData) setSystemMessageTemplates(templatesMsgData);
 
+            if (allUserBadges) {
+                const distribution: Record<string, number> = {};
+                allUserBadges.forEach((ub: any) => {
+                    distribution[ub.badge_template_id] = (distribution[ub.badge_template_id] || 0) + 1;
+                });
+                setBadgeDistribution(distribution);
+            }
+
+            // Update cache timestamp
+            cacheRef.current = { data: true, timestamp: Date.now() };
         } catch (error: any) {
             if (error.name === 'AbortError') return;
             console.error('Error fetching Supabase data:', error);
@@ -398,8 +480,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 .single();
             if (error) throw error;
             if (data) {
-                const userIsAdmin = data.role === 'admin' || data.role === 'staff';
-                setIsAdmin(userIsAdmin);
+                setIsAdmin(data.role === 'admin');
+                setIsStaff(data.role === 'staff');
                 const userData: any = {
                     id: userId,
                     numericId: data.numeric_id,
@@ -633,6 +715,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 setCurrentUserId(null);
                 setCurrentUser({});
                 setIsAdmin(false);
+                setIsStaff(false);
             }
         });
         return () => subscription.unsubscribe();
@@ -692,8 +775,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             .subscribe();
 
         const badgeChannel = supabase.channel(`badges-ctx-${currentUserId}`)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'user_badges' }, () => {
-                fetchSupabaseData();
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'user_badges', filter: `user_id=eq.${currentUserId}` }, () => {
+                fetchSupabaseData(true);
                 if (currentUserId) fetchProfile(currentUserId);
             })
             .subscribe();
@@ -704,8 +787,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
     }, [isLoggedIn, currentUserId]);
 
-    useEffect(() => {
-        if (!events || events.length === 0 || !allProfiles || allProfiles.length === 0 || !rankings || rankings.length === 0) return;
+    // Memoized Rankings calculation to improve performance and avoid state update loops
+    const calculatedRankings = React.useMemo(() => {
+        if (!events || events.length === 0 || !allProfiles || allProfiles.length === 0 || !rankings || rankings.length === 0) return rankings;
+        
         const metadataMap = new Map<string, RankingPlayer>();
         const metadataByIdMap = new Map<string, RankingPlayer>();
         allProfiles.forEach(p => {
@@ -713,8 +798,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (p.id) metadataByIdMap.set(p.id, p);
         });
 
-        let hasChanges = false;
-        const updatedRankings = rankings.map(ranking => {
+        return rankings.map(ranking => {
             const playerMap = new Map<string, RankingPlayer>();
             events.forEach(ev => {
                 const included = ev.includedRankings || ['annual', 'quarterly', 'legacy'];
@@ -736,9 +820,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                             });
                         }
                         const p = playerMap.get(playerKey)!;
-                        // Prioritize the pre-saved per-ranking points (calculated at event closure with correct schema)
-                        // Only fall back to re-calculation if no saved value exists (legacy events)
-                        // Force dynamic calculation for special tournaments to bypass any stale schema-based db values
                         const isSpecialEvent = ev.rankingType === 'special';
                         const isLegacyRanking = ranking.id === 'legacy' || ranking.label.toLowerCase().includes('legado');
                         const forceRecalc = isSpecialEvent && isLegacyRanking;
@@ -748,7 +829,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                             : calculatePoints(
                                 ev.rankingType || 'weekly', 
                                 ev.results?.length || 0, 
-                                // For special events, use the buyinTotal if provided in results, else parse from event
                                 (isSpecialEvent && r.buyinTotal) ? r.buyinTotal : (Number((ev.buyin?.toString() || '0').replace(/[^0-9]/g, '')) || 0), 
                                 r.position, 
                                 r.prize, 
@@ -765,11 +845,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     });
                 }
             });
-            const sortedPlayers = Array.from(playerMap.values()).filter(p => p.points > 0).sort((a, b) => b.points - a.points).map((p, i) => ({ ...p, rank: i + 1 }));
-            if (JSON.stringify(sortedPlayers) !== JSON.stringify(ranking.players)) { hasChanges = true; return { ...ranking, players: sortedPlayers }; }
-            return ranking;
+            const sortedPlayers = Array.from(playerMap.values())
+                .filter(p => p.points > 0)
+                .sort((a, b) => b.points - a.points)
+                .map((p, i) => ({ ...p, rank: i + 1 }));
+            
+            return { ...ranking, players: sortedPlayers };
         });
-        if (hasChanges) setRankings(updatedRankings);
     }, [events, allProfiles, globalScoringSchemas, rankings]);
 
     useEffect(() => {
@@ -830,6 +912,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await supabase.auth.signOut();
         setIsLoggedIn(false);
         setIsAdmin(false);
+        setIsStaff(false);
         handleNavigate('home');
     };
 
@@ -842,6 +925,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             handleNavigate('profile');
         }
         window.scrollTo(0, 0);
+    };
+
+    const uploadImage = async (userId: string, base64Data: string, folder: string = 'avatars'): Promise<string> => {
+        if (!base64Data || !base64Data.startsWith('data:image')) return base64Data;
+
+        try {
+            // Compress even more before uploading if it's base64
+            // (Actually handleProfileUpdate receives what's passed from components)
+            const response = await fetch(base64Data);
+            const blob = await response.blob();
+            const fileExt = blob.type.split('/')[1] || 'jpg';
+            const fileName = `${userId}/${folder}/${Date.now()}.${fileExt}`;
+
+            const { data, error } = await supabase.storage
+                .from('avatars')
+                .upload(fileName, blob, { upsert: true });
+
+            if (error) throw error;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('avatars')
+                .getPublicUrl(data.path);
+
+            return publicUrl;
+        } catch (error) {
+            console.error('Error uploading image:', error);
+            return base64Data;
+        }
     };
 
     const handleProfileUpdate = async (targetId: string, updatedData: any) => {
@@ -857,12 +968,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             // Prepare clean update object
             const dbUpdate: any = {};
             if (updatedData.name !== undefined) dbUpdate.name = updatedData.name;
-            if (updatedData.avatar !== undefined) dbUpdate.avatar_url = updatedData.avatar;
+            
+            // Handle image uploads to Storage
+            if (updatedData.avatar !== undefined && updatedData.avatar?.startsWith('data:image')) {
+                dbUpdate.avatar_url = await uploadImage(sanitizedTargetId, updatedData.avatar, 'avatar');
+                updatedData.avatar = dbUpdate.avatar_url; // Sync back to updatedData for local state
+            } else if (updatedData.avatar !== undefined) {
+                dbUpdate.avatar_url = updatedData.avatar;
+            }
+
+            if (updatedData.gallery !== undefined) {
+                const uploadedGallery = await Promise.all(
+                    updatedData.gallery.map((img: string) => 
+                        img.startsWith('data:image') ? uploadImage(sanitizedTargetId, img, 'gallery') : img
+                    )
+                );
+                dbUpdate.gallery = uploadedGallery;
+                updatedData.gallery = uploadedGallery; // Sync back
+            }
+
             if (updatedData.city !== undefined) dbUpdate.city = updatedData.city;
             if (updatedData.bio !== undefined) dbUpdate.bio = updatedData.bio;
             if (updatedData.social !== undefined) dbUpdate.social = updatedData.social;
             if (updatedData.playStyles !== undefined) dbUpdate.play_styles = updatedData.playStyles;
-            if (updatedData.gallery !== undefined) dbUpdate.gallery = updatedData.gallery;
             if (updatedData.level !== undefined) dbUpdate.level = updatedData.level;
             if (updatedData.currentExp !== undefined) dbUpdate.current_exp = updatedData.currentExp;
             if (updatedData.suprema_nickname !== undefined) dbUpdate.suprema_nickname = updatedData.suprema_nickname;
@@ -961,29 +1089,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.log('--- PERSISTENCE LOG: Saving Event ---', event);
 
         const isNew = !events.some(e => e.id === event.id) || event.id.length < 20;
+        
+        // Mapeamento explícito para garantir que campos nulos ou indefinidos sejam tratados corretamente
         const dbData: any = {
-            title: event.title, date: event.date, time: event.time, type: event.type, modality: event.modality, buyin: event.buyin, guaranteed: event.guaranteed,
-            status: event.status, ranking_type: event.rankingType, included_rankings: event.includedRankings, description: event.description,
-            stack: event.stack, blinds: event.blinds, late_reg: event.lateReg, location: event.location, rebuy_value: event.rebuyValue,
-            rebuy_chips: event.rebuyChips, addon_value: event.addonValue, addon_chips: event.addonChips, staff_bonus_value: event.staffBonusValue,
-            staff_bonus_chips: event.staffBonusChips, time_chip_value: event.timeChipValue, time_chip_chips: event.timeChipChips, flyer_url: event.flyerUrl,
-            time_chip_addon_chips: event.timeChipAddonChips, time_chip_discount_brl: event.timeChipDiscountBrl, max_capacity: event.maxCapacity,
-            double_rebuy_value: event.doubleRebuyValue, double_rebuy_chips: event.doubleRebuyChips, double_addon_value: event.doubleAddonValue,
-            double_addon_chips: event.doubleAddonChips, parallel_products: event.parallelProducts, results: event.results,
-            total_rebuys: event.totalRebuys, total_addons: event.totalAddons, total_prize: event.totalPrize, scoring_schema_id: event.scoringSchemaId,
-            game_mode: event.gameMode, cash_game_type: event.cashGameType, cash_game_blinds: event.cashGameBlinds,
-            cash_game_capacity: event.cashGameCapacity,
-            cash_game_min_max: event.cashGameMinMax,
+            title: event.title || '',
+            date: event.date || '',
+            time: event.time || '',
+            type: event.type || 'live',
+            modality: event.modality || null,
+            buyin: event.buyin || '',
+            guaranteed: event.guaranteed || '',
+            status: event.status || 'open',
+            ranking_type: event.rankingType || 'weekly',
+            included_rankings: event.includedRankings || ['annual', 'quarterly'],
+            description: event.description || '',
+            stack: event.stack || '',
+            blinds: event.blinds || '',
+            late_reg: event.lateReg || '',
+            location: event.location || '',
+            rebuy_value: event.rebuyValue || '',
+            rebuy_chips: event.rebuyChips || '',
+            addon_value: event.addonValue || '',
+            addon_chips: event.addonChips || '',
+            staff_bonus_value: event.staffBonusValue || '',
+            staff_bonus_chips: event.staffBonusChips || '',
+            time_chip_value: event.timeChipValue || '',
+            time_chip_chips: event.timeChipChips || '',
+            flyer_url: event.flyerUrl || null,
+            time_chip_addon_chips: event.timeChipAddonChips || '',
+            time_chip_discount_brl: event.timeChipDiscountBrl || '',
+            max_capacity: event.maxCapacity || '',
+            double_rebuy_value: event.doubleRebuyValue || '',
+            double_rebuy_chips: event.doubleRebuyChips || '',
+            double_addon_value: event.doubleAddonValue || '',
+            double_addon_chips: event.doubleAddonChips || '',
+            parallel_products: event.parallelProducts || [],
+            results: event.results || null,
+            total_rebuys: Number(event.totalRebuys) || 0,
+            total_addons: Number(event.totalAddons) || 0,
+            total_prize: Number(event.totalPrize) || 0,
+            scoring_schema_id: event.scoringSchemaId || null,
+            game_mode: event.gameMode || 'tournament',
+            cash_game_type: event.cashGameType || null,
+            cash_game_blinds: event.cashGameBlinds || '',
+            cash_game_capacity: event.cashGameCapacity || '',
+            cash_game_min_max: event.cashGameMinMax || '',
             cash_game_dinner: event.cashGameDinner || false,
             cash_game_open_bar: event.cashGameOpenBar || false,
             cash_game_notes: event.cashGameNotes || '',
-            staff_expenses_brl: event.staffExpensesBrl || 0,
-            prize_payout_brl: event.prizePayoutBrl || 0,
-            is_multi_day: event.isMultiDay,
-            is_starting_day: event.isStartingDay,
-            is_final_day: event.isFinalDay,
-            final_event_id: event.finalEventId,
-            stack_aggregation: event.stackAggregation,
+            staff_expenses_brl: Number(event.staffExpensesBrl) || 0,
+            prize_payout_brl: Number(event.prizePayoutBrl) || 0,
+            is_multi_day: event.isMultiDay || false,
+            is_starting_day: event.isStartingDay || false,
+            is_final_day: event.isFinalDay || false,
+            final_event_id: event.finalEventId || null,
+            stack_aggregation: event.stackAggregation || 'max',
             is_hidden: event.is_hidden || false,
             is_special_event: event.is_special_event || false,
             timeline_title: event.timeline_title || '',
@@ -1004,32 +1164,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         try {
             if (isNew) {
+                console.log('--- PERSISTENCE: Inserting New Event ---', dbData);
                 const { data, error } = await supabase.from('events').insert([dbData]).select();
-                if (error) {
-                    console.error('Supabase INSERT Error:', error);
-                    throw error;
-                }
-                const savedEvent = data && data[0] ? { ...event, id: data[0].id } : event;
-                setEvents(prev => [...prev.filter(e => e.id !== event.id), savedEvent]);
-                console.log('Successfully inserted new event:', savedEvent);
-                return savedEvent;
+                if (error) throw error;
+                
+                const savedEvent = data && data[0] ? { ...event, ...data[0] } : event;
+                // Importante: Manter as chaves camelCase no estado local
+                const mappedSavedEvent = {
+                    ...savedEvent,
+                    isStartingDay: (savedEvent as any).is_starting_day,
+                    isFinalDay: (savedEvent as any).is_final_day,
+                    isMultiDay: (savedEvent as any).is_multi_day
+                };
+
+                setEvents(prev => [...prev.filter(e => e.id !== event.id), mappedSavedEvent]);
+                return mappedSavedEvent;
             } else {
-                console.log('--- PERSISTENCE LOG: Updating Event ---', event.id, dbData);
-                const { error, data } = await supabase.from('events').update(dbData).eq('id', event.id).select();
+                console.log('--- PERSISTENCE: Updating Existing Event ---', event.id, dbData);
+                const { data, error } = await supabase.from('events').update(dbData).eq('id', event.id).select();
+                if (error) throw error;
                 
-                if (error) {
-                    console.error('--- PERSISTENCE ERROR: Supabase Update Failed ---', error);
-                    throw error;
-                }
-                console.log('--- PERSISTENCE SUCCESS: Supabase Response ---', data);
-                
-                setEvents(prev => prev.map(e => e.id === event.id ? event : e));
-                console.log('Successfully updated event:', event.id);
-                return event;
+                const savedEvent = data && data[0] ? { ...event, ...data[0] } : event;
+                const mappedSavedEvent = {
+                    ...savedEvent,
+                    isStartingDay: (savedEvent as any).is_starting_day,
+                    isFinalDay: (savedEvent as any).is_final_day,
+                    isMultiDay: (savedEvent as any).is_multi_day
+                };
+
+                setEvents(prev => prev.map(e => e.id === event.id ? mappedSavedEvent : e));
+                alert('Evento salvo com sucesso!');
+                return mappedSavedEvent;
             }
-        } catch (e) {
-            console.error('Error saving event:', e);
-            fetchSupabaseData();
+        } catch (error: any) {
+            console.error('--- PERSISTENCE GLOBAL ERROR ---', error);
+            alert(`Erro ao salvar evento: ${error.message || 'Erro desconhecido'}`);
+            throw error;
         }
     };
 
@@ -1393,8 +1563,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     return (
         <AppContext.Provider value={{
-            currentView, setCurrentView, isAdmin, isLoggedIn, currentUserId, currentUser, events, isLoading, rankings, contentDB, globalScoringSchemas,
-            allProfiles, experienceLevels, dailyRewards, badgeTemplates, systemMessageTemplates, prizeLabel, totalQualifiers, customTotalQualifiers, nextGoal,
+            currentView, setCurrentView, isAdmin, isStaff, isLoggedIn, currentUserId, currentUser, events, isLoading, rankings: calculatedRankings, contentDB, globalScoringSchemas,
+            allProfiles, experienceLevels, dailyRewards, badgeTemplates, badgeDistribution, systemMessageTemplates, prizeLabel, totalQualifiers, customTotalQualifiers, nextGoal,
             messages, unreadCount, polls, pollVotesByCurrentUser, newNotification, selectedPlayer, setSelectedPlayer, months, vipPlans, userReservations,
             handleNavigate, handleLogin, handleLogout, handlePlayerSelect, handleProfileUpdate, handleSaveEvent, handleDeleteEventAcrossApp,
             handleEventClosure, handleUpdateRankingMeta, handleUpdateGlobalSchemas, handleUpdateSystemMessageTemplate, handleCreateSystemMessageTemplate, handleAddRanking, handleDeleteRanking, handleAwardBadge,
@@ -1404,7 +1574,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setEvents, setExperienceLevels, setDailyRewards,
             isFlyerOpen, setIsFlyerOpen,
             refreshSupabaseData: async () => {
-                await fetchSupabaseData();
+                await fetchSupabaseData(true);
                 if (currentUserId) await fetchProfile(currentUserId);
             }
         }}>

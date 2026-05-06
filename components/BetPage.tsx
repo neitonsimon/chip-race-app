@@ -338,7 +338,12 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             return;
         }
 
-        const isStaff = isAdmin || currentUser?.role === 'staff' || currentUser?.role === 'admin';
+        const isStaff = isAdmin || currentUser?.role === 'admin';
+        if (currentUser?.role === 'staff') {
+            alert('Atenção: Usuários com cargo de STAFF não podem realizar apostas.');
+            return;
+        }
+        
         if (!isStaff && paymentMethod !== 'credits') {
             alert('Para sua segurança, apostas via App só podem ser realizadas utilizando seus créditos Chip Race.');
             return;
@@ -347,8 +352,8 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
         const odd = placingBetOn?.bet_odds?.find(o => o.id === selectedOddId);
         if (!odd) return;
 
-        // Check if expired
-        if (placingBetOn?.expires_at && new Date(placingBetOn.expires_at) < new Date()) {
+        // Check if expired or closed
+        if (placingBetOn?.status !== 'open' || (placingBetOn?.expires_at && new Date(placingBetOn.expires_at) < new Date())) {
             alert('Este mercado de apostas já foi encerrado.');
             return;
         }
@@ -425,13 +430,26 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
         } else {
             // Record financial transaction for visibility in Wallet Monitor
             if (selectedPunter && !selectedPunter.id.startsWith('GUEST:')) {
-                await supabase.from('transactions').insert({
+                const txDescription = `Aposta (${paymentMethod.toUpperCase()}): ${placingBetOn?.events?.title || 'Evento'} (${placingBetOn?.category || 'Aposta'}) - Odd: ${odd.odd_value}`;
+                
+                const { error: txError } = await supabase.from('transactions').insert({
                     user_id: selectedPunter.id,
+                    type: 'debit',
+                    category: 'bet',
                     amount_brl: -amount,
                     amount_chipz: 0,
-                    description: `Aposta (${paymentMethod.toUpperCase()}): ${placingBetOn?.events?.title} (${placingBetOn?.category}) - Odd: ${odd.odd_value}`,
-                    category: 'bet'
+                    description: txDescription,
+                    metadata: { 
+                        bet_id: placingBetOn?.id, 
+                        odd_id: selectedOddId,
+                        payment_method: paymentMethod,
+                        source: 'bet_page'
+                    }
                 });
+                
+                if (txError) {
+                    console.error('Error creating transaction record:', txError);
+                }
             }
 
             alert('Bilhete emitido com sucesso!');
@@ -457,10 +475,13 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             .from('user_bets')
             .select(`
                 id, bet_id, odd_id, user_id, punter_id, punter_name, amount, potential_return, payment_method, status, created_at,
-                bet_odds (
-                    id,
-                    guest_name,
-                    profiles (id, name)
+                bets:bets!user_bets_bet_id_fkey (
+                    category,
+                    events (title, date)
+                ),
+                bet_odds:bet_odds!user_bets_odd_id_fkey (
+                    profiles:profiles!bet_odds_user_id_fkey (name),
+                    guest_name
                 )
             `)
             .eq('bet_id', betId)
@@ -595,9 +616,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                                         <span className="material-icons-outlined text-sm">edit</span>
                                                     </button>
                                                 )}
-                                                <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-lg ${bet.status === 'open' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                                                    {bet.status === 'open' ? 'Aberto' : 'Encerrado'}
-                                                </span>
+
                                             </div>
                                         </div>
                                     </div>
@@ -607,29 +626,35 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                         {new Date(bet.events?.date || '').toLocaleDateString('pt-BR')}
                                     </p>
                                 </div>
-                                <div className="p-4 space-y-1.5 flex-1">
+                                 <div className="p-4 space-y-2 flex-1">
                                     {bet.bet_odds?.map(odd => (
-                                        <div key={odd.id} className="flex items-center justify-between py-2 px-4 bg-black/40 rounded-2xl hover:bg-black/60 transition-colors">
+                                        <div key={odd.id} className="flex items-center justify-between py-3 px-5 bg-black/40 rounded-2xl hover:bg-cyan-500/10 border border-transparent hover:border-cyan-500/20 transition-all cursor-pointer group/odd">
                                             <div className="flex items-center gap-3">
                                                 <img 
                                                     src={odd.profiles?.avatar_url || 'https://ui-avatars.com/api/?name=' + (odd.profiles?.name || odd.guest_name)} 
                                                     alt={odd.profiles?.name || odd.guest_name} 
-                                                    className="w-8 h-8 rounded-full border border-white/10"
+                                                    className="w-10 h-10 rounded-full border border-white/10 group-hover/odd:border-cyan-500/50 transition-colors"
                                                 />
-                                                <span className="text-sm font-medium">{odd.profiles?.name || odd.guest_name}</span>
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-bold group-hover/odd:text-cyan-400 transition-colors">{odd.profiles?.name || odd.guest_name}</span>
+                                                    <span className="text-[9px] text-gray-500 uppercase font-black">Odd Fixa</span>
+                                                </div>
                                             </div>
-                                            <div className="bg-cyan-500/10 border border-cyan-500/20 px-4 py-1 rounded-xl">
-                                                <span className="text-cyan-400 font-black">@{odd.odd_value.toFixed(2)}</span>
+                                            <div className="bg-cyan-500/10 border border-cyan-500/20 px-4 py-2 rounded-xl group-hover/odd:bg-cyan-500 group-hover/odd:text-black transition-all">
+                                                <span className="text-cyan-400 font-black group-hover/odd:text-black transition-colors">@{odd.odd_value.toFixed(2)}</span>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                                 <div className="p-2 bg-black/20 flex flex-col gap-2">
-                                    {((bet.expires_at && new Date(bet.expires_at) < new Date()) && !isAdmin && currentUser?.role !== 'staff') ? (
-                                        <div className="w-full py-4 bg-white/5 text-gray-500 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 cursor-not-allowed">
+                                    {(bet.status !== 'open' || (bet.expires_at && new Date(bet.expires_at) < new Date())) ? (
+                                        <button 
+                                            disabled
+                                            className="w-full py-4 bg-white/5 text-gray-500 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 cursor-not-allowed border border-white/5"
+                                        >
                                             <span className="material-icons-outlined text-sm">lock</span>
                                             MERCADO ENCERRADO
-                                        </div>
+                                        </button>
                                     ) : (
                                         <button 
                                             onClick={() => {
@@ -979,18 +1004,25 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                         <div className="p-8 space-y-6">
                             <div className="space-y-4">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Selecione o Jogador (Apenas 1)</label>
-                                <div className="space-y-2 max-h-[200px] overflow-y-auto custom-scrollbar pr-2">
+                                 <div className="space-y-3 max-h-[250px] overflow-y-auto custom-scrollbar pr-2">
                                     {placingBetOn.bet_odds?.map(odd => (
                                         <button 
                                             key={odd.id}
                                             onClick={() => setSelectedOddId(odd.id)}
-                                            className={`w-full flex items-center justify-between p-3 rounded-2xl border transition-all ${selectedOddId === odd.id ? 'bg-cyan-500/20 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.1)]' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}
+                                            className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${selectedOddId === odd.id ? 'bg-cyan-500/20 border-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.15)]' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}
                                         >
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedOddId === odd.id ? 'border-cyan-500 bg-cyan-500' : 'border-white/20'}`}>
-                                                    {selectedOddId === odd.id && <span className="material-icons-outlined text-black text-[14px] font-black">check</span>}
+                                            <div className="flex items-center gap-4">
+                                                <img 
+                                                    src={odd.profiles?.avatar_url || 'https://ui-avatars.com/api/?name=' + (odd.profiles?.name || odd.guest_name)} 
+                                                    className={`w-10 h-10 rounded-full border transition-all ${selectedOddId === odd.id ? 'border-cyan-500' : 'border-white/10'}`}
+                                                />
+                                                <div className="text-left">
+                                                    <p className={`text-sm font-bold ${selectedOddId === odd.id ? 'text-cyan-400' : 'text-white'}`}>{odd.profiles?.name || odd.guest_name}</p>
+                                                    <p className="text-[10px] text-gray-500 uppercase font-black">Odd: {odd.odd_value.toFixed(2)}</p>
                                                 </div>
-                                                <span className="text-sm font-medium">{odd.profiles?.name || odd.guest_name}</span>
+                                            </div>
+                                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${selectedOddId === odd.id ? 'border-cyan-500 bg-cyan-500' : 'border-white/20'}`}>
+                                                {selectedOddId === odd.id && <span className="material-icons-outlined text-black text-[16px] font-black">check</span>}
                                             </div>
                                         </button>
                                     ))}

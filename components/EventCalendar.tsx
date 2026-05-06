@@ -207,6 +207,29 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
     const [showOutsourcedSuggestions, setShowOutsourcedSuggestions] = useState(false);
     const [outsourcedExtra10k, setOutsourcedExtra10k] = useState(false);
 
+    const handleEditEvent = (event: Event) => {
+        setEditingEvent(event);
+        // Se for um evento multi-dia e for o dia final, carregar os dias iniciais relacionados
+        if (event.isMultiDay && event.isFinalDay) {
+            setIsMultiDayForm(true);
+            setStackAggregation(event.stackAggregation || 'max');
+            
+            const relatedStartingDays = events.filter(e => e.finalEventId === event.id && e.isStartingDay);
+            if (relatedStartingDays.length > 0) {
+                setStartingDays(relatedStartingDays.map(sd => ({
+                    name: sd.title,
+                    date: sd.date,
+                    time: sd.time
+                })));
+            } else {
+                setStartingDays([{ name: '1A', date: '', time: '' }]);
+            }
+        } else {
+            setIsMultiDayForm(false);
+            setStartingDays([{ name: '1A', date: '', time: '' }]);
+        }
+    };
+
     // Helpers for Sorting
     const getBuyinValue = (str: string) => {
         const num = parseInt(str.replace(/\D/g, ''));
@@ -1177,7 +1200,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                     {/* Info */}
                                     <div className="flex-1 md:px-4 text-left w-full">
                                         <div className="flex flex-wrap items-center gap-3 mb-1">
-                                            <h3 className={`text-xl font-bold text-gray-900 dark:text-white group-hover:${tStyles.textMain} transition-colors cursor-pointer flex items-center gap-2`} onClick={() => isAdmin && setEditingEvent(event)}>
+                                            <h3 className={`text-xl font-bold text-gray-900 dark:text-white group-hover:${tStyles.textMain} transition-colors cursor-pointer flex items-center gap-2`} onClick={() => isAdmin && handleEditEvent(event)}>
                                                 {event.title}
 
                                                 {eventIsToday && activeTab === 'upcoming' && (
@@ -1360,7 +1383,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                             if (event.status === 'closed') {
                                                                 handleOpenClosing(event);
                                                             } else {
-                                                                setEditingEvent(event);
+                                                                handleEditEvent(event);
                                                             }
                                                         }}
                                                         className="p-2 text-gray-400 hover:text-white transition-colors bg-white/5 rounded-lg border border-white/5 hover:bg-white/10"
