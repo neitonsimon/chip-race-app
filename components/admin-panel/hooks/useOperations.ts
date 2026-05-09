@@ -358,6 +358,77 @@ export function useOperations({
         }
     };
 
+    const handleImportReservations = async () => {
+        if (!selectedEvent) { alert('Selecione um evento primeiro.'); return; }
+        
+        setIsLoading(true);
+        try {
+            // 1. Obter todos os jogadores com reserva para este evento
+            const { data: reservations, error: resErr } = await supabase
+                .from('tournament_reservations')
+                .select('user_id')
+                .eq('event_id', selectedEvent.id)
+                .in('status', ['reserved', 'confirmed'])
+                .not('user_id', 'is', null);
+
+            if (resErr) throw resErr;
+
+            if (!reservations || reservations.length === 0) {
+                alert('Nenhuma reserva encontrada para este evento.');
+                return;
+            }
+
+            const reservedUserIds = reservations.map(r => r.user_id);
+
+            // 2. Obter comandas existentes (abertas ou fechadas) para este evento
+            const { data: existingCommands, error: cmdErr } = await supabase
+                .from('commands')
+                .select('user_id')
+                .eq('event_id', selectedEvent.id);
+
+            if (cmdErr) throw cmdErr;
+
+            const existingUserIds = existingCommands?.map(c => c.user_id) || [];
+
+            // 3. Filtrar usuários que não têm comanda
+            const usersToImport = reservedUserIds.filter(id => !existingUserIds.includes(id));
+
+            if (usersToImport.length === 0) {
+                alert('Todos os jogadores com reserva já possuem comanda neste evento.');
+                return;
+            }
+
+            // 4. Criar comandas em lote
+            const newCommands = usersToImport.map(userId => ({
+                event_id: selectedEvent.id,
+                user_id: userId,
+                status: 'open',
+                opened_by: currentUser.id
+            }));
+
+            const { error: insertErr } = await supabase.from('commands').insert(newCommands);
+            if (insertErr) throw insertErr;
+
+            await supabase.from('audit_logs').insert({
+                admin_id: currentUser.id,
+                action_type: 'COMMAND_IMPORTED',
+                description: `Admin importou ${usersToImport.length} jogadores das reservas para comandas no evento ${selectedEvent.id}.`,
+                target_user_id: null,
+                details: { count: usersToImport.length, event_id: selectedEvent.id }
+            });
+
+            // Refresh commands list
+            fetchOpenCommands(selectedEvent.id);
+            fetchClosedCommands(selectedEvent.id);
+            alert(`Importação concluída! ${usersToImport.length} novas comandas criadas.`);
+        } catch (err: any) {
+            alert('Erro ao importar reservas: ' + err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+
     const getTournamentItems = () => {
         if (!selectedEvent) return [];
         const ev = selectedEvent;
@@ -737,6 +808,7 @@ export function useOperations({
         handleAddManualOnline,
         isProductDisabled,
         isTourItemDisabled,
-        getVipPrice
+        getVipPrice,
+        handleImportReservations
     };
 }

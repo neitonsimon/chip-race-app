@@ -362,7 +362,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         handleAddManualOnline,
         isProductDisabled,
         isTourItemDisabled,
-        getVipPrice
+        getVipPrice,
+        handleImportReservations
     } = useOperations({
         currentUser,
         selectedEvent,
@@ -884,6 +885,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             getVipPrice={getVipPrice}
                             handleDeleteCommand={handleDeleteCommand}
                             currentUserRole={currentUser?.role}
+                            handleImportReservations={handleImportReservations}
                         />
                     )}
 

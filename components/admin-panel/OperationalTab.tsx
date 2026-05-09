@@ -57,6 +57,7 @@ interface OperationalTabProps {
     getVipPrice?: (price: number, category: string, name: string) => number;
     handleDeleteCommand: (cmd: any) => Promise<void>;
     currentUserRole?: string;
+    handleImportReservations?: () => Promise<void>;
 }
 
 export const OperationalTab: React.FC<OperationalTabProps> = ({
@@ -74,7 +75,8 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
     searchQuery, handleCreateGhostUser,
     getVipPrice,
     handleDeleteCommand,
-    currentUserRole
+    currentUserRole,
+    handleImportReservations
 }) => {
     const [eventFilterTab, setEventFilterTab] = React.useState<'proximos' | 'concluidos'>('proximos');
     const [selectedSubCategory, setSelectedSubCategory] = React.useState<string | null>(null);
@@ -232,6 +234,29 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                             )}
                         </div>
                     </div>
+
+
+                    {currentUserRole === 'admin' && selectedEvent && handleImportReservations && (
+                        <div className="flex gap-2">
+                            <button
+                                onClick={handleImportReservations}
+                                disabled={isLoading}
+                                className="flex-1 py-2 flex items-center justify-center gap-1.5 bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-xl text-[9px] font-black uppercase hover:bg-blue-500 hover:text-white transition-all disabled:opacity-50"
+                                title="Importar todos jogadores com reservas"
+                            >
+                                <span className="material-icons-outlined text-[14px]">group_add</span>
+                                Importar Reservas
+                            </button>
+                            <button
+                                onClick={handleImportReservations}
+                                disabled={isLoading}
+                                className="w-10 flex items-center justify-center bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-xl hover:bg-blue-500 hover:text-white transition-all disabled:opacity-50"
+                                title="Sincronizar Novas Reservas"
+                            >
+                                <span className="material-icons-outlined text-sm">sync</span>
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
