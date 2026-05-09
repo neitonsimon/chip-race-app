@@ -1070,7 +1070,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             {/* Place Bet Modal */}
             {showPlaceBetModal && placingBetOn && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-                    <div className="bg-[#0a061d] border border-white/10 rounded-[32px] w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in duration-300 flex flex-col max-h-[95vh]">
+                    <div className="bg-[#0a061d] border border-white/10 rounded-[32px] w-full max-w-xl shadow-2xl overflow-hidden animate-in zoom-in duration-300 flex flex-col max-h-[98vh]">
                         <div className="p-6 md:p-8 border-b border-white/5 bg-gradient-to-r from-cyan-500/10 to-transparent flex-shrink-0">
                             <h2 className="text-xl md:text-2xl font-black uppercase tracking-tighter">Emitir Aposta</h2>
                             <p className="text-[10px] md:text-xs text-gray-400 mt-1">{(placingBetOn.events?.title) || 'Sem Evento'} - {(placingBetOn.category || '').replace('_', ' ')}</p>
@@ -1079,7 +1079,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                         <div className="p-4 md:p-8 space-y-4 md:space-y-6 overflow-y-auto custom-scrollbar flex-1">
                             <div className="space-y-3">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Selecione o Jogador (Apenas 1)</label>
-                                 <div className="space-y-2 max-h-[180px] md:max-h-[250px] overflow-y-auto custom-scrollbar pr-1">
+                                 <div className="space-y-2 max-h-[350px] md:max-h-[450px] overflow-y-auto custom-scrollbar pr-1">
                                     {placingBetOn.bet_odds?.map(odd => (
                                         <button 
                                             key={odd.id}
