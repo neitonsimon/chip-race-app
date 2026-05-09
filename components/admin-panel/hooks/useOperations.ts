@@ -406,8 +406,49 @@ export function useOperations({
                 opened_by: currentUser.id
             }));
 
-            const { error: insertErr } = await supabase.from('commands').insert(newCommands);
+            const { data: insertedCommands, error: insertErr } = await supabase.from('commands').insert(newCommands).select();
             if (insertErr) throw insertErr;
+
+            const tItems = getTournamentItems();
+            const buyInItem = tItems.find(i => i.id === 't-buyin');
+            const staffItem = tItems.find(i => i.id === 't-staff');
+
+            if (insertedCommands && (buyInItem || staffItem)) {
+                const commandItemsToInsert: any[] = [];
+                for (const cmd of insertedCommands) {
+                    let totalToAdd = 0;
+                    if (buyInItem) {
+                        commandItemsToInsert.push({
+                            command_id: cmd.id,
+                            product_id: buyInItem.id,
+                            unit_price_brl: buyInItem.price,
+                            total_price_brl: buyInItem.price,
+                            quantity: 1,
+                            created_by: currentUser.id,
+                            notes: `${buyInItem.name} — ${buyInItem.chips} fichas`
+                        });
+                        totalToAdd += buyInItem.price;
+                    }
+                    if (staffItem) {
+                        commandItemsToInsert.push({
+                            command_id: cmd.id,
+                            product_id: staffItem.id,
+                            unit_price_brl: staffItem.price,
+                            total_price_brl: staffItem.price,
+                            quantity: 1,
+                            created_by: currentUser.id,
+                            notes: `${staffItem.name} — ${staffItem.chips} fichas`
+                        });
+                        totalToAdd += staffItem.price;
+                    }
+                    if (totalToAdd > 0) {
+                        await supabase.from('commands').update({ total_brl: totalToAdd }).eq('id', cmd.id);
+                    }
+                }
+                if (commandItemsToInsert.length > 0) {
+                    await supabase.from('command_items').insert(commandItemsToInsert);
+                }
+            }
 
             await supabase.from('audit_logs').insert({
                 admin_id: currentUser.id,
@@ -444,12 +485,11 @@ export function useOperations({
     };
 
     const getCashItems = () => [
-        { id: 'cash-20', name: '20 fichas', price: 20 },
-        { id: 'cash-30', name: '30 fichas', price: 30 },
         { id: 'cash-50', name: '50 fichas', price: 50 },
         { id: 'cash-100', name: '100 fichas', price: 100 },
         { id: 'cash-200', name: '200 fichas', price: 200 },
         { id: 'cash-500', name: '500 fichas', price: 500 },
+        { id: 'cash-1000', name: '1000 fichas', price: 1000 },
     ];
 
     const getVipPrice = (price: number, category: string, name: string) => {

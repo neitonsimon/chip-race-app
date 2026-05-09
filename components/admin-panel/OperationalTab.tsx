@@ -1,6 +1,7 @@
 import React from 'react';
 import { Event, Command, CommandItem } from '../../types';
 import { formatCurrencyK } from '../../utils/format';
+import { supabase } from '../../src/lib/supabase';
 
 interface OperationalTabProps {
     selectedEvent: Event | null;
@@ -86,19 +87,50 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
     const [isResizing, setIsResizing] = React.useState(false);
     const operationalContainerRef = React.useRef<HTMLDivElement>(null);
 
-    // Filter categories that should go into 'Diversos'
-    const mainCategoryKeys = ['bar', 'torneio', 'cash'];
-    const subCategoriesToKeep = ['jackpot', 'get-up', 'red-omaha', 'bet', 'poker-online'];
-    const diversosCategories = productCategories.filter(c => !mainCategoryKeys.includes(c.name) && subCategoriesToKeep.includes(c.name));
-    // Determine which items to show based on productSection
+    // --- Product Exclusion per Event ---
+    const [excludedProductIds, setExcludedProductIds] = React.useState<Set<string>>(new Set());
+    const [showProductMgr, setShowProductMgr] = React.useState(false);
+    const [productMgrSection, setProductMgrSection] = React.useState<string>('bar');
+
+    React.useEffect(() => {
+        if (!selectedEvent) { setExcludedProductIds(new Set()); return; }
+        supabase
+            .from('event_product_exclusions')
+            .select('product_id')
+            .eq('event_id', selectedEvent.id)
+            .then(({ data }) => {
+                setExcludedProductIds(new Set((data || []).map((r: any) => r.product_id)));
+            });
+    }, [selectedEvent?.id]);
+
+    const toggleProductExclusion = async (product: any) => {
+        if (!selectedEvent || !currentUserRole || currentUserRole !== 'admin') return;
+        const pid = String(product.id);
+        const isExcluded = excludedProductIds.has(pid);
+        if (isExcluded) {
+            await supabase.from('event_product_exclusions')
+                .delete()
+                .eq('event_id', selectedEvent.id)
+                .eq('product_id', pid);
+            setExcludedProductIds(prev => { const s = new Set(prev); s.delete(pid); return s; });
+        } else {
+            await supabase.from('event_product_exclusions').insert({
+                event_id: selectedEvent.id,
+                product_id: pid,
+                product_category: product.category || productMgrSection
+            });
+            setExcludedProductIds(prev => new Set(prev).add(pid));
+        }
+    };
+
+    // Filter categories that should go into 'Diversos' (now Jackpot)
     const getVisibleItems = () => {
         if (productSection === 'torneio') return tournamentItems;
         if (productSection === 'cash') return cashItems;
         if (productSection === 'diversos') {
-            if (!selectedSubCategory) return [];
-            return allProducts.filter(p => p.category === selectedSubCategory && p.active);
+            return allProducts.filter(p => p.category === 'jackpot' && p.active && !excludedProductIds.has(String(p.id)));
         }
-        return allProducts.filter(p => p.category === productSection && p.active);
+        return allProducts.filter(p => p.category === productSection && p.active && !excludedProductIds.has(String(p.id)));
     };
 
     const visibleItems = getVisibleItems();
@@ -144,6 +176,7 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
     }, [isResizing]);
 
     return (
+        <>
         <div ref={operationalContainerRef} className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden select-none">
             {/* Sidebar: Event Selection & Player Search */}
             <div className={`w-full lg:w-80 flex-1 lg:flex-none border-b lg:border-r border-white/5 bg-black/40 flex flex-col ${selectedEvent ? 'hidden lg:flex' : 'flex'}`}>
@@ -256,6 +289,21 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                 <span className="material-icons-outlined text-sm">sync</span>
                             </button>
                         </div>
+                    )}
+
+                    {currentUserRole === 'admin' && selectedEvent && (
+                        <button
+                            onClick={() => setShowProductMgr(true)}
+                            className="w-full py-2 flex items-center justify-center gap-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-xl text-[9px] font-black uppercase hover:bg-amber-500 hover:text-white transition-all"
+                        >
+                            <span className="material-icons-outlined text-[14px]">tune</span>
+                            Gerenciar Produtos do Evento
+                            {excludedProductIds.size > 0 && (
+                                <span className="ml-1 bg-amber-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full">
+                                    {excludedProductIds.size} ocultos
+                                </span>
+                            )}
+                        </button>
                     )}
                 </div>
 
@@ -782,46 +830,13 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                                     Cash
                                                 </button>
                                                 <button
-                                                    onClick={() => { setProductSection('diversos'); }}
+                                                    onClick={() => { setProductSection('diversos'); setSelectedSubCategory(null); }}
                                                     className={`px-4 py-2 flex-1 xl:flex-none rounded-lg text-[10px] sm:text-xs font-black uppercase transition-all whitespace-nowrap text-center ${productSection === 'diversos' ? 'bg-secondary text-white shadow-neon-blue' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'}`}
                                                 >
-                                                    Diversos
+                                                    Jackpot
                                                 </button>
                                             </div>
                                         </div>
-
-                                        {productSection === 'diversos' && !selectedSubCategory && (
-                                            <div className="grid grid-cols-2 gap-2 mb-4">
-                                                {diversosCategories.map(cat => (
-                                                    <button
-                                                        key={cat.name}
-                                                        onClick={() => setSelectedSubCategory(cat.name)}
-                                                        className="p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 hover:border-secondary transition-all flex flex-col items-center gap-1 group"
-                                                    >
-                                                        <span className="material-icons-outlined text-secondary opacity-50 group-hover:opacity-100 transition-opacity">
-                                                            {['lastlonger', 'jackpot', 'bet'].includes(cat.name) ? 'stars' : cat.icon || 'category'}
-                                                        </span>
-                                                        <span className="text-[10px] font-black uppercase text-gray-400 group-hover:text-white transition-colors">
-                                                            {cat.label}
-                                                        </span>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        {productSection === 'diversos' && selectedSubCategory && (
-                                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/5">
-                                                <button
-                                                    onClick={() => setSelectedSubCategory(null)}
-                                                    className="w-6 h-6 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-all"
-                                                >
-                                                    <span className="material-icons text-sm">arrow_back</span>
-                                                </button>
-                                                <p className="text-[10px] font-black uppercase text-secondary">
-                                                    {productCategories.find(c => c.name === selectedSubCategory)?.label}
-                                                </p>
-                                            </div>
-                                        )}
 
                                         {productSection === 'cash' && (
                                             <div className="mb-4 flex gap-2">
@@ -841,30 +856,6 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                                 <button
                                                     onClick={handleAddManualCash}
                                                     className="bg-primary hover:scale-105 active:scale-95 text-white p-2 rounded-xl transition-all shadow-neon-pink"
-                                                >
-                                                    <span className="material-icons text-sm">add</span>
-                                                </button>
-                                            </div>
-                                        )}
-
-                                        {productSection === 'diversos' && selectedSubCategory === 'poker-online' && (
-                                            <div className="mb-4 flex gap-2">
-                                                <input
-                                                    type="text"
-                                                    inputMode="decimal"
-                                                    placeholder="Valor Fichas Online R$"
-                                                    value={cashAmount}
-                                                    onChange={(e) => {
-                                                        const val = e.target.value.replace(',', '.');
-                                                        if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                                                            setCashAmount(val);
-                                                        }
-                                                    }}
-                                                    className="flex-1 bg-white/5 border border-secondary/30 rounded-xl px-3 py-2 text-xs text-white font-bold focus:border-secondary outline-none transition-all"
-                                                />
-                                                <button
-                                                    onClick={handleAddManualOnline}
-                                                    className="bg-secondary hover:scale-105 active:scale-95 text-white p-2 rounded-xl transition-all shadow-neon-blue"
                                                 >
                                                     <span className="material-icons text-sm">add</span>
                                                 </button>
@@ -1076,5 +1067,109 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                 )}
             </div>
         </div>
+
+        {/* Product Manager Modal */}
+        {showProductMgr && selectedEvent && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4" onClick={() => setShowProductMgr(false)}>
+                <div className="bg-[#080518] border border-white/10 rounded-3xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                    {/* Header */}
+                    <div className="p-5 border-b border-white/10 flex items-center justify-between flex-shrink-0">
+                        <div>
+                            <h3 className="text-sm font-black text-white uppercase tracking-widest">Gerenciar Produtos</h3>
+                            <p className="text-[10px] text-gray-500 mt-0.5">Ocultar produtos deste evento: <span className="text-amber-400 font-bold">{selectedEvent.title}</span></p>
+                        </div>
+                        <button onClick={() => setShowProductMgr(false)} className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-colors">
+                            <span className="material-icons text-sm">close</span>
+                        </button>
+                    </div>
+
+                    {/* Category Tabs */}
+                    <div className="flex gap-1 p-3 border-b border-white/5 flex-shrink-0">
+                        {[
+                            { key: 'bar', label: 'Bar', icon: 'local_bar' },
+                            { key: 'jackpot', label: 'Jackpot', icon: 'stars' },
+                        ].map(tab => (
+                            <button
+                                key={tab.key}
+                                onClick={() => setProductMgrSection(tab.key)}
+                                className={`flex-1 py-2 flex items-center justify-center gap-1.5 rounded-xl text-[10px] font-black uppercase transition-all ${productMgrSection === tab.key ? 'bg-primary text-white shadow-neon-pink' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'}`}
+                            >
+                                <span className="material-icons-outlined text-sm">{tab.icon}</span>
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Info */}
+                    <div className="px-5 py-2 flex-shrink-0">
+                        <p className="text-[10px] text-gray-500">
+                            <span className="material-icons-outlined text-[11px] align-middle mr-1 text-amber-400">info</span>
+                            Produtos <span className="text-red-400 font-bold">ocultos</span> ficam indisponíveis para lançamento neste evento. Os demais eventos não são afetados.
+                        </p>
+                    </div>
+
+                    {/* Product List */}
+                    <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                        <div className="space-y-2">
+                            {allProducts
+                                .filter(p => p.category === productMgrSection && p.active)
+                                .map(product => {
+                                    const pid = String(product.id);
+                                    const isExcluded = excludedProductIds.has(pid);
+                                    return (
+                                        <div
+                                            key={pid}
+                                            className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${isExcluded ? 'bg-red-500/5 border-red-500/20 opacity-60' : 'bg-white/5 border-white/10'}`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${isExcluded ? 'bg-red-500/20 text-red-400' : 'bg-primary/10 text-primary'}`}>
+                                                    <span className="material-icons-outlined text-sm">{isExcluded ? 'visibility_off' : 'inventory_2'}</span>
+                                                </div>
+                                                <div>
+                                                    <p className={`text-xs font-black uppercase ${isExcluded ? 'line-through text-gray-500' : 'text-white'}`}>{product.name}</p>
+                                                    <p className="text-[10px] text-gray-500">R$ {Number(product.price).toFixed(2)}</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => toggleProductExclusion(product)}
+                                                className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all ${isExcluded
+                                                    ? 'bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500 hover:text-white'
+                                                    : 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white'
+                                                }`}
+                                            >
+                                                {isExcluded ? (
+                                                    <><span className="material-icons-outlined text-[12px] align-middle mr-1">visibility</span>Mostrar</>
+                                                ) : (
+                                                    <><span className="material-icons-outlined text-[12px] align-middle mr-1">visibility_off</span>Ocultar</>
+                                                )}
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            {allProducts.filter(p => p.category === productMgrSection && p.active).length === 0 && (
+                                <div className="text-center py-8 text-gray-600">
+                                    <span className="material-icons-outlined text-3xl block mb-2 opacity-30">inventory_2</span>
+                                    <p className="text-xs">Nenhum produto nesta categoria</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="p-4 border-t border-white/5 flex-shrink-0 flex items-center justify-between">
+                        <p className="text-[10px] text-gray-500">
+                            {excludedProductIds.size} produto(s) oculto(s) neste evento
+                        </p>
+                        <button
+                            onClick={() => setShowProductMgr(false)}
+                            className="px-5 py-2 bg-primary text-white rounded-xl text-[10px] font-black uppercase hover:bg-primary/80 transition-colors"
+                        >
+                            Concluído
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+        </>
     );
 };
