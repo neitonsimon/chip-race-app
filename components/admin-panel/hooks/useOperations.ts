@@ -30,7 +30,7 @@ export function useOperations({
     const [cashAmount, setCashAmount] = useState('');
     const [commandsTab, setCommandsTab] = useState<'ativas' | 'historico' | 'resumo'>('ativas');
     const lastActionTimeRef = useRef<number>(0);
-    const COOLDOWN_MS = 800;
+    const COOLDOWN_MS = 400;
 
 
     const fetchOpenCommands = async (eventId: string) => {
