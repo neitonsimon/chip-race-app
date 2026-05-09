@@ -221,37 +221,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         
         const CACHE_KEY = 'cr_app_raw_data_cache_v2';
         
-        // Check cache unless forced refresh
-        if (!force && cacheRef.current && (Date.now() - cacheRef.current.timestamp < CACHE_DURATION)) {
-            console.log('Using cached Supabase data...');
-            setIsLoading(false);
-            return;
+        try {
+        let rankingsData: any[] | null = null;
+        let templatesData: any[] | null = null;
+        let schemasData: any[] | null = null;
+        let eventsData: any[] | null = null;
+        let contentData: any[] | null = null;
+        let ecoCategoriesData: any[] | null = null;
+        let profilesData: any[] | null = null;
+        let currentUserBadges: any[] | null = null;
+        let expLevelsData: any[] | null = null;
+        let dailyRewardsData: any[] | null = null;
+        let templatesMsgData: any[] | null = null;
+        let allUserBadges: any[] | null = null;
+
+        let useCache = false;
+        if (!force) {
+            try {
+                const sessionData = sessionStorage.getItem(CACHE_KEY);
+                if (sessionData) {
+                    const parsed = JSON.parse(sessionData);
+                    if (Date.now() - parsed.timestamp < CACHE_DURATION && parsed.currentUserId === currentUserId) {
+                        console.log('Using cached data for:', currentUserId);
+                        rankingsData = parsed.rankingsData || [];
+                        templatesData = parsed.templatesData || [];
+                        schemasData = parsed.schemasData || [];
+                        eventsData = parsed.eventsData || [];
+                        contentData = parsed.contentData || [];
+                        ecoCategoriesData = parsed.ecoCategoriesData || [];
+                        profilesData = parsed.profilesData || [];
+                        currentUserBadges = parsed.currentUserBadges || [];
+                        expLevelsData = parsed.expLevelsData || [];
+                        dailyRewardsData = parsed.dailyRewardsData || [];
+                        templatesMsgData = parsed.templatesMsgData || [];
+                        allUserBadges = parsed.allUserBadges || [];
+                        useCache = true;
+                    }
+                }
+            } catch (e) {
+                console.error('Error reading session cache', e);
+            }
         }
 
-        setIsLoading(true);
-        try {
-            const signal = abortControllerRef.current.signal;
-            let rankingsData, templatesData, schemasData, eventsData, contentData, ecoCategoriesData, profilesData, currentUserBadges, expLevelsData, dailyRewardsData, templatesMsgData, allUserBadges;
-
-            let useCache = false;
-            if (!force) {
-                try {
-                    const sessionData = sessionStorage.getItem(CACHE_KEY);
-                    if (sessionData) {
-                        const parsed = JSON.parse(sessionData);
-                        // Make sure the cache matches the current user to avoid showing wrong user's badges
-                        if (Date.now() - parsed.timestamp < CACHE_DURATION && parsed.currentUserId === currentUserId) {
-                            console.log('Using sessionStorage cached Supabase data...');
-                            ({ rankingsData, templatesData, schemasData, eventsData, contentData, ecoCategoriesData, profilesData, currentUserBadges, expLevelsData, dailyRewardsData, templatesMsgData, allUserBadges } = parsed);
-                            useCache = true;
-                        }
-                    }
-                } catch (e) {
-                    console.error('Error reading session cache', e);
-                }
-            }
-
-            if (!useCache) {
+        if (!useCache) {
+            console.log('Fetching fresh Supabase data...', force ? '(forced)' : '');
+            setIsLoading(true);
+            try {
                 const results = await Promise.all([
                     supabase.from('rankings').select('id, label, description, rules, start_date, end_date, prize_info_title, prize_info_detail, scoring_schema_map, is_active, brl_reward, chipz_reward, badge_template_id, position_prizes, order'),
                     supabase.from('badge_templates').select('id, title, description, icon, color, category, rarity, event_trigger, is_legendary'),
@@ -289,9 +304,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                         dailyRewardsData, templatesMsgData, allUserBadges
                     }));
                 } catch (e) {
-                    console.warn('Could not save to sessionStorage (quota exceeded?)', e);
+                    console.warn('Failed to save to sessionStorage (quota exceeded):', e);
                 }
+            } catch (err) {
+                console.error('Promise.all failed:', err);
             }
+        }
 
             if (rankingsData) {
                 const mappedRankings = rankingsData.map(r => ({
@@ -407,7 +425,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     if (item.key === 'hero') setContentDB(prev => ({ ...prev, hero: item.value }));
                     else if (item.key === 'details') setContentDB(prev => ({ ...prev, details: item.value }));
                     else if (item.key === 'faq') setContentDB(prev => ({ ...prev, faq: item.value }));
-                        else if (item.key === 'special_events') setContentDB(prev => ({ ...prev, special_events: item.value }));
+                    else if (item.key === 'special_events') setContentDB(prev => ({ ...prev, special_events: item.value }));
                     else if (item.key === 'months') setMonths(item.value);
                     else if (item.key === 'total_qualifiers') setCustomTotalQualifiers(item.value);
                     else if (item.key === 'documents') setContentDB(prev => ({ ...prev, documents: item.value }));
@@ -696,6 +714,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     useEffect(() => {
         fetchSupabaseData();
+    }, [currentUserId]);
+
+    useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (session) {
                 setIsLoggedIn(true);

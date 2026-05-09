@@ -995,16 +995,16 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             {/* Place Bet Modal */}
             {showPlaceBetModal && placingBetOn && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-                    <div className="bg-[#0a061d] border border-white/10 rounded-[32px] w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in duration-300">
-                        <div className="p-8 border-b border-white/5 bg-gradient-to-r from-cyan-500/10 to-transparent">
-                            <h2 className="text-2xl font-black uppercase tracking-tighter">Emitir Aposta</h2>
-                            <p className="text-xs text-gray-400 mt-1">{(placingBetOn.events?.title) || 'Sem Evento'} - {(placingBetOn.category || '').replace('_', ' ')}</p>
+                    <div className="bg-[#0a061d] border border-white/10 rounded-[32px] w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in duration-300 flex flex-col max-h-[95vh]">
+                        <div className="p-6 md:p-8 border-b border-white/5 bg-gradient-to-r from-cyan-500/10 to-transparent flex-shrink-0">
+                            <h2 className="text-xl md:text-2xl font-black uppercase tracking-tighter">Emitir Aposta</h2>
+                            <p className="text-[10px] md:text-xs text-gray-400 mt-1">{(placingBetOn.events?.title) || 'Sem Evento'} - {(placingBetOn.category || '').replace('_', ' ')}</p>
                         </div>
 
-                        <div className="p-8 space-y-6">
-                            <div className="space-y-4">
+                        <div className="p-4 md:p-8 space-y-4 md:space-y-6 overflow-y-auto custom-scrollbar flex-1">
+                            <div className="space-y-3">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Selecione o Jogador (Apenas 1)</label>
-                                 <div className="space-y-3 max-h-[250px] overflow-y-auto custom-scrollbar pr-2">
+                                 <div className="space-y-2 max-h-[180px] md:max-h-[250px] overflow-y-auto custom-scrollbar pr-1">
                                     {placingBetOn.bet_odds?.map(odd => (
                                         <button 
                                             key={odd.id}
@@ -1029,8 +1029,8 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-1 md:space-y-2">
                                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Valor da Aposta (R$)</label>
                                     <div className="relative">
                                         <input 
@@ -1047,7 +1047,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                         )}
                                     </div>
                                 </div>
-                                <div className="space-y-2">
+                                <div className="space-y-1 md:space-y-2">
                                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Retorno Potencial (Green)</label>
                                     <div className="w-full bg-green-500/10 border border-green-500/20 rounded-2xl px-4 py-4">
                                         <div className="text-green-400 font-black text-lg">
@@ -1129,7 +1129,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                             </div>
                         </div>
 
-                        <div className="p-8 pt-0 flex gap-4">
+                        <div className="p-4 md:p-8 pt-0 flex gap-3 md:gap-4 flex-shrink-0 border-t border-white/5 pt-4 md:pt-0">
                             <button 
                                 onClick={() => {
                                     setShowPlaceBetModal(false);
