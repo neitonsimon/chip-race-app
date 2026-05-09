@@ -879,12 +879,25 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
                                                             else if (productSection === 'cash') handleCashItemClick(p);
                                                             else handleProductClick(p);
                                                         }}
-                                                        className={`p-3 border rounded-xl text-left transition-all group relative ${pendingProduct?.id === p.id ? 'bg-primary border-primary shadow-neon-pink' : disabled ? 'bg-white/5 border-white/5 opacity-50 cursor-not-allowed' : 'bg-white/5 hover:bg-white/10 border-white/10'}`}
+                                                        className={`p-3 border rounded-xl text-left transition-all group relative ${
+                                                            pendingProduct?.id === p.id 
+                                                                ? 'bg-primary border-primary shadow-neon-pink' 
+                                                                : count > 0 
+                                                                    ? 'bg-primary/10 border-primary/40 shadow-inner' 
+                                                                    : disabled 
+                                                                        ? 'bg-white/5 border-white/5 opacity-50 cursor-not-allowed' 
+                                                                        : 'bg-white/5 hover:bg-white/10 border-white/10'
+                                                        }`}
                                                     >
+                                                        {count > 0 && !pendingProduct && (
+                                                            <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-primary text-white rounded-full flex items-center justify-center shadow-lg border-2 border-[#080518] z-10 animate-in zoom-in duration-200">
+                                                                <span className="material-icons text-[12px]">check</span>
+                                                            </div>
+                                                        )}
                                                         <div className="flex items-center justify-between gap-2 mb-1">
-                                                            <p className={`text-xs xl:text-sm font-black uppercase flex-1 leading-tight ${pendingProduct?.id === p.id ? 'text-white' : 'text-gray-200'}`}>{p.name}</p>
+                                                            <p className={`text-xs xl:text-sm font-black uppercase flex-1 leading-tight ${pendingProduct?.id === p.id ? 'text-white' : count > 0 ? 'text-primary' : 'text-gray-200'}`}>{p.name}</p>
                                                             {count > 0 && (
-                                                                <span className={`text-xs xl:text-sm font-black px-2 py-1 rounded-md ${pendingProduct?.id === p.id ? 'bg-white/20 text-white' : 'bg-primary/20 text-primary shadow-sm'}`}>
+                                                                <span className={`text-xs xl:text-sm font-black px-2 py-1 rounded-md ${pendingProduct?.id === p.id ? 'bg-white/20 text-white' : 'bg-primary/20 text-primary shadow-sm border border-primary/20'}`}>
                                                                     {count}x
                                                                 </span>
                                                             )}
