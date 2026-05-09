@@ -47,6 +47,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
     const [showViewBetsModal, setShowViewBetsModal] = useState(false);
     const [marketBets, setMarketBets] = useState<any[]>([]);
     const [saving, setSaving] = useState(false);
+    const [importingPlayers, setImportingPlayers] = useState(false);
 
     // Place bet form state
     const [selectedOddId, setSelectedOddId] = useState('');
@@ -198,6 +199,58 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
     const updateOdd = (id: string, value: number) => {
         setSelectedPlayers(selectedPlayers.map(p => p.id === id ? { ...p, odd: value } : p));
     };
+
+    const handleImportFromEvent = async () => {
+        const eventId = editingBet?.event_id || selectedEventId;
+        if (!eventId) {
+            alert('Por favor, selecione um evento primeiro.');
+            return;
+        }
+        setImportingPlayers(true);
+        try {
+            const { data, error } = await supabase
+                .from('tournament_reservations')
+                .select('user_id, profiles(id, name)')
+                .eq('event_id', eventId)
+                .in('status', ['reserved', 'confirmed']);
+                
+            if (error) throw error;
+            
+            if (data && data.length > 0) {
+                const newPlayers: any[] = [];
+                data.forEach((res: any) => {
+                    const profArray = Array.isArray(res.profiles) ? res.profiles : [res.profiles];
+                    profArray.forEach((prof: any) => {
+                         if (prof && prof.id && prof.name) {
+                             const exists = selectedPlayers.find(p => p.id === prof.id);
+                             if (!exists && !newPlayers.find(p => p.id === prof.id)) {
+                                 newPlayers.push({
+                                     id: prof.id,
+                                     name: prof.name,
+                                     odd: 2.0
+                                 });
+                             }
+                         }
+                    });
+                });
+                
+                if (newPlayers.length > 0) {
+                    setSelectedPlayers(prev => [...prev, ...newPlayers]);
+                    alert(`${newPlayers.length} novos jogadores importados das reservas deste evento!`);
+                } else {
+                    alert('Todos os jogadores reservados deste evento já estão no mercado.');
+                }
+            } else {
+                alert('Nenhum jogador reservado encontrado para este evento.');
+            }
+        } catch (err: any) {
+            console.error('Error importing players:', err);
+            alert('Erro ao importar jogadores: ' + err.message);
+        } finally {
+            setImportingPlayers(false);
+        }
+    };
+
 
     const handleCreateBet = async () => {
         if (!selectedEventId || selectedPlayers.length === 0 || saving) return;
@@ -722,7 +775,19 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                         <div className="p-8 space-y-6 max-h-[85vh] overflow-y-auto custom-scrollbar">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Evento Relacionado</label>
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Evento Relacionado</label>
+                                        {selectedEventId && (
+                                            <button
+                                                onClick={handleImportFromEvent}
+                                                disabled={importingPlayers}
+                                                className="text-[10px] font-black uppercase tracking-widest text-cyan-500 hover:text-cyan-400 flex items-center gap-1 transition-colors"
+                                            >
+                                                <span className="material-icons-outlined text-[12px]">{importingPlayers ? 'hourglass_empty' : 'group_add'}</span>
+                                                {importingPlayers ? 'Importando...' : 'Importar Reservas'}
+                                            </button>
+                                        )}
+                                    </div>
                                     <select 
                                         value={selectedEventId}
                                         onChange={(e) => setSelectedEventId(e.target.value)}
@@ -908,7 +973,17 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Adicionar Jogador ao Mercado</label>
+                                <div className="flex items-center justify-between">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Adicionar Jogador ao Mercado</label>
+                                    <button
+                                        onClick={handleImportFromEvent}
+                                        disabled={importingPlayers}
+                                        className="text-[10px] font-black uppercase tracking-widest text-cyan-500 hover:text-cyan-400 flex items-center gap-1 transition-colors"
+                                    >
+                                        <span className="material-icons-outlined text-[12px]">{importingPlayers ? 'hourglass_empty' : 'group_add'}</span>
+                                        {importingPlayers ? 'Importando...' : 'Importar Reservas do Evento'}
+                                    </button>
+                                </div>
                                 <div className="relative">
                                     <span className="material-icons-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">search</span>
                                     <input 
