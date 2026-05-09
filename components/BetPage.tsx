@@ -1147,7 +1147,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                 onClick={handlePlaceBet}
                                 className="flex-[2] py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-green-500/20"
                             >
-                                EMITIR BILHETE
+                                APOSTAR AGORA
                             </button>
                         </div>
                     </div>
