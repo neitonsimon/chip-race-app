@@ -58,7 +58,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
     const [selectedPunter, setSelectedPunter] = useState<RankingPlayer | null>(null);
     const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credits' | 'debt'>('pix');
     const [betAmount, setBetAmount] = useState<string>('');
-
+    const [preSelectedOdds, setPreSelectedOdds] = useState<Record<string, string>>({});
     useEffect(() => {
         fetchBets();
     }, []);
@@ -680,24 +680,33 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                     </p>
                                 </div>
                                  <div className="p-4 space-y-2 flex-1">
-                                    {bet.bet_odds?.map(odd => (
-                                        <div key={odd.id} className="flex items-center justify-between py-3 px-5 bg-black/40 rounded-2xl hover:bg-cyan-500/10 border border-transparent hover:border-cyan-500/20 transition-all cursor-pointer group/odd">
+                                    {bet.bet_odds?.slice(0, 7).map(odd => (
+                                        <div 
+                                            key={odd.id} 
+                                            onClick={() => setPreSelectedOdds(prev => ({ ...prev, [bet.id]: odd.id }))}
+                                            className={`flex items-center justify-between py-3 px-5 rounded-2xl border transition-all cursor-pointer group/odd ${preSelectedOdds[bet.id] === odd.id ? 'bg-cyan-500/20 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.15)]' : 'bg-black/40 border-transparent hover:bg-cyan-500/10 hover:border-cyan-500/20'}`}
+                                        >
                                             <div className="flex items-center gap-3">
                                                 <img 
                                                     src={odd.profiles?.avatar_url || 'https://ui-avatars.com/api/?name=' + (odd.profiles?.name || odd.guest_name)} 
                                                     alt={odd.profiles?.name || odd.guest_name} 
-                                                    className="w-10 h-10 rounded-full border border-white/10 group-hover/odd:border-cyan-500/50 transition-colors"
+                                                    className={`w-10 h-10 rounded-full border transition-colors ${preSelectedOdds[bet.id] === odd.id ? 'border-cyan-500' : 'border-white/10 group-hover/odd:border-cyan-500/50'}`}
                                                 />
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-bold group-hover/odd:text-cyan-400 transition-colors">{odd.profiles?.name || odd.guest_name}</span>
+                                                    <span className={`text-sm font-bold transition-colors ${preSelectedOdds[bet.id] === odd.id ? 'text-cyan-400' : 'group-hover/odd:text-cyan-400'}`}>{odd.profiles?.name || odd.guest_name}</span>
                                                     <span className="text-[9px] text-gray-500 uppercase font-black">Odd Fixa</span>
                                                 </div>
                                             </div>
-                                            <div className="bg-cyan-500/10 border border-cyan-500/20 px-4 py-2 rounded-xl group-hover/odd:bg-cyan-500 group-hover/odd:text-black transition-all">
-                                                <span className="text-cyan-400 font-black group-hover/odd:text-black transition-colors">@{odd.odd_value.toFixed(2)}</span>
+                                            <div className={`px-4 py-2 rounded-xl transition-all ${preSelectedOdds[bet.id] === odd.id ? 'bg-cyan-500 text-black border border-cyan-500' : 'bg-cyan-500/10 border border-cyan-500/20 group-hover/odd:bg-cyan-500 group-hover/odd:text-black'}`}>
+                                                <span className={`font-black transition-colors ${preSelectedOdds[bet.id] === odd.id ? 'text-black' : 'text-cyan-400 group-hover/odd:text-black'}`}>@{odd.odd_value.toFixed(2)}</span>
                                             </div>
                                         </div>
                                     ))}
+                                    {(bet.bet_odds?.length || 0) > 7 && (
+                                        <div className="text-center py-2 text-[10px] font-black text-cyan-500/50 uppercase tracking-widest bg-white/5 rounded-xl border border-white/5">
+                                            + {(bet.bet_odds?.length || 0) - 7} jogadores (Ver Todos)
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="p-2 bg-black/20 flex flex-col gap-2">
                                     {(bet.status !== 'open' || (bet.expires_at && new Date(bet.expires_at) < new Date())) ? (
@@ -721,6 +730,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                                     return;
                                                 }
                                                 setPlacingBetOn(bet);
+                                                setSelectedOddId(preSelectedOdds[bet.id] || '');
                                                 setShowPlaceBetModal(true);
                                             }}
                                             className={`w-full py-4 font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 ${
