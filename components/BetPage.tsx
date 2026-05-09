@@ -623,8 +623,8 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                             <div key={bet.id} className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden hover:border-cyan-500/30 transition-all group flex flex-col">
                                 <div className="p-6 border-b border-white/5 bg-gradient-to-br from-white/5 to-transparent relative">
                                     <div className="flex justify-between items-start mb-4">
-                                        <div className="flex flex-col gap-2">
-                                            <span className="text-[10px] w-fit font-black uppercase tracking-widest px-2 py-1 bg-cyan-500/20 text-cyan-400 rounded-lg">
+                                        <div className="flex flex-col gap-3">
+                                            <span className="text-sm w-fit font-black uppercase tracking-widest px-4 py-1.5 bg-gradient-to-r from-cyan-500/30 to-blue-600/30 border border-cyan-500/50 text-cyan-200 rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.3)]">
                                                 {bet.category.replace('_', ' ')}
                                             </span>
                                             <CountdownTimer expiresAt={bet.expires_at} />
@@ -673,7 +673,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                             </div>
                                         </div>
                                     </div>
-                                    <h3 className="text-xl font-bold mb-1 truncate">{bet.events?.title}</h3>
+                                    <h3 className="text-2xl font-black mb-2 truncate text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">{bet.events?.title}</h3>
                                     <p className="text-xs text-gray-500 flex items-center gap-1">
                                         <span className="material-icons-outlined text-xs">calendar_today</span>
                                         {new Date(bet.events?.date || '').toLocaleDateString('pt-BR')}
