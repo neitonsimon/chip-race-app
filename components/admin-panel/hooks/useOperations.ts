@@ -420,7 +420,7 @@ export function useOperations({
                     if (buyInItem) {
                         commandItemsToInsert.push({
                             command_id: cmd.id,
-                            product_id: buyInItem.id,
+                            product_id: null,
                             unit_price_brl: buyInItem.price,
                             total_price_brl: buyInItem.price,
                             quantity: 1,
@@ -432,7 +432,7 @@ export function useOperations({
                     if (staffItem) {
                         commandItemsToInsert.push({
                             command_id: cmd.id,
-                            product_id: staffItem.id,
+                            product_id: null,
                             unit_price_brl: staffItem.price,
                             total_price_brl: staffItem.price,
                             quantity: 1,

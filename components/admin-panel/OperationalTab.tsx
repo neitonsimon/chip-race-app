@@ -138,13 +138,17 @@ export const OperationalTab: React.FC<OperationalTabProps> = ({
     const getItemCount = (p: any) => {
         if (!commandItems) return 0;
         if (productSection === 'torneio') {
-            return commandItems.filter(item => item.notes?.startsWith(p.name)).reduce((sum, item) => sum + (item.quantity || 1), 0);
+            return commandItems
+                .filter(item => item.notes?.toLowerCase().trim().startsWith(p.name.toLowerCase().trim()))
+                .reduce((sum, item) => sum + (item.quantity || 1), 0);
         }
         if (productSection === 'cash') {
-            return commandItems.filter(item => item.notes?.includes(p.name)).reduce((sum, item) => sum + (item.quantity || 1), 0);
+            return commandItems
+                .filter(item => item.notes?.toLowerCase().trim().includes(p.name.toLowerCase().trim()))
+                .reduce((sum, item) => sum + (item.quantity || 1), 0);
         }
         // Use ID for bar and diversos subcategories
-        return commandItems.filter(item => item.product_id === p.id).reduce((sum, item) => sum + (item.quantity || 1), 0);
+        return commandItems.filter(item => String(item.product_id) === String(p.id)).reduce((sum, item) => sum + (item.quantity || 1), 0);
     };
     const startResizing = () => setIsResizing(true);
 
