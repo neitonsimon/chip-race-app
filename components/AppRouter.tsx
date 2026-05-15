@@ -31,7 +31,7 @@ import { ResetPassword } from './ResetPassword';
 import { MaintenancePage } from './MaintenancePage';
 
 export const AppRouter: React.FC = () => {
-    const isMaintenance = true; // TOGGLE THIS TO DISABLE MAINTENANCE MODE
+    const isMaintenance = false; // TOGGLE THIS TO DISABLE MAINTENANCE MODE
 
     const {
         currentView, isAdmin, isLoggedIn, currentUser, events, rankings, contentDB,
@@ -277,10 +277,6 @@ export const AppRouter: React.FC = () => {
                 );
         }
     };
-
-    if (isMaintenance && !isAdmin) {
-        return <MaintenancePage />;
-    }
 
     return (
         <main className={`flex-grow pb-20 transition-all duration-300 ${(!isLoggedIn && currentView !== 'login' && currentView !== 'register') ? 'pt-40 md:pt-20' : 'pt-20'}`}>
