@@ -25,7 +25,6 @@ import { ResponsibleGaming } from './ResponsibleGaming';
 import { OnlineCreditsPage } from './OnlineCreditsPage';
 import { CategoryPage } from './CategoryPage';
 import { DocumentLinks } from './DocumentLinks';
-import { FenachimPage } from './FenachimPage';
 import { BetPage } from './BetPage';
 import { ResetPassword } from './ResetPassword';
 import { MaintenancePage } from './MaintenancePage';
@@ -174,8 +173,6 @@ export const AppRouter: React.FC = () => {
                 />;
             case 'the-chosen-regulations':
                 return <TheChosenRegulations prizeLabel={prizeLabel} onBack={() => handleNavigate('the-chosen-details')} />;
-            case 'fenachim':
-                return <FenachimPage onNavigate={handleNavigate} />;
             case 'vip':
                 return <VipPage
                     onNavigate={handleNavigate}
