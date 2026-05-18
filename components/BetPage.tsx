@@ -782,7 +782,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
         if (!expiresAt) return null;
 
         return (
-            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border animate-pulse ${timeLeft === 'ENCERRADO' ? 'bg-red-500/10 border-red-500/30 text-red-500' : 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400'}`}>
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border animate-pulse ${timeLeft === 'ENCERRADO' ? 'bg-red-500/10 border-red-500/30 text-red-500' : 'bg-red-500/10 border-red-500/30 text-red-400'}`}>
                 <span className="material-icons-outlined text-sm">{timeLeft === 'ENCERRADO' ? 'timer_off' : 'timer'}</span>
                 <span className="text-[11px] font-black tracking-tighter">{timeLeft}</span>
             </div>
@@ -802,7 +802,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             <div className="max-w-[1400px] mx-auto w-full">
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-6">
                     <div>
-                        <h1 className="text-4xl font-black uppercase tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 mb-2">
+                        <h1 className="text-4xl font-black uppercase tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-rose-600 mb-2">
                             Chip Race Bet
                         </h1>
                         <p className="text-gray-400 text-sm font-medium">
@@ -813,7 +813,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                     {isAdmin && (
                         <button 
                             onClick={() => setShowCreateModal(true)}
-                            className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-blue-600 hover:to-cyan-500 text-white font-bold py-3 px-8 rounded-2xl shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all flex items-center gap-2 group"
+                            className="bg-gradient-to-r from-red-600 to-rose-700 hover:from-rose-700 hover:to-red-600 text-white font-bold py-3 px-8 rounded-2xl shadow-[0_0_20px_rgba(239,68,68,0.3)] transition-all flex items-center gap-2 group"
                         >
                             <span className="material-icons-outlined group-hover:rotate-90 transition-transform">add</span>
                             CRIAR NOVO BET
@@ -828,7 +828,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                             onClick={() => setActiveTab('ativos')}
                             className={`px-6 sm:px-8 py-3 rounded-xl text-xs font-black uppercase tracking-[0.15em] transition-all duration-300 flex items-center gap-2 ${
                                 activeTab === 'ativos'
-                                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-[0_0_15px_rgba(6,182,212,0.3)]'
+                                    ? 'bg-gradient-to-r from-red-600 to-rose-700 text-white shadow-[0_0_15px_rgba(239,68,68,0.3)]'
                                     : 'text-gray-400 hover:text-white'
                             }`}
                         >
@@ -839,7 +839,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                             onClick={() => setActiveTab('encerrados')}
                             className={`px-6 sm:px-8 py-3 rounded-xl text-xs font-black uppercase tracking-[0.15em] transition-all duration-300 flex items-center gap-2 ${
                                 activeTab === 'encerrados'
-                                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-[0_0_15px_rgba(6,182,212,0.3)]'
+                                    ? 'bg-gradient-to-r from-red-600 to-rose-700 text-white shadow-[0_0_15px_rgba(239,68,68,0.3)]'
                                     : 'text-gray-400 hover:text-white'
                             }`}
                         >
@@ -851,11 +851,11 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
 
                 {loading && !showViewBetsModal ? (
                     <div className="flex justify-center py-20">
-                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyan-500"></div>
+                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
                     </div>
                 ) : filteredBets.length === 0 ? (
                     <div className="bg-white/5 border border-white/10 rounded-3xl p-20 text-center max-w-2xl mx-auto backdrop-blur-sm">
-                        <span className="material-icons-outlined text-6xl text-cyan-500/20 mb-4 animate-pulse">
+                        <span className="material-icons-outlined text-6xl text-red-500/20 mb-4 animate-pulse">
                             {activeTab === 'ativos' ? 'sports_esports' : 'history'}
                         </span>
                         <p className="text-gray-400 font-bold uppercase tracking-widest text-sm mb-2">
@@ -870,11 +870,11 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 w-full">
                         {filteredBets.map(bet => (
-                            <div key={bet.id} className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden hover:border-cyan-500/30 transition-all group flex flex-col">
+                            <div key={bet.id} className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden hover:border-red-500/30 transition-all group flex flex-col">
                                 <div className="p-6 border-b border-white/5 bg-gradient-to-br from-white/5 to-transparent relative">
                                     <div className="flex justify-between items-start mb-4">
                                         <div className="flex flex-col gap-3">
-                                            <span className="text-sm w-fit font-black uppercase tracking-widest px-4 py-1.5 bg-gradient-to-r from-cyan-500/30 to-blue-600/30 border border-cyan-500/50 text-cyan-200 rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.3)]">
+                                            <span className="text-xs md:text-[22.4px] md:leading-normal w-fit font-black uppercase tracking-widest px-4 py-1.5 md:px-6 md:py-2.5 bg-gradient-to-r from-red-500/30 to-rose-600/30 border border-red-500/50 text-red-200 rounded-xl md:rounded-2xl shadow-[0_0_15px_rgba(239,68,68,0.3)]">
                                                 {categoryLabels[bet.category] || bet.category.replace('_', ' ')}
                                             </span>
                                             <CountdownTimer expiresAt={bet.expires_at} />
@@ -946,8 +946,8 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                                 className={`flex items-center justify-between py-3 px-5 rounded-2xl border transition-all ${
                                                     activeTab === 'ativos' && !(bet.status !== 'open' || (bet.expires_at && new Date(bet.expires_at) < new Date()))
                                                         ? preSelectedOdds[bet.id] === odd.id
-                                                            ? 'bg-cyan-500/20 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.15)] cursor-pointer group/odd'
-                                                            : 'bg-black/40 border-transparent hover:bg-cyan-500/10 hover:border-cyan-500/20 cursor-pointer group/odd'
+                                                            ? 'bg-red-500/20 border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.15)] cursor-pointer group/odd'
+                                                            : 'bg-black/40 border-transparent hover:bg-red-500/10 hover:border-red-500/20 cursor-pointer group/odd'
                                                         : isWinner
                                                             ? 'bg-green-500/15 border-green-500/40 shadow-[0_0_15px_rgba(74,222,128,0.08)]'
                                                             : 'bg-black/20 border-white/5 opacity-70'
@@ -960,8 +960,8 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                                         className={`w-10 h-10 rounded-full border transition-colors ${
                                                             activeTab === 'ativos'
                                                                 ? preSelectedOdds[bet.id] === odd.id
-                                                                    ? 'border-cyan-500'
-                                                                    : 'border-white/10 group-hover/odd:border-cyan-500/50'
+                                                                    ? 'border-red-500'
+                                                                    : 'border-white/10 group-hover/odd:border-red-500/50'
                                                                 : isWinner
                                                                     ? 'border-green-500 shadow-[0_0_10px_rgba(74,222,128,0.3)]'
                                                                     : 'border-white/5'
@@ -971,8 +971,8 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                                         <span className={`text-sm font-bold transition-colors ${
                                                             activeTab === 'ativos'
                                                                 ? preSelectedOdds[bet.id] === odd.id
-                                                                    ? 'text-cyan-400'
-                                                                    : 'group-hover/odd:text-cyan-400'
+                                                                    ? 'text-red-400'
+                                                                    : 'group-hover/odd:text-red-400'
                                                                 : isWinner
                                                                     ? 'text-green-400 font-extrabold'
                                                                     : 'text-gray-400'
@@ -1020,13 +1020,13 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                                     ) : (
                                                         <div className={`px-4 py-2 rounded-xl transition-all ${
                                                             preSelectedOdds[bet.id] === odd.id 
-                                                                ? 'bg-cyan-500 text-black border border-cyan-500' 
-                                                                : 'bg-cyan-500/10 border border-cyan-500/20 group-hover/odd:bg-cyan-500 group-hover/odd:text-black'
+                                                                ? 'bg-red-500 text-white border border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]' 
+                                                                : 'bg-red-500/10 border border-red-500/20 group-hover/odd:bg-red-500 group-hover/odd:text-white'
                                                         }`}>
                                                             <span className={`font-black transition-colors ${
                                                                 preSelectedOdds[bet.id] === odd.id 
-                                                                    ? 'text-black' 
-                                                                    : 'text-cyan-400 group-hover/odd:text-black'
+                                                                    ? 'text-white' 
+                                                                    : 'text-red-400 group-hover/odd:text-white'
                                                             }`}>
                                                                 @{odd.odd_value.toFixed(2)}
                                                             </span>
@@ -1037,7 +1037,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                         );
                                     })}
                                     {activeTab === 'ativos' && (bet.bet_odds?.length || 0) > 7 && (
-                                        <div className="text-center py-2 text-[10px] font-black text-cyan-500/50 uppercase tracking-widest bg-white/5 rounded-xl border border-white/5">
+                                        <div className="text-center py-2 text-[10px] font-black text-red-500/50 uppercase tracking-widest bg-white/5 rounded-xl border border-white/5">
                                             + {(bet.bet_odds?.length || 0) - 7} jogadores (Ver Todos)
                                         </div>
                                     )}
@@ -1072,7 +1072,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                                     ? 'bg-white/5 hover:bg-white/10 text-gray-400 shadow-inner' 
                                                     : (!isAdmin && currentUser?.role !== 'staff' && (currentUser.balanceBrl || 0) <= 0)
                                                         ? 'bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-black border border-amber-500/20 animate-pulse'
-                                                        : 'bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-500 hover:to-blue-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.5)] scale-[1.02] border-t border-white/20'
+                                                        : 'bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white shadow-[0_0_20px_rgba(239,68,68,0.5)] scale-[1.02] border-t border-white/20'
                                             }`}
                                         >
                                             <span className="material-icons-outlined text-sm">
@@ -1092,7 +1092,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                     {isAdmin && (
                                         <button 
                                             onClick={() => viewMarketBets(bet.id)}
-                                            className="w-full py-2 text-[10px] font-bold text-gray-500 hover:text-cyan-400 uppercase tracking-tighter transition-colors flex items-center justify-center gap-1"
+                                            className="w-full py-2 text-[10px] font-bold text-gray-500 hover:text-red-400 uppercase tracking-tighter transition-colors flex items-center justify-center gap-1"
                                         >
                                             <span className="material-icons-outlined text-xs">visibility</span>
                                             Ver Apostas Realizadas
@@ -1109,7 +1109,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             {showCreateModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
                     <div className="bg-[#0a061d] border border-white/10 rounded-[32px] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-300 flex flex-col max-h-[90vh] md:max-h-[95vh]">
-                        <div className="p-8 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-cyan-500/10 to-transparent">
+                        <div className="p-8 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-red-500/10 to-transparent">
                             <h2 className="text-2xl font-black uppercase tracking-tighter">Configurar Novo Mercado</h2>
                             <button onClick={() => setShowCreateModal(false)} className="text-gray-500 hover:text-white transition-colors">
                                 <span className="material-icons-outlined">close</span>
@@ -1125,7 +1125,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                             <button
                                                 onClick={handleImportFromEvent}
                                                 disabled={importingPlayers}
-                                                className="text-[10px] font-black uppercase tracking-widest text-cyan-500 hover:text-cyan-400 flex items-center gap-1 transition-colors"
+                                                className="text-[10px] font-black uppercase tracking-widest text-red-500 hover:text-red-400 flex items-center gap-1 transition-colors"
                                             >
                                                 <span className="material-icons-outlined text-[12px]">{importingPlayers ? 'hourglass_empty' : 'group_add'}</span>
                                                 {importingPlayers ? 'Importando...' : 'Importar Reservas'}
@@ -1135,7 +1135,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                     <select 
                                         value={selectedEventId}
                                         onChange={(e) => setSelectedEventId(e.target.value)}
-                                        className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors text-white text-sm appearance-none cursor-pointer"
+                                        className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-red-500 transition-colors text-white text-sm appearance-none cursor-pointer"
                                     >
                                         <option value="" className="bg-[#0a061d] text-white">Selecione um evento...</option>
                                         {events.filter(e => e.status !== 'closed').map(e => (
@@ -1149,7 +1149,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                     <select 
                                         value={selectedCategory}
                                         onChange={(e) => setSelectedCategory(e.target.value as any)}
-                                        className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors text-white text-sm appearance-none cursor-pointer"
+                                        className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-red-500 transition-colors text-white text-sm appearance-none cursor-pointer"
                                     >
                                         <option value="campeao" className="bg-[#0a061d] text-white">Campeão</option>
                                         <option value="3handed" className="bg-[#0a061d] text-white">3-Handed</option>
@@ -1163,7 +1163,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Horário de Encerramento</label>
                                     <input 
                                         type="datetime-local"
-                                        className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors text-white text-sm cursor-pointer"
+                                        className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-red-500 transition-colors text-white text-sm cursor-pointer"
                                         value={expiresAt}
                                         onChange={(e) => setExpiresAt(e.target.value)}
                                     />
@@ -1173,7 +1173,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Aposta Máxima (R$)</label>
                                     <input 
                                         type="number"
-                                        className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors text-white text-sm"
+                                        className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-red-500 transition-colors text-white text-sm"
                                         placeholder="Ilimitado"
                                         value={maxBet}
                                         onChange={(e) => setMaxBet(e.target.value)}
@@ -1188,7 +1188,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                     <input 
                                         type="text"
                                         placeholder="Digite o nome do jogador..."
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-4 outline-none focus:border-cyan-500 transition-colors text-sm"
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-4 outline-none focus:border-red-500 transition-colors text-sm"
                                         value={playerSearch}
                                         onChange={(e) => handlePlayerSearch(e.target.value)}
                                     />
@@ -1214,7 +1214,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
 
                             {selectedPlayers.length > 0 && (
                                 <div className="space-y-4 pt-4 border-t border-white/5">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-cyan-500">Jogadores Selecionados & Odds</label>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-red-500">Jogadores Selecionados & Odds</label>
                                     <div className="space-y-2">
                                         {selectedPlayers.map(p => (
                                             <div key={p.id} className="flex items-center gap-4 bg-white/5 p-3 rounded-2xl border border-white/5">
@@ -1229,7 +1229,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                                             step="0.1"
                                                             value={p.odd}
                                                             onChange={(e) => updateOdd(p.id, parseFloat(e.target.value))}
-                                                            className="bg-transparent w-16 text-sm font-black text-cyan-400 outline-none"
+                                                            className="bg-transparent w-16 text-sm font-black text-red-400 outline-none"
                                                         />
                                                     </div>
                                                     <button onClick={() => removePlayerFromBet(p.id)} className="text-red-500 hover:text-red-400">
@@ -1257,7 +1257,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                             <button 
                                 onClick={handleCreateBet}
                                 disabled={saving}
-                                className={`flex-[2] py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black uppercase tracking-widest rounded-2xl shadow-neon-blue hover:scale-[1.02] active:scale-[0.98] transition-all ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                className={`flex-[2] py-4 bg-gradient-to-r from-red-600 to-rose-700 text-white font-black uppercase tracking-widest rounded-2xl shadow-[0_0_20px_rgba(239,68,68,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 {saving ? 'CRIANDO...' : 'CONFIRMAR MERCADO'}
                             </button>
@@ -1270,7 +1270,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             {showEditModal && editingBet && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
                     <div className="bg-[#0a061d] border border-white/10 rounded-[32px] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-300 flex flex-col max-h-[90vh] md:max-h-[95vh]">
-                        <div className="p-8 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-cyan-500/10 to-transparent">
+                        <div className="p-8 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-red-500/10 to-transparent">
                             <h2 className="text-2xl font-black uppercase tracking-tighter">Editar Mercado</h2>
                             <button onClick={() => setShowEditModal(false)} className="text-gray-500 hover:text-white transition-colors">
                                 <span className="material-icons-outlined">close</span>
@@ -1280,14 +1280,14 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                         <div className="p-8 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
                             {/* CONFIGURAÇÕES GERAIS */}
                             <div className="space-y-4 pb-6 border-b border-white/5">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-cyan-500">Configurações do Mercado</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-red-500">Configurações do Mercado</label>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Categoria</label>
                                         <select 
                                             value={selectedCategory}
                                             onChange={(e) => setSelectedCategory(e.target.value as any)}
-                                            className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors text-white text-sm appearance-none cursor-pointer"
+                                            className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-red-500 transition-colors text-white text-sm appearance-none cursor-pointer"
                                         >
                                             <option value="campeao" className="bg-[#0a061d] text-white">Campeão</option>
                                             <option value="3handed" className="bg-[#0a061d] text-white">3-Handed</option>
@@ -1301,7 +1301,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                         <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Fim das Apostas</label>
                                         <input 
                                             type="datetime-local"
-                                            className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors text-white text-sm cursor-pointer"
+                                            className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-red-500 transition-colors text-white text-sm cursor-pointer"
                                             value={expiresAt}
                                             onChange={(e) => setExpiresAt(e.target.value)}
                                         />
@@ -1311,7 +1311,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                         <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Aposta Máxima (R$)</label>
                                         <input 
                                             type="number"
-                                            className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors text-white text-sm"
+                                            className="w-full bg-[#0a061d] border border-white/10 rounded-2xl px-4 py-3 outline-none focus:border-red-500 transition-colors text-white text-sm"
                                             placeholder="Ilimitado"
                                             value={maxBet}
                                             onChange={(e) => setMaxBet(e.target.value)}
@@ -1326,7 +1326,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                     <button
                                         onClick={handleImportFromEvent}
                                         disabled={importingPlayers}
-                                        className="text-[10px] font-black uppercase tracking-widest text-cyan-500 hover:text-cyan-400 flex items-center gap-1 transition-colors"
+                                        className="text-[10px] font-black uppercase tracking-widest text-red-500 hover:text-red-400 flex items-center gap-1 transition-colors"
                                     >
                                         <span className="material-icons-outlined text-[12px]">{importingPlayers ? 'hourglass_empty' : 'group_add'}</span>
                                         {importingPlayers ? 'Importando...' : 'Importar Reservas do Evento'}
@@ -1337,7 +1337,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                     <input 
                                         type="text"
                                         placeholder="Adicionar novo jogador..."
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-4 outline-none focus:border-cyan-500 transition-colors text-sm"
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-4 outline-none focus:border-red-500 transition-colors text-sm"
                                         value={playerSearch}
                                         onChange={(e) => handlePlayerSearch(e.target.value)}
                                     />
@@ -1363,7 +1363,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
 
                             {selectedPlayers.length > 0 && (
                                 <div className="space-y-4 pt-4 border-t border-white/5">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-cyan-500">Gerenciar Jogadores & Odds</label>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-red-500">Gerenciar Jogadores & Odds</label>
                                     <div className="space-y-2">
                                         {selectedPlayers.map(p => (
                                             <div key={p.id} className="flex items-center gap-4 bg-white/5 p-3 rounded-2xl border border-white/5">
@@ -1378,7 +1378,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                                             step="0.1"
                                                             value={p.odd}
                                                             onChange={(e) => updateOdd(p.id, parseFloat(e.target.value))}
-                                                            className="bg-transparent w-12 text-xs font-black text-cyan-400 outline-none"
+                                                            className="bg-transparent w-12 text-xs font-black text-red-400 outline-none"
                                                         />
                                                     </div>
                                                     {p.odd_id && (
@@ -1416,7 +1416,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                 <button 
                                     onClick={handleUpdateBet} 
                                     disabled={saving}
-                                    className={`flex-[2] py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black uppercase tracking-widest rounded-2xl shadow-neon-blue hover:scale-[1.02] transition-all ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    className={`flex-[2] py-4 bg-gradient-to-r from-red-600 to-rose-700 text-white font-black uppercase tracking-widest rounded-2xl shadow-[0_0_20px_rgba(239,68,68,0.3)] hover:scale-[1.02] transition-all ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
                                     {saving ? 'SALVANDO...' : 'SALVAR ALTERAÇÕES'}
                                 </button>
@@ -1449,7 +1449,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             {showPlaceBetModal && placingBetOn && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
                     <div className="bg-[#0a061d] border border-white/10 rounded-[32px] w-full max-w-xl shadow-2xl overflow-hidden animate-in zoom-in duration-300 flex flex-col max-h-[98vh]">
-                        <div className="p-6 md:p-8 border-b border-white/5 bg-gradient-to-r from-cyan-500/10 to-transparent flex-shrink-0">
+                        <div className="p-6 md:p-8 border-b border-white/5 bg-gradient-to-r from-red-500/10 to-transparent flex-shrink-0">
                             <h2 className="text-xl md:text-2xl font-black uppercase tracking-tighter">Emitir Aposta</h2>
                             <p className="text-[10px] md:text-xs text-gray-400 mt-1">{(placingBetOn.events?.title) || 'Sem Evento'} - {(placingBetOn.category || '').replace('_', ' ')}</p>
                         </div>
@@ -1462,19 +1462,19 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                         <button 
                                             key={odd.id}
                                             onClick={() => setSelectedOddId(odd.id)}
-                                            className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${selectedOddId === odd.id ? 'bg-cyan-500/20 border-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.15)]' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}
+                                            className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${selectedOddId === odd.id ? 'bg-red-500/20 border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.15)]' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}
                                         >
                                             <div className="flex items-center gap-4">
                                                 <img 
                                                     src={odd.profiles?.avatar_url || 'https://ui-avatars.com/api/?name=' + (odd.profiles?.name || odd.guest_name)} 
-                                                    className={`w-10 h-10 rounded-full border transition-all ${selectedOddId === odd.id ? 'border-cyan-500' : 'border-white/10'}`}
+                                                    className={`w-10 h-10 rounded-full border transition-all ${selectedOddId === odd.id ? 'border-red-500' : 'border-white/10'}`}
                                                 />
                                                 <div className="text-left">
-                                                    <p className={`text-sm font-bold ${selectedOddId === odd.id ? 'text-cyan-400' : 'text-white'}`}>{odd.profiles?.name || odd.guest_name}</p>
+                                                    <p className={`text-sm font-bold ${selectedOddId === odd.id ? 'text-red-400' : 'text-white'}`}>{odd.profiles?.name || odd.guest_name}</p>
                                                     <p className="text-[10px] text-gray-500 uppercase font-black">Odd: {odd.odd_value.toFixed(2)}</p>
                                                 </div>
                                             </div>
-                                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${selectedOddId === odd.id ? 'border-cyan-500 bg-cyan-500' : 'border-white/20'}`}>
+                                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${selectedOddId === odd.id ? 'border-red-500 bg-red-500' : 'border-white/20'}`}>
                                                 {selectedOddId === odd.id && <span className="material-icons-outlined text-black text-[16px] font-black">check</span>}
                                             </div>
                                         </button>
@@ -1488,7 +1488,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                     <div className="relative">
                                         <input 
                                             type="number"
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 outline-none focus:border-cyan-500 transition-colors text-white font-bold text-lg"
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 outline-none focus:border-red-500 transition-colors text-white font-bold text-lg"
                                             placeholder="0,00"
                                             value={betAmount}
                                             onChange={(e) => setBetAmount(e.target.value)}
@@ -1515,7 +1515,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                 <div className="relative">
                                     <input 
                                         type="text"
-                                        className={`w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 outline-none transition-colors text-white font-bold ${!isAdmin && isLoggedIn ? 'opacity-60 cursor-not-allowed' : 'focus:border-cyan-500'}`}
+                                        className={`w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 outline-none transition-colors text-white font-bold ${!isAdmin && isLoggedIn ? 'opacity-60 cursor-not-allowed' : 'focus:border-red-500'}`}
                                         placeholder="Buscar ou digitar nome..."
                                         value={punterSearch}
                                         onChange={(e) => handlePunterSearch(e.target.value)}
@@ -1543,9 +1543,9 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                     )}
                                 </div>
                                 {selectedPunter ? (
-                                    <div className="flex items-center gap-2 px-3 py-2 bg-cyan-500/10 border border-cyan-500/20 rounded-xl mt-1">
-                                        <span className="material-icons-outlined text-cyan-400 text-sm">person</span>
-                                        <span className="text-[10px] font-bold text-cyan-400 uppercase">Perfil Vinculado: {selectedPunter.name}</span>
+                                    <div className="flex items-center gap-2 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-xl mt-1">
+                                        <span className="material-icons-outlined text-red-400 text-sm">person</span>
+                                        <span className="text-[10px] font-bold text-red-400 uppercase">Perfil Vinculado: {selectedPunter.name}</span>
                                     </div>
                                 ) : punterSearch.length > 2 && (
                                     <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl mt-1">
@@ -1572,9 +1572,9 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                         <button
                                             key={method.id}
                                             onClick={() => setPaymentMethod(method.id as any)}
-                                            className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all gap-1 ${paymentMethod === method.id ? 'bg-cyan-500/20 border-cyan-500/50' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}
+                                            className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all gap-1 ${paymentMethod === method.id ? 'bg-red-500/20 border-red-500/50' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}
                                         >
-                                            <span className={`material-icons-outlined text-lg ${paymentMethod === method.id ? 'text-cyan-400' : 'text-gray-500'}`}>{method.icon}</span>
+                                            <span className={`material-icons-outlined text-lg ${paymentMethod === method.id ? 'text-red-400' : 'text-gray-500'}`}>{method.icon}</span>
                                             <span className={`text-[9px] font-black uppercase tracking-tighter ${paymentMethod === method.id ? 'text-white' : 'text-gray-500'}`}>{method.label}</span>
                                         </button>
                                     ))}
@@ -1598,7 +1598,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                             </button>
                             <button 
                                 onClick={handlePlaceBet}
-                                className="flex-[2] py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-green-500/20"
+                                className="flex-[2] py-4 bg-gradient-to-r from-red-500 to-rose-600 text-white font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-red-500/20"
                             >
                                 APOSTAR AGORA
                             </button>
@@ -1611,7 +1611,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             {showViewBetsModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
                     <div className="bg-[#0a061d] border border-white/10 rounded-[32px] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-300 flex flex-col max-h-[90vh] md:max-h-[95vh]">
-                        <div className="p-8 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-purple-500/10 to-transparent">
+                        <div className="p-8 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-red-500/10 to-transparent">
                             <h2 className="text-2xl font-black uppercase tracking-tighter">Apostas Realizadas</h2>
                             <button onClick={() => setShowViewBetsModal(false)} className="text-gray-500 hover:text-white transition-colors">
                                 <span className="material-icons-outlined">close</span>
@@ -1628,7 +1628,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                             <div className="flex items-center gap-2 mb-1">
                                                 <span className="text-sm font-bold text-white">{bet.punter_name}</span>
                                                 <span className="text-[10px] text-gray-500 uppercase font-bold bg-white/5 px-2 py-0.5 rounded">apostou em</span>
-                                                <span className="text-sm font-black text-cyan-400">
+                                                <span className="text-sm font-black text-red-400">
                                                     {(bet.bet_odds as any)?.profiles?.name || (bet.bet_odds as any)?.profiles?.[0]?.name || bet.bet_odds?.guest_name || 'N/A'}
                                                 </span>
                                                 <span className="text-[10px] px-2 py-0.5 bg-white/10 rounded text-gray-400">ID: {bet.id.slice(0, 8)}</span>
@@ -1638,7 +1638,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                             </p>
                                         </div>
                                         <div className="flex items-center gap-3">
-                                            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded border ${bet.payment_method === 'credits' ? 'border-cyan-500/50 text-cyan-400' : bet.payment_method === 'debt' ? 'border-amber-500/50 text-amber-400' : 'border-green-500/50 text-green-400'}`}>
+                                            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded border ${bet.payment_method === 'credits' ? 'border-red-500/50 text-red-400' : bet.payment_method === 'debt' ? 'border-amber-500/50 text-amber-400' : 'border-green-500/50 text-green-400'}`}>
                                                 {bet.payment_method || 'pix'}
                                             </span>
                                             <span className={`text-[10px] font-black uppercase px-3 py-1 rounded-full ${bet.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' : bet.status === 'won' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
