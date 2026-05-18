@@ -68,6 +68,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
     const [betAmount, setBetAmount] = useState<string>('');
     const [preSelectedOdds, setPreSelectedOdds] = useState<Record<string, string>>({});
     const [activeTab, setActiveTab] = useState<'ativos' | 'encerrados'>('ativos');
+    const [expandedBets, setExpandedBets] = useState<Record<string, boolean>>({});
     useEffect(() => {
         fetchBets();
     }, []);
@@ -931,7 +932,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                     </p>
                                 </div>
                                 <div className="p-4 space-y-2 flex-1">
-                                    {(activeTab === 'ativos' ? bet.bet_odds?.slice(0, 7) : bet.bet_odds)?.map(odd => {
+                                    {((activeTab === 'ativos' && !expandedBets[bet.id]) ? bet.bet_odds?.slice(0, 7) : bet.bet_odds)?.map(odd => {
                                         const isWinner = odd.status === 'win';
                                         
                                         return (
@@ -1037,9 +1038,22 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                         );
                                     })}
                                     {activeTab === 'ativos' && (bet.bet_odds?.length || 0) > 7 && (
-                                        <div className="text-center py-2 text-[10px] font-black text-red-500/50 uppercase tracking-widest bg-white/5 rounded-xl border border-white/5">
-                                            + {(bet.bet_odds?.length || 0) - 7} jogadores (Ver Todos)
-                                        </div>
+                                        <button 
+                                            onClick={() => setExpandedBets(prev => ({ ...prev, [bet.id]: !prev[bet.id] }))}
+                                            className="w-full text-center py-2.5 text-[10px] font-black text-red-500/50 hover:text-red-400 uppercase tracking-widest bg-white/5 hover:bg-white/10 rounded-xl border border-white/5 hover:border-red-500/20 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                        >
+                                            {expandedBets[bet.id] ? (
+                                                <>
+                                                    <span className="material-icons-outlined text-xs">keyboard_arrow_up</span>
+                                                    Ver Menos
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <span className="material-icons-outlined text-xs">keyboard_arrow_down</span>
+                                                    + {(bet.bet_odds?.length || 0) - 7} jogadores (Ver Todos)
+                                                </>
+                                            )}
+                                        </button>
                                     )}
                                 </div>
                                 <div className="p-2 bg-black/20 flex flex-col gap-2">
