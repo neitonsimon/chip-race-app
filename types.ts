@@ -213,11 +213,12 @@ export interface ChipzPackage {
   id: string;
   amount: number;
   price: number;
-  stock: number;
-  popular: boolean;
+  stock?: number;
+  popular?: boolean;
   active: boolean;
   name?: string; // Mantido como opcional para compatibilidade temporária
   bonus?: number; // Mantido como opcional para compatibilidade temporária
+  bonus_percentage?: number;
 }
 
 // tier rewards removed as requested
@@ -316,6 +317,7 @@ export interface MonthData {
   qualifiers: number | string;
   prize: number | string;
   isActive?: boolean;
+  status?: 'active' | 'completed' | 'locked';
 }
 
 

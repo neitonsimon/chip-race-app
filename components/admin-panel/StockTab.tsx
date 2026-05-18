@@ -180,7 +180,7 @@ export const StockTab: React.FC<StockTabProps> = ({ currentUser }) => {
             alert('✅ Base de estoque criada e vinculada com sucesso!');
             await fetchData();
             setPItemId(newItem.id);
-            setPCategory(newItem.category);
+            setPCategory(product.category || 'bar');
         } catch (error: any) {
             console.error(error);
             alert('Erro ao criar vínculo: ' + error.message);

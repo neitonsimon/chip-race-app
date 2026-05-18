@@ -6,8 +6,8 @@ import { useApp } from '../contexts/AppContext';
 interface Bet {
     id: string;
     event_id: string;
-    category: 'campeao' | '3handed' | 'mesa_finalista';
-    status: 'open' | 'closed' | 'settled';
+    category: 'campeao' | '3handed' | 'mesa_finalista' | 'primeiro_eliminado' | 'bolha_itm';
+    status: 'open' | 'closed' | 'settled' | 'archived';
     expires_at?: string;
     max_bet?: number;
     total_wagered?: number;
@@ -25,6 +25,14 @@ interface BetOdd {
     profiles?: { name: string; avatar_url: string };
 }
 
+const categoryLabels: Record<string, string> = {
+    campeao: 'Campeão',
+    '3handed': '3-Handed',
+    mesa_finalista: 'Mesa Finalista',
+    primeiro_eliminado: 'Primeiro Eliminado',
+    bolha_itm: 'Bolha ITM'
+};
+
 export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) => void }> = ({ isAdmin, onNavigate }) => {
     const { events, getAllUniquePlayers, isLoggedIn, currentUser, allProfiles, refreshSupabaseData } = useApp();
     const [bets, setBets] = useState<Bet[]>([]);
@@ -33,7 +41,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
     
     // Form state
     const [selectedEventId, setSelectedEventId] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState<'campeao' | '3handed' | 'mesa_finalista'>('campeao');
+    const [selectedCategory, setSelectedCategory] = useState<'campeao' | '3handed' | 'mesa_finalista' | 'primeiro_eliminado' | 'bolha_itm'>('campeao');
     const [expiresAt, setExpiresAt] = useState('');
     const [maxBet, setMaxBet] = useState<string>('');
     const [playerSearch, setPlayerSearch] = useState('');
@@ -59,6 +67,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
     const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credits' | 'debt'>('pix');
     const [betAmount, setBetAmount] = useState<string>('');
     const [preSelectedOdds, setPreSelectedOdds] = useState<Record<string, string>>({});
+    const [activeTab, setActiveTab] = useState<'ativos' | 'encerrados'>('ativos');
     useEffect(() => {
         fetchBets();
     }, []);
@@ -384,6 +393,180 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
         }
     };
 
+    const handleToggleArchiveBet = async () => {
+        if (!editingBet || saving) return;
+        setSaving(true);
+        const isArchived = editingBet.status === 'archived';
+        const newStatus = isArchived ? 'open' : 'archived';
+
+        try {
+            const { error } = await supabase
+                .from('bets')
+                .update({ status: newStatus })
+                .eq('id', editingBet.id);
+
+            if (error) throw error;
+
+            alert(isArchived ? 'Mercado desarquivado com sucesso!' : 'Mercado arquivado com sucesso!');
+            setShowEditModal(false);
+            fetchBets();
+            if (refreshSupabaseData) await refreshSupabaseData();
+        } catch (error: any) {
+            console.error('Error toggling archive status:', error);
+            alert('Erro ao alterar status de arquivamento: ' + error.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleToggleWinner = async (bet: Bet, oddId: string, currentStatus: string) => {
+        if (saving) return;
+        setSaving(true);
+        const newStatus = currentStatus === 'win' ? 'active' : 'win';
+
+        try {
+            const isSingleWinner = ['campeao', 'primeiro_eliminado', 'bolha_itm'].includes(bet.category);
+
+            if (newStatus === 'win') {
+                if (isSingleWinner) {
+                    // Set all other odds in this bet to loss first
+                    await supabase
+                        .from('bet_odds')
+                        .update({ status: 'loss' })
+                        .eq('bet_id', bet.id);
+
+                    // Set all other user_bets in this bet to lost first
+                    await supabase
+                        .from('user_bets')
+                        .update({ status: 'lost' })
+                        .eq('bet_id', bet.id);
+                }
+
+                // Update this specific odd to win
+                const { error: oddError } = await supabase
+                    .from('bet_odds')
+                    .update({ status: 'win' })
+                    .eq('id', oddId);
+
+                if (oddError) throw oddError;
+
+                // Update user_bets for this specific odd to won
+                const { error: userBetsError } = await supabase
+                    .from('user_bets')
+                    .update({ status: 'won' })
+                    .eq('odd_id', oddId);
+
+                if (userBetsError) throw userBetsError;
+
+                // Handle credit payout for all winning bets of this odd
+                const { data: winningBets } = await supabase
+                    .from('user_bets')
+                    .select('id, punter_id, potential_return, payment_method, status')
+                    .eq('odd_id', oddId);
+
+                if (winningBets && winningBets.length > 0) {
+                    for (const userBet of winningBets) {
+                        if (userBet.punter_id && userBet.payment_method === 'credits') {
+                            // Fetch latest profile balance
+                            const { data: profile } = await supabase
+                                .from('profiles')
+                                .select('balance_brl')
+                                .eq('id', userBet.punter_id)
+                                .single();
+
+                            if (profile) {
+                                const currentBalance = Number(profile.balance_brl) || 0;
+                                const payoutAmount = Number(userBet.potential_return) || 0;
+                                const newBalance = currentBalance + payoutAmount;
+
+                                await supabase
+                                    .from('profiles')
+                                    .update({ balance_brl: newBalance })
+                                    .eq('id', userBet.punter_id);
+
+                                // Add an audit log transaction record
+                                await supabase.from('transactions').insert({
+                                    user_id: userBet.punter_id,
+                                    type: 'credit',
+                                    category: 'purchase',
+                                    amount_brl: payoutAmount,
+                                    amount_chipz: 0,
+                                    description: `Aposta ganha no Bet #${bet.id.slice(0, 8)}`,
+                                    metadata: { bet_id: bet.id, odd_id: oddId, user_bet_id: userBet.id }
+                                });
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Rollback: changing back to active
+                const { error: oddError } = await supabase
+                    .from('bet_odds')
+                    .update({ status: 'active' })
+                    .eq('id', oddId);
+
+                if (oddError) throw oddError;
+
+                // Select the bets that were marked as won so we can rollback their balances
+                const { data: rollbackBets } = await supabase
+                    .from('user_bets')
+                    .select('id, punter_id, potential_return, payment_method, status')
+                    .eq('odd_id', oddId);
+
+                // Update user_bets for this specific odd back to pending
+                const { error: userBetsError } = await supabase
+                    .from('user_bets')
+                    .update({ status: 'pending' })
+                    .eq('odd_id', oddId);
+
+                if (userBetsError) throw userBetsError;
+
+                if (rollbackBets && rollbackBets.length > 0) {
+                    for (const userBet of rollbackBets) {
+                        if (userBet.punter_id && userBet.payment_method === 'credits') {
+                            const { data: profile } = await supabase
+                                .from('profiles')
+                                .select('balance_brl')
+                                .eq('id', userBet.punter_id)
+                                .single();
+
+                            if (profile) {
+                                const currentBalance = Number(profile.balance_brl) || 0;
+                                const payoutAmount = Number(userBet.potential_return) || 0;
+                                const newBalance = Math.max(0, currentBalance - payoutAmount);
+
+                                await supabase
+                                    .from('profiles')
+                                    .update({ balance_brl: newBalance })
+                                    .eq('id', userBet.punter_id);
+
+                                // Add a rollback audit log transaction record
+                                await supabase.from('transactions').insert({
+                                    user_id: userBet.punter_id,
+                                    type: 'debit',
+                                    category: 'purchase',
+                                    amount_brl: payoutAmount,
+                                    amount_chipz: 0,
+                                    description: `Estorno de aposta no Bet #${bet.id.slice(0, 8)}`,
+                                    metadata: { bet_id: bet.id, odd_id: oddId, user_bet_id: userBet.id }
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            alert('Resultado atualizado com sucesso!');
+            fetchBets();
+            if (refreshSupabaseData) await refreshSupabaseData();
+        } catch (err: any) {
+            console.error('Error toggling winner status:', err);
+            alert('Erro ao atualizar resultado final: ' + err.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const handlePlaceBet = async () => {
         const amount = parseFloat(betAmount);
         if (!selectedOddId || amount <= 0 || !punterSearch) {
@@ -584,6 +767,14 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
         );
     };
 
+    const filteredBets = bets.filter(bet => {
+        if (activeTab === 'ativos') {
+            return bet.status !== 'archived';
+        } else {
+            return bet.status === 'archived';
+        }
+    });
+
     return (
         <div className="min-h-screen bg-[#050821] text-white pt-10 pb-20 px-4">
             <div className="max-w-[1400px] mx-auto w-full">
@@ -608,24 +799,61 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                     )}
                 </div>
 
+                {/* Tab Switcher */}
+                <div className="flex justify-center mb-10">
+                    <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 shadow-lg backdrop-blur-md">
+                        <button
+                            onClick={() => setActiveTab('ativos')}
+                            className={`px-6 sm:px-8 py-3 rounded-xl text-xs font-black uppercase tracking-[0.15em] transition-all duration-300 flex items-center gap-2 ${
+                                activeTab === 'ativos'
+                                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-[0_0_15px_rgba(6,182,212,0.3)]'
+                                    : 'text-gray-400 hover:text-white'
+                            }`}
+                        >
+                            <span className="material-icons-outlined text-sm">sports_esports</span>
+                            Mercados Ativos
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('encerrados')}
+                            className={`px-6 sm:px-8 py-3 rounded-xl text-xs font-black uppercase tracking-[0.15em] transition-all duration-300 flex items-center gap-2 ${
+                                activeTab === 'encerrados'
+                                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-[0_0_15px_rgba(6,182,212,0.3)]'
+                                    : 'text-gray-400 hover:text-white'
+                            }`}
+                        >
+                            <span className="material-icons-outlined text-sm">history</span>
+                            Bets Encerrados
+                        </button>
+                    </div>
+                </div>
+
                 {loading && !showViewBetsModal ? (
                     <div className="flex justify-center py-20">
                         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyan-500"></div>
                     </div>
-                ) : bets.length === 0 ? (
-                    <div className="bg-white/5 border border-white/10 rounded-3xl p-20 text-center">
-                        <span className="material-icons-outlined text-6xl text-white/10 mb-4">sports_esports</span>
-                        <p className="text-gray-500">Nenhum mercado de apostas disponível no momento.</p>
+                ) : filteredBets.length === 0 ? (
+                    <div className="bg-white/5 border border-white/10 rounded-3xl p-20 text-center max-w-2xl mx-auto backdrop-blur-sm">
+                        <span className="material-icons-outlined text-6xl text-cyan-500/20 mb-4 animate-pulse">
+                            {activeTab === 'ativos' ? 'sports_esports' : 'history'}
+                        </span>
+                        <p className="text-gray-400 font-bold uppercase tracking-widest text-sm mb-2">
+                            {activeTab === 'ativos' ? 'Nenhum Mercado Ativo' : 'Nenhum Bet Encerrado'}
+                        </p>
+                        <p className="text-gray-500 text-xs font-medium">
+                            {activeTab === 'ativos' 
+                                ? 'No momento não existem mercados de apostas ativos. Volte mais tarde!' 
+                                : 'Ainda não existem apostas ou mercados encerrados/arquivados.'}
+                        </p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 w-full">
-                        {bets.map(bet => (
+                        {filteredBets.map(bet => (
                             <div key={bet.id} className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden hover:border-cyan-500/30 transition-all group flex flex-col">
                                 <div className="p-6 border-b border-white/5 bg-gradient-to-br from-white/5 to-transparent relative">
                                     <div className="flex justify-between items-start mb-4">
                                         <div className="flex flex-col gap-3">
                                             <span className="text-sm w-fit font-black uppercase tracking-widest px-4 py-1.5 bg-gradient-to-r from-cyan-500/30 to-blue-600/30 border border-cyan-500/50 text-cyan-200 rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.3)]">
-                                                {bet.category.replace('_', ' ')}
+                                                {categoryLabels[bet.category] || bet.category.replace('_', ' ')}
                                             </span>
                                             <CountdownTimer expiresAt={bet.expires_at} />
                                         </div>
@@ -679,30 +907,112 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                         {new Date(bet.events?.date || '').toLocaleDateString('pt-BR')}
                                     </p>
                                 </div>
-                                 <div className="p-4 space-y-2 flex-1">
-                                    {bet.bet_odds?.slice(0, 7).map(odd => (
-                                        <div 
-                                            key={odd.id} 
-                                            onClick={() => setPreSelectedOdds(prev => ({ ...prev, [bet.id]: odd.id }))}
-                                            className={`flex items-center justify-between py-3 px-5 rounded-2xl border transition-all cursor-pointer group/odd ${preSelectedOdds[bet.id] === odd.id ? 'bg-cyan-500/20 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.15)]' : 'bg-black/40 border-transparent hover:bg-cyan-500/10 hover:border-cyan-500/20'}`}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <img 
-                                                    src={odd.profiles?.avatar_url || 'https://ui-avatars.com/api/?name=' + (odd.profiles?.name || odd.guest_name)} 
-                                                    alt={odd.profiles?.name || odd.guest_name} 
-                                                    className={`w-10 h-10 rounded-full border transition-colors ${preSelectedOdds[bet.id] === odd.id ? 'border-cyan-500' : 'border-white/10 group-hover/odd:border-cyan-500/50'}`}
-                                                />
-                                                <div className="flex flex-col">
-                                                    <span className={`text-sm font-bold transition-colors ${preSelectedOdds[bet.id] === odd.id ? 'text-cyan-400' : 'group-hover/odd:text-cyan-400'}`}>{odd.profiles?.name || odd.guest_name}</span>
-                                                    <span className="text-[9px] text-gray-500 uppercase font-black">Odd Fixa</span>
+                                <div className="p-4 space-y-2 flex-1">
+                                    {(activeTab === 'ativos' ? bet.bet_odds?.slice(0, 7) : bet.bet_odds)?.map(odd => {
+                                        const isWinner = odd.status === 'win';
+                                        
+                                        return (
+                                            <div 
+                                                key={odd.id} 
+                                                onClick={() => {
+                                                    if (activeTab === 'ativos') {
+                                                        setPreSelectedOdds(prev => ({ ...prev, [bet.id]: odd.id }));
+                                                    }
+                                                }}
+                                                className={`flex items-center justify-between py-3 px-5 rounded-2xl border transition-all ${
+                                                    activeTab === 'ativos'
+                                                        ? preSelectedOdds[bet.id] === odd.id
+                                                            ? 'bg-cyan-500/20 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.15)] cursor-pointer group/odd'
+                                                            : 'bg-black/40 border-transparent hover:bg-cyan-500/10 hover:border-cyan-500/20 cursor-pointer group/odd'
+                                                        : isWinner
+                                                            ? 'bg-green-500/15 border-green-500/40 shadow-[0_0_15px_rgba(74,222,128,0.08)]'
+                                                            : 'bg-black/20 border-white/5 opacity-70'
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <img 
+                                                        src={odd.profiles?.avatar_url || 'https://ui-avatars.com/api/?name=' + (odd.profiles?.name || odd.guest_name)} 
+                                                        alt={odd.profiles?.name || odd.guest_name} 
+                                                        className={`w-10 h-10 rounded-full border transition-colors ${
+                                                            activeTab === 'ativos'
+                                                                ? preSelectedOdds[bet.id] === odd.id
+                                                                    ? 'border-cyan-500'
+                                                                    : 'border-white/10 group-hover/odd:border-cyan-500/50'
+                                                                : isWinner
+                                                                    ? 'border-green-500 shadow-[0_0_10px_rgba(74,222,128,0.3)]'
+                                                                    : 'border-white/5'
+                                                        }`}
+                                                    />
+                                                    <div className="flex flex-col">
+                                                        <span className={`text-sm font-bold transition-colors ${
+                                                            activeTab === 'ativos'
+                                                                ? preSelectedOdds[bet.id] === odd.id
+                                                                    ? 'text-cyan-400'
+                                                                    : 'group-hover/odd:text-cyan-400'
+                                                                : isWinner
+                                                                    ? 'text-green-400 font-extrabold'
+                                                                    : 'text-gray-400'
+                                                        }`}>
+                                                            {odd.profiles?.name || odd.guest_name}
+                                                        </span>
+                                                        <span className="text-[9px] text-gray-500 uppercase font-black">Odd Fixa</span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center gap-2">
+                                                    {activeTab === 'encerrados' ? (
+                                                        <>
+                                                            {isAdmin ? (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleToggleWinner(bet, odd.id, odd.status);
+                                                                    }}
+                                                                    disabled={saving}
+                                                                    className={`px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                                                                        isWinner
+                                                                            ? 'bg-green-500/20 border-green-500/50 text-green-400 hover:bg-green-500/30'
+                                                                            : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'
+                                                                    } ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                >
+                                                                    <span className="material-icons text-xs">
+                                                                        {isWinner ? 'emoji_events' : 'radio_button_unchecked'}
+                                                                    </span>
+                                                                    {isWinner ? 'Vencedor' : 'Marcar Vencedor'}
+                                                                </button>
+                                                            ) : (
+                                                                isWinner ? (
+                                                                    <span className="px-3 py-1.5 bg-green-500/20 border border-green-500/30 text-green-400 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+                                                                        <span className="material-icons text-xs">emoji_events</span>
+                                                                        Vencedor
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="text-xs text-gray-600 font-black">
+                                                                        @{odd.odd_value.toFixed(2)}
+                                                                    </span>
+                                                                )
+                                                            )}
+                                                        </>
+                                                    ) : (
+                                                        <div className={`px-4 py-2 rounded-xl transition-all ${
+                                                            preSelectedOdds[bet.id] === odd.id 
+                                                                ? 'bg-cyan-500 text-black border border-cyan-500' 
+                                                                : 'bg-cyan-500/10 border border-cyan-500/20 group-hover/odd:bg-cyan-500 group-hover/odd:text-black'
+                                                        }`}>
+                                                            <span className={`font-black transition-colors ${
+                                                                preSelectedOdds[bet.id] === odd.id 
+                                                                    ? 'text-black' 
+                                                                    : 'text-cyan-400 group-hover/odd:text-black'
+                                                            }`}>
+                                                                @{odd.odd_value.toFixed(2)}
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
-                                            <div className={`px-4 py-2 rounded-xl transition-all ${preSelectedOdds[bet.id] === odd.id ? 'bg-cyan-500 text-black border border-cyan-500' : 'bg-cyan-500/10 border border-cyan-500/20 group-hover/odd:bg-cyan-500 group-hover/odd:text-black'}`}>
-                                                <span className={`font-black transition-colors ${preSelectedOdds[bet.id] === odd.id ? 'text-black' : 'text-cyan-400 group-hover/odd:text-black'}`}>@{odd.odd_value.toFixed(2)}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {(bet.bet_odds?.length || 0) > 7 && (
+                                        );
+                                    })}
+                                    {activeTab === 'ativos' && (bet.bet_odds?.length || 0) > 7 && (
                                         <div className="text-center py-2 text-[10px] font-black text-cyan-500/50 uppercase tracking-widest bg-white/5 rounded-xl border border-white/5">
                                             + {(bet.bet_odds?.length || 0) - 7} jogadores (Ver Todos)
                                         </div>
@@ -774,7 +1084,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             {/* Create Bet Modal */}
             {showCreateModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-                    <div className="bg-[#0a061d] border border-white/10 rounded-[32px] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+                    <div className="bg-[#0a061d] border border-white/10 rounded-[32px] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-300 flex flex-col max-h-[90vh] md:max-h-[95vh]">
                         <div className="p-8 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-cyan-500/10 to-transparent">
                             <h2 className="text-2xl font-black uppercase tracking-tighter">Configurar Novo Mercado</h2>
                             <button onClick={() => setShowCreateModal(false)} className="text-gray-500 hover:text-white transition-colors">
@@ -782,7 +1092,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                             </button>
                         </div>
 
-                        <div className="p-8 space-y-6 max-h-[85vh] overflow-y-auto custom-scrollbar">
+                        <div className="p-8 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between">
@@ -820,6 +1130,8 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                         <option value="campeao" className="bg-[#0a061d] text-white">Campeão</option>
                                         <option value="3handed" className="bg-[#0a061d] text-white">3-Handed</option>
                                         <option value="mesa_finalista" className="bg-[#0a061d] text-white">Mesa Finalista</option>
+                                        <option value="primeiro_eliminado" className="bg-[#0a061d] text-white">Primeiro Eliminado</option>
+                                        <option value="bolha_itm" className="bg-[#0a061d] text-white">Bolha ITM</option>
                                     </select>
                                 </div>
 
@@ -933,7 +1245,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             {/* Edit Bet Modal */}
             {showEditModal && editingBet && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-                    <div className="bg-[#0a061d] border border-white/10 rounded-[32px] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+                    <div className="bg-[#0a061d] border border-white/10 rounded-[32px] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-300 flex flex-col max-h-[90vh] md:max-h-[95vh]">
                         <div className="p-8 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-cyan-500/10 to-transparent">
                             <h2 className="text-2xl font-black uppercase tracking-tighter">Editar Mercado</h2>
                             <button onClick={() => setShowEditModal(false)} className="text-gray-500 hover:text-white transition-colors">
@@ -941,7 +1253,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                             </button>
                         </div>
 
-                        <div className="p-8 space-y-6 max-h-[85vh] overflow-y-auto custom-scrollbar">
+                        <div className="p-8 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
                             {/* CONFIGURAÇÕES GERAIS */}
                             <div className="space-y-4 pb-6 border-b border-white/5">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-cyan-500">Configurações do Mercado</label>
@@ -956,6 +1268,8 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                             <option value="campeao" className="bg-[#0a061d] text-white">Campeão</option>
                                             <option value="3handed" className="bg-[#0a061d] text-white">3-Handed</option>
                                             <option value="mesa_finalista" className="bg-[#0a061d] text-white">Mesa Finalista</option>
+                                            <option value="primeiro_eliminado" className="bg-[#0a061d] text-white">Primeiro Eliminado</option>
+                                            <option value="bolha_itm" className="bg-[#0a061d] text-white">Bolha ITM</option>
                                         </select>
                                     </div>
 
@@ -1054,9 +1368,9 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                             )}
                         </div>
 
-                        <div className="p-8 border-t border-white/5 flex flex-col gap-4">
+                        <div className="p-8 border-t border-white/5 flex flex-col gap-3">
                             <div className="flex gap-4">
-                                <button onClick={() => setShowEditModal(false)} className="flex-1 py-4 bg-white/5 text-white font-bold rounded-2xl">CANCELAR</button>
+                                <button onClick={() => setShowEditModal(false)} className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-white font-bold rounded-2xl transition-colors">CANCELAR</button>
                                 <button 
                                     onClick={handleUpdateBet} 
                                     disabled={saving}
@@ -1065,13 +1379,25 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                     {saving ? 'SALVANDO...' : 'SALVAR ALTERAÇÕES'}
                                 </button>
                             </div>
-                            <button 
-                                onClick={handleDeleteBet}
-                                className="w-full py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-[0.2em] rounded-xl border border-red-500/20 transition-all flex items-center justify-center gap-2 group"
-                            >
-                                <span className="material-icons-outlined text-sm group-hover:shake">delete_forever</span>
-                                EXCLUIR MERCADO PERMANENTEMENTE
-                            </button>
+                            <div className="grid grid-cols-2 gap-3 mt-1">
+                                <button 
+                                    onClick={handleToggleArchiveBet}
+                                    disabled={saving}
+                                    className={`w-full py-3 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 text-[10px] font-black uppercase tracking-[0.2em] rounded-xl border border-amber-500/20 transition-all flex items-center justify-center gap-2 group ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
+                                    <span className="material-icons-outlined text-sm group-hover:rotate-12 transition-transform">
+                                        {editingBet.status === 'archived' ? 'unarchive' : 'archive'}
+                                    </span>
+                                    {editingBet.status === 'archived' ? 'DESARQUIVAR' : 'ARQUIVAR BET'}
+                                </button>
+                                <button 
+                                    onClick={handleDeleteBet}
+                                    className="w-full py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-[0.2em] rounded-xl border border-red-500/20 transition-all flex items-center justify-center gap-2 group"
+                                >
+                                    <span className="material-icons-outlined text-sm group-hover:shake">delete_forever</span>
+                                    EXCLUIR
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1242,7 +1568,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             {/* View Bets Modal */}
             {showViewBetsModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-                    <div className="bg-[#0a061d] border border-white/10 rounded-[32px] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+                    <div className="bg-[#0a061d] border border-white/10 rounded-[32px] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-300 flex flex-col max-h-[90vh] md:max-h-[95vh]">
                         <div className="p-8 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-purple-500/10 to-transparent">
                             <h2 className="text-2xl font-black uppercase tracking-tighter">Apostas Realizadas</h2>
                             <button onClick={() => setShowViewBetsModal(false)} className="text-gray-500 hover:text-white transition-colors">
@@ -1250,7 +1576,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                             </button>
                         </div>
 
-                        <div className="p-8 max-h-[60vh] overflow-y-auto custom-scrollbar space-y-4">
+                        <div className="p-8 flex-1 overflow-y-auto custom-scrollbar space-y-4">
                             {marketBets.length === 0 ? (
                                 <p className="text-center text-gray-500 py-10">Nenhuma aposta registrada neste mercado.</p>
                             ) : (
