@@ -46,7 +46,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
     const [maxBet, setMaxBet] = useState<string>('');
     const [playerSearch, setPlayerSearch] = useState('');
     const [searchResults, setSearchResults] = useState<RankingPlayer[]>([]);
-    const [selectedPlayers, setSelectedPlayers] = useState<{ id: string; name: string; odd: number; odd_id?: string }[]>([]);
+    const [selectedPlayers, setSelectedPlayers] = useState<{ id: string; name: string; odd: number; odd_id?: string; isWinner?: boolean }[]>([]);
 
     const [showEditModal, setShowEditModal] = useState(false);
     const [editingBet, setEditingBet] = useState<Bet | null>(null);
@@ -558,6 +558,28 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
 
             alert('Resultado atualizado com sucesso!');
             fetchBets();
+            if (editingBet && editingBet.id === bet.id) {
+                const updatedOdds = editingBet.bet_odds?.map(o => {
+                    if (o.id === oddId) {
+                        return { ...o, status: newStatus };
+                    }
+                    if (isSingleWinner && newStatus === 'win') {
+                        return { ...o, status: 'loss' as const };
+                    }
+                    return o;
+                });
+                setEditingBet({ ...editingBet, bet_odds: updatedOdds });
+
+                setSelectedPlayers(prev => prev.map(sp => {
+                    if (sp.odd_id === oddId) {
+                        return { ...sp, isWinner: newStatus === 'win' };
+                    }
+                    if (isSingleWinner && newStatus === 'win') {
+                        return { ...sp, isWinner: false };
+                    }
+                    return sp;
+                }));
+            }
             if (refreshSupabaseData) await refreshSupabaseData();
         } catch (err: any) {
             console.error('Error toggling winner status:', err);
@@ -888,7 +910,8 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                                                 id: o.user_id || `GUEST:${o.guest_name}`,
                                                                 odd_id: o.id,
                                                                 name: o.profiles?.name || o.guest_name || '',
-                                                                odd: o.odd_value
+                                                                odd: o.odd_value,
+                                                                isWinner: o.status === 'win'
                                                             })) || []);
                                                             setShowEditModal(true);
                                                         }}
@@ -915,12 +938,13 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                             <div 
                                                 key={odd.id} 
                                                 onClick={() => {
-                                                    if (activeTab === 'ativos') {
+                                                    const isClosed = bet.status !== 'open' || (bet.expires_at && new Date(bet.expires_at) < new Date());
+                                                    if (activeTab === 'ativos' && !isClosed) {
                                                         setPreSelectedOdds(prev => ({ ...prev, [bet.id]: odd.id }));
                                                     }
                                                 }}
                                                 className={`flex items-center justify-between py-3 px-5 rounded-2xl border transition-all ${
-                                                    activeTab === 'ativos'
+                                                    activeTab === 'ativos' && !(bet.status !== 'open' || (bet.expires_at && new Date(bet.expires_at) < new Date()))
                                                         ? preSelectedOdds[bet.id] === odd.id
                                                             ? 'bg-cyan-500/20 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.15)] cursor-pointer group/odd'
                                                             : 'bg-black/40 border-transparent hover:bg-cyan-500/10 hover:border-cyan-500/20 cursor-pointer group/odd'
@@ -960,7 +984,7 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                                 </div>
 
                                                 <div className="flex items-center gap-2">
-                                                    {activeTab === 'encerrados' ? (
+                                                    {activeTab === 'encerrados' || bet.status === 'closed' || bet.status === 'archived' || (bet.expires_at && new Date(bet.expires_at) < new Date()) ? (
                                                         <>
                                                             {isAdmin ? (
                                                                 <button
@@ -1343,22 +1367,40 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                     <div className="space-y-2">
                                         {selectedPlayers.map(p => (
                                             <div key={p.id} className="flex items-center gap-4 bg-white/5 p-3 rounded-2xl border border-white/5">
-                                                <div className="flex-1">
-                                                    <p className="text-sm font-bold">{p.name}</p>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-bold truncate">{p.name}</p>
                                                 </div>
-                                                <div className="flex items-center gap-3">
-                                                    <div className="flex items-center bg-black/40 rounded-xl px-3 py-1.5 border border-white/10">
-                                                        <span className="text-xs text-gray-500 mr-2">ODD:</span>
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    <div className="flex items-center bg-black/40 rounded-xl px-2.5 py-1.5 border border-white/10">
+                                                        <span className="text-[10px] text-gray-500 mr-1.5">ODD:</span>
                                                         <input 
                                                             type="number"
                                                             step="0.1"
                                                             value={p.odd}
                                                             onChange={(e) => updateOdd(p.id, parseFloat(e.target.value))}
-                                                            className="bg-transparent w-16 text-sm font-black text-cyan-400 outline-none"
+                                                            className="bg-transparent w-12 text-xs font-black text-cyan-400 outline-none"
                                                         />
                                                     </div>
-                                                    <button onClick={() => removePlayerFromBet(p.id)} className="text-red-500 hover:text-red-400">
-                                                        <span className="material-icons-outlined text-xl">delete_outline</span>
+                                                    {p.odd_id && (
+                                                        <button
+                                                            onClick={async () => {
+                                                                if (!editingBet) return;
+                                                                const currentStatus = p.isWinner ? 'win' : 'active';
+                                                                await handleToggleWinner(editingBet, p.odd_id!, currentStatus);
+                                                            }}
+                                                            disabled={saving}
+                                                            className={`px-2.5 py-1.5 rounded-xl border text-[9px] font-black uppercase tracking-wider transition-all flex items-center gap-1 shrink-0 ${
+                                                                p.isWinner
+                                                                    ? 'bg-green-500/20 border-green-500/50 text-green-400 shadow-[0_0_10px_rgba(74,222,128,0.1)]'
+                                                                    : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'
+                                                            } ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                        >
+                                                            <span className="material-icons text-[11px]">emoji_events</span>
+                                                            {p.isWinner ? 'Ganhou' : 'Marcar'}
+                                                        </button>
+                                                    )}
+                                                    <button onClick={() => removePlayerFromBet(p.id)} className="text-red-500 hover:text-red-400 p-1 shrink-0">
+                                                        <span className="material-icons-outlined text-lg">delete_outline</span>
                                                     </button>
                                                 </div>
                                             </div>
