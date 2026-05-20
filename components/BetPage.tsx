@@ -73,34 +73,41 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
         fetchBets();
     }, []);
 
-    // Pre-fill punter for non-admins
+    // Manage place bet modal states when opened
     useEffect(() => {
-        if (showPlaceBetModal && !isAdmin && isLoggedIn && currentUser) {
-            const isStaff = currentUser.role === 'staff' || currentUser.role === 'admin';
+        if (showPlaceBetModal) {
+            const isStaff = isAdmin || currentUser?.role === 'staff' || currentUser?.role === 'admin';
             
-            // For normal users, only 'credits' is allowed
-            if (!isStaff) {
+            if (isStaff) {
+                // Reset form fields for admins/staff to prevent state leak from previous placements
+                setSelectedPunter(null);
+                setPunterName('');
+                setPunterSearch('');
+                setBetAmount('');
+                setPaymentMethod('pix'); // Default payment method for staff/admin is 'pix'
+            } else if (isLoggedIn && currentUser) {
+                // For normal users, only 'credits' is allowed
                 setPaymentMethod('credits');
-            }
 
-            const fetchMyBalance = async () => {
-                const { data } = await supabase
-                    .from('profiles')
-                    .select('id, name, avatar_url, numeric_id, role, balance_brl')
-                    .eq('id', currentUser.id)
-                    .single();
-                
-                if (data) {
-                    const myProfile = {
-                        ...data,
-                        balanceBrl: Number(data.balance_brl)
-                    };
-                    setSelectedPunter(myProfile as any);
-                    setPunterSearch(data.name);
-                    setPunterName(data.name);
-                }
-            };
-            fetchMyBalance();
+                const fetchMyBalance = async () => {
+                    const { data } = await supabase
+                        .from('profiles')
+                        .select('id, name, avatar_url, numeric_id, role, balance_brl')
+                        .eq('id', currentUser.id)
+                        .single();
+                    
+                    if (data) {
+                        const myProfile = {
+                            ...data,
+                            balanceBrl: Number(data.balance_brl)
+                        };
+                        setSelectedPunter(myProfile as any);
+                        setPunterSearch(data.name);
+                        setPunterName(data.name);
+                    }
+                };
+                fetchMyBalance();
+            }
         }
     }, [showPlaceBetModal, isAdmin, isLoggedIn, currentUser]);
 
@@ -735,7 +742,9 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             .select(`
                 id, bet_id, odd_id, user_id, punter_id, punter_name, amount, potential_return, payment_method, status, created_at,
                 bets:bets!user_bets_bet_id_fkey (
+                    id,
                     category,
+                    event_id,
                     events (title, date)
                 ),
                 bet_odds:bet_odds!user_bets_odd_id_fkey (
@@ -751,6 +760,115 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
             setShowViewBetsModal(true);
         }
         setLoading(false);
+    };
+
+    const handleDeleteUserBet = async (bet: any) => {
+        // Warning if the bet is already resolved as won/lost
+        const statusWarning = bet.status !== 'pending' 
+            ? `\nATENÇÃO: Esta aposta já foi resolvida como ${bet.status.toUpperCase()}!` 
+            : '';
+        const confirmDelete = window.confirm(`Tem certeza que deseja excluir a aposta de R$ ${bet.amount.toFixed(2)} de ${bet.punter_name}?${statusWarning}\nEsta ação é irreversível.`);
+        if (!confirmDelete) return;
+
+        setLoading(true);
+        try {
+            // 1. If payment method is credits, return the credits to the punter's profile balance
+            if (bet.payment_method === 'credits' && bet.punter_id) {
+                // Fetch the latest profile balance to avoid race conditions or dirty reads
+                const { data: profile, error: profileErr } = await supabase
+                    .from('profiles')
+                    .select('balance_brl')
+                    .eq('id', bet.punter_id)
+                    .single();
+
+                if (profileErr) throw new Error('Não foi possível obter o perfil do jogador para o estorno: ' + profileErr.message);
+
+                if (profile) {
+                    const currentBalance = Number(profile.balance_brl) || 0;
+                    const refundAmount = Number(bet.amount) || 0;
+                    const newBalance = currentBalance + refundAmount;
+
+                    // Update the balance
+                    const { error: balanceUpdateErr } = await supabase
+                        .from('profiles')
+                        .update({ balance_brl: newBalance })
+                        .eq('id', bet.punter_id);
+
+                    if (balanceUpdateErr) throw new Error('Erro ao devolver os créditos ao jogador: ' + balanceUpdateErr.message);
+
+                    // Insert an audit transaction record
+                    const { error: txErr } = await supabase.from('transactions').insert({
+                        user_id: bet.punter_id,
+                        type: 'credit',
+                        category: 'purchase',
+                        amount_brl: refundAmount,
+                        amount_chipz: 0,
+                        description: `Estorno de aposta excluída (Bet #${bet.id.slice(0, 8)})`,
+                        metadata: { 
+                            bet_id: bet.bet_id, 
+                            odd_id: bet.odd_id, 
+                            user_bet_id: bet.id,
+                            action: 'delete_bet'
+                        }
+                    });
+
+                    if (txErr) {
+                        console.error('Error creating transaction record:', txErr);
+                    }
+                }
+            }
+
+            // 2. If payment method is debt, remove the pending debt record
+            if (bet.payment_method === 'debt' && bet.punter_id) {
+                // Search for the pending debt associated with this punter, same amount, same event
+                const { data: matchedDebts, error: selectDebtErr } = await supabase
+                    .from('debts')
+                    .select('id')
+                    .eq('user_id', bet.punter_id)
+                    .eq('amount_brl', bet.amount)
+                    .eq('status', 'pending')
+                    .eq('event_id', bet.bets?.event_id)
+                    .order('created_at', { ascending: false })
+                    .limit(1);
+
+                if (selectDebtErr) {
+                    console.error('Erro ao buscar pendura para exclusão:', selectDebtErr.message);
+                } else if (matchedDebts && matchedDebts.length > 0) {
+                    const debtIdToDelete = matchedDebts[0].id;
+                    const { error: deleteDebtErr } = await supabase
+                        .from('debts')
+                        .delete()
+                        .eq('id', debtIdToDelete);
+
+                    if (deleteDebtErr) {
+                        console.error('Erro ao deletar pendura:', deleteDebtErr.message);
+                    }
+                } else {
+                    console.warn('Nenhuma pendura pendente correspondente encontrada para exclusão.');
+                }
+            }
+
+            // 3. Delete the bet record itself
+            const { error: deleteBetError } = await supabase
+                .from('user_bets')
+                .delete()
+                .eq('id', bet.id);
+
+            if (deleteBetError) throw deleteBetError;
+
+            // 4. Update the local state
+            setMarketBets(prev => prev.filter(b => b.id !== bet.id));
+            alert('Aposta excluída com sucesso!');
+
+            // 5. Sync global data (which will update the dashboard/balance in case of credits/debts changes)
+            if (refreshSupabaseData) await refreshSupabaseData();
+            fetchBets();
+
+        } catch (error: any) {
+            alert('Erro ao excluir aposta: ' + error.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const CountdownTimer = ({ expiresAt }: { expiresAt?: string }) => {
@@ -1659,6 +1777,15 @@ export const BetPage: React.FC<{ isAdmin: boolean; onNavigate: (view: string) =>
                                                 {bet.status}
                                             </span>
                                             <span className="text-[10px] text-gray-500">{new Date(bet.created_at).toLocaleString('pt-BR')}</span>
+                                            {isAdmin && (
+                                                <button
+                                                    onClick={() => handleDeleteUserBet(bet)}
+                                                    className="p-1.5 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-xl transition-all"
+                                                    title="Excluir Aposta"
+                                                >
+                                                    <span className="material-icons-outlined text-base">delete</span>
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 ))
