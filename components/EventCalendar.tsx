@@ -3020,13 +3020,6 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                             })()}
                                         </div>
 
-                                        {reservingEvent.type === 'online' && (
-                                            <div className="mt-4 p-4 bg-green-500/10 rounded-xl border border-green-500/20 text-center">
-                                                <p className="text-xs font-black text-green-300 uppercase leading-relaxed tracking-wider">
-                                                    "Garanta o bônus pelo nosso site e se inscreva no torneio para adquirir um add on free."
-                                                </p>
-                                            </div>
-                                        )}
                                     </div>
 
 
