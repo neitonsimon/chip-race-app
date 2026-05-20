@@ -35,10 +35,28 @@ export const FinalTableResult: React.FC<FinalTableResultProps> = ({
     events,
     rankingPlayers = [],
 }) => {
-    // Primary: find events with "mesa final" in the title that include this ranking
+    // Normalize string to compare (lowercase, accents removed)
     const titleNormalize = (s: string) =>
         s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
+    // Get keywords from rankingLabel to find matching Mesa Final in all events
+    // E.g. "Alpha RANK" -> ["alpha"] (ignoring words shorter than 3 chars or "rank"/"ranking")
+    const labelKeywords = titleNormalize(rankingLabel)
+        .split(/[\s-]+/)
+        .filter(w => w.length > 2 && w !== 'rank' && w !== 'ranking');
+
+    // 1. Try to find a matching "mesa final" event from ALL events based on title keywords matching the ranking label
+    const matchingEventsByTitle = events
+        .filter((e) => {
+            const normalizedTitle = titleNormalize(e.title);
+            if (!normalizedTitle.includes('mesa final')) return false;
+            if (labelKeywords.length === 0) return false;
+            // Ensure all keywords from the ranking label are present in the event title
+            return labelKeywords.every(keyword => normalizedTitle.includes(keyword));
+        })
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    // 2. Original approach: find events with "mesa final" in the title that are explicitly included in this ranking
     const eventsInRanking = events.filter((e) =>
         e.includedRankings?.includes(rankingId)
     );
@@ -52,7 +70,7 @@ export const FinalTableResult: React.FC<FinalTableResultProps> = ({
         .filter((e) => e.isFinalDay === true)
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    const finalEvent = byTitle[0] || byFinalDay[0];
+    const finalEvent = matchingEventsByTitle[0] || byTitle[0] || byFinalDay[0];
 
     if (!finalEvent) {
         return (
