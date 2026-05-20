@@ -35,16 +35,24 @@ export const FinalTableResult: React.FC<FinalTableResultProps> = ({
     events,
     rankingPlayers = [],
 }) => {
-    // Find the final table event for this ranking (isFinalDay=true AND this ranking is included)
-    const finalEvent = events
-        .filter(
-            (e) =>
-                e.isFinalDay === true &&
-                (e.includedRankings?.includes(rankingId) ||
-                    // fallback: title contains ranking label (case-insensitive)
-                    e.title.toLowerCase().includes(rankingLabel.toLowerCase().slice(0, 6)))
-        )
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+    // Primary: find events with "mesa final" in the title that include this ranking
+    const titleNormalize = (s: string) =>
+        s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+    const eventsInRanking = events.filter((e) =>
+        e.includedRankings?.includes(rankingId)
+    );
+
+    const byTitle = eventsInRanking
+        .filter((e) => titleNormalize(e.title).includes('mesa final'))
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    // Fallback: isFinalDay=true events included in this ranking
+    const byFinalDay = eventsInRanking
+        .filter((e) => e.isFinalDay === true)
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    const finalEvent = byTitle[0] || byFinalDay[0];
 
     if (!finalEvent) {
         return (
