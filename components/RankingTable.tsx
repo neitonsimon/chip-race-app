@@ -5,6 +5,7 @@ import { createProfileSlug } from '../src/lib/slugUtils';
 import { ScoringFormulaEditor } from './ScoringFormulaEditor';
 import { RankingSkeleton } from './Skeleton';
 import { RankingStages } from './RankingStages';
+import { FinalTableResult } from './FinalTableResult';
 import { calculatePoints, calculatePointsWithBreakdown, ScoreBreakdown } from '../utils/scoring';
 import { formatK } from '../utils/format';
 
@@ -62,6 +63,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({
     const [showSimulator, setShowSimulator] = useState(false);
     const [showFormulaEditor, setShowFormulaEditor] = useState(false);
     const [showStages, setShowStages] = useState(false);
+    const [showFinalTable, setShowFinalTable] = useState(false);
     const [rankingView, setRankingView] = useState<'active' | 'finalized'>('active');
     const [isRetracted, setIsRetracted] = useState(false);
     const [detailPlayer, setDetailPlayer] = useState<RankingPlayer | null>(null);
@@ -471,6 +473,13 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                 <span className="material-icons-outlined text-base">calendar_month</span>
                                 Calendário de Etapas
                             </button>
+                            <button
+                                onClick={() => setShowFinalTable(!showFinalTable)}
+                                className={`text-sm font-bold uppercase hover:underline flex items-center gap-1 mt-2 transition-colors ${showFinalTable ? 'text-yellow-400' : 'text-gray-500 hover:text-yellow-400'}`}
+                            >
+                                <span className="material-icons-outlined text-base">emoji_events</span>
+                                Resultado Mesa Final
+                            </button>
                         </div>
                     </div>
                 )}
@@ -486,6 +495,18 @@ export const RankingTable: React.FC<RankingTableProps> = ({
                                     rankingId={activeRankingId}
                                     rankingLabel={activeRanking.label}
                                     events={events}
+                                />
+                            </div>
+                        )}
+
+                        {/* --- RESULTADO MESA FINAL --- */}
+                        {showFinalTable && activeRanking && !isRetracted && (
+                            <div className="animate-in slide-in-from-top-4 duration-300">
+                                <FinalTableResult
+                                    rankingId={activeRankingId}
+                                    rankingLabel={activeRanking.label}
+                                    events={events}
+                                    rankingPlayers={activeRanking.players}
                                 />
                             </div>
                         )}
