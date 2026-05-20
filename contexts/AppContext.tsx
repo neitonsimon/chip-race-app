@@ -274,7 +274,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     supabase.from('events').select('id, title, date, time, type, buyin, guaranteed, status, ranking_type, included_rankings, description, modality, stack, blinds, late_reg, location, results, is_hidden, is_starting_day, scoring_schema_id, is_special_event, flyer_url, rebuy_value, rebuy_chips, addon_value, addon_chips, staff_bonus_value, staff_bonus_chips, time_chip_value, time_chip_chips, time_chip_addon_chips, time_chip_discount_brl, max_capacity, double_rebuy_value, double_rebuy_chips, double_addon_value, double_addon_chips, parallel_products, total_rebuys, total_addons, total_prize, game_mode, cash_game_type, cash_game_blinds, cash_game_capacity, cash_game_min_max, cash_game_dinner, cash_game_open_bar, cash_game_notes, staff_expenses_brl, prize_payout_brl, is_multi_day, is_final_day, final_event_id, stack_aggregation, bonus1_condition, bonus1_stack, bonus1_addon, bonus1_extra, bonus2_condition, bonus2_stack, bonus2_addon, bonus2_extra, bonus3_condition, bonus3_stack, bonus3_addon, bonus3_extra, timeline_title, structure').order('date', { ascending: true }),
                     supabase.from('content_db').select('key, value'),
                     supabase.from('ecosystem_categories').select('id, title, description, icon, color, order').order('order', { ascending: true }),
-                    supabase.from('profiles_public').select('id, numeric_id, name, avatar_url, city, is_vip, vip_status, vip_expires_at, level, current_exp, next_level_exp, is_verified, total_pending_debt, suprema_nickname, suprema_user_id'),
+                    supabase.from('profiles_public').select('id, numeric_id, name, avatar_url, city, is_vip, vip_status, vip_expires_at, level, current_exp, next_level_exp, is_verified, total_pending_debt, suprema_nickname, suprema_user_id, profile_views'),
                     currentUserId ? supabase.from('user_badges').select('id, user_id, badge_template_id, title, description, icon, color, awarded_at, badge_templates(id, title, description, icon, color, rarity, is_legendary)').eq('user_id', currentUserId) : Promise.resolve({ data: [] }),
                     supabase.from('experience_levels').select('level, required_exp, credit_limit').order('level', { ascending: true }),
                     supabase.from('daily_rewards').select('day, reward_type, reward_value, reward_label').order('day', { ascending: true }),
@@ -459,6 +459,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     totalPendingDebt: p.total_pending_debt || 0,
                     suprema_nickname: p.suprema_nickname || undefined,
                     suprema_user_id: p.suprema_user_id || undefined,
+                    profile_views: p.profile_views || 0,
                     badges: currentUserBadges?.filter(ub => ub.user_id === p.id).map(ub => ({
                         ...ub,
                         color: ub.color 
@@ -493,7 +494,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const fetchProfile = async (userId: string) => {
         try {
             const { data, error } = await supabase.from('profiles')
-                .select('id, numeric_id, name, avatar_url, city, bio, social, play_styles, gallery, level, current_exp, next_level_exp, last_daily_claim, daily_streak, is_vip, vip_status, vip_expires_at, balance_brl, balance_chipz, locked_balance_brl, balance_unlock_date, total_pending_debt, debt_limit_brl, is_verified, suprema_nickname, suprema_user_id, role')
+                .select('id, numeric_id, name, avatar_url, city, bio, social, play_styles, gallery, level, current_exp, next_level_exp, last_daily_claim, daily_streak, is_vip, vip_status, vip_expires_at, balance_brl, balance_chipz, locked_balance_brl, balance_unlock_date, total_pending_debt, debt_limit_brl, is_verified, suprema_nickname, suprema_user_id, role, profile_views')
                 .eq('id', userId)
                 .single();
             if (error) throw error;
@@ -528,6 +529,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     suprema_nickname: data.suprema_nickname || '',
                     suprema_user_id: data.suprema_user_id || '',
                     role: data.role,
+                    profile_views: data.profile_views || 0,
                     badges: []
                 };
                 const { data: userBadges } = await supabase.from('user_badges').select('id, user_id, badge_template_id, title, description, icon, color, awarded_at, badge_templates(id, title, description, icon, color, rarity, is_legendary)').eq('user_id', userId).order('awarded_at', { ascending: false });

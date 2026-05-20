@@ -108,8 +108,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             </span>
                         )}
                     </div>
-                    <div className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-4 bg-primary/10 inline-block px-3 py-1 rounded-full border border-primary/20">
-                        ID: {player.numericId ? `CR#${String(player.numericId).padStart(3, '0')}` : 'CR#GUEST'}
+                    <div className="flex flex-wrap justify-center gap-2 mb-4">
+                        <div className="text-[10px] font-black text-primary uppercase tracking-[0.2em] bg-primary/10 inline-flex items-center px-3 py-1 rounded-full border border-primary/20">
+                            ID: {player.numericId ? `CR#${String(player.numericId).padStart(3, '0')}` : 'CR#GUEST'}
+                        </div>
+                        <div className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.15em] bg-cyan-400/10 inline-flex items-center gap-1 px-3 py-1 rounded-full border border-cyan-400/20" title="Visualizações de perfil">
+                            <span className="material-icons text-[12px]">visibility</span>
+                            {player.profile_views || 0} views
+                        </div>
                     </div>
                     <p className="text-gray-500 dark:text-gray-400 text-base mb-2">{player.city}</p>
                     {player.suprema_nickname && (

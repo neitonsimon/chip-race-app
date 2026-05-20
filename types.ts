@@ -196,6 +196,7 @@ export interface RankingPlayer {
   suprema_user_id?: string;
   lockedBalanceBrl?: number;
   balanceUnlockDate?: string;
+  profile_views?: number;
 }
 
 export interface OnlineCreditRequest {
@@ -310,6 +311,7 @@ export interface PlayerStats {
   balanceUnlockDate?: string;
   suprema_nickname?: string;
   suprema_user_id?: string;
+  profile_views?: number;
 }
 
 export interface MonthData {

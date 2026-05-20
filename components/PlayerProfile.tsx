@@ -103,6 +103,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
     // Core refs and calculated properties
     const targetIdRef = useRef<string | null>(initialData?.id || currentUser?.id || null);
     const isOwnProfile = isLoggedIn && (!initialData || initialData.id === currentUser?.id);
+    const lastIncrementedIdRef = useRef<string | null>(null);
 
     const [player, setPlayer] = useState<PlayerStats>(() => ({
         id: initialData?.id || currentUser?.id || '',
@@ -129,7 +130,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         vipExpiresAt: initialData?.vipExpiresAt || null,
         balanceBrl: initialData?.balanceBrl || 0,
         balanceChipz: initialData?.balanceChipz || 0,
-        isVerified: initialData?.isVerified || false
+        isVerified: initialData?.isVerified || false,
+        profile_views: (initialData as any)?.profile_views || (currentUser as any)?.profile_views || 0
     }));
 
     // States para Inbox e Mensagens
@@ -265,7 +267,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             level: 1, currentExp: 0, nextLevelExp: 1000,
             lastDailyClaim: null, dailyStreak: 0, isVip: false,
             vipStatus: 'nao_vip', vipExpiresAt: null,
-            balanceBrl: 0, balanceChipz: 0, isVerified: false
+            balanceBrl: 0, balanceChipz: 0, isVerified: false,
+            profile_views: 0
         };
 
         // 1. Determine Identity (Name, Avatar, Bio...)
@@ -299,7 +302,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                 isVerified: initialData.isVerified || false,
                 badges: (initialData as any).badges || [],
                 suprema_nickname: (initialData as any).suprema_nickname,
-                suprema_user_id: (initialData as any).suprema_user_id
+                suprema_user_id: (initialData as any).suprema_user_id,
+                profile_views: (initialData as any).profile_views || 0
             };
             setActiveTab('overview');
         } else if (currentUser) {
@@ -329,6 +333,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             baseData.badges = currentUser.badges || [];
             baseData.suprema_nickname = (currentUser as any).suprema_nickname;
             baseData.suprema_user_id = (currentUser as any).suprema_user_id;
+            baseData.profile_views = (currentUser as any).profile_views || 0;
 
             // CHECK CLAIM AVAILABILITY
             checkClaimAvailability(baseData.lastDailyClaim);
@@ -434,6 +439,42 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
         if (targetIdRef.current) {
             fetchBadges();
         }
+    }, [player.id]);
+
+    // View counter tracking to avoid double increments in the same session
+    useEffect(() => {
+        const targetId = player.id;
+        if (!targetId || targetId.startsWith('CR-') || targetId === 'GUEST') return;
+
+        // Simple regex to check if it's a valid UUID
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(targetId)) return;
+
+        if (lastIncrementedIdRef.current === targetId) return;
+
+        // Mark as incremented to avoid duplicate calls
+        lastIncrementedIdRef.current = targetId;
+
+        const incrementViews = async () => {
+            try {
+                const { error } = await supabase.rpc('increment_profile_views', { p_id: targetId });
+                if (error) {
+                    console.error('Error incrementing profile views:', error);
+                } else {
+                    // Update local state to immediately show updated view count
+                    setPlayer(prev => {
+                        if (prev.id === targetId) {
+                            return { ...prev, profile_views: (prev.profile_views || 0) + 1 };
+                        }
+                        return prev;
+                    });
+                }
+            } catch (err) {
+                console.error('Failed to execute increment_profile_views RPC:', err);
+            }
+        };
+
+        incrementViews();
     }, [player.id]);
 
     // Financial handlers removed - moved to hook usePlayerFinancial
