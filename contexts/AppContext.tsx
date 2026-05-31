@@ -221,7 +221,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (abortControllerRef.current) abortControllerRef.current.abort();
         abortControllerRef.current = new AbortController();
         
-        const CACHE_KEY = 'cr_app_raw_data_cache_v2';
+        const CACHE_KEY = 'cr_app_raw_data_cache_v3';
         
         try {
         let rankingsData: any[] | null = null;

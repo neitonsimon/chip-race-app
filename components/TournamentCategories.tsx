@@ -22,6 +22,24 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
   const [productDetails, setProductDetails] = useState<any>(null);
   const [isLoadingProduct, setIsLoadingProduct] = useState(false);
 
+  const renderDescription = (desc: string) => {
+    if (!desc) return 'Nenhuma descrição informada.';
+    const match = desc.match(/(.*?)\((ID:\s*\d+)\)(.*)/i);
+    if (match) {
+      const [_, before, idPart, after] = match;
+      return (
+        <>
+          {before}
+          <span className="inline-block bg-[#00e0ff]/15 text-[#00e0ff] border border-[#00e0ff]/30 px-2 py-0.5 rounded font-mono font-black text-[11px] mx-1 shadow-[0_0_8px_rgba(0,224,255,0.25)] animate-pulse">
+            {idPart}
+          </span>
+          {after}
+        </>
+      );
+    }
+    return desc;
+  };
+
   const processedCategories = React.useMemo(() => {
     const virtuals: TournamentCategory[] = [];
 
@@ -580,7 +598,7 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
                             </div>
                           )}
                           <p className={`font-body text-sm sm:text-base mt-3.5 font-medium leading-relaxed ${isMystery ? 'text-gray-800' : 'text-gray-400 group-hover:text-white'} max-w-[240px]`}>
-                            {isMystery ? '??? ??? ??? ???' : cat.description || 'Nenhuma descrição informada.'}
+                            {isMystery ? '??? ??? ??? ???' : renderDescription(cat.description)}
                           </p>
                         </div>
 
@@ -624,7 +642,7 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
                               </div>
                             )}
                             <p className={`font-body text-sm sm:text-base mt-2 font-medium leading-relaxed ${isMystery ? 'text-gray-800' : 'text-gray-400 group-hover:text-white'}`}>
-                              {isMystery ? '??? ??? ??? ???' : cat.description || 'Nenhuma descrição informada.'}
+                              {isMystery ? '??? ??? ??? ???' : renderDescription(cat.description)}
                             </p>
                           </div>
 
