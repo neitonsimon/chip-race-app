@@ -5,8 +5,8 @@ import { BadgePreview } from './BadgePreview';
 interface GiftsTabProps {
     giftTarget: 'single' | 'all';
     setGiftTarget: (t: 'single' | 'all') => void;
-    giftType: 'brl' | 'chipz' | 'vip';
-    setGiftType: (t: 'brl' | 'chipz' | 'vip') => void;
+    giftType: 'brl' | 'chipz' | 'vip' | 'jackpot';
+    setGiftType: (t: 'brl' | 'chipz' | 'vip' | 'jackpot') => void;
     selectedVipType?: 'trimestral' | 'anual' | 'master' | 'honorario';
     setSelectedVipType?: (t: 'trimestral' | 'anual' | 'master' | 'honorario') => void;
     giftAmount: string;
@@ -399,6 +399,7 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                                     <button onClick={() => setGiftType('brl')} className={`flex-1 py-3 rounded-xl border text-[9px] sm:text-[10px] font-black uppercase transition-all ${giftType === 'brl' ? 'bg-primary border-primary text-white shadow-neon-pink' : 'bg-white/5 border-white/10 text-gray-400'}`}>R$</button>
                                     <button onClick={() => setGiftType('chipz')} className={`flex-1 py-3 rounded-xl border text-[9px] sm:text-[10px] font-black uppercase transition-all ${giftType === 'chipz' ? 'bg-cyan-500 border-cyan-500 text-white shadow-neon-cyan' : 'bg-white/5 border-white/10 text-gray-400'}`}>Chipz</button>
                                     <button onClick={() => setGiftType('vip')} className={`flex-1 py-3 rounded-xl border text-[9px] sm:text-[10px] font-black uppercase transition-all ${giftType === 'vip' ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg' : 'bg-white/5 border-white/10 text-gray-400'}`}>VIP</button>
+                                    <button onClick={() => setGiftType('jackpot')} className={`flex-1 py-3 rounded-xl border text-[9px] sm:text-[10px] font-black uppercase transition-all ${giftType === 'jackpot' ? 'bg-gradient-to-r from-yellow-600 to-yellow-400 text-black border-transparent shadow-lg shadow-yellow-500/20' : 'bg-white/5 border-white/10 text-gray-400'}`}>Jackpot</button>
                                 </div>
                             </div>
 
@@ -434,15 +435,23 @@ export const GiftsTab: React.FC<GiftsTabProps> = ({
                                 <div>
                                     <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Quantidade</label>
                                     <div className="relative">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm tracking-tighter">{giftType === 'brl' ? 'R$' : 'C'}</span>
-                                        <input type="text" inputMode="decimal" value={giftAmount}
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm tracking-tighter">
+                                            {giftType === 'brl' ? 'R$' : giftType === 'chipz' ? 'C' : '🎫'}
+                                        </span>
+                                        <input type="text" inputMode={giftType === 'jackpot' ? 'numeric' : 'decimal'} value={giftAmount}
                                             onChange={e => {
                                                 const val = e.target.value.replace(',', '.');
-                                                if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                                                    setGiftAmount(val);
+                                                if (giftType === 'jackpot') {
+                                                    if (val === '' || /^\d*$/.test(val)) {
+                                                        setGiftAmount(val);
+                                                    }
+                                                } else {
+                                                    if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                                        setGiftAmount(val);
+                                                    }
                                                 }
                                             }}
-                                            placeholder="0.00"
+                                            placeholder={giftType === 'jackpot' ? '0' : '0.00'}
                                             className="w-full bg-[#050214] border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white text-sm font-black focus:border-primary outline-none transition-all" />
                                     </div>
                                 </div>

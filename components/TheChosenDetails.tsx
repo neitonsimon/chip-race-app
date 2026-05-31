@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ContentDB, TournamentCategory } from '../types';
 import { TheChosenQualifiers } from './TheChosenQualifiers';
-import { RoadmapSection } from './RoadmapSection';
 import { supabase } from '../src/lib/supabase';
 import appConfig from '../src/config/appConfig.json';
 
@@ -654,10 +653,7 @@ export const TheChosenDetails: React.FC<TheChosenDetailsProps> = ({
 
             </div>
 
-            {/* ROADMAP / MARCOS DE EVOLUÇÃO */}
-            <div className="mb-20">
-                <RoadmapSection />
-            </div>
+
 
             {/* MODAL PRODUTO / DETALHES ESPECÍFICOS */}
             {

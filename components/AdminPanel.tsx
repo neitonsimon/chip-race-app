@@ -11,6 +11,7 @@ import { InventoryTab } from './admin-panel/InventoryTab';
 import { StockTab } from './admin-panel/StockTab';
 import { SettingsTab } from './admin-panel/SettingsTab';
 import { EventsTab } from './admin-panel/EventsTab';
+import { HomeTilesTab } from './admin-panel/HomeTilesTab';
 import { CheckoutModal } from './admin-panel/modals/CheckoutModal';
 import { TopUpModal } from './admin-panel/modals/TopUpModal';
 import { EditClosedCommandModal } from './admin-panel/modals/EditClosedCommandModal';
@@ -77,7 +78,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     onClose, currentUser, onUpdateProfile, badgeTemplates = [], isAdmin = false, 
     onCreateBadgeTemplate, onUpdateBadgeTemplate, onSendAdminMessage, onCreatePoll, onRefreshData, onSelectPlayer, onNavigate 
 }) => {
-    const [activeTab, setActiveTab] = useState<'operational' | 'inventory' | 'reports' | 'launch' | 'send-gifts' | 'badges' | 'debts' | 'communications' | 'reservations' | 'events' | 'settings'>('operational');
+    const [activeTab, setActiveTab] = useState<'operational' | 'inventory' | 'reports' | 'launch' | 'send-gifts' | 'badges' | 'debts' | 'communications' | 'reservations' | 'events' | 'settings' | 'home-tiles'>('operational');
     const [events, setEvents] = useState<any[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
     const [products, setProducts] = useState<any[]>([]);
@@ -121,9 +122,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     const pastEventsList = events.filter(ev => ev.status === 'closed' && ev.type !== 'online').sort((a, b) => b.date.localeCompare(a.date));
 
 
-    const updatePlayerBalanceLocally = (userId: string, amount: number, type: 'brl' | 'chipz' = 'brl') => {
-        const field = type === 'brl' ? 'balance_brl' : 'balance_chipz';
-        const propField = type === 'brl' ? 'balanceBrl' : 'balanceChipz';
+    const updatePlayerBalanceLocally = (userId: string, amount: number, type: 'brl' | 'chipz' | 'jackpot' = 'brl') => {
+        const field = type === 'brl' ? 'balance_brl' : type === 'chipz' ? 'balance_chipz' : 'jackpot_vouchers';
+        const propField = type === 'brl' ? 'balanceBrl' : type === 'chipz' ? 'balanceChipz' : 'jackpotVouchers';
 
         // Update selectedCommand if matches
         if (selectedCommand && selectedCommand.user_id === userId) {
@@ -781,6 +782,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     { id: 'communications', icon: 'campaign', label: 'Comunic.' },
                     { id: 'reservations', icon: 'support_agent', label: 'Bônus/Res.' },
                     { id: 'events', icon: 'celebration', label: 'Eventos' },
+                    { id: 'home-tiles', icon: 'grid_view', label: 'Home Page' },
                     { id: 'settings', icon: 'settings', label: 'Site' }
                 ].filter(t => currentUser?.role !== 'staff' || t.id === 'operational').map(t => (
                     <button key={t.id} onClick={() => { setActiveTab(t.id as any); if (t.id === 'reports' && selectedEvent) fetchReport(selectedEvent.id); }}
@@ -803,6 +805,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         { id: 'communications', icon: 'campaign', label: 'Comunic.' },
                         { id: 'reservations', icon: 'support_agent', label: 'Bônus/Res.' },
                         { id: 'events', icon: 'celebration', label: 'Eventos' },
+                        { id: 'home-tiles', icon: 'grid_view', label: 'Home Page' },
                         { id: 'settings', icon: 'settings', label: 'Site' }
                     ].filter(t => currentUser?.role !== 'staff' || t.id === 'operational').map(t => (
                         <button key={t.id} onClick={() => { setActiveTab(t.id as any); if (t.id === 'reports' && selectedEvent) fetchReport(selectedEvent.id); }}
@@ -1045,6 +1048,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     {activeTab === 'events' && isAdmin && (
                         <div className="p-6">
                             <EventsTab />
+                        </div>
+                    )}
+
+                    {activeTab === 'home-tiles' && isAdmin && (
+                        <div className="p-6">
+                            <HomeTilesTab />
                         </div>
                     )}
 

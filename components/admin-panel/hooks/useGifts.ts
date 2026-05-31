@@ -5,13 +5,13 @@ interface UseGiftsProps {
     isAdmin: boolean;
     currentUser: any;
     badgeTemplates: any[];
-    updatePlayerBalanceLocally: (userId: string, amount: number, type: 'brl' | 'chipz') => void;
+    updatePlayerBalanceLocally: (userId: string, amount: number, type: 'brl' | 'chipz' | 'jackpot') => void;
 }
 
 export function useGifts({ isAdmin, currentUser, badgeTemplates, updatePlayerBalanceLocally }: UseGiftsProps) {
     const [giftTarget, setGiftTarget] = useState<'single' | 'all'>('single');
     const [selectedGiftUsers, setSelectedGiftUsers] = useState<any[]>([]);
-    const [giftType, setGiftType] = useState<'brl' | 'chipz' | 'badge' | 'vip'>('brl');
+    const [giftType, setGiftType] = useState<'brl' | 'chipz' | 'badge' | 'vip' | 'jackpot'>('brl');
     const [selectedVipType, setSelectedVipType] = useState<'trimestral' | 'anual' | 'master' | 'honorario'>('trimestral');
     const [giftAmount, setGiftAmount] = useState('');
     const [giftSearchQuery, setGiftSearchQuery] = useState('');
@@ -37,7 +37,7 @@ export function useGifts({ isAdmin, currentUser, badgeTemplates, updatePlayerBal
         setGiftSearchQuery(query);
         if (query.length < 2) { setGiftSearchResults([]); return; }
         const isNumeric = /^\d+$/.test(query);
-        let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, vip_status, balance_brl, balance_chipz, debt_limit_brl, total_pending_debt');
+        let q = supabase.from('profiles').select('id, name, numeric_id, avatar_url, vip_status, balance_brl, balance_chipz, debt_limit_brl, total_pending_debt, jackpot_vouchers');
         q = isNumeric ? q.eq('numeric_id', parseInt(query)) : q.ilike('name', `%${query}%`);
         const { data } = await q.order('name', { ascending: true }).limit(10);
         setGiftSearchResults(data || []);
@@ -102,14 +102,16 @@ export function useGifts({ isAdmin, currentUser, badgeTemplates, updatePlayerBal
                 return;
             }
 
-            const finalAmount = (giftType === 'chipz' || giftType === 'vip') ? Math.floor(amount) : amount;
+            const finalAmount = (giftType === 'chipz' || giftType === 'vip' || giftType === 'jackpot') ? Math.floor(amount) : amount;
             const logMsg = giftType === 'brl'
                 ? `R$ ${finalAmount.toFixed(2)}`
                 : giftType === 'chipz'
                     ? `${finalAmount} Chipz`
                     : giftType === 'vip'
                         ? `Voucher VIP: ${selectedVipType.toUpperCase()}`
-                        : `Insígnia: ${badgeTemplates.find(b => b.id === selectedBadgeId)?.title}`;
+                        : giftType === 'jackpot'
+                            ? `${finalAmount} Vouchers de Jackpot`
+                            : `Insígnia: ${badgeTemplates.find(b => b.id === selectedBadgeId)?.title}`;
             const finalDescription = giftDescription.trim() || `Atribuição de Admin: ${logMsg}`;
 
             // Chunks for mass sending
@@ -150,6 +152,15 @@ export function useGifts({ isAdmin, currentUser, badgeTemplates, updatePlayerBal
                             }
                         });
                         if (vipCmdErr) throw new Error(`Erro ao criar voucher VIP: ${vipCmdErr.message}`);
+                    } else if (giftType === 'jackpot') {
+                        // Increment jackpot vouchers directly on player profile
+                        const { data: current, error: getErr } = await supabase.from('profiles').select('jackpot_vouchers').eq('id', uid).single();
+                        if (getErr) throw getErr;
+                        const newVouchers = (current?.jackpot_vouchers || 0) + finalAmount;
+                        const { error: updErr } = await supabase.from('profiles').update({ jackpot_vouchers: newVouchers }).eq('id', uid);
+                        if (updErr) throw updErr;
+
+                        updatePlayerBalanceLocally(uid, finalAmount, 'jackpot');
                     } else {
                         // Use secure_balance_transaction for logging and safety
                         await supabase.rpc('secure_balance_transaction', {
@@ -166,7 +177,7 @@ export function useGifts({ isAdmin, currentUser, badgeTemplates, updatePlayerBal
                         if (giftType === 'brl') {
                             const expBonus = Math.floor(finalAmount / 50);
                             if (expBonus > 0) {
-                                await supabase.rpc('bulk_add_event_exp', {
+                                  await supabase.rpc('bulk_add_event_exp', {
                                     p_user_ids: [uid],
                                     p_exp_amount: expBonus
                                 });
@@ -178,10 +189,18 @@ export function useGifts({ isAdmin, currentUser, badgeTemplates, updatePlayerBal
                         user_id: uid,
                         sender: 'Admin',
                         sender_id: currentUser.id,
-                        subject: giftType === 'badge' ? '🎖️ Você recebeu uma medalha!' : giftType === 'vip' ? '💎 Você recebeu um VIP!' : '🎁 Você recebeu um Presente!',
+                        subject: giftType === 'badge' 
+                            ? '🎖️ Você recebeu uma medalha!' 
+                            : giftType === 'vip' 
+                                ? '💎 Você recebeu um VIP!' 
+                                : giftType === 'jackpot'
+                                    ? '🎫 Você recebeu Vouchers de Jackpot!'
+                                    : '🎁 Você recebeu um Presente!',
                         content: giftType === 'vip'
                             ? `Você recebeu um Voucher VIP ${selectedVipType.toUpperCase()}! Acesse seu Perfil > aba Recibos para ativá-lo quando desejar.`
-                            : `${finalDescription}. ${giftType !== 'badge' ? 'O saldo já foi atualizado e está disponível para uso.' : ''}`,
+                            : giftType === 'jackpot'
+                                ? `Você recebeu ${finalAmount} Voucher(s) de Mystery Jackpot! Justificativa: ${finalDescription}.`
+                                : `${finalDescription}. O saldo já foi atualizado e está disponível para uso.`,
                         category: giftType === 'vip' ? 'vip' : 'gift',
                         is_read: false
                     });

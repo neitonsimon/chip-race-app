@@ -18,7 +18,7 @@ export default function App() {
 
     const [isSupportOpen, setIsSupportOpen] = React.useState(false);
 
-    const showFooter = ['home', 'the-chosen-details', 'calendar', 'ranking', 'vip', 'recarga', 'the-chosen-regulations', 'terms', 'privacy', 'rules', 'responsible-gaming'].includes(currentView);
+    const showFooter = ['the-chosen-details', 'calendar', 'ranking', 'vip', 'recarga', 'the-chosen-regulations', 'terms', 'privacy', 'rules', 'responsible-gaming', 'copa-mundo', 'jackpot'].includes(currentView);
 
     // OneSignal Push Notifications Setup
     React.useEffect(() => {
@@ -113,26 +113,6 @@ export default function App() {
 
     return (
         <div className="min-h-screen flex flex-col bg-background-light dark:bg-background-dark relative">
-            <Navigation
-                currentView={currentView}
-                onNavigate={handleNavigate}
-                prizeLabel={prizeLabel}
-                isLoggedIn={isLoggedIn}
-                isAdmin={isAdmin}
-                onLogout={async () => {
-                    await supabase.auth.signOut();
-                    handleNavigate('home');
-                }}
-                messages={messages}
-                unreadCount={unreadCount}
-                onMarkAsRead={handleMarkAsRead}
-                onReply={handleReplyMessage}
-                balanceBrl={currentUser.balanceBrl || 0}
-                balanceChipz={currentUser.balanceChipz || 0}
-                totalPendingDebt={currentUser.totalPendingDebt || 0}
-                currentUserRole={currentUser?.role}
-            />
-
             <AppRouter />
 
             {showFooter && (

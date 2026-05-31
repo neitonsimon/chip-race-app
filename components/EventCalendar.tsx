@@ -1843,7 +1843,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                                 R$ {winner.prize.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                             </div>
                                                         )}
-                                                        {viewClosedEvent.includedRankings && viewClosedEvent.includedRankings.length > 0 && (() => {
+                                                        {viewClosedEvent.includedRankings && viewClosedEvent.includedRankings.some(id => rankings.some(r => r.id === id)) && (() => {
                                                             const mainRankingId = viewClosedEvent.includedRankings.find(id => winner.pointsPerRanking?.[id] !== undefined) || viewClosedEvent.includedRankings[0];
                                                             const savedPts = winner.pointsPerRanking?.[mainRankingId] ?? winner.calculatedPoints;
                                                             return (
@@ -1899,7 +1899,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                 ) : (
                                                     <>
                                                         <th className="px-4 py-3 text-right">Prêmio</th>
-                                                        {viewClosedEvent.includedRankings && viewClosedEvent.includedRankings.length > 0 && (
+                                                        {viewClosedEvent.includedRankings && viewClosedEvent.includedRankings.some(id => rankings.some(r => r.id === id)) && (
                                                             <th className="px-4 py-3 text-center">Pts</th>
                                                         )}
                                                     </>
@@ -1941,7 +1941,7 @@ export const EventCalendar: React.FC<EventCalendarProps> = ({
                                                                         <td className="px-4 py-3 text-right text-green-500 font-bold">
                                                                             {result.prize > 0 ? `R$ ${result.prize.toLocaleString('pt-BR')}` : '-'}
                                                                         </td>
-                                                                        {viewClosedEvent.includedRankings && viewClosedEvent.includedRankings.length > 0 && (() => {
+                                                                        {viewClosedEvent.includedRankings && viewClosedEvent.includedRankings.some(id => rankings.some(r => r.id === id)) && (() => {
                                                                             const mainRankingId = viewClosedEvent.includedRankings.find(id => result.pointsPerRanking?.[id] !== undefined) || viewClosedEvent.includedRankings[0];
                                                                             const savedPts = result.pointsPerRanking?.[mainRankingId] ?? result.calculatedPoints;
                                                                             return (

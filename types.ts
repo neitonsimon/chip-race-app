@@ -8,6 +8,13 @@ export interface TournamentCategory {
   slots: number; // Número de vagas fixas/editáveis
   is_mystery?: boolean;
   is_hidden?: boolean;
+  col_span?: number;
+  row_span?: number;
+  target_view?: string;
+  button_text?: string;
+  order?: number;
+  background_url?: string;
+  icon_url?: string;
 }
 
 export interface NavLink {
@@ -312,6 +319,7 @@ export interface PlayerStats {
   suprema_nickname?: string;
   suprema_user_id?: string;
   profile_views?: number;
+  jackpotVouchers?: number;
 }
 
 export interface MonthData {

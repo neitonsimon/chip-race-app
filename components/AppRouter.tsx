@@ -28,6 +28,8 @@ import { DocumentLinks } from './DocumentLinks';
 import { BetPage } from './BetPage';
 import { ResetPassword } from './ResetPassword';
 import { MaintenancePage } from './MaintenancePage';
+import { CopaMundoChipRace } from './CopaMundoChipRace';
+import { MysteryJackpotPage } from './MysteryJackpotPage';
 
 export const AppRouter: React.FC = () => {
     const isMaintenance = false; // TOGGLE THIS TO DISABLE MAINTENANCE MODE
@@ -104,7 +106,7 @@ export const AppRouter: React.FC = () => {
                 />;
             case 'profile':
                 // During initial data load, show a loading screen to avoid race conditions
-                if (isLoading && !selectedPlayer) {
+                if ((isLoading || (isLoggedIn && !currentUser?.id)) && !selectedPlayer) {
                     return (
                         <div className="min-h-screen bg-[#050310] flex items-center justify-center">
                             <div className="flex flex-col items-center gap-4">
@@ -237,46 +239,37 @@ export const AppRouter: React.FC = () => {
                 return <ClubRules />;
             case 'responsible-gaming':
                 return <ResponsibleGaming />;
+            case 'copa-mundo':
+                return <CopaMundoChipRace onNavigate={handleNavigate} />;
+            case 'jackpot':
+                return <MysteryJackpotPage onNavigate={handleNavigate} currentUser={currentUser as any} />;
             case 'home':
             default:
                 return (
-                    <>
-                        <Hero
-                            isAdmin={isAdmin}
-                            prizeLabel={prizeLabel}
-                            months={months}
-                            onUpdateMonth={handleUpdateMonth}
-                            onToggleStatus={handleToggleMonthStatus}
-                            onNavigate={handleNavigate}
-                            content={contentDB.hero}
-                            specialEvents={contentDB.special_events || []}
-                            onUpdateContent={(field, val) => updateContent('hero', field, val)}
-                            showTimeline={false}
-                        />
-
-                        <TournamentCategories
-                            isAdmin={isAdmin}
-                            categories={contentDB.categories}
-                            onUpdateCategory={updateCategory}
-                            prizeLabel={prizeLabel}
-                            onNavigate={handleNavigate}
-                        />
-                        <RoadmapSection />
-                        <SponsorsSection />
-                        <Newsletter onNavigate={handleNavigate} />
-                        <FAQSection
-                            isAdmin={isAdmin}
-                            faqs={contentDB.faq}
-                            onUpdateFaqs={(val) => updateContent('faq', '', val)}
-                        />
-                        <DocumentLinks />
-                    </>
+                    <TournamentCategories
+                        isAdmin={isAdmin}
+                        categories={contentDB.categories}
+                        onUpdateCategory={updateCategory}
+                        prizeLabel={prizeLabel}
+                        onNavigate={handleNavigate}
+                    />
                 );
         }
     };
 
     return (
-        <main className={`flex-grow pb-20 transition-all duration-300 ${(!isLoggedIn && currentView !== 'login' && currentView !== 'register') ? 'pt-40 md:pt-20' : 'pt-20'}`}>
+        <main className={`flex-grow pb-20 relative ${currentView === 'home' ? 'pt-4' : 'pt-20'}`}>
+            {currentView !== 'home' && (
+                <div className="fixed top-4 left-4 z-[999] animate-in fade-in duration-300">
+                    <button
+                        onClick={() => handleNavigate('home')}
+                        className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2.5 bg-[#030914]/90 hover:bg-[#06152d]/95 border-2 border-[#00e0ff]/50 hover:border-[#00e0ff] text-[#00e0ff] hover:text-white rounded-xl transition-all duration-300 backdrop-blur-md font-display font-black uppercase text-[10px] sm:text-xs tracking-widest cursor-pointer shadow-[0_0_20px_rgba(0,224,255,0.25)] hover:shadow-[0_0_30px_rgba(0,224,255,0.5)] hover:scale-[1.03] group"
+                    >
+                        <span className="material-icons-outlined text-xs sm:text-sm group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                        <span>Menu Principal</span>
+                    </button>
+                </div>
+            )}
             {renderContent()}
         </main>
     );

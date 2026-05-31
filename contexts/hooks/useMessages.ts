@@ -235,26 +235,90 @@ export function useMessages({ isLoggedIn, currentUserId, isAdmin, systemMessageT
         fetchPolls();
         fetchUserPollVotes(currentUserId);
 
-        const msgChannel = supabase.channel(`messages-hook-${currentUserId}`)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, (payload) => {
+        const msgChannel = supabase.channel(`messages-hook-${currentUserId}`);
+
+        // 1. Assinatura para mensagens destinadas diretamente ao usuário
+        msgChannel.on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'messages',
+            filter: `user_id=eq.${currentUserId}`
+        }, (payload) => {
+            if (payload.eventType === 'INSERT') {
+                const m = payload.new as SupabaseMessage;
+                const newMsg: Message = {
+                    id: m.id,
+                    from: m.sender || 'Chip Race',
+                    senderId: m.sender_id,
+                    subject: m.subject || 'Notificação',
+                    content: m.content || '',
+                    date: new Date(m.created_at || Date.now()).toLocaleDateString('pt-BR', {
+                        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+                    }),
+                    read: false,
+                    category: m.category || 'system',
+                    pollId: m.poll_id
+                };
+                if (notificationTimer.current) clearTimeout(notificationTimer.current);
+                setNewNotification(newMsg);
+                notificationTimer.current = setTimeout(() => setNewNotification(null), 8000);
+            }
+            fetchMessages(currentUserId);
+        });
+
+        // 2. Assinatura para mensagens de sistema globais (user_id é null)
+        msgChannel.on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'messages',
+            filter: 'category=eq.system'
+        }, (payload) => {
+            if (payload.eventType === 'INSERT') {
+                const m = payload.new as SupabaseMessage;
+                if (!m.user_id) { // Apenas mensagens globais (sem destinatário específico)
+                    const newMsg: Message = {
+                        id: m.id,
+                        from: m.sender || 'Chip Race',
+                        senderId: m.sender_id,
+                        subject: m.subject || 'Notificação',
+                        content: m.content || '',
+                        date: new Date(m.created_at || Date.now()).toLocaleDateString('pt-BR', {
+                            day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+                        }),
+                        read: false,
+                        category: m.category || 'system',
+                        pollId: m.poll_id
+                    };
+                    if (notificationTimer.current) clearTimeout(notificationTimer.current);
+                    setNewNotification(newMsg);
+                    notificationTimer.current = setTimeout(() => setNewNotification(null), 8000);
+                }
+            }
+            fetchMessages(currentUserId);
+        });
+
+        // 3. Assinatura para mensagens de suporte globais (apenas admins e staffs)
+        if (isAdmin) {
+            msgChannel.on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'messages',
+                filter: 'category=eq.support'
+            }, (payload) => {
                 if (payload.eventType === 'INSERT') {
                     const m = payload.new as SupabaseMessage;
-                    const isSupportToAdmin = m.category === 'support' && !m.user_id;
-                    const isTargetedToMe = m.user_id === currentUserId;
-                    const isGlobalNonSupport = !m.user_id && m.category !== 'support';
-
-                    if (isTargetedToMe || isGlobalNonSupport || (isAdmin && isSupportToAdmin)) {
+                    if (!m.user_id) { // Canal de tickets de suporte abertos por jogadores
                         const newMsg: Message = {
                             id: m.id,
                             from: m.sender || 'Chip Race',
                             senderId: m.sender_id,
-                            subject: m.subject || 'Notificação',
+                            subject: m.subject || 'Suporte Recebido',
                             content: m.content || '',
                             date: new Date(m.created_at || Date.now()).toLocaleDateString('pt-BR', {
                                 day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
                             }),
                             read: false,
-                            category: m.category || 'system',
+                            category: m.category || 'support',
                             pollId: m.poll_id
                         };
                         if (notificationTimer.current) clearTimeout(notificationTimer.current);
@@ -263,8 +327,10 @@ export function useMessages({ isLoggedIn, currentUserId, isAdmin, systemMessageT
                     }
                 }
                 fetchMessages(currentUserId);
-            })
-            .subscribe();
+            });
+        }
+
+        msgChannel.subscribe();
 
         return () => {
             supabase.removeChannel(msgChannel);

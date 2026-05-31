@@ -228,6 +228,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
 
     // Helper para buscar Avatar
     const getPlayerAvatar = (name: string) => {
+        if (!name) return DEFAULT_AVATAR;
         const p = rankingPlayers.find(ptr => ptr.name.toLowerCase() === name.toLowerCase());
         return p?.avatar || `https://ui-avatars.com/api/?name=${name.replace(' ', '+')}&background=random`;
     };
@@ -311,8 +312,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             targetIdRef.current = currentUser.id || '';
             baseData.id = currentUser.id || '';
             baseData.numericId = (currentUser as any).numericId;
-            baseData.name = currentUser.name;
-            baseData.avatar = currentUser.avatar;
+            baseData.name = currentUser.name || 'Jogador';
+            baseData.avatar = currentUser.avatar || DEFAULT_AVATAR;
             if (currentUser.city) baseData.city = currentUser.city;
             if (currentUser.bio) baseData.bio = currentUser.bio;
             if (currentUser.playStyles) baseData.playStyles = currentUser.playStyles;
@@ -351,7 +352,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                     // Find result for this player (Priority to ID, Fallback to Name)
                     const res = e.results?.find(r => {
                         if (r.userId && r.userId === targetIdRef.current) return true;
-                        if (r.name && r.name.toLowerCase().trim() === baseData.name.toLowerCase().trim()) return true;
+                        if (r.name && baseData.name && r.name.toLowerCase().trim() === baseData.name.toLowerCase().trim()) return true;
                         return false;
                     });
                     if (res) {
@@ -1969,14 +1970,16 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                                         R$ {winner.prize.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                     </div>
                                                 )}
-                                                <div className="text-xl font-display font-bold text-secondary mt-2 bg-secondary/10 px-4 py-1 rounded-full inline-block border border-secondary/30">
-                                                    {(() => {
-                                                        const mainRankingId = viewClosedEvent.includedRankings?.find(id => winner.pointsPerRanking?.[id] !== undefined) || viewClosedEvent.includedRankings?.[0];
-                                                        return mainRankingId
-                                                            ? (winner.pointsPerRanking?.[mainRankingId] ?? winner.calculatedPoints)
-                                                            : winner.calculatedPoints;
-                                                    })()} PTS
-                                                </div>
+                                                {viewClosedEvent.includedRankings && viewClosedEvent.includedRankings.some(id => (rankings || []).some(r => r.id === id)) && (
+                                                    <div className="text-xl font-display font-bold text-secondary mt-2 bg-secondary/10 px-4 py-1 rounded-full inline-block border border-secondary/30">
+                                                        {(() => {
+                                                            const mainRankingId = viewClosedEvent.includedRankings?.find(id => winner.pointsPerRanking?.[id] !== undefined) || viewClosedEvent.includedRankings?.[0];
+                                                            return mainRankingId
+                                                                ? (winner.pointsPerRanking?.[mainRankingId] ?? winner.calculatedPoints)
+                                                                : winner.calculatedPoints;
+                                                        })()} PTS
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     ) : (
@@ -2018,7 +2021,9 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                                 <th className="px-4 py-4 text-center w-12">#</th>
                                                 <th className="px-4 py-4">Jogador</th>
                                                 <th className="px-4 py-4 text-right">Prêmio</th>
-                                                <th className="px-4 py-4 text-center">Pts</th>
+                                                {viewClosedEvent.includedRankings && viewClosedEvent.includedRankings.some(id => (rankings || []).some(r => r.id === id)) && (
+                                                    <th className="px-4 py-4 text-center">Pts</th>
+                                                )}
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-white/5">
@@ -2041,14 +2046,16 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
                                                         <td className="px-4 py-4 text-right text-green-500 font-bold">
                                                             {result.prize > 0 ? `R$ ${result.prize.toLocaleString('pt-BR')}` : '-'}
                                                         </td>
-                                                        <td className="px-4 py-4 text-center font-display font-black text-secondary">
-                                                            {(() => {
-                                                                const mainRankingId = viewClosedEvent.includedRankings?.find(id => result.pointsPerRanking?.[id] !== undefined) || viewClosedEvent.includedRankings?.[0];
-                                                                return mainRankingId
-                                                                    ? (result.pointsPerRanking?.[mainRankingId] ?? result.calculatedPoints)
-                                                                    : result.calculatedPoints;
-                                                            })()}
-                                                        </td>
+                                                        {viewClosedEvent.includedRankings && viewClosedEvent.includedRankings.some(id => (rankings || []).some(r => r.id === id)) && (
+                                                            <td className="px-4 py-4 text-center font-display font-black text-secondary">
+                                                                {(() => {
+                                                                    const mainRankingId = viewClosedEvent.includedRankings?.find(id => result.pointsPerRanking?.[id] !== undefined) || viewClosedEvent.includedRankings?.[0];
+                                                                    return mainRankingId
+                                                                        ? (result.pointsPerRanking?.[mainRankingId] ?? result.calculatedPoints)
+                                                                        : result.calculatedPoints;
+                                                                })()}
+                                                            </td>
+                                                        )}
                                                     </tr>
                                                 ))}
                                         </tbody>

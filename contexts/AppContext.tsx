@@ -76,7 +76,9 @@ interface AppContextType {
     handleUpdateBadgeTemplate: (id: string, badge: Partial<BadgeTemplate>) => Promise<void>;
     badgeDistribution: Record<string, number>;
     updateContent: (section: keyof ContentDB, field: string, value: any) => Promise<void>;
-    updateCategory: (index: number, field: keyof TournamentCategory, value: any) => Promise<void>;
+    updateCategory: (index: number, updates: Partial<TournamentCategory>) => Promise<void>;
+    addCategory?: (category: TournamentCategory) => Promise<void>;
+    deleteCategory?: (id: string) => Promise<void>;
     setNewNotification: (msg: Message | null) => void;
     getAllUniquePlayers: () => RankingPlayer[];
     setEvents: React.Dispatch<React.SetStateAction<Event[]>>;
@@ -144,7 +146,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         data: any;
         timestamp: number;
     } | null>(null);
-    const CACHE_DURATION = 1000 * 60 * 5; // 5 minutes
+    const CACHE_DURATION = 1000 * 60 * 60 * 12; // 12 hours
 
     // Map URL path to internal views & selected players
     useEffect(() => {
@@ -273,7 +275,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     supabase.from('scoring_schemas').select('id, name, criteria, position_points'),
                     supabase.from('events').select('id, title, date, time, type, buyin, guaranteed, status, ranking_type, included_rankings, description, modality, stack, blinds, late_reg, location, results, is_hidden, is_starting_day, scoring_schema_id, is_special_event, flyer_url, rebuy_value, rebuy_chips, addon_value, addon_chips, staff_bonus_value, staff_bonus_chips, time_chip_value, time_chip_chips, time_chip_addon_chips, time_chip_discount_brl, max_capacity, double_rebuy_value, double_rebuy_chips, double_addon_value, double_addon_chips, parallel_products, total_rebuys, total_addons, total_prize, game_mode, cash_game_type, cash_game_blinds, cash_game_capacity, cash_game_min_max, cash_game_dinner, cash_game_open_bar, cash_game_notes, staff_expenses_brl, prize_payout_brl, is_multi_day, is_final_day, final_event_id, stack_aggregation, bonus1_condition, bonus1_stack, bonus1_addon, bonus1_extra, bonus2_condition, bonus2_stack, bonus2_addon, bonus2_extra, bonus3_condition, bonus3_stack, bonus3_addon, bonus3_extra, timeline_title, structure').order('date', { ascending: true }),
                     supabase.from('content_db').select('key, value'),
-                    supabase.from('ecosystem_categories').select('id, title, description, icon, color, order').order('order', { ascending: true }),
+                    supabase.from('ecosystem_categories').select('id, title, description, icon, color, order, col_span, row_span, target_view, button_text, is_mystery, is_hidden, slots, background_url, icon_url').order('order', { ascending: true }),
                     supabase.from('profiles_public').select('id, numeric_id, name, avatar_url, city, is_vip, vip_status, vip_expires_at, level, current_exp, next_level_exp, is_verified, total_pending_debt, suprema_nickname, suprema_user_id, profile_views'),
                     currentUserId ? supabase.from('user_badges').select('id, user_id, badge_template_id, title, description, icon, color, awarded_at, badge_templates(id, title, description, icon, color, rarity, is_legendary)').eq('user_id', currentUserId) : Promise.resolve({ data: [] }),
                     supabase.from('experience_levels').select('level, required_exp, credit_limit').order('level', { ascending: true }),
@@ -494,7 +496,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const fetchProfile = async (userId: string) => {
         try {
             const { data, error } = await supabase.from('profiles')
-                .select('id, numeric_id, name, avatar_url, city, bio, social, play_styles, gallery, level, current_exp, next_level_exp, last_daily_claim, daily_streak, is_vip, vip_status, vip_expires_at, balance_brl, balance_chipz, locked_balance_brl, balance_unlock_date, total_pending_debt, debt_limit_brl, is_verified, suprema_nickname, suprema_user_id, role, profile_views')
+                .select('id, numeric_id, name, avatar_url, city, bio, social, play_styles, gallery, level, current_exp, next_level_exp, last_daily_claim, daily_streak, is_vip, vip_status, vip_expires_at, balance_brl, balance_chipz, locked_balance_brl, balance_unlock_date, total_pending_debt, debt_limit_brl, is_verified, suprema_nickname, suprema_user_id, role, profile_views, jackpot_vouchers')
                 .eq('id', userId)
                 .single();
             if (error) throw error;
@@ -530,6 +532,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     suprema_user_id: data.suprema_user_id || '',
                     role: data.role,
                     profile_views: data.profile_views || 0,
+                    jackpotVouchers: data.jackpot_vouchers || 0,
                     badges: []
                 };
                 const { data: userBadges } = await supabase.from('user_badges').select('id, user_id, badge_template_id, title, description, icon, color, awarded_at, badge_templates(id, title, description, icon, color, rarity, is_legendary)').eq('user_id', userId).order('awarded_at', { ascending: false });
@@ -1584,6 +1587,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     };
 
+    const addCategory = async (category: TournamentCategory) => {
+        setContentDB(prev => ({ ...prev, categories: [...prev.categories, category] }));
+        if (isAdmin) {
+            const { error } = await supabase.from('ecosystem_categories').insert([category]);
+            if (error) console.error('Error adding category:', error);
+        }
+    };
+
+    const deleteCategory = async (id: string) => {
+        setContentDB(prev => ({ ...prev, categories: prev.categories.filter(c => c.id !== id) }));
+        if (isAdmin) {
+            const { error } = await supabase.from('ecosystem_categories').delete().eq('id', id);
+            if (error) console.error('Error deleting category:', error);
+        }
+    };
+
     return (
         <AppContext.Provider value={{
             currentView, setCurrentView, isAdmin, isStaff, isLoggedIn, currentUserId, currentUser, events, isLoading, rankings: calculatedRankings, contentDB, globalScoringSchemas,
@@ -1593,7 +1612,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             handleEventClosure, handleUpdateRankingMeta, handleUpdateGlobalSchemas, handleUpdateSystemMessageTemplate, handleCreateSystemMessageTemplate, handleAddRanking, handleDeleteRanking, handleAwardBadge,
             handleUpdateRankingPrize, handleUpdateTotalQualifiers, handleUpdateMonth, handleToggleMonthStatus,
             handleNavigateToPlayerByName, handleCreatePoll, handleVoteOnPoll, handleSendAdminMessage, handleSendMessage, handleReplyMessage,
-            handleMarkAsRead, handleDeleteMessage, handleCreateBadgeTemplate, handleUpdateBadgeTemplate, updateContent, updateCategory, setNewNotification, getAllUniquePlayers,
+            handleMarkAsRead, handleDeleteMessage, handleCreateBadgeTemplate, handleUpdateBadgeTemplate, updateContent, updateCategory, addCategory, deleteCategory, setNewNotification, getAllUniquePlayers,
             setEvents, setExperienceLevels, setDailyRewards,
             isFlyerOpen, setIsFlyerOpen,
             refreshSupabaseData: async () => {
