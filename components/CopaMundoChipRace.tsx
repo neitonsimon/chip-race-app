@@ -1140,27 +1140,7 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
         </div>
       </div>
 
-      {/* Developer Admin Mode Trigger float bar */}
-      <div className="fixed bottom-6 left-6 z-[999] bg-[#0d091a]/95 border border-white/10 p-3 rounded-2xl flex items-center gap-3 backdrop-blur shadow-2xl">
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
-          <span className="text-[10px] font-display font-black text-gray-400 uppercase tracking-wider">Dev Local Controls</span>
-        </div>
-        <div className="w-px h-4 bg-white/10" />
-        <button
-          onClick={() => setSimulatedAdmin(prev => !prev)}
-          className={`px-3 py-1.5 rounded-xl font-display text-[9px] font-black uppercase tracking-wider transition-all duration-300 ${simulatedAdmin ? 'bg-amber-500 text-black shadow-[0_0_10px_rgba(245,158,11,0.4)]' : 'bg-white/5 text-gray-400 hover:text-white border border-white/10'}`}
-        >
-          {simulatedAdmin ? 'ADM SIMULADO: ON' : 'ADM SIMULADO: OFF'}
-        </button>
-        <button
-          onClick={handleResetToDefault}
-          className="px-3 py-1.5 bg-red-950/40 text-red-400 hover:bg-red-900/60 rounded-xl font-display text-[9px] font-black uppercase tracking-wider border border-red-500/20 transition-all"
-          title="Resetar dados locais dos grupos e chaveamentos"
-        >
-          RESETAR TUDO
-        </button>
-      </div>
+
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
 

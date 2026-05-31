@@ -239,7 +239,7 @@ export const AppRouter: React.FC = () => {
                 return <ClubRules />;
             case 'responsible-gaming':
                 return <ResponsibleGaming />;
-            case 'copa-mundo':
+            case 'copa-mundo-poker':
                 return <CopaMundoChipRace onNavigate={handleNavigate} />;
             case 'jackpot':
                 return <MysteryJackpotPage onNavigate={handleNavigate} currentUser={currentUser as any} />;

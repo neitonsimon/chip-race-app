@@ -86,7 +86,7 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
       order: 1,
       col_span: 2,
       row_span: 2,
-      target_view: 'copa-mundo',
+      target_view: 'copa-mundo-poker',
       button_text: 'VER CHAVEAMENTO'
     });
     virtuals.push({
