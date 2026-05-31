@@ -1129,29 +1129,12 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
       {/* Cyber table lines */}
       <div className="absolute inset-0 opacity-[0.02] bg-[linear-gradient(rgba(239,68,68,0.6)_1px,transparent_1px),linear-gradient(90deg,rgba(239,68,68,0.6)_1px,transparent_1px)] bg-[size:45px_45px] pointer-events-none z-0" />
 
-      {/* Background Watermark Logos */}
-      <div className="absolute inset-0 pointer-events-none z-0 select-none overflow-hidden">
-        {/* Top Background Watermark */}
-        <div className="absolute top-[4%] left-1/2 -translate-x-1/2 w-full max-w-[900px] aspect-square opacity-[0.06] bg-watermark">
+      {/* Fixed Background Watermark Logo */}
+      <div className="fixed inset-0 pointer-events-none z-0 select-none overflow-hidden flex items-center justify-center">
+        <div className="w-[95vw] max-w-[1250px] aspect-square opacity-[0.14] bg-watermark">
           <img 
             src="/copa-logo.jpg" 
-            alt="Copa do Mundo Background Watermark" 
-            className="w-full h-full object-contain"
-          />
-        </div>
-        {/* Middle Background Watermark */}
-        <div className="absolute top-[35%] left-1/2 -translate-x-1/2 w-full max-w-[900px] aspect-square opacity-[0.04] bg-watermark">
-          <img 
-            src="/copa-logo.jpg" 
-            alt="Copa do Mundo Background Watermark Mid" 
-            className="w-full h-full object-contain"
-          />
-        </div>
-        {/* Bottom Background Watermark */}
-        <div className="absolute bottom-[3%] left-1/2 -translate-x-1/2 w-full max-w-[900px] aspect-square opacity-[0.05] bg-watermark">
-          <img 
-            src="/copa-logo.jpg" 
-            alt="Copa do Mundo Background Watermark Bottom" 
+            alt="Copa do Mundo Background Watermark Fixed" 
             className="w-full h-full object-contain"
           />
         </div>
