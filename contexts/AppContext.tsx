@@ -1189,6 +1189,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
 
         try {
+            if (isAdmin) invalidateSessionCache();
             if (isNew) {
                 console.log('--- PERSISTENCE: Inserting New Event ---', dbData);
                 const { data, error } = await supabase.from('events').insert([dbData]).select();
@@ -1232,7 +1233,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const handleDeleteEventAcrossApp = async (eventId: string) => {
         setEvents(prev => prev.filter(e => e.id !== eventId));
         if (eventId.length >= 20 && isAdmin) {
-            try { await supabase.from('events').delete().eq('id', eventId); } catch (e) { console.error('Error deleting event:', e); }
+            try { 
+                invalidateSessionCache();
+                await supabase.from('events').delete().eq('id', eventId); 
+            } catch (e) { console.error('Error deleting event:', e); }
         }
     };
 
@@ -1244,6 +1248,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setEvents(prev => prev.map(e => e.id === eventId ? updatedEvent : e));
             if (isAdmin && eventId.length >= 20) {
                 try {
+                    invalidateSessionCache();
                     await supabase.from('events').update({ status: 'closed', results, total_rebuys: stats.totalRebuys, total_addons: stats.totalAddons, total_prize: stats.totalPrize }).eq('id', eventId);
 
                     // Award 5 EXP to each participant with a userId
@@ -1346,6 +1351,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 .sort((a, b) => (a.order || 0) - (b.order || 0))
         );
         if (isAdmin) {
+            invalidateSessionCache();
             const dbData: any = {
                 label: fullRanking.label,
                 description: fullRanking.description,
@@ -1371,6 +1377,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (!isAdmin || !schemas) return;
 
         try {
+            invalidateSessionCache();
             // 1. Identificar e remover schemas excluídos
             const { data: dbSchemas, error: fetchError } = await supabase.from('scoring_schemas').select('id');
             if (fetchError) throw fetchError;
@@ -1440,6 +1447,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (!window.confirm('Excluir ranking permanentemente? Esta ação não pode ser desfeita.')) return;
         setRankings(prev => prev.filter(r => r.id !== id));
         if (isAdmin) {
+            invalidateSessionCache();
             const { error } = await supabase.from('rankings').delete().eq('id', id);
             if (error) {
                 console.error('Error deleting ranking:', error);
@@ -1465,6 +1473,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             }
         }
 
+        invalidateSessionCache();
         const { error } = await supabase.from('user_badges').insert(badge);
         return { error };
     };
@@ -1477,6 +1486,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
                     // Persist to DB if admin
                     if (isAdmin) {
+                        invalidateSessionCache();
                         supabase.from('rankings').update({ position_prizes: updatedPrizes }).eq('id', rankingId).then(({ error }) => {
                             if (error) console.error('Error updating position prizes:', error);
                         });
@@ -1492,14 +1502,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const handleUpdateTotalQualifiers = async (value: number | null) => {
         setCustomTotalQualifiers(value);
-        if (isAdmin) await supabase.from('content_db').upsert({ key: 'total_qualifiers', value }, { onConflict: 'key' });
+        if (isAdmin) {
+            invalidateSessionCache();
+            await supabase.from('content_db').upsert({ key: 'total_qualifiers', value }, { onConflict: 'key' });
+        }
     };
 
     const handleUpdateMonth = async (index: number, field: keyof MonthData, value: any) => {
         const newM = [...months];
         newM[index] = { ...newM[index], [field]: value };
         setMonths(newM);
-        if (isAdmin) await supabase.from('content_db').upsert({ key: 'months', value: newM }, { onConflict: 'key' });
+        if (isAdmin) {
+            invalidateSessionCache();
+            await supabase.from('content_db').upsert({ key: 'months', value: newM }, { onConflict: 'key' });
+        }
     };
 
     const handleToggleMonthStatus = (index: number) => {
@@ -1570,10 +1586,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await hookSendMessage(toPlayerName, content);
     };
 
+    const invalidateSessionCache = () => {
+        try {
+            sessionStorage.removeItem('cr_app_raw_data_cache_v2');
+            console.log('--- SESSION CACHE INVALIDATED ---');
+        } catch (e) {
+            console.error('Error clearing session cache:', e);
+        }
+    };
+
     const updateContent = async (section: keyof ContentDB, field: string, value: any) => {
         const newSec = field === '' ? value : { ...contentDB[section], [field]: value };
         setContentDB(prev => ({ ...prev, [section]: newSec }));
-        if (isAdmin) await supabase.from('content_db').upsert({ key: section, value: newSec }, { onConflict: 'key' });
+        if (isAdmin) {
+            invalidateSessionCache();
+            await supabase.from('content_db').upsert({ key: section, value: newSec }, { onConflict: 'key' });
+        }
     };
 
     const updateCategory = async (index: number, updates: Partial<TournamentCategory>) => {
@@ -1582,6 +1610,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         newCats[index] = { ...newCats[index], ...updates };
         setContentDB(prev => ({ ...prev, categories: newCats }));
         if (isAdmin) {
+            invalidateSessionCache();
             const { error } = await supabase.from('ecosystem_categories').update(updates).eq('id', oldId);
             if (error) console.error('Error updating category:', error);
         }
@@ -1590,6 +1619,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const addCategory = async (category: TournamentCategory) => {
         setContentDB(prev => ({ ...prev, categories: [...prev.categories, category] }));
         if (isAdmin) {
+            invalidateSessionCache();
             const { error } = await supabase.from('ecosystem_categories').insert([category]);
             if (error) console.error('Error adding category:', error);
         }
@@ -1598,6 +1628,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const deleteCategory = async (id: string) => {
         setContentDB(prev => ({ ...prev, categories: prev.categories.filter(c => c.id !== id) }));
         if (isAdmin) {
+            invalidateSessionCache();
             const { error } = await supabase.from('ecosystem_categories').delete().eq('id', id);
             if (error) console.error('Error deleting category:', error);
         }

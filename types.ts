@@ -13,8 +13,8 @@ export interface TournamentCategory {
   target_view?: string;
   button_text?: string;
   order?: number;
-  background_url?: string;
-  icon_url?: string;
+  background_url?: string | null;
+  icon_url?: string | null;
 }
 
 export interface NavLink {

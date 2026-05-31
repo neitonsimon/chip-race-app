@@ -190,8 +190,8 @@ export const HomeTilesTab: React.FC = () => {
         button_text: form.button_text.trim(),
         is_mystery: form.is_mystery,
         is_hidden: form.is_hidden,
-        background_url: form.background_url.trim() || undefined,
-        icon_url: form.icon_url.trim() || undefined
+        background_url: form.background_url.trim() || null,
+        icon_url: form.icon_url.trim() || null
       };
 
       if (isEditing && editingCategory) {
