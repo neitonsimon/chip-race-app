@@ -538,6 +538,21 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
       setBracket(defaultBracket);
       localStorage.setItem('cr_copa_mundo_bracket_v3', JSON.stringify(defaultBracket));
     }
+
+    // Real-time synchronization when updated from the draw popup window
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'cr_copa_mundo_groups_v3' && e.newValue) {
+        try {
+          setGroups(JSON.parse(e.newValue));
+        } catch (err) {
+          console.error("Erro ao sincronizar grupos via storage:", err);
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+    };
   }, []);
 
   // Live countdown to June 7, 2026 at 20:00 (Copa do Mundo Chip Race launch date)
