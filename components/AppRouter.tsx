@@ -29,6 +29,7 @@ import { BetPage } from './BetPage';
 import { ResetPassword } from './ResetPassword';
 import { MaintenancePage } from './MaintenancePage';
 import { CopaMundoChipRace } from './CopaMundoChipRace';
+import { CopaMundoSorteio } from './CopaMundoSorteio';
 import { MysteryJackpotPage } from './MysteryJackpotPage';
 
 export const AppRouter: React.FC = () => {
@@ -241,6 +242,8 @@ export const AppRouter: React.FC = () => {
                 return <ResponsibleGaming />;
             case 'copa-mundo-poker':
                 return <CopaMundoChipRace onNavigate={handleNavigate} />;
+            case 'sorteio-copa':
+                return <CopaMundoSorteio onNavigate={handleNavigate} />;
             case 'jackpot':
                 return <MysteryJackpotPage onNavigate={handleNavigate} currentUser={currentUser as any} />;
             case 'home':

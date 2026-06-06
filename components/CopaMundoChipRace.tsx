@@ -216,7 +216,14 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
   const [bracket, setBracket] = useState<BracketState | null>(null);
   
   const [activeGroupTab, setActiveGroupTab] = useState<'A-F' | 'G-L'>('A-F');
+  const [activeMobileGroup, setActiveMobileGroup] = useState<string>('A');
   const [activeBracketRound, setActiveBracketRound] = useState<'16avos' | 'oitavas' | 'quartas' | 'semis' | 'finais'>('16avos');
+  const [activeMobileMatchIndex, setActiveMobileMatchIndex] = useState<number>(0);
+
+  const handleSelectBracketRound = (round: '16avos' | 'oitavas' | 'quartas' | 'semis' | 'finais') => {
+    setActiveBracketRound(round);
+    setActiveMobileMatchIndex(0);
+  };
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
   // Modal / Group Editing states
@@ -1081,6 +1088,126 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
     }
   });
 
+  const renderGroupCard = (group: GroupState) => {
+    const sortedPlayers = getSortedGroupPlayers(group);
+    const isTied = checkPerfectTie(group);
+
+    return (
+      <div key={group.id} className={`bg-[#0b0716]/80 border ${isTied ? 'border-amber-500/45' : 'border-white/5'} rounded-3xl p-5 flex flex-col justify-between hover:border-red-500/25 transition-colors duration-300 relative`}>
+        
+        {isTied && (
+          <div className="absolute top-2 right-2 flex items-center gap-1 text-[8px] font-black uppercase bg-amber-500/10 text-amber-500 border border-amber-500/30 rounded px-2 py-0.5 animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+            <span>⚠️ Empate Técnico</span>
+          </div>
+        )}
+
+        {/* Group Title Header */}
+        <div className="flex justify-between items-center mb-4 pb-2 border-b border-white/5">
+          <div className="flex items-center gap-2">
+            <h3 className="font-display text-base font-black tracking-widest text-white uppercase">{group.name}</h3>
+            {isAdmin && (
+              <button
+                onClick={() => handleOpenEditGroup(group)}
+                className="flex items-center gap-1 text-[9px] bg-amber-500 hover:bg-amber-400 text-black font-bold uppercase rounded-lg px-2.5 py-1 transition-all"
+              >
+                <span className="material-icons text-[10px]">edit</span>
+                Editar
+              </button>
+            )}
+          </div>
+          <span className="text-[9px] bg-red-950/40 text-red-400 border border-red-500/20 px-2 py-0.5 rounded font-display font-semibold">FASE DE GRUPOS</span>
+        </div>
+
+        {/* Standing Table */}
+        <div className="overflow-x-auto mb-4">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="text-gray-500 uppercase font-display text-[8px] tracking-wider border-b border-white/5">
+                <th className="py-1.5">Jogador</th>
+                <th className="py-1.5 text-center">Pts</th>
+                <th className="py-1.5 text-center">1ºs</th>
+                <th className="py-1.5 text-center">2ºs</th>
+                <th className="py-1.5 text-center">4ºs</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {sortedPlayers.map((p, pIdx) => {
+                const status = pIdx < 2 ? 'classificado' : pIdx === 2 ? 'repescagem' : 'eliminado';
+                const isClassificado = status === 'classificado';
+                const isRepescagem = status === 'repescagem';
+
+                return (
+                  <tr key={p.name} className="hover:bg-white/[0.02]">
+                    <td className="py-2 pr-2 font-medium flex items-center gap-1.5">
+                      <span className={`w-1.5 h-1.5 rounded-full ${isClassificado ? 'bg-emerald-500' : isRepescagem ? 'bg-amber-500' : 'bg-red-500'}`} />
+                      <span className={isClassificado ? 'text-white font-semibold' : 'text-gray-400 truncate max-w-[110px]'}>
+                        {p.name || 'Vago'}
+                      </span>
+                      {group.tieBreakerOverride === p.name && (
+                        <span className="text-[8px] font-display font-black bg-amber-500/10 text-amber-400 border border-amber-500/30 px-1 rounded-sm">HU</span>
+                      )}
+                    </td>
+                    <td className={`py-2 text-center font-display font-black ${isClassificado ? 'text-emerald-400' : isRepescagem ? 'text-amber-400' : 'text-gray-500'}`}>{p.points}</td>
+                    <td className="py-2 text-center text-gray-400 font-bold">{p.wins}</td>
+                    <td className="py-2 text-center text-gray-400">{p.vices}</td>
+                    <td className="py-2 text-center text-gray-500">{p.eliminations}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Qualification Indicators Details */}
+        <div className="flex justify-between items-center bg-black/25 p-2 rounded-xl border border-white/5 text-[8px] text-gray-500 font-light">
+          <div className="flex gap-2">
+            <div className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Top 2</div>
+            <div className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Melhores 3ºs</div>
+            <div className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500" /> Elim</div>
+          </div>
+          {group.tieBreakerOverride && (
+            <span className="text-[8px] text-amber-500 font-semibold uppercase">Desempate HU Aplicado</span>
+          )}
+        </div>
+
+        {/* Tournament Schedule HUD inside group */}
+        <div className="bg-[#120c24]/50 border border-white/5 rounded-2xl p-3 mt-4">
+          <h4 className="text-[8px] font-display font-black uppercase text-gray-400 tracking-wider mb-2">Rodadas Sit & Go</h4>
+          <div className="space-y-2 text-[10px]">
+            {[1, 2, 3, 4].map((roundNum) => {
+              const roundData = group.rounds[roundNum as 1 | 2 | 3 | 4] || {};
+              const winner = Object.keys(roundData).find(name => roundData[name] === 1);
+              const hasPlayed = Object.keys(roundData).length > 0;
+              const isGroupAToF = ['A', 'B', 'C', 'D', 'E', 'F'].includes(group.id);
+              const roundDates = isGroupAToF 
+                ? { 1: '07/06', 2: '10/06', 3: '14/06', 4: '17/06' }
+                : { 1: '21/06', 2: '24/06', 3: '28/06', 4: '01/07' };
+              const rDate = roundDates[roundNum as 1 | 2 | 3 | 4];
+
+              return (
+                <div key={roundNum} className="flex justify-between items-center bg-black/15 px-2 py-1.5 rounded-lg border border-white/[0.02]">
+                  <div className="flex flex-col">
+                    <span className="font-medium text-gray-300">Sit & Go #{roundNum}</span>
+                    <span className="text-[8px] text-gray-500 font-display font-semibold uppercase">{rDate}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-right">
+                    <span className="text-gray-500 font-light text-[9px] truncate max-w-[100px]">
+                      {hasPlayed && winner ? `Vencedor: ${winner}` : 'Não Lançada'}
+                    </span>
+                    <span className={`text-[8px] font-semibold uppercase px-1 rounded-sm ${hasPlayed ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/20' : 'bg-[#1b0811] text-amber-500 border border-amber-500/20'}`}>
+                      {hasPlayed ? 'FIM' : 'AGENDADO'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+      </div>
+    );
+  };
+
   return (
     <div className="copa-mundo-page min-h-screen bg-[#070511] text-gray-200 font-body relative overflow-hidden pb-12">
       <style dangerouslySetInnerHTML={{__html: `
@@ -1119,6 +1246,13 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
           .copa-mundo-page .text-4xl { font-size: 24px !important; }
           .copa-mundo-page .text-3xl { font-size: 20px !important; }
           .copa-mundo-page .text-2xl { font-size: 18px !important; }
+        }
+        .scrollbar-none::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-none {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
         }
       `}} />
       {/* Decorative Cinematic Spotlight glows */}
@@ -1160,12 +1294,6 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
                 />
               </div>
             </div>
-          </div>
-
-          {/* Trophy reflection badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#1b0811] border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.08)] mb-4 animate-in slide-in-from-top-4 duration-1000">
-            <span className="material-icons text-amber-500 text-xs">emoji_events</span>
-            <span className="text-[10px] sm:text-xs font-display font-black text-red-400 tracking-wider uppercase">COPA DO MUNDO DE POKER CHIP RACE 2026</span>
           </div>
 
           {/* New Prominent Prize Text Banner requested */}
@@ -1254,6 +1382,28 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
               Os 48 competidores divididos em 12 grupos de 4. Cada grupo joga 4 rodadas Sit & Go. Cada rodada gera pontos para as posições: **1º (Campeão) = 5 pts, 2º (Vice) = 3 pts, 3º = 2 pts, 4º = 1 pt**. Não participantes recebem 0. Critérios de desempate ordenados: mais vezes campeão ➔ vice-campeão ➔ rodada de desempate HU ou 3-handed.
             </p>
 
+            {(isAdmin || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && (
+              <div className="flex justify-center mt-6">
+                <button
+                  onClick={() => {
+                    const width = 1450;
+                    const height = 900;
+                    const left = (window.screen.width - width) / 2;
+                    const top = (window.screen.height - height) / 2;
+                    window.open(
+                      window.location.origin + '/sorteio-copa',
+                      'SorteioCopa',
+                      `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no,resizable=yes`
+                    );
+                  }}
+                  className="flex items-center gap-2 bg-gradient-to-r from-red-600 via-amber-500 to-red-600 text-black font-black uppercase text-xs tracking-[0.15em] px-6 py-3 rounded-2xl shadow-[0_0_15px_rgba(239,68,68,0.25)] hover:shadow-[0_0_25px_rgba(239,68,68,0.45)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-300 cursor-pointer"
+                >
+                  <span className="material-icons text-base">casino</span>
+                  Sorteio dos Grupos (Live)
+                </button>
+              </div>
+            )}
+
             {/* Observation block added as requested */}
             <div className="mt-6 max-w-2xl mx-auto bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4 flex gap-3 text-left animate-in fade-in duration-500">
               <span className="material-icons text-amber-500 shrink-0 select-none text-base">info_outline</span>
@@ -1266,8 +1416,8 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
             </div>
           </div>
 
-          {/* Group navigation tabs */}
-          <div className="flex justify-center gap-3 mb-8">
+          {/* Group navigation tabs (Desktop only) */}
+          <div className="hidden sm:flex justify-center gap-3 mb-8">
             <button
               onClick={() => setActiveGroupTab('A-F')}
               className={`px-6 py-2.5 rounded-xl font-display text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all duration-300 ${activeGroupTab === 'A-F' ? 'bg-red-950/45 border border-red-500/40 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.15)]' : 'bg-[#0d091a]/30 border border-white/5 text-gray-400 hover:text-white'}`}
@@ -1282,127 +1432,27 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
             </button>
           </div>
 
-          {/* Group Mosaico/Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredGroups.map((group) => {
-              const sortedPlayers = getSortedGroupPlayers(group);
-              const isTied = checkPerfectTie(group);
+          {/* Mobile Group Selection Grid (A to L) */}
+          <div className="grid grid-cols-6 gap-2 mb-8 sm:hidden px-2 max-w-md mx-auto">
+            {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'].map((letter) => (
+              <button
+                key={letter}
+                onClick={() => setActiveMobileGroup(letter)}
+                className={`py-2 rounded-xl font-display text-xs font-black uppercase transition-all duration-300 ${activeMobileGroup === letter ? 'bg-red-950/45 border border-red-500/40 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.15)]' : 'bg-[#0d091a]/30 border border-white/5 text-gray-400 hover:text-white'}`}
+              >
+                {letter}
+              </button>
+            ))}
+          </div>
 
-              return (
-                <div key={group.id} className={`bg-[#0b0716]/80 border ${isTied ? 'border-amber-500/45' : 'border-white/5'} rounded-3xl p-5 flex flex-col justify-between hover:border-red-500/25 transition-colors duration-300 relative`}>
-                  
-                  {isTied && (
-                    <div className="absolute top-2 right-2 flex items-center gap-1 text-[8px] font-black uppercase bg-amber-500/10 text-amber-500 border border-amber-500/30 rounded px-2 py-0.5 animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.2)]">
-                      <span>⚠️ Empate Técnico</span>
-                    </div>
-                  )}
+          {/* Group Mosaico/Grid - Desktop only */}
+          <div className="hidden sm:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredGroups.map((group) => renderGroupCard(group))}
+          </div>
 
-                  {/* Group Title Header */}
-                  <div className="flex justify-between items-center mb-4 pb-2 border-b border-white/5">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-display text-base font-black tracking-widest text-white uppercase">{group.name}</h3>
-                      {isAdmin && (
-                        <button
-                          onClick={() => handleOpenEditGroup(group)}
-                          className="flex items-center gap-1 text-[9px] bg-amber-500 hover:bg-amber-400 text-black font-bold uppercase rounded-lg px-2.5 py-1 transition-all"
-                        >
-                          <span className="material-icons text-[10px]">edit</span>
-                          Editar
-                        </button>
-                      )}
-                    </div>
-                    <span className="text-[9px] bg-red-950/40 text-red-400 border border-red-500/20 px-2 py-0.5 rounded font-display font-semibold">FASE DE GRUPOS</span>
-                  </div>
-
-                  {/* Standing Table */}
-                  <div className="overflow-x-auto mb-4">
-                    <table className="w-full text-left text-xs">
-                      <thead>
-                        <tr className="text-gray-500 uppercase font-display text-[8px] tracking-wider border-b border-white/5">
-                          <th className="py-1.5">Jogador</th>
-                          <th className="py-1.5 text-center">Pts</th>
-                          <th className="py-1.5 text-center">1ºs</th>
-                          <th className="py-1.5 text-center">2ºs</th>
-                          <th className="py-1.5 text-center">4ºs</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/5">
-                        {sortedPlayers.map((p, pIdx) => {
-                          const status = pIdx < 2 ? 'classificado' : pIdx === 2 ? 'repescagem' : 'eliminado';
-                          const isClassificado = status === 'classificado';
-                          const isRepescagem = status === 'repescagem';
-
-                          return (
-                            <tr key={p.name} className="hover:bg-white/[0.02]">
-                              <td className="py-2 pr-2 font-medium flex items-center gap-1.5">
-                                <span className={`w-1.5 h-1.5 rounded-full ${isClassificado ? 'bg-emerald-500' : isRepescagem ? 'bg-amber-500' : 'bg-red-500'}`} />
-                                <span className={isClassificado ? 'text-white font-semibold' : 'text-gray-400 truncate max-w-[110px]'}>
-                                  {p.name || 'Vago'}
-                                </span>
-                                {group.tieBreakerOverride === p.name && (
-                                  <span className="text-[8px] font-display font-black bg-amber-500/10 text-amber-400 border border-amber-500/30 px-1 rounded-sm">HU</span>
-                                )}
-                              </td>
-                              <td className={`py-2 text-center font-display font-black ${isClassificado ? 'text-emerald-400' : isRepescagem ? 'text-amber-400' : 'text-gray-500'}`}>{p.points}</td>
-                              <td className="py-2 text-center text-gray-400 font-bold">{p.wins}</td>
-                              <td className="py-2 text-center text-gray-400">{p.vices}</td>
-                              <td className="py-2 text-center text-gray-500">{p.eliminations}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Qualification Indicators Details */}
-                  <div className="flex justify-between items-center bg-black/25 p-2 rounded-xl border border-white/5 text-[8px] text-gray-500 font-light">
-                    <div className="flex gap-2">
-                      <div className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Top 2</div>
-                      <div className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Melhores 3ºs</div>
-                      <div className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500" /> Elim</div>
-                    </div>
-                    {group.tieBreakerOverride && (
-                      <span className="text-[8px] text-amber-500 font-semibold uppercase">Desempate HU Aplicado</span>
-                    )}
-                  </div>
-
-                  {/* Tournament Schedule HUD inside group */}
-                  <div className="bg-[#120c24]/50 border border-white/5 rounded-2xl p-3 mt-4">
-                    <h4 className="text-[8px] font-display font-black uppercase text-gray-400 tracking-wider mb-2">Rodadas Sit & Go</h4>
-                    <div className="space-y-2 text-[10px]">
-                      {[1, 2, 3, 4].map((roundNum) => {
-                        const roundData = group.rounds[roundNum as 1 | 2 | 3 | 4] || {};
-                        const winner = Object.keys(roundData).find(name => roundData[name] === 1);
-                        const hasPlayed = Object.keys(roundData).length > 0;
-                        const isGroupAToF = ['A', 'B', 'C', 'D', 'E', 'F'].includes(group.id);
-                        const roundDates = isGroupAToF 
-                          ? { 1: '07/06', 2: '10/06', 3: '14/06', 4: '17/06' }
-                          : { 1: '21/06', 2: '24/06', 3: '28/06', 4: '01/07' };
-                        const rDate = roundDates[roundNum as 1 | 2 | 3 | 4];
-
-                        return (
-                          <div key={roundNum} className="flex justify-between items-center bg-black/15 px-2 py-1.5 rounded-lg border border-white/[0.02]">
-                            <div className="flex flex-col">
-                              <span className="font-medium text-gray-300">Sit & Go #{roundNum}</span>
-                              <span className="text-[8px] text-gray-500 font-display font-semibold uppercase">{rDate}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 text-right">
-                              <span className="text-gray-500 font-light text-[9px] truncate max-w-[100px]">
-                                {hasPlayed && winner ? `Vencedor: ${winner}` : 'Não Lançada'}
-                              </span>
-                              <span className={`text-[8px] font-semibold uppercase px-1 rounded-sm ${hasPlayed ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/20' : 'bg-[#1b0811] text-amber-500 border border-amber-500/20'}`}>
-                                {hasPlayed ? 'FIM' : 'AGENDADO'}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                </div>
-              );
-            })}
+          {/* Single Group Display - Mobile only */}
+          <div className="block sm:hidden px-2">
+            {groups.filter(g => g.id === activeMobileGroup).map((group) => renderGroupCard(group))}
           </div>
         </section>
 
@@ -1693,69 +1743,133 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
           {/* Interactive Round Bracket Selector */}
           <div className="flex flex-wrap justify-center gap-2 mb-10 max-w-4xl mx-auto">
             <button
-              onClick={() => setActiveBracketRound('16avos')}
+              onClick={() => handleSelectBracketRound('16avos')}
               className={`px-4 py-2.5 rounded-xl font-display text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all duration-200 ${activeBracketRound === '16avos' ? 'bg-red-600 text-white shadow-[0_0_15px_rgba(220,38,38,0.4)]' : 'bg-[#0d091a]/40 border border-white/5 text-gray-400 hover:text-white'}`}
             >
               16-avos de Final (32 HU)
             </button>
             <button
-              onClick={() => setActiveBracketRound('oitavas')}
+              onClick={() => handleSelectBracketRound('oitavas')}
               className={`px-4 py-2.5 rounded-xl font-display text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all duration-200 ${activeBracketRound === 'oitavas' ? 'bg-red-600 text-white shadow-[0_0_15px_rgba(220,38,38,0.4)]' : 'bg-[#0d091a]/40 border border-white/5 text-gray-400 hover:text-white'}`}
             >
               Oitavas de Final (16 HU)
             </button>
             <button
-              onClick={() => setActiveBracketRound('quartas')}
+              onClick={() => handleSelectBracketRound('quartas')}
               className={`px-4 py-2.5 rounded-xl font-display text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all duration-200 ${activeBracketRound === 'quartas' ? 'bg-red-600 text-white shadow-[0_0_15px_rgba(220,38,38,0.4)]' : 'bg-[#0d091a]/40 border border-white/5 text-gray-400 hover:text-white'}`}
             >
               Quartas de Final (8 HU)
             </button>
             <button
-              onClick={() => setActiveBracketRound('semis')}
+              onClick={() => handleSelectBracketRound('semis')}
               className={`px-4 py-2.5 rounded-xl font-display text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all duration-200 ${activeBracketRound === 'semis' ? 'bg-red-600 text-white shadow-[0_0_15px_rgba(220,38,38,0.4)]' : 'bg-[#0d091a]/40 border border-white/5 text-gray-400 hover:text-white'}`}
             >
               Semifinais (4 HU)
             </button>
             <button
-              onClick={() => setActiveBracketRound('finais')}
+              onClick={() => handleSelectBracketRound('finais')}
               className={`px-4 py-2.5 rounded-xl font-display text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all duration-200 ${activeBracketRound === 'finais' ? 'bg-amber-500 text-black shadow-[0_0_15px_rgba(245,158,11,0.4)] font-bold' : 'bg-[#0d091a]/40 border border-white/5 text-gray-400 hover:text-white'}`}
             >
               Final & 3º Lugar
             </button>
           </div>
 
+          {/* Mobile Match Selector Buttons */}
+          {bracket && bracket[activeBracketRound] && (
+            <div className="flex sm:hidden overflow-x-auto gap-2 mb-8 pb-2 scrollbar-none justify-start px-2 max-w-md mx-auto">
+              {bracket[activeBracketRound].map((match, idx) => {
+                const buttonLabel = activeBracketRound === 'finais'
+                  ? (idx === 0 ? 'Final' : '3º Lugar')
+                  : `Jogo ${idx + 1}`;
+                
+                return (
+                  <button
+                    key={match.id}
+                    onClick={() => setActiveMobileMatchIndex(idx)}
+                    className={`shrink-0 px-4 py-2 rounded-xl font-display text-xs font-black uppercase transition-all duration-300 ${
+                      activeMobileMatchIndex === idx
+                        ? 'bg-red-950/45 border border-red-500/40 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.15)]'
+                        : 'bg-[#0d091a]/30 border border-white/5 text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    {buttonLabel}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {/* Active Round Match Bracket View */}
           <div className="max-w-6xl mx-auto">
             {bracket && bracket[activeBracketRound] && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {bracket[activeBracketRound].map((match, idx) => (
-                  <div key={match.id} className="relative group">
-                    <MatchCard
-                      player1={match.player1}
-                      player2={match.player2}
-                      score1={match.score1}
-                      score2={match.score2}
-                      date={match.date}
-                      buyIn={match.buyIn}
-                      rebuy={match.rebuy}
-                      winner={match.winner}
-                      status={match.status}
-                      gameLabel={`Jogo ${idx + 1}`}
-                    />
-                    
-                    {/* Admin Edit HU Match Card Button overlay */}
-                    {isAdmin && (
-                      <button
-                        onClick={() => handleOpenEditMatch(activeBracketRound, idx)}
-                        className="absolute bottom-2 right-2 flex items-center gap-1 text-[8px] bg-amber-500 hover:bg-amber-400 text-black font-bold uppercase rounded-lg px-2 py-1 shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                      >
-                        <span className="material-icons text-[9px]">edit</span>
-                        Editar Duelo
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
+              <>
+                {/* Desktop View (grid showing all matches) */}
+                <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {bracket[activeBracketRound].map((match, idx) => (
+                    <div key={match.id} className="relative group">
+                      <MatchCard
+                        player1={match.player1}
+                        player2={match.player2}
+                        score1={match.score1}
+                        score2={match.score2}
+                        date={match.date}
+                        buyIn={match.buyIn}
+                        rebuy={match.rebuy}
+                        winner={match.winner}
+                        status={match.status}
+                        gameLabel={activeBracketRound === 'finais' ? (idx === 0 ? 'Final' : '3º Lugar') : `Jogo ${idx + 1}`}
+                      />
+                      
+                      {/* Admin Edit HU Match Card Button overlay */}
+                      {isAdmin && (
+                        <button
+                          onClick={() => handleOpenEditMatch(activeBracketRound, idx)}
+                          className="absolute bottom-2 right-2 flex items-center gap-1 text-[8px] bg-amber-500 hover:bg-amber-400 text-black font-bold uppercase rounded-lg px-2 py-1 shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        >
+                          <span className="material-icons text-[9px]">edit</span>
+                          Editar Duelo
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Mobile View (single match with always-visible admin edit overlay) */}
+                <div className="block sm:hidden px-2">
+                  {bracket[activeBracketRound]
+                    .filter((_, idx) => idx === activeMobileMatchIndex)
+                    .map((match) => {
+                      const idx = activeMobileMatchIndex;
+                      return (
+                        <div key={match.id} className="relative group">
+                          <MatchCard
+                            player1={match.player1}
+                            player2={match.player2}
+                            score1={match.score1}
+                            score2={match.score2}
+                            date={match.date}
+                            buyIn={match.buyIn}
+                            rebuy={match.rebuy}
+                            winner={match.winner}
+                            status={match.status}
+                            gameLabel={activeBracketRound === 'finais' ? (idx === 0 ? 'Final' : '3º Lugar') : `Jogo ${idx + 1}`}
+                          />
+                          
+                          {/* Admin Edit HU Match Card Button overlay */}
+                          {isAdmin && (
+                            <button
+                              onClick={() => handleOpenEditMatch(activeBracketRound, idx)}
+                              className="absolute bottom-2 right-2 flex items-center gap-1 text-[8px] bg-amber-500 hover:bg-amber-400 text-black font-bold uppercase rounded-lg px-2 py-1 shadow-md opacity-100 transition-opacity duration-300"
+                            >
+                              <span className="material-icons text-[9px]">edit</span>
+                              Editar Duelo
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              </>
             )}
           </div>
         </section>
