@@ -315,6 +315,16 @@ export const CopaMundoSorteio: React.FC<{ onNavigate: (view: string) => void }> 
         if (!isTestMode) {
           syncToMainWebsite(updatedAssignments);
         }
+
+        // Auto prompt when draw finishes
+        if (nextPlayers.length === 0) {
+          setTimeout(() => {
+            if (window.confirm("Sorteio Concluído com Sucesso! Deseja salvar estes resultados oficialmente no site?")) {
+              syncToMainWebsite(updatedAssignments);
+              alert("Resultados salvos com sucesso!");
+            }
+          }, 600);
+        }
       }
     }, 100);
   };
@@ -405,13 +415,36 @@ export const CopaMundoSorteio: React.FC<{ onNavigate: (view: string) => void }> 
 
   // Save/Sync to Main LocalStorage State
   const syncToMainWebsite = (assignments: Record<string, string>) => {
+    let allGroups: any[] = [];
     const savedGroupsStr = localStorage.getItem('cr_copa_mundo_groups_v3');
-    if (!savedGroupsStr) return;
+    
+    if (savedGroupsStr) {
+      try {
+        allGroups = JSON.parse(savedGroupsStr);
+      } catch (e) {
+        allGroups = [];
+      }
+    }
+
+    // Fallback: if localStorage does not exist or has never been initialized, seed all 12 groups A to L
+    if (!Array.isArray(allGroups) || allGroups.length === 0) {
+      allGroups = [
+        { id: 'A', name: 'GRUPO A', players: ['Carlos Stonge'], rounds: { 1: {}, 2: {}, 3: {}, 4: {} } },
+        { id: 'B', name: 'GRUPO B', players: ["Jorge 'Xumiska' Henn"], rounds: { 1: {}, 2: {}, 3: {}, 4: {} } },
+        { id: 'C', name: 'GRUPO C', players: ['Ismael Ertel'], rounds: { 1: {}, 2: {}, 3: {}, 4: {} } },
+        { id: 'D', name: 'GRUPO D', players: ["'Gonha' Hermes"], rounds: { 1: {}, 2: {}, 3: {}, 4: {} } },
+        { id: 'E', name: 'GRUPO E', players: ["Alex 'Chicle' Leissmann"], rounds: { 1: {}, 2: {}, 3: {}, 4: {} } },
+        { id: 'F', name: 'GRUPO F', players: ['Robson Gonçalves'], rounds: { 1: {}, 2: {}, 3: {}, 4: {} } },
+        { id: 'G', name: 'GRUPO G', players: ['ReiDoOmaha', 'BountyHunter', 'RunnerRunner', 'LimperFeliz'], rounds: { 1: {}, 2: {}, 3: {}, 4: {} } },
+        { id: 'H', name: 'GRUPO H', players: ['FullHouseTop', 'DoubleBarrel', 'Assobiador', 'CheckRaiseViciado'], rounds: { 1: {}, 2: {}, 3: {}, 4: {} } },
+        { id: 'I', name: 'GRUPO I', players: ['PocketAces_AA', 'SidePotWinner', 'MinRaiseChato', 'FoldadorFrequente'], rounds: { 1: {}, 2: {}, 3: {}, 4: {} } },
+        { id: 'J', name: 'GRUPO J', players: ['RedLineGod', 'GTO_Soldier', 'ExploitKing', 'FishLover'], rounds: { 1: {}, 2: {}, 3: {}, 4: {} } },
+        { id: 'K', name: 'GRUPO K', players: ['OurosK', 'HeadsUpAssasin', 'OutsInder', 'CoinFlipHater'], rounds: { 1: {}, 2: {}, 3: {}, 4: {} } },
+        { id: 'L', name: 'GRUPO L', players: ['ValkyriePoker', 'HeroCall99', 'ReraiseMaster', 'MuckAndCry'], rounds: { 1: {}, 2: {}, 3: {}, 4: {} } }
+      ];
+    }
 
     try {
-      const allGroups = JSON.parse(savedGroupsStr) as any[];
-      if (!Array.isArray(allGroups)) return;
-
       // Update ONLY groups A to F
       const updatedGroups = allGroups.map(group => {
         if (['A', 'B', 'C', 'D', 'E', 'F'].includes(group.id)) {
