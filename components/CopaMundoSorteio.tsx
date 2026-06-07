@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../contexts/AppContext';
+import { supabase } from '../src/lib/supabase';
 
 interface GroupSeat {
   groupId: string;
@@ -474,6 +475,10 @@ export const CopaMundoSorteio: React.FC<{ onNavigate: (view: string) => void }> 
       });
 
       localStorage.setItem('cr_copa_mundo_groups_v3', JSON.stringify(updatedGroups));
+      supabase.from('content_db').upsert({ key: 'copa_mundo_groups', value: updatedGroups }, { onConflict: 'key' })
+        .then(({ error }) => {
+          if (error) console.error('Error syncing groups to Supabase:', error);
+        });
     } catch (e) {
       console.error('Error syncing to main website:', e);
     }

@@ -499,45 +499,98 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
     ]
   };
 
-  // Load from localStorage or seed
+  // Load from Supabase (or localStorage fallback) or seed
   useEffect(() => {
-    const savedGroups = localStorage.getItem('cr_copa_mundo_groups_v3');
-    if (savedGroups) {
-      try {
-        const parsed = JSON.parse(savedGroups);
-        // Compatibility check: verify if the loaded state has the old object-based structure or is missing rounds
-        if (Array.isArray(parsed) && parsed.length > 0 && (!parsed[0].rounds || typeof parsed[0].players[0] === 'object')) {
-          setGroups(defaultGroups);
-          localStorage.setItem('cr_copa_mundo_groups_v3', JSON.stringify(defaultGroups));
-        } else {
-          setGroups(parsed);
-        }
-      } catch (e) {
-        setGroups(defaultGroups);
-      }
-    } else {
-      setGroups(defaultGroups);
-      localStorage.setItem('cr_copa_mundo_groups_v3', JSON.stringify(defaultGroups));
-    }
+    const loadData = async () => {
+      let remoteGroups: GroupState[] | null = null;
+      let remoteBracket: BracketState | null = null;
 
-    const savedBracket = localStorage.getItem('cr_copa_mundo_bracket_v3');
-    if (savedBracket) {
       try {
-        const parsed = JSON.parse(savedBracket);
-        // Compatibility check for bracket structure
-        if (!parsed || !parsed['16avos'] || !parsed['16avos'][0] || typeof parsed['16avos'][0].player1 === 'object' || parsed['16avos'][0].player1 === 'NutsMaster' || parsed['oitavas'][0].player1 === '') {
-          setBracket(defaultBracket);
-          localStorage.setItem('cr_copa_mundo_bracket_v3', JSON.stringify(defaultBracket));
-        } else {
-          setBracket(parsed);
+        const { data: groupsData } = await supabase.from('content_db').select('value').eq('key', 'copa_mundo_groups').single();
+        if (groupsData?.value) {
+          remoteGroups = groupsData.value as GroupState[];
         }
-      } catch (e) {
-        setBracket(defaultBracket);
+      } catch (err) {
+        console.warn("Failed to fetch groups from Supabase:", err);
       }
-    } else {
-      setBracket(defaultBracket);
-      localStorage.setItem('cr_copa_mundo_bracket_v3', JSON.stringify(defaultBracket));
-    }
+
+      try {
+        const { data: bracketData } = await supabase.from('content_db').select('value').eq('key', 'copa_mundo_bracket').single();
+        if (bracketData?.value) {
+          remoteBracket = bracketData.value as BracketState;
+        }
+      } catch (err) {
+        console.warn("Failed to fetch bracket from Supabase:", err);
+      }
+
+      const savedGroups = localStorage.getItem('cr_copa_mundo_groups_v3');
+      let finalGroups: GroupState[] = defaultGroups;
+      
+      // Load groups
+      if (remoteGroups && Array.isArray(remoteGroups) && remoteGroups.length > 0) {
+        finalGroups = remoteGroups;
+        localStorage.setItem('cr_copa_mundo_groups_v3', JSON.stringify(remoteGroups));
+      } else if (savedGroups) {
+        try {
+          const parsed = JSON.parse(savedGroups);
+          if (Array.isArray(parsed) && parsed.length > 0 && (!parsed[0].rounds || typeof parsed[0].players[0] === 'object')) {
+            finalGroups = defaultGroups;
+            localStorage.setItem('cr_copa_mundo_groups_v3', JSON.stringify(defaultGroups));
+          } else {
+            finalGroups = parsed;
+          }
+          
+          // Auto-migrate: if local storage has the draw results but Supabase doesn't, sync it to Supabase!
+          // We check if the local groups has Carlos Stonge (indicating it has the real draw data, not mock)
+          const hasRealDrawData = finalGroups.some(g => g.players && g.players.includes('Carlos Stonge'));
+          if (hasRealDrawData) {
+            await supabase.from('content_db').upsert({ key: 'copa_mundo_groups', value: finalGroups }, { onConflict: 'key' });
+          }
+        } catch (e) {
+          finalGroups = defaultGroups;
+        }
+      } else {
+        finalGroups = defaultGroups;
+        localStorage.setItem('cr_copa_mundo_groups_v3', JSON.stringify(defaultGroups));
+      }
+      setGroups(finalGroups);
+
+      const savedBracket = localStorage.getItem('cr_copa_mundo_bracket_v3');
+      let finalBracket: BracketState = defaultBracket;
+
+      // Load bracket
+      if (remoteBracket) {
+        finalBracket = remoteBracket;
+        localStorage.setItem('cr_copa_mundo_bracket_v3', JSON.stringify(remoteBracket));
+      } else if (savedBracket) {
+        try {
+          const parsed = JSON.parse(savedBracket);
+          if (!parsed || !parsed['16avos'] || !parsed['16avos'][0] || typeof parsed['16avos'][0].player1 === 'object' || parsed['16avos'][0].player1 === 'NutsMaster' || parsed['oitavas'][0].player1 === '') {
+            finalBracket = defaultBracket;
+            localStorage.setItem('cr_copa_mundo_bracket_v3', JSON.stringify(defaultBracket));
+          } else {
+            finalBracket = parsed;
+          }
+
+          // Auto-migrate bracket if Supabase is empty
+          if (savedGroups) {
+            const parsedGroups = JSON.parse(savedGroups);
+            const hasRealDrawData = Array.isArray(parsedGroups) && parsedGroups.some(g => g.players && g.players.includes('Carlos Stonge'));
+            if (hasRealDrawData) {
+              await supabase.from('content_db').upsert({ key: 'copa_mundo_bracket', value: finalBracket }, { onConflict: 'key' });
+            }
+          }
+        } catch (e) {
+          finalBracket = defaultBracket;
+        }
+      } else {
+        finalBracket = defaultBracket;
+        localStorage.setItem('cr_copa_mundo_bracket_v3', JSON.stringify(defaultBracket));
+      }
+      setBracket(finalBracket);
+    };
+
+    loadData();
 
     // Real-time synchronization when updated from the draw popup window
     const handleStorage = (e: StorageEvent) => {
@@ -580,14 +633,24 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
     return () => clearInterval(interval);
   }, []);
 
-  const saveGroupsData = (updatedGroups: GroupState[]) => {
+  const saveGroupsData = async (updatedGroups: GroupState[]) => {
     setGroups(updatedGroups);
     localStorage.setItem('cr_copa_mundo_groups_v3', JSON.stringify(updatedGroups));
+    try {
+      await supabase.from('content_db').upsert({ key: 'copa_mundo_groups', value: updatedGroups }, { onConflict: 'key' });
+    } catch (err) {
+      console.error("Error saving groups to Supabase:", err);
+    }
   };
 
-  const saveBracketData = (updatedBracket: BracketState) => {
+  const saveBracketData = async (updatedBracket: BracketState) => {
     setBracket(updatedBracket);
     localStorage.setItem('cr_copa_mundo_bracket_v3', JSON.stringify(updatedBracket));
+    try {
+      await supabase.from('content_db').upsert({ key: 'copa_mundo_bracket', value: updatedBracket }, { onConflict: 'key' });
+    } catch (err) {
+      console.error("Error saving bracket to Supabase:", err);
+    }
   };
 
   const handleResetToDefault = () => {
