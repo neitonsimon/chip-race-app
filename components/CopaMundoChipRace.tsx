@@ -219,6 +219,7 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
   const [activeMobileGroup, setActiveMobileGroup] = useState<string>('A');
   const [activeBracketRound, setActiveBracketRound] = useState<'16avos' | 'oitavas' | 'quartas' | 'semis' | 'finais'>('16avos');
   const [activeMobileMatchIndex, setActiveMobileMatchIndex] = useState<number>(0);
+  const [isScheduleExpanded, setIsScheduleExpanded] = useState(false);
 
   const handleSelectBracketRound = (round: '16avos' | 'oitavas' | 'quartas' | 'semis' | 'finais') => {
     setActiveBracketRound(round);
@@ -2126,9 +2127,21 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
             <p className="mt-4 text-xs sm:text-sm text-gray-400 max-w-xl mx-auto leading-relaxed font-light px-2">
               Calendário completo das rodadas classificatórias e fases decisivas do mata-mata heads-up:
             </p>
+            {/* Collapse/Expand button for PC */}
+            <div className="mt-6 hidden sm:flex justify-center">
+              <button
+                onClick={() => setIsScheduleExpanded(!isScheduleExpanded)}
+                className="group relative flex items-center gap-2 bg-[#1b0a15]/95 border border-amber-500/35 hover:border-amber-400/60 transition-all duration-300 rounded-xl px-5 py-2.5 text-[10px] sm:text-xs font-display font-black text-amber-400 uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_15px_rgba(245,158,11,0.1)] hover:shadow-[0_0_20px_rgba(245,158,11,0.2)]"
+              >
+                <span className="material-icons text-sm transition-transform duration-300 group-hover:rotate-12">
+                  {isScheduleExpanded ? 'expand_less' : 'expand_more'}
+                </span>
+                {isScheduleExpanded ? 'Recolher Cronograma' : 'Expandir Cronograma'}
+              </button>
+            </div>
           </div>
 
-          <div className="bg-[#0b0716]/80 border border-white/5 rounded-3xl p-6 max-w-5xl mx-auto overflow-hidden">
+          <div className={`bg-[#0b0716]/80 border border-white/5 rounded-3xl p-6 max-w-5xl mx-auto overflow-hidden transition-all duration-300 ${isScheduleExpanded ? 'block animate-in fade-in slide-in-from-top-4 duration-300' : 'block sm:hidden'}`}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               
               {/* Group Stage Dates */}
