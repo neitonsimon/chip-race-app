@@ -220,6 +220,14 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
   const [activeBracketRound, setActiveBracketRound] = useState<'16avos' | 'oitavas' | 'quartas' | 'semis' | 'finais'>('16avos');
   const [activeMobileMatchIndex, setActiveMobileMatchIndex] = useState<number>(0);
   const [isScheduleExpanded, setIsScheduleExpanded] = useState(false);
+  const [expandedGroupSchedules, setExpandedGroupSchedules] = useState<Record<string, boolean>>({});
+
+  const toggleGroupSchedule = (groupId: string) => {
+    setExpandedGroupSchedules(prev => ({
+      ...prev,
+      [groupId]: !prev[groupId]
+    }));
+  };
 
   const handleSelectBracketRound = (round: '16avos' | 'oitavas' | 'quartas' | 'semis' | 'finais') => {
     setActiveBracketRound(round);
@@ -1251,8 +1259,27 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
 
         {/* Tournament Schedule HUD inside group */}
         <div className="bg-[#120c24]/50 border border-white/5 rounded-2xl p-3 mt-4">
-          <h4 className="text-[8px] font-display font-black uppercase text-gray-400 tracking-wider mb-2">Rodadas Sit & Go</h4>
-          <div className="space-y-2 text-[10px]">
+          <div 
+            className="flex justify-between items-center cursor-pointer select-none"
+            onClick={() => {
+              if (window.innerWidth >= 640) {
+                toggleGroupSchedule(group.id);
+              }
+            }}
+          >
+            <h4 className="text-[8px] font-display font-black uppercase text-gray-400 tracking-wider">Rodadas Sit & Go</h4>
+            {/* Toggle Button / Chevron indicator */}
+            <button
+              className="hidden sm:flex items-center gap-1 text-[8px] text-amber-500 hover:text-amber-400 font-black uppercase tracking-wider transition-all"
+            >
+              <span>{expandedGroupSchedules[group.id] ? 'Recolher' : 'Expandir'}</span>
+              <span className={`material-icons text-[10px] transition-transform duration-300 ${expandedGroupSchedules[group.id] ? 'rotate-180' : ''}`}>
+                expand_more
+              </span>
+            </button>
+          </div>
+          
+          <div className={`space-y-2 text-[10px] mt-2 transition-all duration-300 ${expandedGroupSchedules[group.id] ? 'block animate-in fade-in duration-300' : 'block sm:hidden'}`}>
             {[1, 2, 3, 4].map((roundNum) => {
               const roundData = group.rounds[roundNum as 1 | 2 | 3 | 4] || {};
               const winner = Object.keys(roundData).find(name => roundData[name] === 1);
