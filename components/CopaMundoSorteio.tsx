@@ -11,21 +11,21 @@ interface GroupSeat {
 
 interface SorteioState {
   player: string;
-  group: string; // 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
+  group: string; // 'G' | 'H' | 'I' | 'J' | 'K' | 'L'
   seatIndex: number; // 1 | 2 | 3 (1 = seat 2, 2 = seat 3, 3 = seat 4)
 }
 
 // 6 leader players (cabeça de chave)
 const LEADERS: Record<string, string> = {
-  A: 'Carlos Stonge',
-  B: "Jorge 'Xumiska' Henn",
-  C: 'Ismael Ertel',
-  D: "'Gonha' Hermes",
-  E: "Alex 'Chicle' Leissmann",
-  F: 'Robson Gonçalves',
+  G: 'Vander borba',
+  H: 'Leo Dresch',
+  I: 'Killerzzz',
+  J: 'Juninho Dreissig',
+  K: 'Gustavo Ferreira',
+  L: 'Breno',
 };
 
-// Available seats for raffle (seats 2, 3, 4 of groups A-F)
+// Available seats for raffle (seats 2, 3, 4 of groups G-L)
 const SEAT_DOTS = ['bg-emerald-500', 'bg-amber-500', 'bg-red-500']; // colors for seat 2, 3, 4
 
 export const CopaMundoSorteio: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) => {
@@ -204,7 +204,7 @@ export const CopaMundoSorteio: React.FC<{ onNavigate: (view: string) => void }> 
     // Set up pools
     const playerPool = [...playerInputs];
     const seatPool: GroupSeat[] = [];
-    const groupsList = ['A', 'B', 'C', 'D', 'E', 'F'];
+    const groupsList = ['G', 'H', 'I', 'J', 'K', 'L'];
 
     groupsList.forEach(groupId => {
       // Seat indexes: 1, 2, 3 correspond to positions 2, 3, 4 in the table
@@ -388,7 +388,7 @@ export const CopaMundoSorteio: React.FC<{ onNavigate: (view: string) => void }> 
     if (!window.confirm('Aviso: Isso irá limpar todo o progresso do sorteio ativo e retornar todos os 18 jogadores ao pote. Deseja prosseguir?')) return;
     
     const seatPool: GroupSeat[] = [];
-    const groupsList = ['A', 'B', 'C', 'D', 'E', 'F'];
+    const groupsList = ['G', 'H', 'I', 'J', 'K', 'L'];
     groupsList.forEach(groupId => {
       for (let sIdx = 1; sIdx <= 3; sIdx++) {
         seatPool.push({
@@ -436,19 +436,19 @@ export const CopaMundoSorteio: React.FC<{ onNavigate: (view: string) => void }> 
         { id: 'D', name: 'GRUPO D', players: ["'Gonha' Hermes"], rounds: { 1: {}, 2: {}, 3: {}, 4: {} } },
         { id: 'E', name: 'GRUPO E', players: ["Alex 'Chicle' Leissmann"], rounds: { 1: {}, 2: {}, 3: {}, 4: {} } },
         { id: 'F', name: 'GRUPO F', players: ['Robson Gonçalves'], rounds: { 1: {}, 2: {}, 3: {}, 4: {} } },
-        { id: 'G', name: 'GRUPO G', players: ['ReiDoOmaha', 'BountyHunter', 'RunnerRunner', 'LimperFeliz'], rounds: { 1: {}, 2: {}, 3: {}, 4: {} } },
-        { id: 'H', name: 'GRUPO H', players: ['FullHouseTop', 'DoubleBarrel', 'Assobiador', 'CheckRaiseViciado'], rounds: { 1: {}, 2: {}, 3: {}, 4: {} } },
-        { id: 'I', name: 'GRUPO I', players: ['PocketAces_AA', 'SidePotWinner', 'MinRaiseChato', 'FoldadorFrequente'], rounds: { 1: {}, 2: {}, 3: {}, 4: {} } },
-        { id: 'J', name: 'GRUPO J', players: ['RedLineGod', 'GTO_Soldier', 'ExploitKing', 'FishLover'], rounds: { 1: {}, 2: {}, 3: {}, 4: {} } },
-        { id: 'K', name: 'GRUPO K', players: ['OurosK', 'HeadsUpAssasin', 'OutsInder', 'CoinFlipHater'], rounds: { 1: {}, 2: {}, 3: {}, 4: {} } },
-        { id: 'L', name: 'GRUPO L', players: ['ValkyriePoker', 'HeroCall99', 'ReraiseMaster', 'MuckAndCry'], rounds: { 1: {}, 2: {}, 3: {}, 4: {} } }
+        { id: 'G', name: 'GRUPO G', players: ['Vander borba'], rounds: { 1: {}, 2: {}, 3: {}, 4: {} } },
+        { id: 'H', name: 'GRUPO H', players: ['Leo Dresch'], rounds: { 1: {}, 2: {}, 3: {}, 4: {} } },
+        { id: 'I', name: 'GRUPO I', players: ['Killerzzz'], rounds: { 1: {}, 2: {}, 3: {}, 4: {} } },
+        { id: 'J', name: 'GRUPO J', players: ['Juninho Dreissig'], rounds: { 1: {}, 2: {}, 3: {}, 4: {} } },
+        { id: 'K', name: 'GRUPO K', players: ['Gustavo Ferreira'], rounds: { 1: {}, 2: {}, 3: {}, 4: {} } },
+        { id: 'L', name: 'GRUPO L', players: ['Breno'], rounds: { 1: {}, 2: {}, 3: {}, 4: {} } }
       ];
     }
 
     try {
-      // Update ONLY groups A to F
+      // Update ONLY groups G to L
       const updatedGroups = allGroups.map(group => {
-        if (['A', 'B', 'C', 'D', 'E', 'F'].includes(group.id)) {
+        if (['G', 'H', 'I', 'J', 'K', 'L'].includes(group.id)) {
           // Re-assemble players array
           // Index 0: Leader
           // Index 1: Seat 2
@@ -487,7 +487,7 @@ export const CopaMundoSorteio: React.FC<{ onNavigate: (view: string) => void }> 
   // Manual Trigger to save/confirm draw results on main site
   const handleSaveOfficially = () => {
     syncToMainWebsite(drawnAssignments);
-    alert('Sorteio gravado com sucesso no site! Os grupos A ao F já estão atualizados.');
+    alert('Sorteio gravado com sucesso no site! Os grupos G ao L já estão atualizados.');
   };
 
   return (
@@ -509,7 +509,7 @@ export const CopaMundoSorteio: React.FC<{ onNavigate: (view: string) => void }> 
             </h1>
             <div className="h-[2px] w-28 bg-gradient-to-r from-red-600 to-amber-500 mx-auto mt-4 rounded-full shadow-[0_0_10px_#dc2626]" />
             <p className="mt-4 text-xs text-gray-400 max-w-xl mx-auto leading-relaxed font-light">
-              Prepare a lista de 18 jogadores para o sorteio. Os cabeças de chave dos grupos A ao F já estão fixados como líderes dos assentos primários de cada tabela.
+              Prepare a lista de 18 jogadores para o sorteio. Os cabeças de chave dos grupos G ao L já estão fixados como líderes dos assentos primários de cada tabela.
             </p>
           </div>
 
@@ -638,7 +638,7 @@ export const CopaMundoSorteio: React.FC<{ onNavigate: (view: string) => void }> 
                   SORTEIO DE GRUPOS - COPA CHIP RACE
                 </h1>
                 <p className="text-[10px] text-gray-500 uppercase tracking-widest">
-                  Live Draw de Elite • Fase Classificatória Grupos A ao F
+                  Live Draw de Elite • Fase Classificatória Grupos G ao L
                 </p>
               </div>
             </div>
@@ -697,9 +697,9 @@ export const CopaMundoSorteio: React.FC<{ onNavigate: (view: string) => void }> 
           {/* MAIN 3-COLUMN GRID */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             
-            {/* COLUMN 1 (Left): Groups A, B, C */}
+            {/* COLUMN 1 (Left): Groups G, H, I */}
             <div className="lg:col-span-4 space-y-6">
-              {['A', 'B', 'C'].map(gId => renderGroupDrawCard(gId))}
+              {['G', 'H', 'I'].map(gId => renderGroupDrawCard(gId))}
             </div>
 
             {/* COLUMN 2 (Center): Draw Panel & Webcam Guide Frame */}
@@ -876,9 +876,9 @@ export const CopaMundoSorteio: React.FC<{ onNavigate: (view: string) => void }> 
 
             </div>
 
-            {/* COLUMN 3 (Right): Groups D, E, F */}
+            {/* COLUMN 3 (Right): Groups J, K, L */}
             <div className="lg:col-span-4 space-y-6">
-              {['D', 'E', 'F'].map(gId => renderGroupDrawCard(gId))}
+              {['J', 'K', 'L'].map(gId => renderGroupDrawCard(gId))}
             </div>
 
           </div>

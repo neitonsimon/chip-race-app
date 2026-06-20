@@ -18,6 +18,12 @@ interface GroupState {
     4: RoundResults;
   };
   tieBreakerOverride?: string; // Player name who wins manual tie-breaker
+  penalties?: {
+    1?: { [playerName: string]: boolean };
+    2?: { [playerName: string]: boolean };
+    3?: { [playerName: string]: boolean };
+    4?: { [playerName: string]: boolean };
+  };
 }
 
 interface PlayerStats {
@@ -241,6 +247,12 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
   const [editRounds, setEditRounds] = useState<{ 1: RoundResults; 2: RoundResults; 3: RoundResults; 4: RoundResults }>({
     1: {}, 2: {}, 3: {}, 4: {}
   });
+  const [editPenalties, setEditPenalties] = useState<{
+    1: { [p: string]: boolean };
+    2: { [p: string]: boolean };
+    3: { [p: string]: boolean };
+    4: { [p: string]: boolean };
+  }>({ 1: {}, 2: {}, 3: {}, 4: {} });
   const [editTieBreaker, setEditTieBreaker] = useState<string>('');
   const [searchQueries, setSearchQueries] = useState<string[]>(['', '', '', '']);
   const [showSearchDropdowns, setShowSearchDropdowns] = useState<boolean[]>([false, false, false, false]);
@@ -467,44 +479,44 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
     '16avos': [
       { id: '16avos-1', player1: 'Campeão Grupo A', player2: '8º melhor 3º colocado', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
       { id: '16avos-2', player1: 'Campeão Grupo B', player2: '7º melhor 3º colocado', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
-      { id: '16avos-3', player1: 'Campeão Grupo C', player2: '6º melhor 3º colocado', status: 'agendado', date: '05/07, 21:45', buyIn: 'R$50', rebuy: '1 Permitido' },
-      { id: '16avos-4', player1: 'Campeão Grupo D', player2: '5º melhor 3º colocado', status: 'agendado', date: '05/07, 21:45', buyIn: 'R$50', rebuy: '1 Permitido' },
+      { id: '16avos-3', player1: 'Campeão Grupo C', player2: '6º melhor 3º colocado', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
+      { id: '16avos-4', player1: 'Campeão Grupo D', player2: '5º melhor 3º colocado', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
       { id: '16avos-5', player1: 'Campeão Grupo E', player2: '4º melhor 3º colocado', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
       { id: '16avos-6', player1: 'Campeão Grupo F', player2: '3º melhor 3º colocado', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
-      { id: '16avos-7', player1: 'Campeão Grupo G', player2: '2º melhor 3º colocado', status: 'agendado', date: '05/07, 21:45', buyIn: 'R$50', rebuy: '1 Permitido' },
-      { id: '16avos-8', player1: 'Campeão Grupo H', player2: '1º melhor 3º colocado', status: 'agendado', date: '05/07, 21:45', buyIn: 'R$50', rebuy: '1 Permitido' },
+      { id: '16avos-7', player1: 'Campeão Grupo G', player2: '2º melhor 3º colocado', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
+      { id: '16avos-8', player1: 'Campeão Grupo H', player2: '1º melhor 3º colocado', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
       { id: '16avos-9', player1: 'Campeão Grupo I', player2: 'Vice Grupo L', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
       { id: '16avos-10', player1: 'Campeão Grupo J', player2: 'Vice Grupo K', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
-      { id: '16avos-11', player1: 'Campeão Grupo K', player2: 'Vice Grupo J', status: 'agendado', date: '05/07, 21:45', buyIn: 'R$50', rebuy: '1 Permitido' },
-      { id: '16avos-12', player1: 'Campeão Grupo L', player2: 'Vice Grupo I', status: 'agendado', date: '05/07, 21:45', buyIn: 'R$50', rebuy: '1 Permitido' },
+      { id: '16avos-11', player1: 'Campeão Grupo K', player2: 'Vice Grupo J', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
+      { id: '16avos-12', player1: 'Campeão Grupo L', player2: 'Vice Grupo I', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
       { id: '16avos-13', player1: 'Vice Grupo A', player2: 'Vice Grupo H', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
       { id: '16avos-14', player1: 'Vice Grupo B', player2: 'Vice Grupo G', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
-      { id: '16avos-15', player1: 'Vice Grupo C', player2: 'Vice Grupo F', status: 'agendado', date: '05/07, 21:45', buyIn: 'R$50', rebuy: '1 Permitido' },
-      { id: '16avos-16', player1: 'Vice Grupo D', player2: 'Vice Grupo E', status: 'agendado', date: '05/07, 21:45', buyIn: 'R$50', rebuy: '1 Permitido' }
+      { id: '16avos-15', player1: 'Vice Grupo C', player2: 'Vice Grupo F', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
+      { id: '16avos-16', player1: 'Vice Grupo D', player2: 'Vice Grupo E', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' }
     ],
     'oitavas': [
       { id: 'oitavas-1', player1: 'Venc. Jogo 1 (16-avos)', player2: 'Venc. Jogo 16 (16-avos)', status: 'agendado', date: '08/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
       { id: 'oitavas-2', player1: 'Venc. Jogo 2 (16-avos)', player2: 'Venc. Jogo 15 (16-avos)', status: 'agendado', date: '08/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
-      { id: 'oitavas-3', player1: 'Venc. Jogo 3 (16-avos)', player2: 'Venc. Jogo 14 (16-avos)', status: 'agendado', date: '08/07, 21:45', buyIn: 'R$50', rebuy: '1 Permitido' },
-      { id: 'oitavas-4', player1: 'Venc. Jogo 4 (16-avos)', player2: 'Venc. Jogo 13 (16-avos)', status: 'agendado', date: '08/07, 21:45', buyIn: 'R$50', rebuy: '1 Permitido' },
+      { id: 'oitavas-3', player1: 'Venc. Jogo 3 (16-avos)', player2: 'Venc. Jogo 14 (16-avos)', status: 'agendado', date: '08/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
+      { id: 'oitavas-4', player1: 'Venc. Jogo 4 (16-avos)', player2: 'Venc. Jogo 13 (16-avos)', status: 'agendado', date: '08/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
       { id: 'oitavas-5', player1: 'Venc. Jogo 5 (16-avos)', player2: 'Venc. Jogo 12 (16-avos)', status: 'agendado', date: '08/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
       { id: 'oitavas-6', player1: 'Venc. Jogo 6 (16-avos)', player2: 'Venc. Jogo 11 (16-avos)', status: 'agendado', date: '08/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
-      { id: 'oitavas-7', player1: 'Venc. Jogo 7 (16-avos)', player2: 'Venc. Jogo 10 (16-avos)', status: 'agendado', date: '08/07, 21:45', buyIn: 'R$50', rebuy: '1 Permitido' },
-      { id: 'oitavas-8', player1: 'Venc. Jogo 8 (16-avos)', player2: 'Venc. Jogo 9 (16-avos)', status: 'agendado', date: '08/07, 21:45', buyIn: 'R$50', rebuy: '1 Permitido' }
+      { id: 'oitavas-7', player1: 'Venc. Jogo 7 (16-avos)', player2: 'Venc. Jogo 10 (16-avos)', status: 'agendado', date: '08/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
+      { id: 'oitavas-8', player1: 'Venc. Jogo 8 (16-avos)', player2: 'Venc. Jogo 9 (16-avos)', status: 'agendado', date: '08/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' }
     ],
     'quartas': [
       { id: 'quartas-1', player1: 'Venc. Jogo 1 (Oitavas)', player2: 'Venc. Jogo 8 (Oitavas)', status: 'agendado', date: '12/07, 20:15', buyIn: 'Grátis', rebuy: 'R$100' },
-      { id: 'quartas-2', player1: 'Venc. Jogo 2 (Oitavas)', player2: 'Venc. Jogo 7 (Oitavas)', status: 'agendado', date: '12/07, 21:45', buyIn: 'Grátis', rebuy: 'R$100' },
+      { id: 'quartas-2', player1: 'Venc. Jogo 2 (Oitavas)', player2: 'Venc. Jogo 7 (Oitavas)', status: 'agendado', date: '12/07, 20:15', buyIn: 'Grátis', rebuy: 'R$100' },
       { id: 'quartas-3', player1: 'Venc. Jogo 3 (Oitavas)', player2: 'Venc. Jogo 6 (Oitavas)', status: 'agendado', date: '12/07, 20:15', buyIn: 'Grátis', rebuy: 'R$100' },
-      { id: 'quartas-4', player1: 'Venc. Jogo 4 (Oitavas)', player2: 'Venc. Jogo 5 (Oitavas)', status: 'agendado', date: '12/07, 21:45', buyIn: 'Grátis', rebuy: 'R$100' }
+      { id: 'quartas-4', player1: 'Venc. Jogo 4 (Oitavas)', player2: 'Venc. Jogo 5 (Oitavas)', status: 'agendado', date: '12/07, 20:15', buyIn: 'Grátis', rebuy: 'R$100' }
     ],
     'semis': [
       { id: 'semis-1', player1: 'Venc. Jogo 1 (Quartas)', player2: 'Venc. Jogo 4 (Quartas)', status: 'agendado', date: '15/07, 20:15', buyIn: 'Grátis', rebuy: 'R$100' },
-      { id: 'semis-2', player1: 'Venc. Jogo 2 (Quartas)', player2: 'Venc. Jogo 3 (Quartas)', status: 'agendado', date: '15/07, 21:45', buyIn: 'Grátis', rebuy: 'R$100' }
+      { id: 'semis-2', player1: 'Venc. Jogo 2 (Quartas)', player2: 'Venc. Jogo 3 (Quartas)', status: 'agendado', date: '15/07, 20:15', buyIn: 'Grátis', rebuy: 'R$100' }
     ],
     'finais': [
-      { id: 'final', player1: 'Venc. Semifinal 1', player2: 'Venc. Semifinal 2', status: 'agendado', date: '19/07, 21:15', buyIn: 'Grátis', rebuy: 'Até 2x R$100' },
-      { id: '3place', player1: 'Perd. Semifinal 1', player2: 'Perd. Semifinal 2', status: 'agendado', date: '19/07, 19:15', buyIn: 'Grátis', rebuy: 'Até 2x R$100' }
+      { id: 'final', player1: 'Venc. Semifinal 1', player2: 'Venc. Semifinal 2', status: 'agendado', date: '19/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 2x R$100' },
+      { id: '3place', player1: 'Perd. Semifinal 1', player2: 'Perd. Semifinal 2', status: 'agendado', date: '19/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 2x R$100' }
     ]
   };
 
@@ -680,21 +692,30 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
 
     if (group && group.rounds) {
       [1, 2, 3, 4].forEach((roundNum) => {
-        const roundData = group.rounds[roundNum as 1 | 2 | 3 | 4];
+        const roundNumTyped = roundNum as 1 | 2 | 3 | 4;
+        const roundData = group.rounds[roundNumTyped];
         const position = roundData ? roundData[pName] : undefined;
 
+        let roundPoints = 0;
         if (position === 1) {
-          points += 5;
+          roundPoints = 5;
           wins += 1;
         } else if (position === 2) {
-          points += 3;
+          roundPoints = 3;
           vices += 1;
         } else if (position === 3) {
-          points += 2;
+          roundPoints = 2;
         } else if (position === 4) {
-          points += 1;
+          roundPoints = 1;
           eliminations += 1;
         }
+
+        // Apply 1-point penalty if marked as registered late
+        if (position !== undefined && position !== 0 && group.penalties?.[roundNumTyped]?.[pName]) {
+          roundPoints = Math.max(0, roundPoints - 1);
+        }
+
+        points += roundPoints;
       });
     }
 
@@ -750,9 +771,28 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
       3: { ...group.rounds[3] },
       4: { ...group.rounds[4] }
     });
+    setEditPenalties({
+      1: group.penalties?.[1] ? { ...group.penalties[1] } : {},
+      2: group.penalties?.[2] ? { ...group.penalties[2] } : {},
+      3: group.penalties?.[3] ? { ...group.penalties[3] } : {},
+      4: group.penalties?.[4] ? { ...group.penalties[4] } : {}
+    });
     setEditTieBreaker(group.tieBreakerOverride || '');
     setSearchQueries(['', '', '', '']);
     setShowSearchDropdowns([false, false, false, false]);
+  };
+
+  const handleTogglePenalty = (roundNum: 1 | 2 | 3 | 4, playerName: string) => {
+    const currentPenalties = { ...editPenalties[roundNum] };
+    if (currentPenalties[playerName]) {
+      delete currentPenalties[playerName];
+    } else {
+      currentPenalties[playerName] = true;
+    }
+    setEditPenalties({
+      ...editPenalties,
+      [roundNum]: currentPenalties
+    });
   };
 
   const handleSaveEditGroup = () => {
@@ -775,7 +815,8 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
           ...g,
           players: editPlayers,
           rounds: editRounds,
-          tieBreakerOverride: editTieBreaker || undefined
+          tieBreakerOverride: editTieBreaker || undefined,
+          penalties: editPenalties
         };
       }
       return g;
@@ -885,40 +926,40 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
       // HU 2: campeao grupo B x 7º melhor 3º colocado
       { id: '16avos-2', player1: championsMap['B'] || 'Campeão Grupo B', player2: getBest3rd(6), status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
       // HU 3: campeao grupo C x 6º melhor 3º colocado
-      { id: '16avos-3', player1: championsMap['C'] || 'Campeão Grupo C', player2: getBest3rd(5), status: 'agendado', date: '05/07, 21:45', buyIn: 'R$50', rebuy: '1 Permitido' },
+      { id: '16avos-3', player1: championsMap['C'] || 'Campeão Grupo C', player2: getBest3rd(5), status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
       // HU 4: campeao grupo D x 5º melhor 3º colocado
-      { id: '16avos-4', player1: championsMap['D'] || 'Campeão Grupo D', player2: getBest3rd(4), status: 'agendado', date: '05/07, 21:45', buyIn: 'R$50', rebuy: '1 Permitido' },
+      { id: '16avos-4', player1: championsMap['D'] || 'Campeão Grupo D', player2: getBest3rd(4), status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
       // HU 5: campeao grupo E x 4º melhor 3º colocado
       { id: '16avos-5', player1: championsMap['E'] || 'Campeão Grupo E', player2: getBest3rd(3), status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
       // HU 6: campeao grupo F x 3º melhor 3º colocado
       { id: '16avos-6', player1: championsMap['F'] || 'Campeão Grupo F', player2: getBest3rd(2), status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
       // HU 7: campeao grupo G x 2º melhor 3º colocado
-      { id: '16avos-7', player1: championsMap['G'] || 'Campeão Grupo G', player2: getBest3rd(1), status: 'agendado', date: '05/07, 21:45', buyIn: 'R$50', rebuy: '1 Permitido' },
+      { id: '16avos-7', player1: championsMap['G'] || 'Campeão Grupo G', player2: getBest3rd(1), status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
       // HU 8: campeao grupo H x 1º melhor 3º colocado
-      { id: '16avos-8', player1: championsMap['H'] || 'Campeão Grupo H', player2: getBest3rd(0), status: 'agendado', date: '05/07, 21:45', buyIn: 'R$50', rebuy: '1 Permitido' },
+      { id: '16avos-8', player1: championsMap['H'] || 'Campeão Grupo H', player2: getBest3rd(0), status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
       
       // Remaining Champions (I, J, K, L) vs Runner-ups (L, K, J, I)
       { id: '16avos-9', player1: championsMap['I'] || 'Campeão Grupo I', player2: runnerupsMap['L'] || 'Vice Grupo L', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
       { id: '16avos-10', player1: championsMap['J'] || 'Campeão Grupo J', player2: runnerupsMap['K'] || 'Vice Grupo K', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
-      { id: '16avos-11', player1: championsMap['K'] || 'Campeão Grupo K', player2: runnerupsMap['J'] || 'Vice Grupo J', status: 'agendado', date: '05/07, 21:45', buyIn: 'R$50', rebuy: '1 Permitido' },
-      { id: '16avos-12', player1: championsMap['L'] || 'Campeão Grupo L', player2: runnerupsMap['I'] || 'Vice Grupo I', status: 'agendado', date: '05/07, 21:45', buyIn: 'R$50', rebuy: '1 Permitido' },
+      { id: '16avos-11', player1: championsMap['K'] || 'Campeão Grupo K', player2: runnerupsMap['J'] || 'Vice Grupo J', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
+      { id: '16avos-12', player1: championsMap['L'] || 'Campeão Grupo L', player2: runnerupsMap['I'] || 'Vice Grupo I', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
       
       // Remaining Runner-ups against each other (A vs H, B vs G, C vs F, D vs E)
       { id: '16avos-13', player1: runnerupsMap['A'] || 'Vice Grupo A', player2: runnerupsMap['H'] || 'Vice Grupo H', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
       { id: '16avos-14', player1: runnerupsMap['B'] || 'Vice Grupo B', player2: runnerupsMap['G'] || 'Vice Grupo G', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
-      { id: '16avos-15', player1: runnerupsMap['C'] || 'Vice Grupo C', player2: runnerupsMap['F'] || 'Vice Grupo F', status: 'agendado', date: '05/07, 21:45', buyIn: 'R$50', rebuy: '1 Permitido' },
-      { id: '16avos-16', player1: runnerupsMap['D'] || 'Vice Grupo D', player2: runnerupsMap['E'] || 'Vice Grupo E', status: 'agendado', date: '05/07, 21:45', buyIn: 'R$50', rebuy: '1 Permitido' }
+      { id: '16avos-15', player1: runnerupsMap['C'] || 'Vice Grupo C', player2: runnerupsMap['F'] || 'Vice Grupo F', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' },
+      { id: '16avos-16', player1: runnerupsMap['D'] || 'Vice Grupo D', player2: runnerupsMap['E'] || 'Vice Grupo E', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' }
     ];
 
     // Compute advancement state from these new 16avos
     const newBracketState = runAdvancementProgress(new16avos, {
       '16avos': new16avos,
-      'oitavas': Array.from({ length: 8 }, (_, i) => ({ id: `oitavas-${i+1}`, player1: '', player2: '', status: 'agendado', date: i % 2 === 0 ? '08/07, 20:15' : '08/07, 21:45', buyIn: 'R$50', rebuy: '1 Permitido' })),
-      'quartas': Array.from({ length: 4 }, (_, i) => ({ id: `quartas-${i+1}`, player1: '', player2: '', status: 'agendado', date: i % 2 === 0 ? '12/07, 20:15' : '12/07, 21:45', buyIn: 'Grátis', rebuy: 'R$100' })),
-      'semis': Array.from({ length: 2 }, (_, i) => ({ id: `semis-${i+1}`, player1: '', player2: '', status: 'agendado', date: i === 0 ? '15/07, 20:15' : '15/07, 21:45', buyIn: 'Grátis', rebuy: 'R$100' })),
+      'oitavas': Array.from({ length: 8 }, (_, i) => ({ id: `oitavas-${i+1}`, player1: '', player2: '', status: 'agendado', date: '08/07, 20:15', buyIn: 'R$50', rebuy: '1 Permitido' })),
+      'quartas': Array.from({ length: 4 }, (_, i) => ({ id: `quartas-${i+1}`, player1: '', player2: '', status: 'agendado', date: '12/07, 20:15', buyIn: 'Grátis', rebuy: 'R$100' })),
+      'semis': Array.from({ length: 2 }, (_, i) => ({ id: `semis-${i+1}`, player1: '', player2: '', status: 'agendado', date: '15/07, 20:15', buyIn: 'Grátis', rebuy: 'R$100' })),
       'finais': [
-        { id: 'final', player1: '', player2: '', status: 'agendado', date: '19/07, 21:15', buyIn: 'Grátis', rebuy: 'Até 2x R$100' },
-        { id: '3place', player1: '', player2: '', status: 'agendado', date: '19/07, 19:15', buyIn: 'Grátis', rebuy: 'Até 2x R$100' }
+        { id: 'final', player1: '', player2: '', status: 'agendado', date: '19/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 2x R$100' },
+        { id: '3place', player1: '', player2: '', status: 'agendado', date: '19/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 2x R$100' }
       ]
     });
 
@@ -1223,15 +1264,27 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
                 const isClassificado = status === 'classificado';
                 const isRepescagem = status === 'repescagem';
 
+                const totalPenalties = [1, 2, 3, 4].reduce((acc, r) => {
+                  return acc + (group.penalties?.[r as 1 | 2 | 3 | 4]?.[p.name] ? 1 : 0);
+                }, 0);
+
                 return (
                   <tr key={p.name} className="hover:bg-white/[0.02]">
-                    <td className="py-2 pr-2 font-medium flex items-center gap-1.5">
+                    <td className="py-2 pr-2 font-medium flex items-center gap-1.5 flex-wrap">
                       <span className={`w-1.5 h-1.5 rounded-full ${isClassificado ? 'bg-emerald-500' : isRepescagem ? 'bg-amber-500' : 'bg-red-500'}`} />
                       <span className={isClassificado ? 'text-white font-semibold' : 'text-gray-400 truncate max-w-[110px]'}>
                         {p.name || 'Vago'}
                       </span>
                       {group.tieBreakerOverride === p.name && (
                         <span className="text-[8px] font-display font-black bg-amber-500/10 text-amber-400 border border-amber-500/30 px-1 rounded-sm">HU</span>
+                      )}
+                      {totalPenalties > 0 && (
+                        <span 
+                          title={`Punição de registro atrasado: -${totalPenalties} pt(s)`} 
+                          className="text-[8px] font-display font-black bg-red-500/10 text-red-400 border border-red-500/30 px-1 rounded-sm cursor-help"
+                        >
+                          -{totalPenalties}P
+                        </span>
                       )}
                     </td>
                     <td className={`py-2 text-center font-display font-black ${isClassificado ? 'text-emerald-400' : isRepescagem ? 'text-amber-400' : 'text-gray-500'}`}>{p.points}</td>
@@ -1673,6 +1726,10 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
                                   ...editRounds,
                                   [roundNumTyped]: {}
                                 });
+                                setEditPenalties({
+                                  ...editPenalties,
+                                  [roundNumTyped]: {}
+                                });
                               }}
                               className="text-[8px] font-display bg-red-950/40 hover:bg-red-900/60 border border-red-500/25 px-2 py-0.5 rounded text-red-400 font-bold uppercase"
                             >
@@ -1687,7 +1744,19 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
 
                               return (
                                 <div key={player} className="flex flex-col sm:flex-row sm:justify-between sm:items-center bg-white/[0.02] p-3 rounded-xl border border-white/[0.02] gap-2">
-                                  <span className="text-xs text-gray-300 font-semibold">{player}</span>
+                                  <div className="flex flex-col gap-1.5 items-start">
+                                    <span className="text-xs text-gray-300 font-semibold">{player}</span>
+                                    <button
+                                      onClick={() => handleTogglePenalty(roundNumTyped, player)}
+                                      className={`px-2 py-0.5 text-[8px] font-display font-black uppercase tracking-wider rounded-md border transition-all ${
+                                        editPenalties[roundNumTyped]?.[player]
+                                          ? 'bg-red-600 text-white border-red-500 shadow-[0_0_8px_rgba(220,38,38,0.4)]'
+                                          : 'bg-gray-800/60 text-gray-400 border-transparent hover:border-red-500/20 hover:text-red-400'
+                                      }`}
+                                    >
+                                      ⚠️ Reg. Atrasado (-1 pt)
+                                    </button>
+                                  </div>
                                   <div className="flex flex-wrap gap-1">
                                     {[
                                       { label: 'DNP (0pt)', val: 0, classes: 'bg-gray-800 text-gray-400 border-transparent' },
@@ -2212,23 +2281,23 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between items-center bg-[#120c24] px-3.5 py-2.5 rounded-xl border border-white/5">
                     <span className="font-medium text-gray-300">16-avos de Final (32 HU)</span>
-                    <span className="font-display font-bold text-red-400">05/07 - 20:15 / 21:45</span>
+                    <span className="font-display font-bold text-red-400">05/07 - 20:15</span>
                   </div>
                   <div className="flex justify-between items-center bg-[#120c24] px-3.5 py-2.5 rounded-xl border border-white/5">
                     <span className="font-medium text-gray-300">Oitavas de Final (16 HU)</span>
-                    <span className="font-display font-bold text-red-400">08/07 - 20:15 / 21:45</span>
+                    <span className="font-display font-bold text-red-400">08/07 - 20:15</span>
                   </div>
                   <div className="flex justify-between items-center bg-[#120c24] px-3.5 py-2.5 rounded-xl border border-white/5">
                     <span className="font-medium text-gray-300">Quartas de Final (8 HU)</span>
-                    <span className="font-display font-bold text-red-400">12/07 - 20:15 / 21:45</span>
+                    <span className="font-display font-bold text-red-400">12/07 - 20:15</span>
                   </div>
                   <div className="flex justify-between items-center bg-[#120c24] px-3.5 py-2.5 rounded-xl border border-white/5">
                     <span className="font-medium text-gray-300">Semifinais (4 HU)</span>
-                    <span className="font-display font-bold text-red-400">15/07 - 20:15 / 21:45</span>
+                    <span className="font-display font-bold text-red-400">15/07 - 20:15</span>
                   </div>
                   <div className="flex justify-between items-center bg-amber-950/20 px-3.5 py-2.5 rounded-xl border border-amber-500/20">
                     <span className="font-bold text-amber-400">Grande Final & 3º Lugar</span>
-                    <span className="font-display font-black text-amber-400">19/07 - 19:15 / 21:15</span>
+                    <span className="font-display font-black text-amber-400">19/07 - 20:15</span>
                   </div>
                 </div>
               </div>
