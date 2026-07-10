@@ -92,6 +92,8 @@ export const Navigation: React.FC<NavigationProps> = ({
             return onNavigate('vip');
         } else if (cat.id === 'online' || cat.id === 'online-credits') {
             return onNavigate('online-credits');
+        } else if (cat.id === 'cash-league') {
+            return onNavigate('cash-league');
         } else {
             onNavigate('category-' + cat.id);
         }

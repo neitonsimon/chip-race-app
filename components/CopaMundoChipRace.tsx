@@ -477,46 +477,46 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
   // Seed default Bracket
   const defaultBracket: BracketState = {
     '16avos': [
-      { id: '16avos-1', player1: 'Campeão Grupo A', player2: '8º melhor 3º colocado', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: '16avos-2', player1: 'Campeão Grupo B', player2: '7º melhor 3º colocado', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: '16avos-3', player1: 'Campeão Grupo C', player2: '6º melhor 3º colocado', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: '16avos-4', player1: 'Campeão Grupo D', player2: '5º melhor 3º colocado', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: '16avos-5', player1: 'Campeão Grupo E', player2: '4º melhor 3º colocado', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: '16avos-6', player1: 'Campeão Grupo F', player2: '3º melhor 3º colocado', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: '16avos-7', player1: 'Campeão Grupo G', player2: '2º melhor 3º colocado', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: '16avos-8', player1: 'Campeão Grupo H', player2: '1º melhor 3º colocado', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: '16avos-9', player1: 'Campeão Grupo I', player2: 'Vice Grupo L', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: '16avos-10', player1: 'Campeão Grupo J', player2: 'Vice Grupo K', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: '16avos-11', player1: 'Campeão Grupo K', player2: 'Vice Grupo J', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: '16avos-12', player1: 'Campeão Grupo L', player2: 'Vice Grupo I', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: '16avos-13', player1: 'Vice Grupo A', player2: 'Vice Grupo H', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: '16avos-14', player1: 'Vice Grupo B', player2: 'Vice Grupo G', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: '16avos-15', player1: 'Vice Grupo C', player2: 'Vice Grupo F', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: '16avos-16', player1: 'Vice Grupo D', player2: 'Vice Grupo E', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' }
+      { id: '16avos-1', player1: 'Campeão Grupo A', player2: '8º melhor 3º colocado', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: '16avos-2', player1: 'Campeão Grupo B', player2: '7º melhor 3º colocado', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: '16avos-3', player1: 'Campeão Grupo C', player2: '6º melhor 3º colocado', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: '16avos-4', player1: 'Campeão Grupo D', player2: '5º melhor 3º colocado', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: '16avos-5', player1: 'Campeão Grupo E', player2: '4º melhor 3º colocado', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: '16avos-6', player1: 'Campeão Grupo F', player2: '3º melhor 3º colocado', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: '16avos-7', player1: 'Campeão Grupo G', player2: '2º melhor 3º colocado', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: '16avos-8', player1: 'Campeão Grupo H', player2: '1º melhor 3º colocado', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: '16avos-9', player1: 'Campeão Grupo I', player2: 'Vice Grupo L', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: '16avos-10', player1: 'Campeão Grupo J', player2: 'Vice Grupo K', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: '16avos-11', player1: 'Campeão Grupo K', player2: 'Vice Grupo J', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: '16avos-12', player1: 'Campeão Grupo L', player2: 'Vice Grupo I', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: '16avos-13', player1: 'Vice Grupo A', player2: 'Vice Grupo H', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: '16avos-14', player1: 'Vice Grupo B', player2: 'Vice Grupo G', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: '16avos-15', player1: 'Vice Grupo C', player2: 'Vice Grupo F', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: '16avos-16', player1: 'Vice Grupo D', player2: 'Vice Grupo E', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' }
     ],
     'oitavas': [
-      { id: 'oitavas-1', player1: 'Venc. Jogo 1 (16-avos)', player2: 'Venc. Jogo 16 (16-avos)', status: 'agendado', date: '08/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: 'oitavas-2', player1: 'Venc. Jogo 2 (16-avos)', player2: 'Venc. Jogo 15 (16-avos)', status: 'agendado', date: '08/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: 'oitavas-3', player1: 'Venc. Jogo 3 (16-avos)', player2: 'Venc. Jogo 14 (16-avos)', status: 'agendado', date: '08/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: 'oitavas-4', player1: 'Venc. Jogo 4 (16-avos)', player2: 'Venc. Jogo 13 (16-avos)', status: 'agendado', date: '08/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: 'oitavas-5', player1: 'Venc. Jogo 5 (16-avos)', player2: 'Venc. Jogo 12 (16-avos)', status: 'agendado', date: '08/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: 'oitavas-6', player1: 'Venc. Jogo 6 (16-avos)', player2: 'Venc. Jogo 11 (16-avos)', status: 'agendado', date: '08/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: 'oitavas-7', player1: 'Venc. Jogo 7 (16-avos)', player2: 'Venc. Jogo 10 (16-avos)', status: 'agendado', date: '08/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: 'oitavas-8', player1: 'Venc. Jogo 8 (16-avos)', player2: 'Venc. Jogo 9 (16-avos)', status: 'agendado', date: '08/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' }
+      { id: 'oitavas-1', player1: 'Venc. Jogo 1 (16-avos)', player2: 'Venc. Jogo 16 (16-avos)', status: 'agendado', date: '08/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: 'oitavas-2', player1: 'Venc. Jogo 2 (16-avos)', player2: 'Venc. Jogo 15 (16-avos)', status: 'agendado', date: '08/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: 'oitavas-3', player1: 'Venc. Jogo 3 (16-avos)', player2: 'Venc. Jogo 14 (16-avos)', status: 'agendado', date: '08/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: 'oitavas-4', player1: 'Venc. Jogo 4 (16-avos)', player2: 'Venc. Jogo 13 (16-avos)', status: 'agendado', date: '08/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: 'oitavas-5', player1: 'Venc. Jogo 5 (16-avos)', player2: 'Venc. Jogo 12 (16-avos)', status: 'agendado', date: '08/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: 'oitavas-6', player1: 'Venc. Jogo 6 (16-avos)', player2: 'Venc. Jogo 11 (16-avos)', status: 'agendado', date: '08/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: 'oitavas-7', player1: 'Venc. Jogo 7 (16-avos)', player2: 'Venc. Jogo 10 (16-avos)', status: 'agendado', date: '08/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: 'oitavas-8', player1: 'Venc. Jogo 8 (16-avos)', player2: 'Venc. Jogo 9 (16-avos)', status: 'agendado', date: '08/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' }
     ],
     'quartas': [
-      { id: 'quartas-1', player1: 'Venc. Jogo 1 (Oitavas)', player2: 'Venc. Jogo 8 (Oitavas)', status: 'agendado', date: '12/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 3x R$100' },
-      { id: 'quartas-2', player1: 'Venc. Jogo 2 (Oitavas)', player2: 'Venc. Jogo 7 (Oitavas)', status: 'agendado', date: '12/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 3x R$100' },
-      { id: 'quartas-3', player1: 'Venc. Jogo 3 (Oitavas)', player2: 'Venc. Jogo 6 (Oitavas)', status: 'agendado', date: '12/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 3x R$100' },
-      { id: 'quartas-4', player1: 'Venc. Jogo 4 (Oitavas)', player2: 'Venc. Jogo 5 (Oitavas)', status: 'agendado', date: '12/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 3x R$100' }
+      { id: 'quartas-1', player1: 'Venc. Jogo 1 (Oitavas)', player2: 'Venc. Jogo 8 (Oitavas)', status: 'agendado', date: '12/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 2x R$100' },
+      { id: 'quartas-2', player1: 'Venc. Jogo 2 (Oitavas)', player2: 'Venc. Jogo 7 (Oitavas)', status: 'agendado', date: '12/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 2x R$100' },
+      { id: 'quartas-3', player1: 'Venc. Jogo 3 (Oitavas)', player2: 'Venc. Jogo 6 (Oitavas)', status: 'agendado', date: '12/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 2x R$100' },
+      { id: 'quartas-4', player1: 'Venc. Jogo 4 (Oitavas)', player2: 'Venc. Jogo 5 (Oitavas)', status: 'agendado', date: '12/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 2x R$100' }
     ],
     'semis': [
-      { id: 'semis-1', player1: 'Venc. Jogo 1 (Quartas)', player2: 'Venc. Jogo 4 (Quartas)', status: 'agendado', date: '15/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 3x R$100' },
-      { id: 'semis-2', player1: 'Venc. Jogo 2 (Quartas)', player2: 'Venc. Jogo 3 (Quartas)', status: 'agendado', date: '15/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 3x R$100' }
+      { id: 'semis-1', player1: 'Venc. Jogo 1 (Quartas)', player2: 'Venc. Jogo 4 (Quartas)', status: 'agendado', date: '15/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 2x R$100' },
+      { id: 'semis-2', player1: 'Venc. Jogo 2 (Quartas)', player2: 'Venc. Jogo 3 (Quartas)', status: 'agendado', date: '15/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 2x R$100' }
     ],
     'finais': [
-      { id: 'final', player1: 'Venc. Semifinal 1', player2: 'Venc. Semifinal 2', status: 'agendado', date: '19/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 3x R$100' },
-      { id: '3place', player1: 'Perd. Semifinal 1', player2: 'Perd. Semifinal 2', status: 'agendado', date: '19/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 3x R$100' }
+      { id: 'final', player1: 'Venc. Semifinal 1', player2: 'Venc. Semifinal 2', status: 'agendado', date: '19/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 2x R$100' },
+      { id: '3place', player1: 'Perd. Semifinal 1', player2: 'Perd. Semifinal 2', status: 'agendado', date: '19/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 2x R$100' }
     ]
   };
 
@@ -608,6 +608,35 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
         finalBracket = defaultBracket;
         localStorage.setItem('cr_copa_mundo_bracket_v3', JSON.stringify(defaultBracket));
       }
+
+      // Migrate rebuys to 2 per duel if needed
+      let bracketMigrated = false;
+      const rounds: (keyof BracketState)[] = ['16avos', 'oitavas', 'quartas', 'semis', 'finais'];
+      rounds.forEach(r => {
+        if (finalBracket[r]) {
+          finalBracket[r] = finalBracket[r].map(m => {
+            let updatedRebuy = m.rebuy;
+            if (m.rebuy === '3 Permitidos') {
+              updatedRebuy = '2 Permitidos';
+              bracketMigrated = true;
+            } else if (m.rebuy === 'Até 3x R$100') {
+              updatedRebuy = 'Até 2x R$100';
+              bracketMigrated = true;
+            }
+            return { ...m, rebuy: updatedRebuy };
+          });
+        }
+      });
+
+      if (bracketMigrated) {
+        localStorage.setItem('cr_copa_mundo_bracket_v3', JSON.stringify(finalBracket));
+        try {
+          await supabase.from('content_db').upsert({ key: 'copa_mundo_bracket', value: finalBracket }, { onConflict: 'key' });
+        } catch (err) {
+          console.warn("Failed to update migrated bracket in Supabase:", err);
+        }
+      }
+
       setBracket(finalBracket);
     };
 
@@ -710,13 +739,15 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
           eliminations += 1;
         }
 
-        // Apply 1-point penalty if marked as registered late
-        if (position !== undefined && position !== 0 && group.penalties?.[roundNumTyped]?.[pName]) {
-          roundPoints = Math.max(0, roundPoints - 1);
-        }
-
         points += roundPoints;
       });
+
+      // Apply penalties (1 point deduction per penalty, regardless of whether they played that round)
+      const totalPenalties = [1, 2, 3, 4].reduce((acc, r) => {
+        return acc + (group.penalties?.[r as 1 | 2 | 3 | 4]?.[pName] ? 1 : 0);
+      }, 0);
+
+      points = Math.max(0, points - totalPenalties);
     }
 
     return { name: pName, points, wins, vices, eliminations };
@@ -922,44 +953,44 @@ export const CopaMundoChipRace: React.FC<{ onNavigate: (view: string) => void }>
     // 3. Assemble the Round of 32 (16-avos)
     const new16avos: BracketMatch[] = [
       // HU 1: campeao grupo A x 8º melhor 3º colocado de grupos
-      { id: '16avos-1', player1: championsMap['A'] || 'Campeão Grupo A', player2: getBest3rd(7), status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
+      { id: '16avos-1', player1: championsMap['A'] || 'Campeão Grupo A', player2: getBest3rd(7), status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
       // HU 2: campeao grupo B x 7º melhor 3º colocado
-      { id: '16avos-2', player1: championsMap['B'] || 'Campeão Grupo B', player2: getBest3rd(6), status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
+      { id: '16avos-2', player1: championsMap['B'] || 'Campeão Grupo B', player2: getBest3rd(6), status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
       // HU 3: campeao grupo C x 6º melhor 3º colocado
-      { id: '16avos-3', player1: championsMap['C'] || 'Campeão Grupo C', player2: getBest3rd(5), status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
+      { id: '16avos-3', player1: championsMap['C'] || 'Campeão Grupo C', player2: getBest3rd(5), status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
       // HU 4: campeao grupo D x 5º melhor 3º colocado
-      { id: '16avos-4', player1: championsMap['D'] || 'Campeão Grupo D', player2: getBest3rd(4), status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
+      { id: '16avos-4', player1: championsMap['D'] || 'Campeão Grupo D', player2: getBest3rd(4), status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
       // HU 5: campeao grupo E x 4º melhor 3º colocado
-      { id: '16avos-5', player1: championsMap['E'] || 'Campeão Grupo E', player2: getBest3rd(3), status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
+      { id: '16avos-5', player1: championsMap['E'] || 'Campeão Grupo E', player2: getBest3rd(3), status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
       // HU 6: campeao grupo F x 3º melhor 3º colocado
-      { id: '16avos-6', player1: championsMap['F'] || 'Campeão Grupo F', player2: getBest3rd(2), status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
+      { id: '16avos-6', player1: championsMap['F'] || 'Campeão Grupo F', player2: getBest3rd(2), status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
       // HU 7: campeao grupo G x 2º melhor 3º colocado
-      { id: '16avos-7', player1: championsMap['G'] || 'Campeão Grupo G', player2: getBest3rd(1), status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
+      { id: '16avos-7', player1: championsMap['G'] || 'Campeão Grupo G', player2: getBest3rd(1), status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
       // HU 8: campeao grupo H x 1º melhor 3º colocado
-      { id: '16avos-8', player1: championsMap['H'] || 'Campeão Grupo H', player2: getBest3rd(0), status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
+      { id: '16avos-8', player1: championsMap['H'] || 'Campeão Grupo H', player2: getBest3rd(0), status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
       
       // Remaining Champions (I, J, K, L) vs Runner-ups (L, K, J, I)
-      { id: '16avos-9', player1: championsMap['I'] || 'Campeão Grupo I', player2: runnerupsMap['L'] || 'Vice Grupo L', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: '16avos-10', player1: championsMap['J'] || 'Campeão Grupo J', player2: runnerupsMap['K'] || 'Vice Grupo K', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: '16avos-11', player1: championsMap['K'] || 'Campeão Grupo K', player2: runnerupsMap['J'] || 'Vice Grupo J', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: '16avos-12', player1: championsMap['L'] || 'Campeão Grupo L', player2: runnerupsMap['I'] || 'Vice Grupo I', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
+      { id: '16avos-9', player1: championsMap['I'] || 'Campeão Grupo I', player2: runnerupsMap['L'] || 'Vice Grupo L', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: '16avos-10', player1: championsMap['J'] || 'Campeão Grupo J', player2: runnerupsMap['K'] || 'Vice Grupo K', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: '16avos-11', player1: championsMap['K'] || 'Campeão Grupo K', player2: runnerupsMap['J'] || 'Vice Grupo J', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: '16avos-12', player1: championsMap['L'] || 'Campeão Grupo L', player2: runnerupsMap['I'] || 'Vice Grupo I', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
       
       // Remaining Runner-ups against each other (A vs H, B vs G, C vs F, D vs E)
-      { id: '16avos-13', player1: runnerupsMap['A'] || 'Vice Grupo A', player2: runnerupsMap['H'] || 'Vice Grupo H', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: '16avos-14', player1: runnerupsMap['B'] || 'Vice Grupo B', player2: runnerupsMap['G'] || 'Vice Grupo G', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: '16avos-15', player1: runnerupsMap['C'] || 'Vice Grupo C', player2: runnerupsMap['F'] || 'Vice Grupo F', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' },
-      { id: '16avos-16', player1: runnerupsMap['D'] || 'Vice Grupo D', player2: runnerupsMap['E'] || 'Vice Grupo E', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' }
+      { id: '16avos-13', player1: runnerupsMap['A'] || 'Vice Grupo A', player2: runnerupsMap['H'] || 'Vice Grupo H', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: '16avos-14', player1: runnerupsMap['B'] || 'Vice Grupo B', player2: runnerupsMap['G'] || 'Vice Grupo G', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: '16avos-15', player1: runnerupsMap['C'] || 'Vice Grupo C', player2: runnerupsMap['F'] || 'Vice Grupo F', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' },
+      { id: '16avos-16', player1: runnerupsMap['D'] || 'Vice Grupo D', player2: runnerupsMap['E'] || 'Vice Grupo E', status: 'agendado', date: '05/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' }
     ];
 
     // Compute advancement state from these new 16avos
     const newBracketState = runAdvancementProgress(new16avos, {
       '16avos': new16avos,
-      'oitavas': Array.from({ length: 8 }, (_, i) => ({ id: `oitavas-${i+1}`, player1: '', player2: '', status: 'agendado', date: '08/07, 20:15', buyIn: 'R$50', rebuy: '3 Permitidos' })),
-      'quartas': Array.from({ length: 4 }, (_, i) => ({ id: `quartas-${i+1}`, player1: '', player2: '', status: 'agendado', date: '12/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 3x R$100' })),
-      'semis': Array.from({ length: 2 }, (_, i) => ({ id: `semis-${i+1}`, player1: '', player2: '', status: 'agendado', date: '15/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 3x R$100' })),
+      'oitavas': Array.from({ length: 8 }, (_, i) => ({ id: `oitavas-${i+1}`, player1: '', player2: '', status: 'agendado', date: '08/07, 20:15', buyIn: 'R$50', rebuy: '2 Permitidos' })),
+      'quartas': Array.from({ length: 4 }, (_, i) => ({ id: `quartas-${i+1}`, player1: '', player2: '', status: 'agendado', date: '12/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 2x R$100' })),
+      'semis': Array.from({ length: 2 }, (_, i) => ({ id: `semis-${i+1}`, player1: '', player2: '', status: 'agendado', date: '15/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 2x R$100' })),
       'finais': [
-        { id: 'final', player1: '', player2: '', status: 'agendado', date: '19/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 3x R$100' },
-        { id: '3place', player1: '', player2: '', status: 'agendado', date: '19/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 3x R$100' }
+        { id: 'final', player1: '', player2: '', status: 'agendado', date: '19/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 2x R$100' },
+        { id: '3place', player1: '', player2: '', status: 'agendado', date: '19/07, 20:15', buyIn: 'Grátis', rebuy: 'Até 2x R$100' }
       ]
     });
 

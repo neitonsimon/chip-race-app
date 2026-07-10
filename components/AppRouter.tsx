@@ -31,6 +31,8 @@ import { MaintenancePage } from './MaintenancePage';
 import { CopaMundoChipRace } from './CopaMundoChipRace';
 import { CopaMundoSorteio } from './CopaMundoSorteio';
 import { MysteryJackpotPage } from './MysteryJackpotPage';
+import { CashLeagueDashboard } from './CashLeagueDashboard';
+import { CashLeagueIndividual } from './CashLeagueIndividual';
 
 export const AppRouter: React.FC = () => {
     const isMaintenance = false; // TOGGLE THIS TO DISABLE MAINTENANCE MODE
@@ -54,6 +56,15 @@ export const AppRouter: React.FC = () => {
     } = useApp();
 
     const renderContent = () => {
+        if (currentView.startsWith('cash-league-individual-')) {
+            const leagueId = currentView.replace('cash-league-individual-', '');
+            return <CashLeagueIndividual leagueId={leagueId} />;
+        }
+
+        if (currentView === 'cash-league') {
+            return <CashLeagueDashboard />;
+        }
+
         if (currentView.startsWith('event-')) {
             const slug = currentView.replace('event-', '');
             const evt = (contentDB?.special_events || []).find(e => e.slug === slug);

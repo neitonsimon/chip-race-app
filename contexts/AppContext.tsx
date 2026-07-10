@@ -5,7 +5,8 @@ import { useMessages } from './hooks/useMessages';
 import {
     RankingPlayer, MonthData, Message, ContentDB, TournamentCategory,
     Event, PlayerResult, PlayerStats, RankingInstance, ScoringSchema,
-    ExperienceLevel, DailyReward, Poll, MessageCategory, BadgeTemplate, SystemMessageTemplate
+    ExperienceLevel, DailyReward, Poll, MessageCategory, BadgeTemplate, SystemMessageTemplate,
+    CashLeague
 } from '../types';
 import { calculatePoints } from '../utils/scoring';
 import { createProfileSlug } from '../src/lib/slugUtils';
@@ -87,6 +88,10 @@ interface AppContextType {
     refreshSupabaseData: () => Promise<void>;
     isFlyerOpen: boolean;
     setIsFlyerOpen: (isOpen: boolean) => void;
+    cashLeagues: CashLeague[];
+    handleCreateCashLeague: (league: Omit<CashLeague, 'id' | 'created_at'>) => Promise<void>;
+    handleUpdateCashLeague: (id: string, updates: Partial<CashLeague>) => Promise<void>;
+    handleDeleteCashLeague: (id: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -187,7 +192,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         } else if (path === '/cadastro') {
             setCurrentView('register');
         } else if (path !== '') {
-            const view = path.substring(1);
+            let view = path.substring(1);
+            if (view.endsWith('/')) view = view.slice(0, -1);
             if (view) setCurrentView(view);
         }
     }, [location.pathname, allProfiles.length, isLoggedIn]);
@@ -206,6 +212,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, [allProfiles.length]);
 
     const [isFlyerOpen, setIsFlyerOpen] = useState(false);
+    const [cashLeagues, setCashLeagues] = useState<CashLeague[]>([]);
 
     // ── Messages & Polls hook ──────────────────────────────────────────────────
     const {
@@ -221,7 +228,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (abortControllerRef.current) abortControllerRef.current.abort();
         abortControllerRef.current = new AbortController();
         
-        const CACHE_KEY = 'cr_app_raw_data_cache_v3';
+        const CACHE_KEY = 'cr_app_raw_data_cache_v4';
         
         try {
         let rankingsData: any[] | null = null;
@@ -236,6 +243,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         let dailyRewardsData: any[] | null = null;
         let templatesMsgData: any[] | null = null;
         let allUserBadges: any[] | null = null;
+        let cashLeaguesData: any[] | null = null;
 
         let useCache = false;
         if (!force) {
@@ -257,6 +265,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                         dailyRewardsData = parsed.dailyRewardsData || [];
                         templatesMsgData = parsed.templatesMsgData || [];
                         allUserBadges = parsed.allUserBadges || [];
+                        cashLeaguesData = parsed.cashLeaguesData || [];
                         useCache = true;
                     }
                 }
@@ -281,7 +290,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     supabase.from('experience_levels').select('level, required_exp, credit_limit').order('level', { ascending: true }),
                     supabase.from('daily_rewards').select('day, reward_type, reward_value, reward_label').order('day', { ascending: true }),
                     supabase.from('system_message_templates').select('id, subject, content, category, sender, is_active, updated_at'),
-                    supabase.from('user_badges').select('badge_template_id')
+                    supabase.from('user_badges').select('badge_template_id'),
+                    supabase.from('cash_leagues').select('id, name, modality, blind, buyin, max_players, rounds, status, prize, participants, results, created_at').order('created_at', { ascending: true })
                 ]);
 
                 rankingsData = results[0].data;
@@ -296,6 +306,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 dailyRewardsData = results[9].data;
                 templatesMsgData = results[10].data;
                 allUserBadges = results[11].data;
+                cashLeaguesData = results[12].data;
 
                 try {
                     sessionStorage.setItem(CACHE_KEY, JSON.stringify({
@@ -303,7 +314,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                         currentUserId,
                         rankingsData, templatesData, schemasData, eventsData, contentData,
                         ecoCategoriesData, profilesData, currentUserBadges, expLevelsData,
-                        dailyRewardsData, templatesMsgData, allUserBadges
+                        dailyRewardsData, templatesMsgData, allUserBadges, cashLeaguesData
                     }));
                 } catch (e) {
                     console.warn('Failed to save to sessionStorage (quota exceeded):', e);
@@ -436,6 +447,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             }
 
             if (ecoCategoriesData) setContentDB(prev => ({ ...prev, categories: ecoCategoriesData }));
+
+            if (cashLeaguesData) {
+                setCashLeagues(cashLeaguesData.map(l => ({
+                    id: l.id,
+                    name: l.name,
+                    modality: l.modality,
+                    blind: l.blind,
+                    buyin: Number(l.buyin),
+                    max_players: l.max_players,
+                    rounds: l.rounds || [],
+                    status: l.status || 'active',
+                    prize: l.prize,
+                    participants: l.participants || [],
+                    results: l.results || {},
+                    created_at: l.created_at
+                })));
+            }
 
             if (profilesData) {
                 setAllProfiles(profilesData.map(p => ({
@@ -912,6 +940,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const handleNavigate = (view: string) => {
         if (view === 'profile') setSelectedPlayer(null);
+        setCurrentView(view);
         
         // Map common views to Portuguese routes or standard paths
         let path = `/${view}`;
@@ -1589,6 +1618,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const invalidateSessionCache = () => {
         try {
             sessionStorage.removeItem('cr_app_raw_data_cache_v2');
+            sessionStorage.removeItem('cr_app_raw_data_cache_v3');
+            sessionStorage.removeItem('cr_app_raw_data_cache_v4');
             console.log('--- SESSION CACHE INVALIDATED ---');
         } catch (e) {
             console.error('Error clearing session cache:', e);
@@ -1634,6 +1665,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     };
 
+    const handleCreateCashLeague = async (league: Omit<CashLeague, 'id' | 'created_at'>) => {
+        invalidateSessionCache();
+        const { data, error } = await supabase.from('cash_leagues').insert([league]).select();
+        if (error) {
+            console.error('Error creating cash league:', error);
+            throw error;
+        }
+        if (data && data[0]) {
+            setCashLeagues(prev => [...prev, data[0] as CashLeague]);
+        }
+    };
+
+    const handleUpdateCashLeague = async (id: string, updates: Partial<CashLeague>) => {
+        invalidateSessionCache();
+        const { data, error } = await supabase.from('cash_leagues').update(updates).eq('id', id).select();
+        if (error) {
+            console.error('Error updating cash league:', error);
+            throw error;
+        }
+        if (data && data[0]) {
+            setCashLeagues(prev => prev.map(l => l.id === id ? { ...l, ...data[0] } : l));
+        }
+    };
+
+    const handleDeleteCashLeague = async (id: string) => {
+        invalidateSessionCache();
+        const { error } = await supabase.from('cash_leagues').delete().eq('id', id);
+        if (error) {
+            console.error('Error deleting cash league:', error);
+            throw error;
+        }
+        setCashLeagues(prev => prev.filter(l => l.id !== id));
+    };
+
     return (
         <AppContext.Provider value={{
             currentView, setCurrentView, isAdmin, isStaff, isLoggedIn, currentUserId, currentUser, events, isLoading, rankings: calculatedRankings, contentDB, globalScoringSchemas,
@@ -1646,6 +1711,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             handleMarkAsRead, handleDeleteMessage, handleCreateBadgeTemplate, handleUpdateBadgeTemplate, updateContent, updateCategory, addCategory, deleteCategory, setNewNotification, getAllUniquePlayers,
             setEvents, setExperienceLevels, setDailyRewards,
             isFlyerOpen, setIsFlyerOpen,
+            cashLeagues, handleCreateCashLeague, handleUpdateCashLeague, handleDeleteCashLeague,
             refreshSupabaseData: async () => {
                 await fetchSupabaseData(true);
                 if (currentUserId) await fetchProfile(currentUserId);

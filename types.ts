@@ -636,3 +636,46 @@ export interface ContentDB {
   faq?: { question: string; answer: string }[];
   documents?: { title: string; subtitle: string; icon: string; url: string; color: string }[];
 }
+
+// ─── CASH LEAGUE INTERFACES ───────────────────────────────────────────
+
+export interface CashLeagueRound {
+  number: number;
+  date: string;
+  time: string;
+  end_time?: string;
+  status: 'pending' | 'completed';
+}
+
+export interface CashLeagueParticipant {
+  id?: string;
+  name: string;
+}
+
+export interface CashLeagueResult {
+  participated?: boolean;
+  entered_by_20h: boolean;
+  stayed_until_23h: boolean;
+  profit_loss: number;
+}
+
+export interface CashLeague {
+  id: string;
+  name: string;
+  modality: string;
+  blind: string;
+  buyin: number;
+  max_players: number;
+  rounds: CashLeagueRound[];
+  status: 'registrando' | 'aguardando_inicio' | 'em_andamento' | 'encerrado';
+  prize: string;
+  participants: CashLeagueParticipant[];
+  results: Record<string, Record<string, CashLeagueResult>>; // e.g. { "1": { "Player Name": { entered_by_20h: true, ... } } }
+  aporte_inicial: number;
+  bonus_resgate: number;
+  start_date: string;
+  weekday: string;
+  bomb_pot_every: number;
+  rake: string;
+  created_at?: string;
+}

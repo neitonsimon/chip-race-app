@@ -997,6 +997,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             onCreateBadgeTemplate={onCreateBadgeTemplate}
                             onUpdateBadgeTemplate={onUpdateBadgeTemplate}
                             isLoading={badgesSystem.isLoading}
+                            selectedRankingId={badgesSystem.selectedRankingId}
+                            setSelectedRankingId={badgesSystem.setSelectedRankingId}
+                            selectedCriterion={badgesSystem.selectedCriterion}
+                            setSelectedCriterion={badgesSystem.setSelectedCriterion}
+                            batchPlayers={badgesSystem.batchPlayers}
+                            setBatchPlayers={badgesSystem.setBatchPlayers}
+                            searchQueryBatch={badgesSystem.searchQueryBatch}
+                            setSearchQueryBatch={badgesSystem.setSearchQueryBatch}
+                            searchResultsBatch={badgesSystem.searchResultsBatch}
+                            setSearchResultsBatch={badgesSystem.setSearchResultsBatch}
+                            handleSearchBatchUser={badgesSystem.handleSearchBatchUser}
+                            handleAddToBatch={badgesSystem.handleAddToBatch}
+                            handleToggleBatchPlayer={badgesSystem.handleToggleBatchPlayer}
                         />
                     )}
 

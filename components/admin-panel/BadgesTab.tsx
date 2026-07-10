@@ -1,10 +1,11 @@
 import React from 'react';
 import { ViewBadgeUsersModal } from './modals/ViewBadgeUsersModal';
 import { BadgePreview } from './BadgePreview';
+import { useApp } from '../../contexts/AppContext';
 
 interface BadgesTabProps {
-    targetType: 'single' | 'all';
-    setTargetType: (t: 'single' | 'all') => void;
+    targetType: 'single' | 'all' | 'batch';
+    setTargetType: (t: 'single' | 'all' | 'batch') => void;
     searchQuery: string;
     setSearchQuery: (q: string) => void;
     description: string;
@@ -22,6 +23,21 @@ interface BadgesTabProps {
     onCreateBadgeTemplate?: (badge: any) => Promise<void>;
     onUpdateBadgeTemplate?: (id: string, badge: any) => Promise<void>;
     isLoading: boolean;
+
+    // Batch send props
+    selectedRankingId: string;
+    setSelectedRankingId: (id: string) => void;
+    selectedCriterion: string;
+    setSelectedCriterion: (crit: string) => void;
+    batchPlayers: { id: string; name: string; checked: boolean; alreadyHas: boolean }[];
+    setBatchPlayers: React.Dispatch<React.SetStateAction<{ id: string; name: string; checked: boolean; alreadyHas: boolean }[]>>;
+    searchQueryBatch: string;
+    setSearchQueryBatch: (q: string) => void;
+    searchResultsBatch: any[];
+    setSearchResultsBatch: (results: any[]) => void;
+    handleSearchBatchUser: (query: string) => Promise<void>;
+    handleAddToBatch: (user: any) => void;
+    handleToggleBatchPlayer: (index: number) => void;
 }
 
 // ─── 200+ Material Icons for badges ────────────────────────────────────────
@@ -464,8 +480,19 @@ export const BadgesTab: React.FC<BadgesTabProps> = ({
     targetType, setTargetType, searchQuery, setSearchQuery, description, setDescription,
     selectedBadgeId, setSelectedBadgeId, searchResults, setSearchResults,
     badgeTemplates, selectedUsers, setSelectedUsers, usersWithSelectedBadge,
-    handleSendBadges, handleSearch, onCreateBadgeTemplate, onUpdateBadgeTemplate, isLoading
+    handleSendBadges, handleSearch, onCreateBadgeTemplate, onUpdateBadgeTemplate, isLoading,
+    
+    // Batch props
+    selectedRankingId, setSelectedRankingId,
+    selectedCriterion, setSelectedCriterion,
+    batchPlayers, setBatchPlayers,
+    searchQueryBatch, setSearchQueryBatch,
+    searchResultsBatch, setSearchResultsBatch,
+    handleSearchBatchUser,
+    handleAddToBatch,
+    handleToggleBatchPlayer
 }) => {
+    const { rankings } = useApp();
     const [showNewBadgeForm, setShowNewBadgeForm] = React.useState(false);
     const [newBadge, setNewBadge] = React.useState({ title: '', description: '', icon: 'stars', color: '#00E5FF', is_archived: false });
     const [showIconPicker, setShowIconPicker] = React.useState(false);
@@ -743,12 +770,53 @@ export const BadgesTab: React.FC<BadgesTabProps> = ({
                                         <span className="material-icons-outlined text-sm">{targetType === 'single' ? 'check_circle' : 'person'}</span>
                                         Específicos
                                     </button>
+                                    <button onClick={() => setTargetType('batch')} className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${targetType === 'batch' ? 'bg-cyan-500/20 border border-cyan-500/40 text-cyan-500' : 'bg-transparent text-gray-500 hover:text-gray-300'}`}>
+                                        <span className="material-icons-outlined text-sm">auto_awesome_motion</span>
+                                        Enviar em Lote
+                                    </button>
                                     <button onClick={() => setTargetType('all')} className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${targetType === 'all' ? 'bg-red-500/20 border border-red-500/40 text-red-500' : 'bg-transparent text-gray-500 hover:text-gray-300'}`}>
                                         <span className="material-icons-outlined text-sm">groups</span>
-                                        TODOS ({searchResults.length || '...'})
+                                        TODOS
                                     </button>
                                 </div>
                             </div>
+
+                            {/* Batch Selection Form */}
+                            {targetType === 'batch' && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#0c0920]/40 border border-white/5 p-5 rounded-3xl animate-in fade-in slide-in-from-top-2 duration-300">
+                                    <div className="space-y-2 text-left">
+                                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Selecione o Ranking</label>
+                                        <select
+                                            value={selectedRankingId}
+                                            onChange={e => setSelectedRankingId(e.target.value)}
+                                            className="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-primary/50 transition-all font-bold font-display"
+                                        >
+                                            <option value="">-- Selecione o Ranking --</option>
+                                            {(rankings || []).map(r => (
+                                                <option key={r.id} value={r.id}>{r.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2 text-left">
+                                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Critério de Distribuição</label>
+                                        <select
+                                            value={selectedCriterion}
+                                            onChange={e => setSelectedCriterion(e.target.value)}
+                                            className="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-primary/50 transition-all font-bold font-display"
+                                        >
+                                            <option value="any_participation">Todos que participaram de alguma etapa</option>
+                                            <option value="any_podium">Todos que pegaram pódio em alguma etapa (Top 3)</option>
+                                            <option value="ranking_final_table">Todos da mesa final do ranking (Top 9 Geral)</option>
+                                            <option value="any_final_table">Todos que pegaram mesa final em alguma etapa (Top 9)</option>
+                                            <option value="main_event_qualified">Todos classificados para o Dia Final do Main Event</option>
+                                            <option value="main_event_participation">Jogaram o evento principal do ranking</option>
+                                            <option value="any_stage_winner">Campeões de Etapa (1º Lugar)</option>
+                                            <option value="ranking_final_table_winner">Campeão da mesa final do ranking (Mesa Final)</option>
+                                            <option value="ranking_winner">Campeão Geral do Ranking (1º Geral)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Badge Selection Library */}
                             <div className="space-y-4">
@@ -848,7 +916,12 @@ export const BadgesTab: React.FC<BadgesTabProps> = ({
                                     <div className="md:col-span-4">
                                         <button
                                             onClick={handleSendBadges}
-                                            disabled={isLoading || !selectedBadgeId || (targetType === 'single' && selectedUsers.length === 0)}
+                                            disabled={
+                                                isLoading || 
+                                                !selectedBadgeId || 
+                                                (targetType === 'single' && selectedUsers.length === 0) ||
+                                                (targetType === 'batch' && batchPlayers.filter(p => p.checked && !p.alreadyHas).length === 0)
+                                            }
                                             className="w-full bg-primary hover:bg-white hover:text-black hover:scale-[1.02] active:scale-95 text-white font-black py-4 rounded-2xl transition-all shadow-neon-pink uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-2 disabled:opacity-30 disabled:grayscale disabled:pointer-events-none"
                                         >
                                             {isLoading
@@ -868,88 +941,216 @@ export const BadgesTab: React.FC<BadgesTabProps> = ({
                     <div className="bg-[#0c0920]/60 backdrop-blur-md border border-white/5 rounded-[2rem] p-6 flex flex-col h-[700px]">
                         <div className="flex items-center justify-between mb-8">
                             <h4 className="text-[10px] font-black text-white uppercase tracking-[0.2em] flex items-center gap-2">
-                                <span className="material-icons-outlined text-primary text-base">person_add</span>
-                                Destinatários
+                                <span className="material-icons-outlined text-primary text-base">
+                                    {targetType === 'batch' ? 'playlist_add_check' : 'person_add'}
+                                </span>
+                                {targetType === 'batch' ? 'Checklist de Envio' : 'Destinatários'}
                             </h4>
-                            <span className="text-[10px] font-black bg-primary/20 text-primary px-3 py-1 rounded-full">{selectedUsers.length}</span>
+                            <span className="text-[10px] font-black bg-primary/20 text-primary px-3 py-1 rounded-full">
+                                {targetType === 'batch'
+                                    ? `${batchPlayers.filter(p => p.checked && !p.alreadyHas).length} / ${batchPlayers.length}`
+                                    : selectedUsers.length
+                                }
+                            </span>
                         </div>
 
                         {/* Search Focus */}
                         <div className="relative mb-8 group">
-                            <span className="material-icons-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-primary transition-colors">search</span>
-                            <input 
-                                type="text" 
-                                value={searchQuery} 
-                                onChange={e => handleSearch(e.target.value)} 
-                                placeholder="Buscar Jogador..."
-                                className="w-full bg-black/40 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-white text-xs outline-none focus:border-primary/40 focus:bg-primary/5 transition-all font-bold placeholder:text-gray-700" 
-                            />
-                            
-                            {searchResults.length > 0 && (
-                                <div className="absolute top-full left-0 right-0 mt-2 bg-[#120d2d] border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-50 max-h-72 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2">
-                                    {searchResults.map(u => {
-                                        const alreadyHasBadge = usersWithSelectedBadge.has(u.id);
-                                        return (
-                                            <button
-                                                key={u.id}
-                                                onClick={() => {
-                                                    if (!selectedUsers.find(x => x.id === u.id)) setSelectedUsers([...selectedUsers, u]);
-                                                    setSearchQuery(''); setSearchResults([]);
-                                                }}
-                                                className={`w-full flex items-center justify-between p-4 hover:bg-primary/10 transition-colors border-b border-white/5 last:border-0 ${alreadyHasBadge ? 'opacity-40' : ''}`}
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${u.name}&background=random`} className="w-9 h-9 rounded-full object-cover border border-white/10" alt="" />
-                                                    <div className="text-left">
-                                                        <p className="text-[10px] font-black text-white leading-none mb-1">{u.name}</p>
-                                                        <p className="text-[8px] text-primary font-black uppercase tracking-tighter">CR#{String(u.numeric_id).padStart(3, '0')}</p>
-                                                    </div>
-                                                </div>
-                                                {alreadyHasBadge ? (
-                                                    <span className="material-icons text-amber-500 text-base">info</span>
-                                                ) : (
-                                                    <span className="material-icons text-gray-700 text-sm">add_circle_outline</span>
-                                                )}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Selected List */}
-                        <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-1">
-                            {selectedUsers.length === 0 ? (
-                                <div className="h-full flex flex-col items-center justify-center opacity-20 py-20 grayscale">
-                                    <span className="material-icons-outlined text-6xl mb-4">search_off</span>
-                                    <p className="text-[9px] font-black uppercase tracking-[0.2em]">Pesquise pelo nome</p>
-                                </div>
-                            ) : (
-                                selectedUsers.map(u => (
-                                    <div key={u.id} className="group flex items-center justify-between p-3.5 bg-white/[0.03] border border-white/5 rounded-2xl hover:border-white/10 transition-all animate-in fade-in slide-in-from-right-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="relative">
-                                                <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${u.name}&background=random`} className="w-10 h-10 rounded-full border border-white/10 object-cover" alt="" />
-                                                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-[#120d2d]"></div>
-                                            </div>
-                                            <div className="text-left">
-                                                <p className="text-[10px] font-black text-white leading-none mb-1">{u.name}</p>
-                                                <p className="text-[9px] text-gray-600 font-bold uppercase">CR#{String(u.numeric_id).padStart(3, '0')}</p>
-                                            </div>
+                            {targetType === 'batch' ? (
+                                <>
+                                    <span className="material-icons-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-cyan-500 transition-colors">person_search</span>
+                                    <input 
+                                        type="text" 
+                                        value={searchQueryBatch} 
+                                        onChange={e => handleSearchBatchUser(e.target.value)} 
+                                        placeholder="Adicionar jogador extra..."
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-white text-xs outline-none focus:border-cyan-500/40 focus:bg-cyan-500/5 transition-all font-bold placeholder:text-gray-700" 
+                                    />
+                                    {searchResultsBatch.length > 0 && (
+                                        <div className="absolute top-full left-0 right-0 mt-2 bg-[#120d2d] border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-50 max-h-72 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2">
+                                            {searchResultsBatch.map(u => {
+                                                const alreadyHasBadge = usersWithSelectedBadge.has(u.id);
+                                                return (
+                                                    <button
+                                                        key={u.id}
+                                                        type="button"
+                                                        onClick={() => handleAddToBatch(u)}
+                                                        className={`w-full flex items-center justify-between p-4 hover:bg-cyan-500/10 transition-colors border-b border-white/5 last:border-0 ${alreadyHasBadge ? 'opacity-40' : ''}`}
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${u.name}&background=random`} className="w-9 h-9 rounded-full object-cover border border-white/10" alt="" />
+                                                            <div className="text-left">
+                                                                <p className="text-[10px] font-black text-white leading-none mb-1">{u.name}</p>
+                                                                <p className="text-[8px] text-cyan-500 font-black uppercase tracking-tighter">CR#{String(u.numeric_id).padStart(3, '0')}</p>
+                                                            </div>
+                                                        </div>
+                                                        {alreadyHasBadge ? (
+                                                            <span className="material-icons text-amber-500 text-base">info</span>
+                                                        ) : (
+                                                            <span className="material-icons text-gray-700 text-sm">add_circle_outline</span>
+                                                        )}
+                                                    </button>
+                                                );
+                                            })}
                                         </div>
-                                        <button 
-                                            onClick={() => setSelectedUsers(selectedUsers.filter(x => x.id !== u.id))} 
-                                            className="w-8 h-8 rounded-xl bg-red-500/0 hover:bg-red-500 text-gray-700 hover:text-white transition-all flex items-center justify-center"
-                                        >
-                                            <span className="material-icons-outlined text-sm">remove_circle</span>
-                                        </button>
-                                    </div>
-                                ))
+                                    )}
+                                </>
+                            ) : (
+                                <>
+                                    <span className="material-icons-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-primary transition-colors">search</span>
+                                    <input 
+                                        type="text" 
+                                        value={searchQuery} 
+                                        onChange={e => handleSearch(e.target.value)} 
+                                        placeholder="Buscar Jogador..."
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-white text-xs outline-none focus:border-primary/40 focus:bg-primary/5 transition-all font-bold placeholder:text-gray-700" 
+                                    />
+                                    
+                                    {searchResults.length > 0 && (
+                                        <div className="absolute top-full left-0 right-0 mt-2 bg-[#120d2d] border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-50 max-h-72 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2">
+                                            {searchResults.map(u => {
+                                                const alreadyHasBadge = usersWithSelectedBadge.has(u.id);
+                                                return (
+                                                    <button
+                                                        key={u.id}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (!selectedUsers.find(x => x.id === u.id)) setSelectedUsers([...selectedUsers, u]);
+                                                            setSearchQuery(''); setSearchResults([]);
+                                                        }}
+                                                        className={`w-full flex items-center justify-between p-4 hover:bg-primary/10 transition-colors border-b border-white/5 last:border-0 ${alreadyHasBadge ? 'opacity-40' : ''}`}
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${u.name}&background=random`} className="w-9 h-9 rounded-full object-cover border border-white/10" alt="" />
+                                                            <div className="text-left">
+                                                                <p className="text-[10px] font-black text-white leading-none mb-1">{u.name}</p>
+                                                                <p className="text-[8px] text-primary font-black uppercase tracking-tighter">CR#{String(u.numeric_id).padStart(3, '0')}</p>
+                                                            </div>
+                                                        </div>
+                                                        {alreadyHasBadge ? (
+                                                            <span className="material-icons text-amber-500 text-base">info</span>
+                                                        ) : (
+                                                            <span className="material-icons text-gray-700 text-sm">add_circle_outline</span>
+                                                        )}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
 
-                        {selectedUsers.length > 0 && (
+                        {/* Selected List / Checklist */}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-1">
+                            {targetType === 'batch' ? (
+                                batchPlayers.length === 0 ? (
+                                    <div className="h-full flex flex-col items-center justify-center opacity-20 py-20 grayscale">
+                                        <span className="material-icons-outlined text-6xl mb-4">analytics</span>
+                                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-center px-4">
+                                            Selecione o ranking e critério para gerar a lista
+                                        </p>
+                                    </div>
+                                ) : (
+                                    batchPlayers.map((u, index) => (
+                                        <div 
+                                            key={u.id} 
+                                            onClick={() => {
+                                                if (!u.alreadyHas) handleToggleBatchPlayer(index);
+                                            }}
+                                            className={`flex items-center justify-between p-3.5 bg-white/[0.03] border border-white/5 rounded-2xl transition-all select-none ${
+                                                u.alreadyHas 
+                                                    ? 'opacity-40 cursor-not-allowed border-amber-500/10'
+                                                    : 'hover:bg-white/[0.05] hover:border-white/10 cursor-pointer'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={u.checked}
+                                                    disabled={u.alreadyHas}
+                                                    onChange={() => {}}
+                                                    className="w-4 h-4 rounded bg-black border-white/10 text-cyan-500 focus:ring-0 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                                />
+                                                <div className="text-left">
+                                                    <p className="text-[10px] font-black text-white leading-none mb-1">{u.name}</p>
+                                                    {u.alreadyHas && (
+                                                        <p className="text-[8px] text-amber-500 font-bold uppercase tracking-wide">
+                                                            Já possui esta medalha
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            {u.alreadyHas && (
+                                                <span className="material-icons text-amber-500 text-sm">info</span>
+                                            )}
+                                        </div>
+                                    ))
+                                )
+                            ) : (
+                                selectedUsers.length === 0 ? (
+                                    <div className="h-full flex flex-col items-center justify-center opacity-20 py-20 grayscale">
+                                        <span className="material-icons-outlined text-6xl mb-4">search_off</span>
+                                        <p className="text-[9px] font-black uppercase tracking-[0.2em]">Pesquise pelo nome</p>
+                                    </div>
+                                ) : (
+                                    selectedUsers.map(u => (
+                                        <div key={u.id} className="group flex items-center justify-between p-3.5 bg-white/[0.03] border border-white/5 rounded-2xl hover:border-white/10 transition-all animate-in fade-in slide-in-from-right-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="relative">
+                                                    <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${u.name}&background=random`} className="w-10 h-10 rounded-full border border-white/10 object-cover" alt="" />
+                                                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-[#120d2d]"></div>
+                                                </div>
+                                                <div className="text-left">
+                                                    <p className="text-[10px] font-black text-white leading-none mb-1">{u.name}</p>
+                                                    <p className="text-[9px] text-gray-600 font-bold uppercase">CR#{String(u.numeric_id).padStart(3, '0')}</p>
+                                                </div>
+                                            </div>
+                                            <button 
+                                                type="button"
+                                                onClick={() => setSelectedUsers(selectedUsers.filter(x => x.id !== u.id))} 
+                                                className="w-8 h-8 rounded-xl bg-red-500/0 hover:bg-red-500 text-gray-700 hover:text-white transition-all flex items-center justify-center"
+                                            >
+                                                <span className="material-icons-outlined text-sm">remove_circle</span>
+                                            </button>
+                                        </div>
+                                    ))
+                                )
+                            )}
+                        </div>
+
+                        {targetType === 'batch' && batchPlayers.length > 0 && (
+                            <div className="flex gap-2 mt-6">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setBatchPlayers(prev => prev.map(p => ({
+                                            ...p,
+                                            checked: !p.alreadyHas
+                                        })));
+                                    }}
+                                    className="flex-1 py-3 border border-white/10 text-[9px] font-black text-gray-400 hover:text-white uppercase tracking-widest rounded-xl transition-all"
+                                >
+                                    Marcar Todos
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setBatchPlayers(prev => prev.map(p => ({
+                                            ...p,
+                                            checked: false
+                                        })));
+                                    }}
+                                    className="flex-1 py-3 border border-red-500/20 text-[9px] font-black text-red-500/60 hover:text-red-500 hover:bg-red-500/5 uppercase tracking-widest rounded-xl transition-all"
+                                >
+                                    Desmarcar Todos
+                                </button>
+                            </div>
+                        )}
+
+                        {targetType === 'single' && selectedUsers.length > 0 && (
                             <button
+                                type="button"
                                 onClick={() => setSelectedUsers([])}
                                 className="w-full mt-6 py-3 border border-red-500/20 text-[9px] font-black text-red-500/60 hover:text-red-500 hover:bg-red-500/5 uppercase tracking-widest rounded-xl transition-all"
                             >

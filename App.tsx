@@ -18,7 +18,7 @@ export default function App() {
 
     const [isSupportOpen, setIsSupportOpen] = React.useState(false);
 
-    const showFooter = ['the-chosen-details', 'calendar', 'ranking', 'vip', 'recarga', 'the-chosen-regulations', 'terms', 'privacy', 'rules', 'responsible-gaming', 'copa-mundo-poker', 'jackpot'].includes(currentView);
+    const showFooter = ['the-chosen-details', 'calendar', 'ranking', 'vip', 'recarga', 'the-chosen-regulations', 'terms', 'privacy', 'rules', 'responsible-gaming', 'copa-mundo-poker', 'jackpot', 'cash-league'].includes(currentView) || currentView.startsWith('cash-league-individual-');
 
     // OneSignal Push Notifications Setup
     React.useEffect(() => {
