@@ -1158,7 +1158,7 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
                     </div>
 
                     {/* Footer note/rule */}
-                    <div className="relative z-10 pt-3 border-t border-white/5 text-[11px] text-gray-500 italic leading-relaxed">
+                    <div className={`relative z-10 pt-3 text-[11px] text-gray-500 italic leading-relaxed ${!stage.highlight ? 'border-t border-white/5' : ''}`}>
                       {stage.custom_rules || 'Regras padrão do campeonato aplicadas.'}
                     </div>
 
@@ -1173,7 +1173,7 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
 
                     {/* If highlighted (Main Event), render the qualifiers table inside the card! */}
                     {stage.highlight && (
-                      <div className="mt-8 pt-6 border-t border-white/10 relative z-10">
+                      <div className="mt-8 pt-6 relative z-10">
                         <h4 className="text-xs sm:text-sm font-display font-black text-[#ffd700] uppercase tracking-widest mb-4 flex items-center gap-2 justify-center sm:justify-start">
                           <span className="material-icons text-sm">stars</span>
                           Jogadores Classificados para o Evento Final
