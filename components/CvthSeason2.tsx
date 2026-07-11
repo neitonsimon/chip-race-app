@@ -1099,6 +1099,117 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
                       </div>
                     )}
 
+                    {/* If highlighted (Main Event), render the qualifiers table inside the card! */}
+                    {stage.highlight && (
+                      <div className="mt-8 pt-6 border-t border-white/10 relative z-10">
+                        <h4 className="text-xs sm:text-sm font-display font-black text-[#ffd700] uppercase tracking-widest mb-4 flex items-center gap-2 justify-center sm:justify-start">
+                          <span className="material-icons text-sm">stars</span>
+                          Jogadores Classificados para o Evento Final
+                        </h4>
+
+                        {/* Table */}
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left border-collapse text-[11px] sm:text-xs">
+                            <thead>
+                              <tr className="border-b border-white/10 text-gray-400 font-display font-black uppercase tracking-wider text-[9px] sm:text-[10px]">
+                                <th className="py-2.5 px-3">Jogador</th>
+                                <th className="py-2.5 px-3 text-center">Stacks</th>
+                                <th className="py-2.5 px-3">Evento Conquistado</th>
+                                {isAdmin && <th className="py-2.5 px-3 text-center">Ações</th>}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5 font-body">
+                              {qualifiers.length > 0 ? (
+                                qualifiers.map((q) => (
+                                  <tr key={q.id} className="hover:bg-white/5 transition-colors">
+                                    <td className="py-2.5 px-3 font-bold text-white flex items-center gap-2">
+                                      <div className="w-5.5 h-5.5 rounded-full bg-gradient-to-br from-[#ffd700] to-[#fdb931] flex items-center justify-center text-black text-[9px] font-black font-display shadow-md">
+                                        {q.playerName.substring(0, 2).toUpperCase()}
+                                      </div>
+                                      <span>{q.playerName}</span>
+                                    </td>
+                                    <td className="py-2.5 px-3 text-center font-mono font-bold text-[#39ff14]">
+                                      {q.stacksCount}x
+                                    </td>
+                                    <td className="py-2.5 px-3 text-gray-300">
+                                      {q.eventWon}
+                                    </td>
+                                    {isAdmin && (
+                                      <td className="py-2.5 px-3 text-center">
+                                        <button
+                                          onClick={() => handleDeleteQualifier(q.id)}
+                                          className="text-red-500 hover:text-red-400 transition-colors p-1"
+                                          title="Remover Jogador"
+                                        >
+                                          <span className="material-icons-outlined text-base">delete</span>
+                                        </button>
+                                      </td>
+                                    )}
+                                  </tr>
+                                ))
+                              ) : (
+                                <tr>
+                                  <td colSpan={isAdmin ? 4 : 3} className="py-6 text-center text-gray-500 italic">
+                                    Nenhum jogador cadastrado nesta lista ainda.
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Admin Add Form inside card */}
+                        {isAdmin && (
+                          <div className="mt-6 pt-6 border-t border-white/5 bg-white/5 p-4 rounded-xl">
+                            <h5 className="text-[10px] sm:text-xs font-display font-black text-[#ffd700] uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                              <span className="material-icons text-sm">add_circle_outline</span>
+                              Adicionar Classificado
+                            </h5>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                              <div>
+                                <label className="block text-[9px] font-bold text-gray-400 uppercase mb-1">Nome</label>
+                                <input
+                                  type="text"
+                                  value={newQualName}
+                                  onChange={(e) => setNewQualName(e.target.value)}
+                                  placeholder="Nome do Jogador"
+                                  className="w-full bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:border-[#ffd700] outline-none transition-all"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[9px] font-bold text-gray-400 uppercase mb-1">Stacks</label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={newQualStacks}
+                                  onChange={(e) => setNewQualStacks(parseInt(e.target.value) || 1)}
+                                  className="w-full bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#ffd700] outline-none transition-all"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[9px] font-bold text-gray-400 uppercase mb-1">Evento</label>
+                                <input
+                                  type="text"
+                                  value={newQualEvent}
+                                  onChange={(e) => setNewQualEvent(e.target.value)}
+                                  placeholder="Etapa # ou Satélite"
+                                  className="w-full bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:border-[#ffd700] outline-none transition-all"
+                                />
+                              </div>
+                            </div>
+                            <div className="mt-3 flex justify-end">
+                              <button
+                                onClick={handleAddQualifier}
+                                className="font-display bg-gradient-to-r from-[#ffd700] to-[#fdb931] hover:from-[#ffe343] hover:to-[#ffe343] text-black font-black uppercase tracking-widest text-[8px] sm:text-[9px] px-4 py-2 rounded-lg transition-all duration-300 shadow-[0_0_8px_rgba(255,215,0,0.2)] hover:scale-[1.02]"
+                              >
+                                Adicionar
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                   </div>
                 );
               })}
@@ -1106,124 +1217,7 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
           )}
         </section>
 
-        {/* JOGADORES CLASSIFICADOS SECTION */}
-        <section className="mb-24 max-w-4xl mx-auto px-4">
-          <div className="text-center mb-10">
-            <h2 className="text-xl md:text-3xl font-display font-black text-white uppercase tracking-widest mb-3 flex items-center justify-center gap-2">
-              <span className="material-icons text-[#ffd700]">stars</span>
-              Jogadores Classificados (Main Event)
-            </h2>
-            <p className="text-xs text-gray-400 font-body">
-              Lista oficial de competidores com stacks garantidas para o grande evento final.
-            </p>
-            <div className="h-[2px] w-24 bg-gradient-to-r from-transparent via-[#ffd700] to-transparent mx-auto mt-3"></div>
-          </div>
 
-          <div className="bg-gradient-to-b from-[#091122]/90 to-[#040815]/95 border-2 border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#ffd700]/5 to-transparent rounded-bl-full pointer-events-none"></div>
-
-            {/* Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs sm:text-sm">
-                <thead>
-                  <tr className="border-b border-white/10 text-gray-400 font-display font-black uppercase tracking-wider text-[10px] sm:text-xs">
-                    <th className="py-3 px-4">Jogador</th>
-                    <th className="py-3 px-4 text-center">Stacks</th>
-                    <th className="py-3 px-4">Evento/Etapa Conquistado</th>
-                    {isAdmin && <th className="py-3 px-4 text-center">Ações</th>}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5 font-body">
-                  {qualifiers.length > 0 ? (
-                    qualifiers.map((q) => (
-                      <tr key={q.id} className="hover:bg-white/5 transition-colors">
-                        <td className="py-3.5 px-4 font-bold text-white flex items-center gap-3">
-                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#ffd700] to-[#fdb931] flex items-center justify-center text-black text-[10px] font-black font-display shadow-md">
-                            {q.playerName.substring(0, 2).toUpperCase()}
-                          </div>
-                          <span>{q.playerName}</span>
-                        </td>
-                        <td className="py-3.5 px-4 text-center font-mono font-bold text-[#39ff14]">
-                          {q.stacksCount}x
-                        </td>
-                        <td className="py-3.5 px-4 text-gray-300">
-                          {q.eventWon}
-                        </td>
-                        {isAdmin && (
-                          <td className="py-3.5 px-4 text-center">
-                            <button
-                              onClick={() => handleDeleteQualifier(q.id)}
-                              className="text-red-500 hover:text-red-400 transition-colors p-1"
-                              title="Remover Jogador"
-                            >
-                              <span className="material-icons-outlined text-lg">delete</span>
-                            </button>
-                          </td>
-                        )}
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={isAdmin ? 4 : 3} className="py-8 text-center text-gray-500 italic">
-                        Nenhum jogador cadastrado nesta lista ainda.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Admin Add Form */}
-            {isAdmin && (
-              <div className="mt-8 pt-6 border-t border-white/10 bg-white/5 p-5 rounded-2xl">
-                <h3 className="text-xs sm:text-sm font-display font-black text-[#ffd700] uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <span className="material-icons text-base">add_circle_outline</span>
-                  Adicionar Jogador Classificado
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                  <div>
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">Nome do Jogador</label>
-                    <input
-                      type="text"
-                      value={newQualName}
-                      onChange={(e) => setNewQualName(e.target.value)}
-                      placeholder="Ex: João da Silva"
-                      className="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-600 focus:border-[#ffd700] focus:ring-1 focus:ring-[#ffd700] outline-none transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">Quantidade de Stacks</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={newQualStacks}
-                      onChange={(e) => setNewQualStacks(parseInt(e.target.value) || 1)}
-                      className="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:border-[#ffd700] focus:ring-1 focus:ring-[#ffd700] outline-none transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">Evento/Etapa Conquistado</label>
-                    <input
-                      type="text"
-                      value={newQualEvent}
-                      onChange={(e) => setNewQualEvent(e.target.value)}
-                      placeholder="Ex: Etapa #3 ou Satélite ME"
-                      className="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-600 focus:border-[#ffd700] focus:ring-1 focus:ring-[#ffd700] outline-none transition-all"
-                    />
-                  </div>
-                </div>
-                <div className="mt-4 flex justify-end">
-                  <button
-                    onClick={handleAddQualifier}
-                    className="font-display bg-gradient-to-r from-[#ffd700] to-[#fdb931] hover:from-[#ffe343] hover:to-[#ffe343] text-black font-black uppercase tracking-widest text-[9px] sm:text-[10px] px-6 py-2.5 rounded-xl transition-all duration-300 shadow-[0_0_12px_rgba(255,215,0,0.3)] hover:scale-[1.02]"
-                  >
-                    Adicionar Jogador
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
 
         {/* HOW IT WORKS SECTION (GET UP SECTION) */}
         <section id="get-up" className="mb-24 scroll-mt-24">
