@@ -257,17 +257,93 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
 
   // Qualifiers CRUD states
   const [newQualName, setNewQualName] = useState('');
-  const [newQualStacks, setNewQualStacks] = useState(1);
+  const [newQualChipsRaw, setNewQualChipsRaw] = useState('1');
   const [newQualEvent, setNewQualEvent] = useState('');
+
+  // Autocomplete suggestion states
+  const [dbProfiles, setDbProfiles] = useState<{ id: string; name: string }[]>([]);
+  const [dbEvents, setDbEvents] = useState<{ id: string; title: string; date: string }[]>([]);
+  const [profileSuggestions, setProfileSuggestions] = useState<{ id: string; name: string }[]>([]);
+  const [eventSuggestions, setEventSuggestions] = useState<{ id: string; title: string; date: string }[]>([]);
+  const [showProfileSuggestions, setShowProfileSuggestions] = useState(false);
+  const [showEventSuggestions, setShowEventSuggestions] = useState(false);
 
   const qualifiers = config.qualifiers || [];
 
+  useEffect(() => {
+    fetchConfig();
+    fetchProfilesAndEvents();
+  }, []);
+
+  const fetchProfilesAndEvents = async () => {
+    try {
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, name')
+        .order('name');
+      if (profilesData) {
+        setDbProfiles(profilesData);
+      }
+
+      const { data: eventsData } = await supabase
+        .from('events')
+        .select('id, title, date')
+        .ilike('title', '%CVTH%')
+        .eq('status', 'closed')
+        .order('date', { ascending: false });
+      if (eventsData) {
+        setDbEvents(eventsData);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar perfis ou eventos:', err);
+    }
+  };
+
+  const handleNameChange = (val: string) => {
+    setNewQualName(val);
+    if (!val.trim()) {
+      setProfileSuggestions([]);
+      setShowProfileSuggestions(false);
+      return;
+    }
+    const filtered = dbProfiles.filter(p => 
+      p.name?.toLowerCase().includes(val.toLowerCase())
+    );
+    setProfileSuggestions(filtered.slice(0, 5));
+    setShowProfileSuggestions(true);
+  };
+
+  const handleSelectProfile = (name: string) => {
+    setNewQualName(name);
+    setShowProfileSuggestions(false);
+  };
+
+  const handleEventChange = (val: string) => {
+    setNewQualEvent(val);
+    if (!val.trim()) {
+      setEventSuggestions(dbEvents.slice(0, 8));
+      setShowEventSuggestions(true);
+      return;
+    }
+    const filtered = dbEvents.filter(e => 
+      e.title?.toLowerCase().includes(val.toLowerCase())
+    );
+    setEventSuggestions(filtered.slice(0, 8));
+    setShowEventSuggestions(true);
+  };
+
+  const handleSelectEvent = (title: string) => {
+    setNewQualEvent(title);
+    setShowEventSuggestions(false);
+  };
+
   const handleAddQualifier = async () => {
     if (!newQualName.trim() || !newQualEvent.trim()) return;
+    const chipsCount = parseInt(newQualChipsRaw.replace(/\./g, '')) || 0;
     const newQual = {
       id: `qual-${Date.now()}`,
       playerName: newQualName.trim(),
-      stacksCount: newQualStacks,
+      stacksCount: chipsCount,
       eventWon: newQualEvent.trim()
     };
     const newQualifiers = [...qualifiers, newQual];
@@ -275,7 +351,7 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
     
     setConfig(newConfig);
     setNewQualName('');
-    setNewQualStacks(1);
+    setNewQualChipsRaw('1');
     setNewQualEvent('');
 
     if (isAdmin) {
@@ -313,10 +389,6 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
       }
     }
   };
-
-  useEffect(() => {
-    fetchConfig();
-  }, []);
 
   const fetchConfig = async () => {
     setLoading(true);
@@ -1113,7 +1185,7 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
                             <thead>
                               <tr className="border-b border-white/10 text-gray-400 font-display font-black uppercase tracking-wider text-[9px] sm:text-[10px]">
                                 <th className="py-2.5 px-3">Jogador</th>
-                                <th className="py-2.5 px-3 text-center">Stacks</th>
+                                <th className="py-2.5 px-3 text-center">Fichas / Stacks</th>
                                 <th className="py-2.5 px-3">Evento Conquistado</th>
                                 {isAdmin && <th className="py-2.5 px-3 text-center">Ações</th>}
                               </tr>
@@ -1129,7 +1201,7 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
                                       <span>{q.playerName}</span>
                                     </td>
                                     <td className="py-2.5 px-3 text-center font-mono font-bold text-[#39ff14]">
-                                      {q.stacksCount}x
+                                      {q.stacksCount.toLocaleString('pt-BR')}
                                     </td>
                                     <td className="py-2.5 px-3 text-gray-300">
                                       {q.eventWon}
@@ -1166,35 +1238,87 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
                               Adicionar Classificado
                             </h5>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-                              <div>
+                              <div className="relative">
                                 <label className="block text-[9px] font-bold text-gray-400 uppercase mb-1">Nome</label>
                                 <input
                                   type="text"
                                   value={newQualName}
-                                  onChange={(e) => setNewQualName(e.target.value)}
-                                  placeholder="Nome do Jogador"
+                                  onChange={(e) => handleNameChange(e.target.value)}
+                                  onFocus={() => {
+                                    const filtered = dbProfiles.filter(p => 
+                                      p.name?.toLowerCase().includes(newQualName.toLowerCase())
+                                    );
+                                    setProfileSuggestions(filtered.slice(0, 5));
+                                    setShowProfileSuggestions(true);
+                                  }}
+                                  onBlur={() => setTimeout(() => setShowProfileSuggestions(false), 200)}
+                                  placeholder="Buscar jogador..."
                                   className="w-full bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:border-[#ffd700] outline-none transition-all"
                                 />
+                                {showProfileSuggestions && profileSuggestions.length > 0 && (
+                                  <div className="absolute left-0 right-0 mt-1 bg-[#0b1329] border border-white/10 rounded-lg shadow-xl z-30 max-h-40 overflow-y-auto">
+                                    {profileSuggestions.map(p => (
+                                      <button
+                                        key={p.id}
+                                        type="button"
+                                        onMouseDown={() => handleSelectProfile(p.name)}
+                                        className="w-full text-left px-3 py-2 text-xs text-gray-200 hover:bg-white/5 hover:text-white transition-colors border-b border-white/5 last:border-0"
+                                      >
+                                        {p.name}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                               <div>
-                                <label className="block text-[9px] font-bold text-gray-400 uppercase mb-1">Stacks</label>
+                                <label className="block text-[9px] font-bold text-gray-400 uppercase mb-1">Fichas / Stacks</label>
                                 <input
-                                  type="number"
-                                  min="1"
-                                  value={newQualStacks}
-                                  onChange={(e) => setNewQualStacks(parseInt(e.target.value) || 1)}
+                                  type="text"
+                                  value={newQualChipsRaw}
+                                  onChange={(e) => {
+                                    const digits = e.target.value.replace(/\D/g, '');
+                                    if (!digits) {
+                                      setNewQualChipsRaw('');
+                                      return;
+                                    }
+                                    setNewQualChipsRaw(Number(digits).toLocaleString('pt-BR'));
+                                  }}
+                                  placeholder="Ex: 50.000"
                                   className="w-full bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#ffd700] outline-none transition-all"
                                 />
                               </div>
-                              <div>
+                              <div className="relative">
                                 <label className="block text-[9px] font-bold text-gray-400 uppercase mb-1">Evento</label>
                                 <input
                                   type="text"
                                   value={newQualEvent}
-                                  onChange={(e) => setNewQualEvent(e.target.value)}
-                                  placeholder="Etapa # ou Satélite"
+                                  onChange={(e) => handleEventChange(e.target.value)}
+                                  onFocus={() => {
+                                    const filtered = dbEvents.filter(evt => 
+                                      evt.title?.toLowerCase().includes(newQualEvent.toLowerCase())
+                                    );
+                                    setEventSuggestions(filtered.slice(0, 8));
+                                    setShowEventSuggestions(true);
+                                  }}
+                                  onBlur={() => setTimeout(() => setShowEventSuggestions(false), 200)}
+                                  placeholder="Buscar evento CVTH..."
                                   className="w-full bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:border-[#ffd700] outline-none transition-all"
                                 />
+                                {showEventSuggestions && eventSuggestions.length > 0 && (
+                                  <div className="absolute left-0 right-0 mt-1 bg-[#0b1329] border border-white/10 rounded-lg shadow-xl z-30 max-h-48 overflow-y-auto">
+                                    {eventSuggestions.map(evt => (
+                                      <button
+                                        key={evt.id}
+                                        type="button"
+                                        onMouseDown={() => handleSelectEvent(evt.title)}
+                                        className="w-full text-left px-3 py-2 text-xs text-gray-200 hover:bg-white/5 hover:text-white transition-colors border-b border-white/5 last:border-0"
+                                      >
+                                        <div className="font-bold">{evt.title}</div>
+                                        <div className="text-[9px] text-gray-400 font-mono mt-0.5">{evt.date}</div>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             </div>
                             <div className="mt-3 flex justify-end">
