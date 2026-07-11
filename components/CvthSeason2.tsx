@@ -1367,7 +1367,8 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
                     Top 10 Ranking
                   </span>
                   {(() => {
-                    const cvthRanking = rankings.find(r => r.label === 'CVTH Anual' || r.id === 'custom-1771994683731') 
+                    const cvthRanking = rankings.find(r => r.label === 'CVTH - Temporada 2' || r.id === 'custom-1783745392857')
+                                        || rankings.find(r => r.label === 'CVTH Anual' || r.id === 'custom-1771994683731') 
                                         || rankings.find(r => r.label.includes('CVTH'))
                                         || rankings[0];
                     return cvthRanking ? (
@@ -1380,7 +1381,8 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
 
                 <div className="space-y-2 max-h-[380px] overflow-y-auto pr-2 custom-scrollbar">
                   {(() => {
-                    const cvthRanking = rankings.find(r => r.label === 'CVTH Anual' || r.id === 'custom-1771994683731') 
+                    const cvthRanking = rankings.find(r => r.label === 'CVTH - Temporada 2' || r.id === 'custom-1783745392857')
+                                        || rankings.find(r => r.label === 'CVTH Anual' || r.id === 'custom-1771994683731') 
                                         || rankings.find(r => r.label.includes('CVTH'))
                                         || rankings[0];
                     const top10 = cvthRanking?.players
