@@ -90,6 +90,19 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
       button_text: 'VER CHAVEAMENTO'
     });
     virtuals.push({
+      id: 'cvth-tile',
+      title: 'CVTH - 2ª TEMPORADA',
+      description: '10 etapas presenciais. Um único objetivo: conquistar sua vaga e chegar ao Main Event com vantagem.',
+      icon: 'sports_esports',
+      color: 'emerald',
+      slots: 10,
+      order: 2,
+      col_span: 1,
+      row_span: 1,
+      target_view: 'cvth2',
+      button_text: 'VER DETALHES'
+    });
+    virtuals.push({
       id: 'regulamentos-tile',
       title: 'REGULAMENTO ADTP',
       description: 'Consulte os regulamentos de poker oficiais: ADTP 2025, Anexos exemplificados e regras gerais TDA 2022.',
@@ -248,6 +261,7 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
                 const isLoginTile = cat.id === 'login-tile';
                 const isAdminTile = cat.id === 'admin-tile';
                 const isCopaMundo = cat.id === 'copa-mundo-tile';
+                const isCvth = cat.id === 'cvth-tile';
 
                 // Determinar o grid span (largura e altura) com fallbacks
                 const cSpan = cat.col_span || 1;
@@ -443,6 +457,46 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
                       <button className="font-display bg-gradient-to-r from-amber-500 to-red-600 hover:from-amber-400 hover:to-red-500 text-black group-hover:text-white font-black uppercase tracking-widest text-[9px] sm:text-[10px] px-6 py-3 rounded-xl transition-all duration-300 shadow-[0_0_15px_rgba(245,158,11,0.5)] hover:shadow-[0_0_25px_rgba(245,158,11,0.8)] hover:scale-[1.03] relative z-10">
                         {cat.button_text || 'VER CHAVEAMENTO'}
                       </button>
+                    </div>
+                  );
+                }
+
+                if (isCvth) {
+                  return (
+                    <div
+                      key="cvth-tile"
+                      onClick={(e) => handleTileClick(e, cat)}
+                      className={`group relative bg-[#041c0b]/30 border-[3.5px] border-[#39ff14]/40 shadow-[0_0_12px_rgba(57,255,20,0.15),inset_0_0_10px_rgba(57,255,20,0.04)] hover:bg-[#073214]/65 hover:border-[#39ff14]/85 hover:shadow-[0_0_30px_rgba(57,255,20,0.55),inset_0_0_20px_rgba(57,255,20,0.15)] rounded-2xl transition-all duration-500 hover:-translate-y-1 backdrop-blur-md cursor-pointer select-none overflow-hidden ${colClass} ${rowClass}`}
+                    >
+                      <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-[#39ff14]/40 rounded-tl-lg pointer-events-none"></div>
+                      <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-[#39ff14]/40 rounded-tr-lg pointer-events-none"></div>
+                      <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-[#39ff14]/40 rounded-bl-lg pointer-events-none"></div>
+                      <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-[#39ff14]/40 rounded-br-lg pointer-events-none"></div>
+
+                      <div className="flex flex-row items-center gap-5 p-4 h-full relative z-10 min-h-[130px]">
+                        <div className="w-16 h-16 flex items-center justify-center flex-shrink-0 relative">
+                          <span className="material-icons-outlined text-[#39ff14] text-5xl drop-shadow-[0_0_10px_rgba(57,255,20,0.8)] transition-all duration-300 group-hover:scale-105 animate-pulse">
+                            sports_esports
+                          </span>
+                        </div>
+
+                        <div className="flex-1 flex flex-col justify-between h-full min-h-[90px]">
+                          <div>
+                            <h3 className="font-display text-lg sm:text-xl font-black uppercase tracking-wider text-white">
+                              CVTH - 2ª TEMP
+                            </h3>
+                            <p className="font-body text-sm sm:text-base mt-2 font-medium leading-relaxed text-gray-400 group-hover:text-white">
+                              {cat.description}
+                            </p>
+                          </div>
+
+                          <div className="mt-3.5 flex justify-start">
+                            <button className="font-display bg-gradient-to-r from-[#39ff14] to-[#1e8a0a] text-black font-black uppercase tracking-widest text-[9px] sm:text-[10px] px-5 py-2 rounded-lg transition-all duration-300 shadow-[0_0_12px_rgba(57,255,20,0.5)] hover:shadow-[0_0_20px_rgba(57,255,20,0.8)] hover:scale-[1.03]">
+                              {cat.button_text || 'VER DETALHES'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   );
                 }

@@ -33,6 +33,7 @@ import { CopaMundoSorteio } from './CopaMundoSorteio';
 import { MysteryJackpotPage } from './MysteryJackpotPage';
 import { CashLeagueDashboard } from './CashLeagueDashboard';
 import { CashLeagueIndividual } from './CashLeagueIndividual';
+import { CvthSeason2 } from './CvthSeason2';
 
 export const AppRouter: React.FC = () => {
     const isMaintenance = false; // TOGGLE THIS TO DISABLE MAINTENANCE MODE
@@ -257,6 +258,8 @@ export const AppRouter: React.FC = () => {
                 return <CopaMundoSorteio onNavigate={handleNavigate} />;
             case 'jackpot':
                 return <MysteryJackpotPage onNavigate={handleNavigate} currentUser={currentUser as any} />;
+            case 'cvth2':
+                return <CvthSeason2 isAdmin={isAdmin} onNavigate={handleNavigate} />;
             case 'home':
             default:
                 return (
