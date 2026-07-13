@@ -405,7 +405,10 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({
             baseData.tournamentLog = [];
         }
 
-        setPlayer(baseData);
+        setPlayer(prev => ({
+            ...baseData,
+            badges: prev.id === baseData.id ? (prev.badges || baseData.badges) : baseData.badges
+        }));
 
     }, [initialData, currentUser, events]);
 

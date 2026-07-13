@@ -206,15 +206,15 @@ const DEFAULT_STAGES: CvthStage[] = [
     buyin: 'R$ 30',
     rebuy: 'R$ 20',
     addon: 'R$ 20',
-    stack: '10k',
+    stack: '10k/10k/15k',
     gtd: '10 Vagas',
     active: true,
     order: 9,
     highlight: false,
     color: 'cyan',
     getup_limit: 'Sem limite específico.',
-    getup_initial: 'Conquistar vaga direta.',
-    getup_increment: '-',
+    getup_initial: '50.000 fichas',
+    getup_increment: '0 fichas',
     custom_rules: 'Objetivo: Conquistar GET UP para o Main Event.'
   },
   {
@@ -234,7 +234,7 @@ const DEFAULT_STAGES: CvthStage[] = [
     getup_limit: 'Acumulável.',
     getup_initial: '50.000 fichas por stack conquistada.',
     getup_increment: '-',
-    custom_rules: 'O maior evento da temporada. Golden Ticket exclusivo.'
+    custom_rules: ''
   }
 ];
 
@@ -632,7 +632,7 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
           </h1>
 
           <p className="text-lg sm:text-xl md:text-2xl font-body font-medium text-gray-300 max-w-3xl mx-auto mb-10 leading-relaxed uppercase tracking-wider">
-            10 etapas presenciais. Um único objetivo: conquistar sua vaga e chegar ao Main Event com vantagem.
+            A temporada mais completa da Chip Race. Premiações, troféus, Ranking CVTH e o exclusivo sistema Get Up.
           </p>
 
           {/* Hero Navigation Buttons */}
@@ -675,22 +675,13 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
             {/* Counters CRUD */}
             <div className="bg-black/30 border border-white/5 rounded-2xl p-5 mb-8">
               <h3 className="text-sm font-display font-bold uppercase text-[#39ff14] tracking-wider mb-4">Gerenciar Contadores de Progresso</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">GET UPs Conquistados</label>
                   <input
                     type="number"
                     value={counterGetups}
                     onChange={(e) => setCounterGetups(Number(e.target.value))}
-                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-white outline-none focus:border-[#00e0ff] text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Stacks Acumuladas</label>
-                  <input
-                    type="number"
-                    value={counterStacks}
-                    onChange={(e) => setCounterStacks(Number(e.target.value))}
                     className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-white outline-none focus:border-[#00e0ff] text-sm"
                   />
                 </div>
@@ -735,7 +726,7 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
                       <th className="py-2 px-3">Data</th>
                       <th className="py-2 px-3">Buy-in</th>
                       <th className="py-2 px-3">GTD</th>
-                      <th className="py-2 px-3">Meta Inicial</th>
+                      <th className="py-2 px-3">Meta Fichas</th>
                       <th className="py-2 px-3">Status</th>
                       <th className="py-2 px-3 text-right">Ações</th>
                     </tr>
@@ -859,7 +850,7 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Stack Inicial</label>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Stack BI/ Rebuy/ Add</label>
                   <input
                     type="text"
                     value={editingStage.stack}
@@ -877,7 +868,7 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Requisito Inicial (Meta Fichas)</label>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Meta Fichas</label>
                   <input
                     type="text"
                     value={editingStage.getup_initial}
@@ -1017,7 +1008,7 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
 
         {/* COUNTER SECTION */}
         <section className="mb-20 py-10 px-6 md:px-12 rounded-3xl bg-gradient-to-r from-[#030d22] via-[#051333] to-[#030d22] border-2 border-[#00e0ff]/20 shadow-[0_0_40px_rgba(0,224,255,0.08)]">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center text-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center text-center">
             
             <div className="p-4 relative">
               <span className="material-icons-outlined text-[#39ff14] text-4xl mb-3 drop-shadow-[0_0_8px_rgba(57,255,20,0.5)]">local_play</span>
@@ -1026,17 +1017,6 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
               </div>
               <div className="text-xs md:text-sm font-bold uppercase tracking-widest text-[#39ff14]">
                 GET UPs Conquistados
-              </div>
-              <div className="absolute right-0 top-1/4 h-1/2 w-px bg-white/10 hidden md:block"></div>
-            </div>
-
-            <div className="p-4 relative">
-              <span className="material-icons-outlined text-[#00e0ff] text-4xl mb-3 drop-shadow-[0_0_8px_rgba(0,224,255,0.5)]">layers</span>
-              <div className="font-display font-black text-5xl md:text-6xl text-white tracking-widest mb-1 animate-pulse">
-                {config.counters.stacks}
-              </div>
-              <div className="text-xs md:text-sm font-bold uppercase tracking-widest text-[#00e0ff]">
-                Stacks Acumuladas
               </div>
               <div className="absolute right-0 top-1/4 h-1/2 w-px bg-white/10 hidden md:block"></div>
             </div>
@@ -1115,7 +1095,7 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
                       </div>
 
                       {/* Main highlights */}
-                      <div className={`grid ${stage.highlight ? 'grid-cols-2 md:grid-cols-4 gap-6' : 'grid-cols-2 gap-4'} mb-6 border-y border-white/5 py-4`}>
+                      <div className={`grid ${stage.highlight ? 'grid-cols-2 md:grid-cols-4 gap-6' : 'grid-cols-2 gap-4'} ${stage.highlight ? 'mb-4' : 'mb-6'} border-y border-white/5 py-4`}>
                         <div>
                           <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-0.5">Buy-in</div>
                           <div className="text-white font-bold text-sm tracking-wide">{stage.buyin}</div>
@@ -1138,7 +1118,7 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
                       {!stage.highlight && (
                         <div className="space-y-2 mb-6">
                           <div className="flex justify-between text-xs border-b border-white/5 pb-1">
-                            <span className="text-gray-400 font-bold uppercase tracking-wider">Stack Inicial</span>
+                            <span className="text-gray-400 font-bold uppercase tracking-wider">Stack BI/ Rebuy/ Add</span>
                             <span className="text-white font-bold">{stage.stack}</span>
                           </div>
                           <div className="flex justify-between text-xs border-b border-white/5 pb-1">
@@ -1146,7 +1126,7 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
                             <span className="text-white font-bold">{stage.getup_limit}</span>
                           </div>
                           <div className="flex justify-between text-xs border-b border-white/5 pb-1">
-                            <span className="text-gray-400 font-bold uppercase tracking-wider">Meta Fichas Inicial</span>
+                            <span className="text-gray-400 font-bold uppercase tracking-wider">Meta Fichas</span>
                             <span className="text-white font-bold">{stage.getup_initial}</span>
                           </div>
                           <div className="flex justify-between text-xs border-b border-white/5 pb-1">
@@ -1158,9 +1138,11 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
                     </div>
 
                     {/* Footer note/rule */}
-                    <div className={`relative z-10 pt-3 text-[11px] text-gray-500 italic leading-relaxed ${!stage.highlight ? 'border-t border-white/5' : ''}`}>
-                      {stage.custom_rules || 'Regras padrão do campeonato aplicadas.'}
-                    </div>
+                    {!stage.highlight && (
+                      <div className="relative z-10 pt-3 text-[11px] text-gray-500 italic leading-relaxed border-t border-white/5">
+                        {stage.custom_rules || 'Regras padrão do campeonato aplicadas.'}
+                      </div>
+                    )}
 
                     {stage.highlight && (
                       <div className="absolute top-4 left-4 z-25">
@@ -1173,7 +1155,7 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
 
                     {/* If highlighted (Main Event), render the qualifiers table inside the card! */}
                     {stage.highlight && (
-                      <div className="mt-8 pt-6 relative z-10">
+                      <div className="mt-4 pt-4 border-t border-white/5 relative z-10">
                         <h4 className="text-xs sm:text-sm font-display font-black text-[#ffd700] uppercase tracking-widest mb-4 flex items-center gap-2 justify-center sm:justify-start">
                           <span className="material-icons text-sm">stars</span>
                           Jogadores Classificados para o Evento Final

@@ -55,7 +55,7 @@ export function useBadges({ isAdmin, currentUser, badgeTemplates }: UseBadgesPro
         // Filter closed events included in this ranking
         const rankingEvents = (events || []).filter(e => 
             e.status === 'closed' && 
-            (e.includedRankings || ['annual', 'quarterly', 'legacy']).includes(selectedRankingId)
+            (e.includedRankings || (e as any).included_rankings || ['annual', 'quarterly', 'legacy']).includes(selectedRankingId)
         );
 
         const matchedUsers = new Map<string, { id: string; name: string }>();
@@ -82,8 +82,10 @@ export function useBadges({ isAdmin, currentUser, badgeTemplates }: UseBadgesPro
 
             case 'any_podium':
                 rankingEvents.forEach(e => {
+                    const isStart = e.isStartingDay || (e as any).is_starting_day;
+                    if (isStart) return; // Ignore starting day qualifiers
                     (e.results || []).forEach(r => {
-                        if (r.position && r.position <= 3) {
+                        if (r.position && Number(r.position) <= 3) {
                             addPlayerByName(r.name, r.userId);
                         }
                     });
@@ -100,8 +102,10 @@ export function useBadges({ isAdmin, currentUser, badgeTemplates }: UseBadgesPro
 
             case 'any_final_table':
                 rankingEvents.forEach(e => {
+                    const isStart = e.isStartingDay || (e as any).is_starting_day;
+                    if (isStart) return; // Ignore starting day qualifiers
                     (e.results || []).forEach(r => {
-                        if (r.position && r.position <= 9) {
+                        if (r.position && Number(r.position) <= 9) {
                             addPlayerByName(r.name, r.userId);
                         }
                     });
@@ -110,10 +114,11 @@ export function useBadges({ isAdmin, currentUser, badgeTemplates }: UseBadgesPro
 
             case 'main_event_qualified':
                 rankingEvents.forEach(e => {
-                    const isMainEvent = e.isMultiDay || e.title.toLowerCase().includes('principal') || e.title.toLowerCase().includes('main event');
-                    if (isMainEvent && e.isStartingDay) {
+                    const isMainEvent = e.isMultiDay || (e as any).is_multi_day || e.title.toLowerCase().includes('principal') || e.title.toLowerCase().includes('main event');
+                    const isStart = e.isStartingDay || (e as any).is_starting_day;
+                    if (isMainEvent && isStart) {
                         (e.results || []).forEach(r => {
-                            if (r.qualifierChips && r.qualifierChips > 0) {
+                            if (r.qualifierChips && Number(r.qualifierChips) > 0) {
                                 addPlayerByName(r.name, r.userId);
                             }
                         });
@@ -123,7 +128,7 @@ export function useBadges({ isAdmin, currentUser, badgeTemplates }: UseBadgesPro
 
             case 'main_event_participation':
                 rankingEvents.forEach(e => {
-                    const isMainEvent = e.isMultiDay || e.title.toLowerCase().includes('principal') || e.title.toLowerCase().includes('main event');
+                    const isMainEvent = e.isMultiDay || (e as any).is_multi_day || e.title.toLowerCase().includes('principal') || e.title.toLowerCase().includes('main event');
                     if (isMainEvent) {
                         (e.results || []).forEach(r => addPlayerByName(r.name, r.userId));
                     }
@@ -132,8 +137,10 @@ export function useBadges({ isAdmin, currentUser, badgeTemplates }: UseBadgesPro
 
             case 'any_stage_winner':
                 rankingEvents.forEach(e => {
+                    const isStart = e.isStartingDay || (e as any).is_starting_day;
+                    if (isStart) return; // Ignore starting day qualifiers
                     (e.results || []).forEach(r => {
-                        if (r.position === 1) {
+                        if (Number(r.position) === 1) {
                             addPlayerByName(r.name, r.userId);
                         }
                     });
@@ -142,11 +149,11 @@ export function useBadges({ isAdmin, currentUser, badgeTemplates }: UseBadgesPro
 
             case 'ranking_final_table_winner':
                 const finalEvent = rankingEvents.find(e => 
-                    e.title.toLowerCase().includes('mesa final') || e.isFinalDay === true
+                    e.title.toLowerCase().includes('mesa final') || e.isFinalDay === true || (e as any).is_final_day === true
                 );
                 if (finalEvent) {
                     (finalEvent.results || []).forEach(r => {
-                        if (r.position === 1) {
+                        if (Number(r.position) === 1) {
                             addPlayerByName(r.name, r.userId);
                         }
                     });

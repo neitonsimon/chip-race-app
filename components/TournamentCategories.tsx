@@ -92,7 +92,7 @@ export const TournamentCategories: React.FC<TournamentCategoriesProps> = ({
     virtuals.push({
       id: 'cvth-tile',
       title: 'CVTH - 2ª TEMPORADA',
-      description: '10 etapas presenciais. Um único objetivo: conquistar sua vaga e chegar ao Main Event com vantagem.',
+      description: 'A temporada mais completa da Chip Race. Premiações, troféus, Ranking CVTH e o exclusivo sistema Get Up.',
       icon: 'sports_esports',
       color: 'emerald',
       slots: 10,
