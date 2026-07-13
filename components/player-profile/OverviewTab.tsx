@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import appConfig from '../../src/config/appConfig.json';
 import { ProfileStatsSkeleton } from '../Skeleton';
@@ -52,6 +52,37 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     const { badgeTemplates, badgeDistribution } = useApp();
     const [showAllBadges, setShowAllBadges] = useState(false);
     const [expandedHistory, setExpandedHistory] = useState(false);
+    const [activeGroupKey, setActiveGroupKey] = useState<string | null>(null);
+    const [selectedBadgeIdMap, setSelectedBadgeIdMap] = useState<Record<string, string>>({});
+
+    const getRarityRankMain = (color: string) => {
+        const c = (color || '#00E5FF').toLowerCase();
+        if (c === '#ffd700' || c === '#eab308') return 4;
+        if (c === '#9ca3af' || c === '#94a3b8') return 0;
+        const rarityIndex = ['#9ca3af','#22c55e','#00e5ff','#ef4444','#eab308','#ff4d79','#fffff0'].indexOf(c);
+        return rarityIndex === -1 ? 99 : rarityIndex;
+    };
+
+    // Group player badges by icon or image_url
+    const badgesByIcon = new Map<string, any[]>();
+    (player?.badges || []).forEach((badge: any) => {
+        const template = badge.badge_templates;
+        const key = (badge.image_url || template?.image_url || template?.icon || badge.icon || 'stars').toLowerCase().trim();
+        if (!badgesByIcon.has(key)) {
+            badgesByIcon.set(key, []);
+        }
+        badgesByIcon.get(key)!.push(badge);
+    });
+
+    // Close active tooltip when clicking outside on desktop
+    useEffect(() => {
+        if (!activeGroupKey) return;
+        const handleOutsideClick = () => {
+            setActiveGroupKey(null);
+        };
+        window.addEventListener('click', handleOutsideClick);
+        return () => window.removeEventListener('click', handleOutsideClick);
+    }, [activeGroupKey]);
 
     if (!player) return null;
 
@@ -436,17 +467,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                     return rarityIndex === -1 ? 99 : rarityIndex;
                                 };
 
-                                // Group player badges by icon or image_url
-                                const badgesByIcon = new Map<string, any[]>();
-                                (player.badges || []).forEach((badge: any) => {
-                                    const template = badge.badge_templates;
-                                    const key = (badge.image_url || template?.image_url || template?.icon || badge.icon || 'stars').toLowerCase().trim();
-                                    if (!badgesByIcon.has(key)) {
-                                        badgesByIcon.set(key, []);
-                                    }
-                                    badgesByIcon.get(key)!.push(badge);
-                                });
-
                                 // Sort badges in each group by rarity rank descending
                                 const badgeGroups = Array.from(badgesByIcon.values()).map(group => {
                                     return group.sort((a, b) => {
@@ -472,9 +492,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                 });
 
                                 return badgeGroups.map((group) => {
-                                    const badge = group[0];
+                                    const groupKey = (group[0].image_url || group[0].badge_templates?.image_url || group[0].badge_templates?.icon || group[0].icon || 'stars').toLowerCase().trim();
+                                    
+                                    // Get currently selected badge in this group, default to group[0] (highest rarity)
+                                    const selectedId = selectedBadgeIdMap[groupKey];
+                                    const badge = group.find(b => b.id === selectedId) || group[0];
+                                    
                                     const template = badge.badge_templates;
-                                    // Always prefer live template values so edits propagate immediately
                                     const badgeIcon = template?.icon || badge.icon || 'stars';
                                     const badgeTitle = template?.title || badge.title || '';
                                     const badgeColor = template?.color || badge.color || '#00E5FF';
@@ -512,7 +536,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
                                     return (
                                         <div key={badge.id}
-                                            className={`group relative w-14 h-14 md:w-16 md:h-16 flex items-center justify-center transition-all cursor-help transform hover:scale-110 rounded-[1.25rem] border-2 ${
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setActiveGroupKey(prev => prev === groupKey ? null : groupKey);
+                                            }}
+                                            className={`group relative w-14 h-14 md:w-16 md:h-16 flex items-center justify-center transition-all cursor-pointer transform hover:scale-110 rounded-[1.25rem] border-2 ${
                                                 isPatrao ? 'badge-patrao-aura' :
                                                 isCelestial ? 'badge-celestial-aura' :
                                                 isSupreme ? 'badge-supreme-aura' :
@@ -566,7 +594,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                             )}
 
                                             {/* Tooltip */}
-                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 max-sm:-translate-x-[40%] mb-4 w-48 md:w-64 bg-[#0c0920] text-white p-4 rounded-2xl border border-white/10 invisible opacity-0 group-hover:visible group-hover:opacity-100 pointer-events-none transition-all z-[100] shadow-[0_10px_40px_rgba(0,0,0,0.8)] scale-90 group-hover:scale-100 font-sans">
+                                            <div 
+                                                onClick={(e) => e.stopPropagation()}
+                                                className={`absolute bottom-full left-1/2 -translate-x-1/2 max-sm:hidden mb-4 w-48 md:w-64 bg-[#0c0920] text-white p-4 rounded-2xl border border-white/10 pointer-events-auto transition-all z-[100] shadow-[0_10px_40px_rgba(0,0,0,0.8)] scale-90 group-hover:scale-100 font-sans ${
+                                                    activeGroupKey === groupKey
+                                                        ? 'visible opacity-100 scale-100'
+                                                        : 'invisible opacity-0 group-hover:visible group-hover:opacity-100'
+                                                }`}
+                                            >
                                                 <div className="flex items-center gap-2 mb-2">
                                                     <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={isSupreme ? {
                                                         background: 'linear-gradient(135deg, #f9a8d4, #ec4899, #ea580c)',
@@ -601,7 +636,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                                 {group.length > 1 && (
                                                     <div className="mt-3 pt-3 border-t border-white/10">
                                                         <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-2 leading-none">Coleção Conquistada ({group.length})</p>
-                                                        <div className="flex flex-col gap-1.5">
+                                                        <div className="flex flex-col gap-1.5 max-h-[150px] overflow-y-auto custom-scrollbar">
                                                             {group.map((otherBadge: any, idx: number) => {
                                                                 const otherTemplate = otherBadge.badge_templates;
                                                                 const otherTitle = otherTemplate?.title || otherBadge.title || '';
@@ -609,11 +644,23 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                                                 const otherAwardedAt = new Date(otherBadge.awarded_at).toLocaleDateString();
                                                                 
                                                                 return (
-                                                                    <div key={otherBadge.id} className="flex items-center justify-between text-[10px]">
+                                                                    <div 
+                                                                        key={otherBadge.id} 
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setSelectedBadgeIdMap(prev => ({
+                                                                                ...prev,
+                                                                                [groupKey]: otherBadge.id
+                                                                            }));
+                                                                        }}
+                                                                        className={`flex items-center justify-between text-[10px] cursor-pointer hover:bg-white/5 px-2 py-1.5 rounded-lg transition-all ${
+                                                                            badge.id === otherBadge.id ? 'bg-white/10' : ''
+                                                                        }`}
+                                                                    >
                                                                         <div className="flex items-center gap-1.5 min-w-0">
                                                                             <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: otherColor, boxShadow: `0 0 4px ${otherColor}` }} />
-                                                                            <span className="font-bold text-gray-300 truncate animate-pulse-subtle" style={{ color: otherColor }}>
-                                                                                {otherTitle} {idx === 0 && <span className="text-[8px] text-gray-500 font-normal tracking-normal italic">(Atual)</span>}
+                                                                            <span className="font-bold text-gray-300 truncate" style={{ color: otherColor }}>
+                                                                                {otherTitle} {badge.id === otherBadge.id && <span className="text-[8px] text-gray-500 font-normal tracking-normal italic">(Selecionada)</span>}
                                                                             </span>
                                                                         </div>
                                                                         <span className="text-gray-500 text-[9px] font-medium shrink-0">{otherAwardedAt}</span>
@@ -894,6 +941,161 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                     </div>
                 </div>
             )}
+            {/* Mobile Badge Details Drawer */}
+            {activeGroupKey && (() => {
+                const group = Array.from(badgesByIcon.values()).find(g => {
+                    const k = (g[0].image_url || g[0].badge_templates?.image_url || g[0].badge_templates?.icon || g[0].icon || 'stars').toLowerCase().trim();
+                    return k === activeGroupKey;
+                });
+                if (!group) return null;
+
+                const selectedId = selectedBadgeIdMap[activeGroupKey];
+                const badge = group.find(b => b.id === selectedId) || group[0];
+                const template = badge.badge_templates;
+                const badgeIcon = template?.icon || badge.icon || 'stars';
+                const badgeTitle = template?.title || badge.title || '';
+                const badgeColor = template?.color || badge.color || '#00E5FF';
+                const originalDesc = template?.description || badge.description;
+
+                const isPatrao = badgeTitle?.toLowerCase().includes('patrão') || badgeTitle?.toLowerCase().includes('patrao');
+                const isCelestial = badgeColor?.toLowerCase() === '#fffff0' || badgeTitle?.toLowerCase().includes('celestial');
+                const isSupreme = badgeColor?.toLowerCase() === '#ff4d79' || badgeTitle?.toLowerCase().includes('supreme') || badgeTitle?.toLowerCase().includes('suprema');
+                const isLegendary = badgeColor?.toLowerCase() === '#ffd700' || badgeColor?.toLowerCase() === '#eab308' || badgeTitle?.toLowerCase().includes('lendária') || badgeTitle?.toLowerCase().includes('lendaria') || badgeTitle?.toLowerCase().includes('legendary') || badgeTitle?.toLowerCase().includes('pioneiro');
+
+                const supremeGradientStyle = {
+                    background: 'linear-gradient(90deg, #f9a8d4, #ec4899, #ea580c)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                };
+                const legendaryGradientStyle = {
+                    background: 'linear-gradient(90deg, #ffd700, #eab308, #fff5cc)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                };
+                const celestialGradientStyle = {
+                    background: 'linear-gradient(90deg, #fff, #fffff0, #00e5ff)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                };
+
+                return (
+                    <div className="fixed inset-0 z-[400] flex items-end justify-center sm:hidden animate-in fade-in duration-200">
+                        {/* Backdrop */}
+                        <div 
+                            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+                            onClick={() => setActiveGroupKey(null)}
+                        />
+                        {/* Drawer Panel */}
+                        <div className="relative w-full bg-[#0c0920] border-t border-white/10 rounded-t-[2.5rem] p-6 shadow-2xl z-10 animate-in slide-in-from-bottom duration-300 max-h-[80vh] overflow-y-auto flex flex-col font-sans">
+                            <button 
+                                onClick={() => setActiveGroupKey(null)} 
+                                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white"
+                            >
+                                <span className="material-icons">close</span>
+                            </button>
+
+                            <div className="flex items-center gap-4 mb-4">
+                                <div 
+                                    className="w-14 h-14 rounded-2xl flex items-center justify-center border-2 shrink-0"
+                                    style={isPatrao ? {
+                                        borderColor: '#fff',
+                                    } : isSupreme ? {
+                                        borderColor: 'rgba(236,72,153,0.6)',
+                                    } : isLegendary ? {
+                                        borderColor: '#eab308',
+                                    } : isCelestial ? {
+                                        borderColor: '#fffff0',
+                                    } : {
+                                        backgroundColor: 'rgba(255,255,255,0.03)',
+                                        borderColor: `${badgeColor}40`,
+                                    }}
+                                >
+                                    {badge.image_url ? (
+                                        <img src={badge.image_url} alt={badgeTitle} className="w-10 h-10 object-contain" />
+                                    ) : (
+                                        <span 
+                                            className="material-icons-outlined text-3xl"
+                                            style={isPatrao ? { textShadow: '0 0 15px rgba(255,255,255,0.8)' } : isSupreme ? supremeGradientStyle : isLegendary ? { color: '#eab308', textShadow: '0 0 20px rgba(234,179,8,0.8)' } : { color: badgeColor }}
+                                        >{badgeIcon}</span>
+                                    )}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={isSupreme ? {
+                                            background: 'linear-gradient(135deg, #f9a8d4, #ec4899, #ea580c)',
+                                        } : isCelestial ? {
+                                            backgroundColor: '#fffff0',
+                                        } : {
+                                            backgroundColor: badgeColor,
+                                        }}></div>
+                                        <h4 
+                                            className="font-black text-sm uppercase tracking-wider truncate"
+                                            style={isSupreme ? supremeGradientStyle : isLegendary ? legendaryGradientStyle : isCelestial ? celestialGradientStyle : { color: badgeColor }}
+                                        >
+                                            {badgeTitle}
+                                        </h4>
+                                    </div>
+                                    <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-0.5">Conquista obtida</p>
+                                </div>
+                            </div>
+
+                            <p className="text-gray-200 text-xs leading-relaxed font-medium mb-4 break-words">{originalDesc}</p>
+                            
+                            <div className="grid grid-cols-2 gap-3 bg-white/[0.02] border border-white/5 rounded-2xl p-3 mb-4">
+                                <div>
+                                    <p className="text-[9px] font-black text-gray-600 uppercase tracking-wider">Ganha em</p>
+                                    <p className="text-xs text-gray-300 font-bold mt-0.5">{new Date(badge.awarded_at).toLocaleDateString()}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[9px] font-black text-gray-600 uppercase tracking-wider">Total distribuída</p>
+                                    <p className="text-xs text-primary font-bold mt-0.5">{formatK(badgeDistribution[template?.id] || 0)}</p>
+                                </div>
+                            </div>
+
+                            {/* Other rarities in the stack */}
+                            {group.length > 1 && (
+                                <div className="mt-2 flex-1 flex flex-col min-h-0">
+                                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 leading-none">Coleção Conquistada ({group.length})</p>
+                                    <div className="flex flex-col gap-1.5 overflow-y-auto max-h-[30vh] custom-scrollbar pr-1">
+                                        {group.map((otherBadge: any, idx: number) => {
+                                            const otherTemplate = otherBadge.badge_templates;
+                                            const otherTitle = otherTemplate?.title || otherBadge.title || '';
+                                            const otherColor = otherTemplate?.color || otherBadge.color || '#00E5FF';
+                                            const otherAwardedAt = new Date(otherBadge.awarded_at).toLocaleDateString();
+                                            
+                                            return (
+                                                <div 
+                                                    key={otherBadge.id} 
+                                                    onClick={() => {
+                                                        setSelectedBadgeIdMap(prev => ({
+                                                            ...prev,
+                                                            [activeGroupKey]: otherBadge.id
+                                                        }));
+                                                    }}
+                                                    className={`flex items-center justify-between text-xs cursor-pointer hover:bg-white/5 px-3 py-2 rounded-xl transition-all border ${
+                                                        badge.id === otherBadge.id ? 'bg-white/10 border-white/10' : 'bg-transparent border-transparent'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: otherColor, boxShadow: `0 0 4px ${otherColor}` }} />
+                                                        <span className="font-bold text-gray-300 truncate" style={{ color: otherColor }}>
+                                                            {otherTitle} {badge.id === otherBadge.id && <span className="text-[9px] text-gray-500 font-normal tracking-normal italic">(Selecionada)</span>}
+                                                        </span>
+                                                    </div>
+                                                    <span className="text-gray-500 text-[10px] font-medium shrink-0">{otherAwardedAt}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 };
