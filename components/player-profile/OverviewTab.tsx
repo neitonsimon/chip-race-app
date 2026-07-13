@@ -436,136 +436,204 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                     return rarityIndex === -1 ? 99 : rarityIndex;
                                 };
 
-                                return [...player.badges]
-                                    .sort((a, b) => {
-                                        const iconA = a.badge_templates?.icon || a.icon || '';
-                                        const iconB = b.badge_templates?.icon || b.icon || '';
-                                        if (iconA < iconB) return -1;
-                                        if (iconA > iconB) return 1;
+                                // Group player badges by icon or image_url
+                                const badgesByIcon = new Map<string, any[]>();
+                                (player.badges || []).forEach((badge: any) => {
+                                    const template = badge.badge_templates;
+                                    const key = (badge.image_url || template?.image_url || template?.icon || badge.icon || 'stars').toLowerCase().trim();
+                                    if (!badgesByIcon.has(key)) {
+                                        badgesByIcon.set(key, []);
+                                    }
+                                    badgesByIcon.get(key)!.push(badge);
+                                });
+
+                                // Sort badges in each group by rarity rank descending
+                                const badgeGroups = Array.from(badgesByIcon.values()).map(group => {
+                                    return group.sort((a, b) => {
                                         const colorA = a.badge_templates?.color || a.color || '';
                                         const colorB = b.badge_templates?.color || b.color || '';
-                                        return getRarityRankMain(colorA) - getRarityRankMain(colorB);
-                                    })
-                                    .map((badge: any) => {
-                                        const template = badge.badge_templates;
-                                        // Always prefer live template values so edits propagate immediately
-                                        const badgeIcon = template?.icon || badge.icon || 'stars';
-                                        const badgeTitle = template?.title || badge.title || '';
-                                        const badgeColor = template?.color || badge.color || '#00E5FF';
-                                        const originalDesc = template?.description || badge.description;
+                                        return getRarityRankMain(colorB) - getRarityRankMain(colorA);
+                                    });
+                                });
 
-                                const isPatrao = badgeTitle?.toLowerCase().includes('patrão') || badgeTitle?.toLowerCase().includes('patrao');
-                                const isCelestial = badgeColor?.toLowerCase() === '#fffff0' || badgeTitle?.toLowerCase().includes('celestial');
-                                const isSupreme = badgeColor?.toLowerCase() === '#ff4d79' || badgeTitle?.toLowerCase().includes('supreme') || badgeTitle?.toLowerCase().includes('suprema');
-                                const isLegendary = badgeColor?.toLowerCase() === '#ffd700' || badgeColor?.toLowerCase() === '#eab308' || badgeTitle?.toLowerCase().includes('lendária') || badgeTitle?.toLowerCase().includes('lendaria') || badgeTitle?.toLowerCase().includes('legendary') || badgeTitle?.toLowerCase().includes('pioneiro');
-                                const isEpic = badgeColor?.toLowerCase() === '#ef4444' || badgeTitle?.toLowerCase().includes('épica') || badgeTitle?.toLowerCase().includes('epica') || badgeTitle?.toLowerCase().includes('epic');
-                                const isRare = badgeColor?.toLowerCase() === '#00e5ff' || badgeTitle?.toLowerCase().includes('rara') || badgeTitle?.toLowerCase().includes('rare');
-                                const isUncommon = badgeColor?.toLowerCase() === '#22c55e' || badgeTitle?.toLowerCase().includes('incomum') || badgeTitle?.toLowerCase().includes('uncommon');
-                                const isCommon = badgeColor?.toLowerCase() === '#9ca3af' || badgeColor?.toLowerCase() === '#94a3b8' || badgeTitle?.toLowerCase().includes('comum') || badgeTitle?.toLowerCase().includes('common');
+                                // Sort the groups by the highest rarity of their main badge
+                                badgeGroups.sort((groupA, groupB) => {
+                                    const badgeA = groupA[0];
+                                    const badgeB = groupB[0];
+                                    const colorA = badgeA.badge_templates?.color || badgeA.color || '';
+                                    const colorB = badgeB.badge_templates?.color || badgeB.color || '';
+                                    
+                                    const rankDiff = getRarityRankMain(colorB) - getRarityRankMain(colorA);
+                                    if (rankDiff !== 0) return rankDiff;
 
-                                const supremeGradientStyle = {
-                                    background: 'linear-gradient(90deg, #f9a8d4, #ec4899, #ea580c)',
-                                    WebkitBackgroundClip: 'text',
-                                    WebkitTextFillColor: 'transparent',
-                                    backgroundClip: 'text',
-                                };
+                                    const iconA = badgeA.badge_templates?.icon || badgeA.icon || '';
+                                    const iconB = badgeB.badge_templates?.icon || badgeB.icon || '';
+                                    return iconA.localeCompare(iconB);
+                                });
 
-                                const legendaryGradientStyle = {
-                                    background: 'linear-gradient(90deg, #ffd700, #eab308, #fff5cc)',
-                                    WebkitBackgroundClip: 'text',
-                                    WebkitTextFillColor: 'transparent',
-                                    backgroundClip: 'text',
-                                };
+                                return badgeGroups.map((group) => {
+                                    const badge = group[0];
+                                    const template = badge.badge_templates;
+                                    // Always prefer live template values so edits propagate immediately
+                                    const badgeIcon = template?.icon || badge.icon || 'stars';
+                                    const badgeTitle = template?.title || badge.title || '';
+                                    const badgeColor = template?.color || badge.color || '#00E5FF';
+                                    const originalDesc = template?.description || badge.description;
 
-                                const celestialGradientStyle = {
-                                    background: 'linear-gradient(90deg, #fff, #fffff0, #00e5ff)',
-                                    WebkitBackgroundClip: 'text',
-                                    WebkitTextFillColor: 'transparent',
-                                    backgroundClip: 'text',
-                                };
+                                    const isPatrao = badgeTitle?.toLowerCase().includes('patrão') || badgeTitle?.toLowerCase().includes('patrao');
+                                    const isCelestial = badgeColor?.toLowerCase() === '#fffff0' || badgeTitle?.toLowerCase().includes('celestial');
+                                    const isSupreme = badgeColor?.toLowerCase() === '#ff4d79' || badgeTitle?.toLowerCase().includes('supreme') || badgeTitle?.toLowerCase().includes('suprema');
+                                    const isLegendary = badgeColor?.toLowerCase() === '#ffd700' || badgeColor?.toLowerCase() === '#eab308' || badgeTitle?.toLowerCase().includes('lendária') || badgeTitle?.toLowerCase().includes('lendaria') || badgeTitle?.toLowerCase().includes('legendary') || badgeTitle?.toLowerCase().includes('pioneiro');
+                                    const isEpic = badgeColor?.toLowerCase() === '#ef4444' || badgeTitle?.toLowerCase().includes('épica') || badgeTitle?.toLowerCase().includes('epica') || badgeTitle?.toLowerCase().includes('epic');
+                                    const isRare = badgeColor?.toLowerCase() === '#00e5ff' || badgeTitle?.toLowerCase().includes('rara') || badgeTitle?.toLowerCase().includes('rare');
+                                    const isUncommon = badgeColor?.toLowerCase() === '#22c55e' || badgeTitle?.toLowerCase().includes('incomum') || badgeTitle?.toLowerCase().includes('uncommon');
+                                    const isCommon = badgeColor?.toLowerCase() === '#9ca3af' || badgeColor?.toLowerCase() === '#94a3b8' || badgeTitle?.toLowerCase().includes('comum') || badgeTitle?.toLowerCase().includes('common');
 
-                                return (
-                                    <div key={badge.id}
-                                        className={`group relative w-14 h-14 md:w-16 md:h-16 flex items-center justify-center transition-all cursor-help transform hover:scale-110 rounded-[1.25rem] border-2 ${
-                                            isPatrao ? 'badge-patrao-aura' :
-                                            isCelestial ? 'badge-celestial-aura' :
-                                            isSupreme ? 'badge-supreme-aura' :
-                                            isLegendary ? 'badge-legendary-aura' :
-                                            isEpic ? 'badge-epic-aura' :
-                                            isRare ? 'badge-rare-aura' :
-                                            isUncommon ? 'badge-uncommon-aura' :
-                                            isCommon ? 'opacity-90 grayscale-[0.5] border-white/10' : 'border-white/10'
-                                        }`}
-                                        style={isPatrao ? {
-                                            borderColor: '#fff',
-                                        } : isSupreme ? {
-                                            borderColor: 'rgba(236,72,153,0.6)',
-                                        } : isLegendary ? {
-                                            borderColor: '#eab308',
-                                        } : isCelestial ? {
-                                            borderColor: '#fffff0',
-                                        } : isCommon ? {
-                                            backgroundColor: 'rgba(0,0,0,0.5)',
-                                            boxShadow: 'none',
-                                        } : {
-                                            backgroundColor: 'rgba(255,255,255,0.03)',
-                                            borderColor: `${badgeColor}40`,
-                                            boxShadow: `0 8px 20px ${badgeColor}15`,
-                                        }}
-                                    >
-                                        <div className="w-full h-full flex items-center justify-center rounded-[1.25rem] transition-all group-hover:bg-white/[0.05]">
-                                            {badge.image_url ? (
-                                                <img src={badge.image_url} alt={badgeTitle} className="w-10 h-10 object-contain" />
-                                            ) : (
-                                                <span
-                                                    className={`material-icons-outlined text-3xl ${isPatrao ? 'text-white' : ''} ${isCommon ? 'text-white/50' : ''}`}
-                                                    style={isPatrao ? { textShadow: '0 0 15px rgba(255,255,255,0.8)' } : isSupreme ? supremeGradientStyle : isLegendary ? { color: '#eab308', textShadow: '0 0 20px rgba(234,179,8,0.8)' } : isCommon ? {} : { color: badgeColor }}
-                                                >{badgeIcon}</span>
-                                            )}
-                                        </div>
+                                    const supremeGradientStyle = {
+                                        background: 'linear-gradient(90deg, #f9a8d4, #ec4899, #ea580c)',
+                                        WebkitBackgroundClip: 'text',
+                                        WebkitTextFillColor: 'transparent',
+                                        backgroundClip: 'text',
+                                    };
 
-                                        {/* Tooltip */}
-                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 max-sm:-translate-x-[40%] mb-4 w-48 md:w-64 bg-[#0c0920] text-white p-4 rounded-2xl border border-white/10 invisible opacity-0 group-hover:visible group-hover:opacity-100 pointer-events-none transition-all z-[100] shadow-[0_10px_40px_rgba(0,0,0,0.8)] scale-90 group-hover:scale-100 font-sans">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={isSupreme ? {
-                                                    background: 'linear-gradient(135deg, #f9a8d4, #ec4899, #ea580c)',
-                                                    boxShadow: '0 0 8px rgba(236,72,153,0.8), 0 0 4px rgba(234,88,12,0.6)'
-                                                } : isCelestial ? {
-                                                    backgroundColor: '#fffff0',
-                                                    boxShadow: '0 0 10px #fffff0'
-                                                } : {
-                                                    backgroundColor: badgeColor,
-                                                    boxShadow: `0 0 10px ${badgeColor}`
-                                                }}></div>
-                                                <p 
-                                                    className={`font-black text-xs uppercase tracking-widest leading-none ${isLegendary || isSupreme || isCelestial ? 'title-shimmer' : ''}`} 
-                                                    style={isSupreme ? supremeGradientStyle : isLegendary ? legendaryGradientStyle : isCelestial ? celestialGradientStyle : { color: badgeColor }}
-                                                >
-                                                    {badgeTitle}
-                                                </p>
-                                            </div>
-                                            <p className="text-gray-200 text-[11px] leading-relaxed font-medium break-words">{originalDesc}</p>
-                                            <div className="mt-2 pt-2 border-t border-white/5 flex flex-col gap-1">
-                                                <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-wider">
-                                                    <span className="text-gray-600">Ganha em:</span>
-                                                    <span className="text-gray-400">{new Date(badge.awarded_at).toLocaleDateString()}</span>
-                                                </div>
-                                                <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-wider">
-                                                    <span className="text-primary/60">Total distribuída:</span>
-                                                    <span className="text-primary">{formatK(badgeDistribution[template?.id] || 0)}</span>
-                                                </div>
-                                            </div>
+                                    const legendaryGradientStyle = {
+                                        background: 'linear-gradient(90deg, #ffd700, #eab308, #fff5cc)',
+                                        WebkitBackgroundClip: 'text',
+                                        WebkitTextFillColor: 'transparent',
+                                        backgroundClip: 'text',
+                                    };
 
-                                            {template?.is_archived && (
-                                                <div className="mt-2 bg-red-500/10 border border-red-500/20 rounded-lg p-2 flex items-center gap-2">
-                                                    <span className="material-icons-outlined text-[10px] text-red-400">history_toggle_off</span>
-                                                    <p className="text-[9px] font-black text-red-300 uppercase tracking-tighter leading-tight italic">Essa medalha nunca mais será distribuída</p>
-                                                </div>
+                                    const celestialGradientStyle = {
+                                        background: 'linear-gradient(90deg, #fff, #fffff0, #00e5ff)',
+                                        WebkitBackgroundClip: 'text',
+                                        WebkitTextFillColor: 'transparent',
+                                        backgroundClip: 'text',
+                                    };
+
+                                    return (
+                                        <div key={badge.id}
+                                            className={`group relative w-14 h-14 md:w-16 md:h-16 flex items-center justify-center transition-all cursor-help transform hover:scale-110 rounded-[1.25rem] border-2 ${
+                                                isPatrao ? 'badge-patrao-aura' :
+                                                isCelestial ? 'badge-celestial-aura' :
+                                                isSupreme ? 'badge-supreme-aura' :
+                                                isLegendary ? 'badge-legendary-aura' :
+                                                isEpic ? 'badge-epic-aura' :
+                                                isRare ? 'badge-rare-aura' :
+                                                isUncommon ? 'badge-uncommon-aura' :
+                                                isCommon ? 'opacity-90 grayscale-[0.5] border-white/10' : 'border-white/10'
+                                            }`}
+                                            style={isPatrao ? {
+                                                borderColor: '#fff',
+                                            } : isSupreme ? {
+                                                borderColor: 'rgba(236,72,153,0.6)',
+                                            } : isLegendary ? {
+                                                borderColor: '#eab308',
+                                            } : isCelestial ? {
+                                                borderColor: '#fffff0',
+                                            } : isCommon ? {
+                                                backgroundColor: 'rgba(0,0,0,0.5)',
+                                                boxShadow: 'none',
+                                            } : {
+                                                backgroundColor: 'rgba(255,255,255,0.03)',
+                                                borderColor: `${badgeColor}40`,
+                                                boxShadow: `0 8px 20px ${badgeColor}15`,
+                                            }}
+                                        >
+                                            {/* Stacked background borders for pile/stack effect */}
+                                            {group.length > 1 && (
+                                                <>
+                                                    <div className="absolute inset-0 translate-x-[3px] translate-y-[3px] rounded-[1.25rem] border border-white/10 bg-black/50 -z-10 opacity-70 scale-[0.97]" />
+                                                    <div className="absolute inset-0 translate-x-[6px] translate-y-[6px] rounded-[1.25rem] border border-white/5 bg-black/70 -z-20 opacity-40 scale-[0.94]" />
+                                                </>
                                             )}
 
-                                            <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 max-sm:left-[40%] w-3 h-3 bg-[#0c0920] border-b border-r border-white/10 transform rotate-45" />
+                                            <div className="w-full h-full flex items-center justify-center rounded-[1.25rem] transition-all group-hover:bg-white/[0.05]">
+                                                {badge.image_url ? (
+                                                    <img src={badge.image_url} alt={badgeTitle} className="w-10 h-10 object-contain" />
+                                                ) : (
+                                                    <span
+                                                        className={`material-icons-outlined text-3xl ${isPatrao ? 'text-white' : ''} ${isCommon ? 'text-white/50' : ''}`}
+                                                        style={isPatrao ? { textShadow: '0 0 15px rgba(255,255,255,0.8)' } : isSupreme ? supremeGradientStyle : isLegendary ? { color: '#eab308', textShadow: '0 0 20px rgba(234,179,8,0.8)' } : isCommon ? {} : { color: badgeColor }}
+                                                    >{badgeIcon}</span>
+                                                )}
+                                            </div>
+
+                                            {/* Stack Count Indicator */}
+                                            {group.length > 1 && (
+                                                <span className="absolute -bottom-1 -right-1 px-1.5 py-0.5 bg-primary text-white text-[9px] font-black rounded-full shadow-lg border border-white/20 scale-90 select-none z-10">
+                                                    x{group.length}
+                                                </span>
+                                            )}
+
+                                            {/* Tooltip */}
+                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 max-sm:-translate-x-[40%] mb-4 w-48 md:w-64 bg-[#0c0920] text-white p-4 rounded-2xl border border-white/10 invisible opacity-0 group-hover:visible group-hover:opacity-100 pointer-events-none transition-all z-[100] shadow-[0_10px_40px_rgba(0,0,0,0.8)] scale-90 group-hover:scale-100 font-sans">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={isSupreme ? {
+                                                        background: 'linear-gradient(135deg, #f9a8d4, #ec4899, #ea580c)',
+                                                        boxShadow: '0 0 8px rgba(236,72,153,0.8), 0 0 4px rgba(234,88,12,0.6)'
+                                                    } : isCelestial ? {
+                                                        backgroundColor: '#fffff0',
+                                                        boxShadow: '0 0 10px #fffff0'
+                                                    } : {
+                                                        backgroundColor: badgeColor,
+                                                        boxShadow: `0 0 10px ${badgeColor}`
+                                                    }}></div>
+                                                    <p 
+                                                        className={`font-black text-xs uppercase tracking-widest leading-none ${isLegendary || isSupreme || isCelestial ? 'title-shimmer' : ''}`} 
+                                                        style={isSupreme ? supremeGradientStyle : isLegendary ? legendaryGradientStyle : isCelestial ? celestialGradientStyle : { color: badgeColor }}
+                                                    >
+                                                        {badgeTitle}
+                                                    </p>
+                                                </div>
+                                                <p className="text-gray-200 text-[11px] leading-relaxed font-medium break-words">{originalDesc}</p>
+                                                <div className="mt-2 pt-2 border-t border-white/5 flex flex-col gap-1">
+                                                    <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-wider">
+                                                        <span className="text-gray-600">Ganha em:</span>
+                                                        <span className="text-gray-400">{new Date(badge.awarded_at).toLocaleDateString()}</span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-wider">
+                                                        <span className="text-primary/60">Total distribuída:</span>
+                                                        <span className="text-primary">{formatK(badgeDistribution[template?.id] || 0)}</span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Other rarities in the stack */}
+                                                {group.length > 1 && (
+                                                    <div className="mt-3 pt-3 border-t border-white/10">
+                                                        <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-2 leading-none">Coleção Conquistada ({group.length})</p>
+                                                        <div className="flex flex-col gap-1.5">
+                                                            {group.map((otherBadge: any, idx: number) => {
+                                                                const otherTemplate = otherBadge.badge_templates;
+                                                                const otherTitle = otherTemplate?.title || otherBadge.title || '';
+                                                                const otherColor = otherTemplate?.color || otherBadge.color || '#00E5FF';
+                                                                const otherAwardedAt = new Date(otherBadge.awarded_at).toLocaleDateString();
+                                                                
+                                                                return (
+                                                                    <div key={otherBadge.id} className="flex items-center justify-between text-[10px]">
+                                                                        <div className="flex items-center gap-1.5 min-w-0">
+                                                                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: otherColor, boxShadow: `0 0 4px ${otherColor}` }} />
+                                                                            <span className="font-bold text-gray-300 truncate animate-pulse-subtle" style={{ color: otherColor }}>
+                                                                                {otherTitle} {idx === 0 && <span className="text-[8px] text-gray-500 font-normal tracking-normal italic">(Atual)</span>}
+                                                                            </span>
+                                                                        </div>
+                                                                        <span className="text-gray-500 text-[9px] font-medium shrink-0">{otherAwardedAt}</span>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {template?.is_archived && (
+                                                    <div className="mt-2 bg-red-500/10 border border-red-500/20 rounded-lg p-2 flex items-center gap-2">
+                                                        <span className="material-icons-outlined text-[10px] text-red-400">history_toggle_off</span>
+                                                        <p className="text-[9px] font-black text-red-300 uppercase tracking-tighter leading-tight italic">Essa medalha nunca mais será distribuída</p>
+                                                    </div>
+                                                )}
+
+                                                <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 max-sm:left-[40%] w-3 h-3 bg-[#0c0920] border-b border-r border-white/10 transform rotate-45" />
+                                            </div>
                                         </div>
-                                    </div>
                                     );
                                 });
                             })()}
