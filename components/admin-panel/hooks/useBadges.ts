@@ -59,17 +59,28 @@ export function useBadges({ isAdmin, currentUser, badgeTemplates }: UseBadgesPro
         );
 
         const matchedUsers = new Map<string, { id: string; name: string }>();
+        const addedUserIds = new Set<string>();
 
         const addPlayerByName = (name: string, userId?: string) => {
             if (!name) return;
-            const normalized = name.trim().toLowerCase();
-            if (matchedUsers.has(normalized)) return;
+            const normalizedName = name.trim().toLowerCase();
 
             // Find profile in allProfiles to get the user UUID
-            const profile = allProfiles.find(ap => ap.name.toLowerCase() === normalized);
+            const profile = allProfiles.find(ap => ap.name.toLowerCase() === normalizedName);
             const uid = userId || profile?.id;
+
             if (uid) {
-                matchedUsers.set(normalized, { id: uid, name: name.trim() });
+                // If we have a user ID, deduplicate by user ID
+                if (addedUserIds.has(uid)) return;
+                addedUserIds.add(uid);
+                
+                // Use the official profile name if available, otherwise the result name
+                const displayName = profile?.name || name.trim();
+                matchedUsers.set(uid, { id: uid, name: displayName });
+            } else {
+                // If no user ID (guest), deduplicate by normalized name
+                if (matchedUsers.has(normalizedName)) return;
+                matchedUsers.set(normalizedName, { id: normalizedName, name: name.trim() });
             }
         };
 
