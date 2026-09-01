@@ -100,6 +100,7 @@ export const CashLeagueDashboard: React.FC = () => {
     const [blind, setBlind] = useState('0,10 / 0,20');
     const [buyin, setBuyin] = useState(20);
     const [maxPlayers, setMaxPlayers] = useState(10);
+    const [minPlayers, setMinPlayers] = useState(5);
     const [prize, setPrize] = useState('Vaga The Chosen 30K + Troféu');
     const [rounds, setRounds] = useState<CashLeagueRound[]>([
         { number: 1, date: '', time: '20:00', end_time: '23:00', status: 'pending' },
@@ -127,6 +128,7 @@ export const CashLeagueDashboard: React.FC = () => {
         setBlind('0,10 / 0,20');
         setBuyin(20);
         setMaxPlayers(10);
+        setMinPlayers(5);
         setPrize('Vaga The Chosen 30K + Troféu');
         setRounds([
             { number: 1, date: '', time: '20:00', end_time: '23:00', status: 'pending' },
@@ -162,6 +164,7 @@ export const CashLeagueDashboard: React.FC = () => {
         setBlind(league.blind);
         setBuyin(league.buyin);
         setMaxPlayers(league.max_players);
+        setMinPlayers(league.min_players || 5);
         setPrize(league.prize);
         setRounds(league.rounds?.map(r => ({
             ...r,
@@ -197,6 +200,7 @@ export const CashLeagueDashboard: React.FC = () => {
             blind,
             buyin,
             max_players: maxPlayers,
+            min_players: minPlayers,
             prize,
             rounds,
             participants,
@@ -260,7 +264,7 @@ export const CashLeagueDashboard: React.FC = () => {
         } else {
             // Add participant
             if (updatedParticipants.length >= league.max_players) {
-                alert('A liga já atingiu o limite de participantes (Cap)!');
+                alert('A liga já atingiu o limite de jogadores por mesa!');
                 return;
             }
             updatedParticipants.push({
@@ -498,9 +502,15 @@ export const CashLeagueDashboard: React.FC = () => {
                                             </span>
                                         </div>
                                         <div className="flex justify-between items-center text-xs">
-                                            <span className="text-gray-400">Cap de Jogadores:</span>
+                                            <span className="text-gray-400">Jogadores por Mesa:</span>
                                             <span className="font-bold text-white bg-white/5 border border-white/10 px-2 py-0.5 rounded">
                                                 {enrolledCount} / {league.max_players}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-xs">
+                                            <span className="text-gray-400">Inicia com:</span>
+                                            <span className="font-bold text-amber-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded">
+                                                {league.min_players || 5} jogadores
                                             </span>
                                         </div>
                                         <div className="flex justify-between items-center text-xs">
@@ -751,8 +761,8 @@ export const CashLeagueDashboard: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Row 2: Blind, Buy-in & Max Players */}
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            {/* Row 2: Blind, Buy-in, Jogadores por Mesa & Inicia com */}
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Blind</label>
                                     <input
@@ -776,11 +786,21 @@ export const CashLeagueDashboard: React.FC = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Cap Jogadores (Máx)</label>
+                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Jogadores por Mesa</label>
                                     <input
                                         type="number"
                                         value={maxPlayers}
                                         onChange={(e) => setMaxPlayers(Number(e.target.value))}
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-primary transition-all"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Inicia com (Mín. Jogadores)</label>
+                                    <input
+                                        type="number"
+                                        value={minPlayers}
+                                        onChange={(e) => setMinPlayers(Number(e.target.value))}
                                         className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-primary transition-all"
                                         required
                                     />

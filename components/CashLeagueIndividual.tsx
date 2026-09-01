@@ -143,7 +143,7 @@ export const CashLeagueIndividual: React.FC<CashLeagueIndividualProps> = ({ leag
         } else {
             // Add participant
             if (updatedParticipants.length >= league.max_players) {
-                alert('A liga já atingiu o limite de participantes (Cap)!');
+                alert('A liga já atingiu o limite de jogadores por mesa!');
                 return;
             }
             updatedParticipants.push({
@@ -242,7 +242,7 @@ export const CashLeagueIndividual: React.FC<CashLeagueIndividualProps> = ({ leag
                         </div>
                         
                         {/* Metrics Grid */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4 w-full lg:w-auto mt-4 lg:mt-0">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-9 gap-4 w-full lg:w-auto mt-4 lg:mt-0">
                             <div className="bg-black/40 border border-white/5 rounded-2xl px-4 py-3 text-center min-w-[100px]">
                                 <div className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">Inscrição</div>
                                 <div className="text-sm font-black text-emerald-400 mt-1">R$ {Number(league.aporte_inicial || 0).toFixed(2)}</div>
@@ -276,8 +276,12 @@ export const CashLeagueIndividual: React.FC<CashLeagueIndividualProps> = ({ leag
                                 </div>
                             </div>
                             <div className="bg-black/40 border border-white/5 rounded-2xl px-4 py-3 text-center min-w-[100px]">
-                                <div className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">Vagas (Cap)</div>
+                                <div className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">Jogadores por Mesa</div>
                                 <div className="text-sm font-black text-white mt-1">{(league.participants || []).length} / {league.max_players}</div>
+                            </div>
+                            <div className="bg-black/40 border border-white/5 rounded-2xl px-4 py-3 text-center min-w-[100px]">
+                                <div className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">Inicia com</div>
+                                <div className="text-sm font-black text-amber-400 mt-1">{(league.min_players || 5)} jogadores</div>
                             </div>
                         </div>
                     </div>

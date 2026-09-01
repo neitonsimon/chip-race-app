@@ -666,6 +666,7 @@ export interface CashLeague {
   blind: string;
   buyin: number;
   max_players: number;
+  min_players: number;
   rounds: CashLeagueRound[];
   status: 'registrando' | 'aguardando_inicio' | 'em_andamento' | 'encerrado';
   prize: string;

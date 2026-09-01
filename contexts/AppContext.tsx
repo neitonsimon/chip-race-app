@@ -291,7 +291,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     supabase.from('daily_rewards').select('day, reward_type, reward_value, reward_label').order('day', { ascending: true }),
                     supabase.from('system_message_templates').select('id, subject, content, category, sender, is_active, updated_at'),
                     supabase.from('user_badges').select('badge_template_id'),
-                    supabase.from('cash_leagues').select('id, name, modality, blind, buyin, max_players, rounds, status, prize, participants, results, created_at').order('created_at', { ascending: true })
+                    supabase.from('cash_leagues').select('id, name, modality, blind, buyin, max_players, min_players, rounds, status, prize, participants, results, created_at, aporte_inicial, bonus_resgate, start_date, weekday, bomb_pot_every, rake').order('created_at', { ascending: true })
                 ]);
 
                 rankingsData = results[0].data;
@@ -456,12 +456,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     blind: l.blind,
                     buyin: Number(l.buyin),
                     max_players: l.max_players,
+                    min_players: l.min_players || 5,
                     rounds: l.rounds || [],
                     status: l.status || 'active',
                     prize: l.prize,
                     participants: l.participants || [],
                     results: l.results || {},
-                    created_at: l.created_at
+                    created_at: l.created_at,
+                    aporte_inicial: l.aporte_inicial ? Number(l.aporte_inicial) : 0,
+                    bonus_resgate: l.bonus_resgate ? Number(l.bonus_resgate) : 0,
+                    start_date: l.start_date || 'Pendente',
+                    weekday: l.weekday || 'Pendente',
+                    bomb_pot_every: l.bomb_pot_every ? Number(l.bomb_pot_every) : 0,
+                    rake: l.rake || '5%'
                 })));
             }
 

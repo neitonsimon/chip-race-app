@@ -169,7 +169,7 @@ const DEFAULT_STAGES: CvthStage[] = [
     rebuy: '20/30',
     addon: '20/40',
     stack: '10k / 10k / 15k',
-    gtd: 'R$ 1.200',
+    gtd: 'R$ 1.000',
     active: true,
     order: 7,
     highlight: false,
@@ -188,7 +188,7 @@ const DEFAULT_STAGES: CvthStage[] = [
     rebuy: '20/30',
     addon: '20/40',
     stack: '10k / 10k / 15k',
-    gtd: 'R$ 1.400',
+    gtd: 'R$ 1.000',
     active: true,
     order: 8,
     highlight: false,
@@ -199,36 +199,17 @@ const DEFAULT_STAGES: CvthStage[] = [
     custom_rules: 'Regra especial de maior número de classificados.'
   },
   {
-    id: 'stage-satellite',
-    name: 'Satélite ME - 10 vagas GTD',
-    category: 'Satélite',
-    date: '06/09',
-    buyin: 'R$ 30',
-    rebuy: 'R$ 20',
-    addon: 'R$ 20',
-    stack: '10k/10k/15k',
-    gtd: '10 Vagas',
-    active: true,
-    order: 9,
-    highlight: false,
-    color: 'cyan',
-    getup_limit: 'Sem limite específico.',
-    getup_initial: '50.000 fichas',
-    getup_increment: '0 fichas',
-    custom_rules: 'Objetivo: Conquistar GET UP para o Main Event.'
-  },
-  {
     id: 'stage-main-event',
     name: 'MAIN EVENT',
     category: 'Especial',
     date: '06/09',
     buyin: 'R$ 130 ou FREE para acumulados',
     rebuy: 'R$ 100 ou FREE',
-    addon: 'R$ 100',
+    addon: '',
     stack: '50k por GET UP conquistado',
     gtd: 'R$ 4.000',
     active: true,
-    order: 10,
+    order: 9,
     highlight: true,
     color: 'gold',
     getup_limit: 'Acumulável.',
@@ -545,7 +526,7 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
     },
     {
       question: 'O que acontece se eu conquistar duas ou mais stacks?',
-      answer: 'Em caso de múltiplos GET UPs conquistados, o jogador escolhe qual usar para o buy-in, rebuy ou add-on no Main Event. Para os jogadores registrados diretamente no dia do Main Event, as fichas serão de 50k para a stack inicial, 50k para o rebuy e 50k para o add-on.'
+      answer: 'Em caso de múltiplos GET UPs conquistados, o jogador escolhe qual usar para o buy-in ou rebuy no Main Event. Para os jogadores registrados diretamente no dia do Main Event, as fichas serão de 50k para a stack inicial e 50k para o rebuy.'
     },
     {
       question: 'Posso jogar o Main Event sem conquistar nenhum GET UP?',
@@ -1041,7 +1022,7 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
               Cronograma das Etapas
             </h2>
             <p className="text-xs sm:text-sm text-gray-400 uppercase tracking-widest max-w-xl mx-auto">
-              Acompanhe as 10 etapas da temporada e o caminho competitivo em direção à glória
+              Acompanhe as etapas da temporada e o caminho competitivo em direção à glória
             </p>
             <div className="h-[2px] w-24 bg-gradient-to-r from-transparent via-[#00e0ff] to-transparent mx-auto mt-4"></div>
           </div>
@@ -1052,7 +1033,7 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
               <div className="text-xs text-gray-500 font-bold uppercase tracking-widest">Carregando cronograma...</div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {config.stages.filter(s => s.active).map((stage) => {
                 const styles = getColorClass(stage.color);
                 
@@ -1060,7 +1041,7 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
                   <div
                     key={stage.id}
                     className={`bg-gradient-to-b from-[#091122]/90 to-[#040815]/95 border-2 ${styles.border} ${styles.shadow} rounded-3xl p-6 transition-all duration-500 hover:-translate-y-2 flex flex-col justify-between relative overflow-hidden group ${
-                      stage.highlight ? 'md:col-span-2 lg:col-span-3 border-[#ffd700] hover:border-[#ffd700]' : ''
+                      stage.highlight ? 'md:col-span-2 lg:col-span-4 border-[#ffd700] hover:border-[#ffd700]' : ''
                     }`}
                   >
                     
@@ -1095,7 +1076,7 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
                       </div>
 
                       {/* Main highlights */}
-                      <div className={`grid ${stage.highlight ? 'grid-cols-2 md:grid-cols-4 gap-6' : 'grid-cols-2 gap-4'} ${stage.highlight ? 'mb-4' : 'mb-6'} border-y border-white/5 py-4`}>
+                      <div className={`grid ${stage.highlight ? (stage.addon && stage.addon.trim() ? 'grid-cols-2 md:grid-cols-4 gap-6' : 'grid-cols-1 sm:grid-cols-3 gap-6') : (stage.addon && stage.addon.trim() ? 'grid-cols-2 gap-4' : 'grid-cols-3 gap-4')} ${stage.highlight ? 'mb-4' : 'mb-6'} border-y border-white/5 py-4`}>
                         <div>
                           <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-0.5">Buy-in</div>
                           <div className="text-white font-bold text-sm tracking-wide">{stage.buyin}</div>
@@ -1108,10 +1089,12 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
                           <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-0.5">Rebuy</div>
                           <div className="text-white font-bold text-sm tracking-wide">{stage.rebuy}</div>
                         </div>
-                        <div>
-                          <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-0.5">Add-on</div>
-                          <div className="text-white font-bold text-sm tracking-wide">{stage.addon}</div>
-                        </div>
+                        {stage.addon && stage.addon.trim() !== '' && stage.addon.trim() !== '-' && (
+                          <div>
+                            <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-0.5">Add-on</div>
+                            <div className="text-white font-bold text-sm tracking-wide">{stage.addon}</div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Technical specifications */}
