@@ -203,7 +203,7 @@ const DEFAULT_STAGES: CvthStage[] = [
     name: 'MAIN EVENT',
     category: 'Especial',
     date: '06/09',
-    buyin: 'R$ 130 ou FREE para acumulados',
+    buyin: 'R$ 130 ou R$ 30 para acumulados',
     rebuy: 'R$ 100 ou FREE',
     addon: '',
     stack: '50k por GET UP conquistado',
