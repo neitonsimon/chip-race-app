@@ -1141,7 +1141,7 @@ export const CvthSeason2: React.FC<CvthSeason2Props> = ({ isAdmin = false, onNav
                       <div className="mt-4 pt-4 border-t border-white/5 relative z-10">
                         <h4 className="text-xs sm:text-sm font-display font-black text-[#ffd700] uppercase tracking-widest mb-4 flex items-center gap-2 justify-center sm:justify-start">
                           <span className="material-icons text-sm">stars</span>
-                          Jogadores Classificados para o Evento Final
+                          Jogadores Classificados para o Evento Principal
                         </h4>
 
                         {/* Table */}
