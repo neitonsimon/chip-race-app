@@ -36,34 +36,74 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({
     fetchReport, fetchMonthlyReport
 }) => {
     const [reportsView, setReportsView] = useState<'financeiro' | 'carteiras'>('financeiro');
-    // Local helper functions for the report UI
+    interface GroupedSectionItem {
+        name: string;
+        category: string;
+        qty: number;
+        total: number;
+        unitPrice: number;
+        isExtra?: boolean;
+    }
+
     const reportBySection = () => {
-        const sections: Record<string, { total: number, items: any[] }> = {
-            'Torneios': { total: 0, items: [] },
-            'Cash Game': { total: 0, items: [] },
-            'Bar': { total: 0, items: [] },
-            'Outros': { total: 0, items: [] }
+        const sections: Record<string, { total: number, grouped: Record<string, GroupedSectionItem> }> = {
+            'Torneios': { total: 0, grouped: {} },
+            'Cash Game': { total: 0, grouped: {} },
+            'Bar': { total: 0, grouped: {} },
+            'Outros': { total: 0, grouped: {} }
         };
 
-        reportData.forEach(item => {
+        filteredReportItems.forEach(item => {
             const cat = (item.products?.category || (item.notes?.startsWith('Cash Game') ? 'cash' : 'torneio')).toLowerCase();
             let section = 'Outros';
             if (cat === 'torneio') section = 'Torneios';
             else if (cat === 'cash') section = 'Cash Game';
             else if (cat === 'bar') section = 'Bar';
 
-            sections[section].total += Number(item.total_price_brl);
-            sections[section].items.push(item);
+            const name = item.products?.name || item.notes || item.description || 'Item';
+            const qty = Number(item.quantity || 1);
+            const total = Number(item.total_price_brl || 0);
+            const unitPrice = Number(item.unit_price_brl) || (qty > 0 ? total / qty : total);
+
+            sections[section].total += total;
+
+            if (!sections[section].grouped[name]) {
+                sections[section].grouped[name] = {
+                    name,
+                    category: cat,
+                    qty: 0,
+                    total: 0,
+                    unitPrice: unitPrice,
+                    isExtra: false
+                };
+            }
+            sections[section].grouped[name].qty += qty;
+            sections[section].grouped[name].total += total;
         });
 
         if (reportFilter !== 'event') {
-            extraReportData.forEach(tx => {
+            filteredExtraReportItems.forEach(tx => {
                 const brl = Number(tx.amount_brl || 0);
                 if (brl >= 0) return; // Ignore positive credits (not revenue)
 
                 const section = 'Outros';
-                sections[section].total += Math.abs(brl);
-                sections[section].items.push({ ...tx, isExtra: true });
+                const name = tx.description || 'Transação';
+                const total = Math.abs(brl);
+
+                sections[section].total += total;
+
+                if (!sections[section].grouped[name]) {
+                    sections[section].grouped[name] = {
+                        name,
+                        category: tx.category || 'outros',
+                        qty: 0,
+                        total: 0,
+                        unitPrice: total,
+                        isExtra: true
+                    };
+                }
+                sections[section].grouped[name].qty += 1;
+                sections[section].grouped[name].total += total;
             });
         }
 
@@ -318,42 +358,69 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({
                                     </div>
                                 </div>
                             ) : (
-                                Object.entries(reportBySection()).map(([section, data]) => (
-                                    <div key={section} className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
-                                        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-black/20">
-                                            <span className="text-sm font-black text-white uppercase tracking-widest">{section}</span>
-                                            <span className="text-primary font-black">R$ {data.total.toFixed(2)}</span>
-                                        </div>
-                                        <div className="overflow-x-auto">
-                                            <table className="w-full text-xs min-w-[500px]">
-                                                <thead>
-                                                    <tr className="border-b border-white/5 bg-black/40">
-                                                        <th className="text-left px-4 py-3 text-gray-500 font-bold uppercase">Item / Detalhe</th>
-                                                        <th className="text-center px-4 py-3 text-gray-500 font-bold uppercase">Qtd</th>
-                                                        <th className="text-right px-4 py-3 text-gray-500 font-bold uppercase">Subtotal</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {data.items.map((i, idx) => (
-                                                        <tr key={idx} className="border-b border-white/5 hover:bg-white/10 transition-colors">
-                                                            <td className="px-4 py-3">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="material-icons-outlined text-[10px] text-gray-500">{i.isExtra ? 'account_balance_wallet' : 'receipt_long'}</span>
-                                                                    <div>
-                                                                        <p className="text-white font-bold">{i.products?.name || i.description || i.notes || 'Sem nome'}</p>
-                                                                        <p className="text-[9px] text-gray-500 uppercase">{i.commands?.profiles?.name || i.profiles?.name || 'Venda Direta'}</p>
-                                                                    </div>
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-4 py-3 text-center text-white font-bold">{i.quantity || 1}</td>
-                                                            <td className="px-4 py-3 text-right text-white font-bold">R$ {Math.abs(Number(i.total_price_brl || i.amount_brl || 0)).toFixed(2)}</td>
+                                Object.entries(reportBySection()).map(([section, data]) => {
+                                    const groupedList = Object.values(data.grouped).sort((a, b) => b.total - a.total);
+                                    return (
+                                        <div key={section} className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden shadow-lg">
+                                            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-black/20">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="material-icons-outlined text-sm text-primary">
+                                                        {section === 'Bar' ? 'local_bar' : section === 'Torneios' ? 'emoji_events' : section === 'Cash Game' ? 'attach_money' : 'receipt_long'}
+                                                    </span>
+                                                    <span className="text-sm font-black text-white uppercase tracking-widest">{section}</span>
+                                                    {groupedList.length > 0 && (
+                                                        <span className="text-[9px] font-black text-gray-400 bg-white/5 px-2 py-0.5 rounded-full uppercase border border-white/5">
+                                                            {groupedList.reduce((s, i) => s + i.qty, 0)} {groupedList.reduce((s, i) => s + i.qty, 0) === 1 ? 'item' : 'itens'}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <span className="text-primary font-black font-display text-base">R$ {data.total.toFixed(2)}</span>
+                                            </div>
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full text-xs min-w-[500px]">
+                                                    <thead>
+                                                        <tr className="border-b border-white/5 bg-black/40">
+                                                            <th className="text-left px-4 py-3 text-gray-500 font-bold uppercase">Item / Detalhe</th>
+                                                            <th className="text-center px-4 py-3 text-gray-500 font-bold uppercase">Qtd</th>
+                                                            <th className="text-right px-4 py-3 text-gray-500 font-bold uppercase">Subtotal</th>
                                                         </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
+                                                    </thead>
+                                                    <tbody>
+                                                        {groupedList.length === 0 ? (
+                                                            <tr>
+                                                                <td colSpan={3} className="px-4 py-4 text-center text-gray-600 italic text-[11px]">
+                                                                    Nenhum item registrado.
+                                                                </td>
+                                                            </tr>
+                                                        ) : (
+                                                            groupedList.map((item, idx) => (
+                                                                <tr key={idx} className="border-b border-white/5 hover:bg-white/10 transition-colors">
+                                                                    <td className="px-4 py-3">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="material-icons-outlined text-[12px] text-gray-500">
+                                                                                {item.isExtra ? 'account_balance_wallet' : 'receipt_long'}
+                                                                            </span>
+                                                                            <div>
+                                                                                <p className="text-white font-bold">{item.name}</p>
+                                                                                {item.unitPrice > 0 && (
+                                                                                    <p className="text-[9px] text-gray-500 uppercase font-bold">
+                                                                                        R$ {item.unitPrice.toFixed(2)} un.
+                                                                                    </p>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="px-4 py-3 text-center text-white font-bold text-sm">{item.qty}</td>
+                                                                    <td className="px-4 py-3 text-right text-white font-bold text-sm">R$ {item.total.toFixed(2)}</td>
+                                                                </tr>
+                                                            ))
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))
+                                    );
+                                })
                             )}
                         </div>
                     )}
