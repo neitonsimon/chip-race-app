@@ -125,7 +125,7 @@ export function useDebts({ isAdmin, currentUser, updatePlayerDebtLocally, update
         }
 
         if (!window.confirm(
-            `Confirmar baixa ${isPartial ? 'PARCIAL ' : ''}${type === 'balance' ? 'via SALDO' : 'MANUAL'} de R$ ${payAmount.toFixed(2)}${isPartial ? ` (R$ ${(fullAmount - payAmount).toFixed(2)} continua em aberto)` : ''} p/ ${userProfile?.name}?`
+            `Confirmar baixa ${isPartial ? 'PARCIAL ' : ''}${type === 'balance' ? 'via SALDO' : 'via PIX'} de R$ ${payAmount.toFixed(2)}${isPartial ? ` (R$ ${(fullAmount - payAmount).toFixed(2)} continua em aberto)` : ''} p/ ${userProfile?.name}?`
         )) return;
 
         setIsLoading(true);
@@ -149,7 +149,7 @@ export function useDebts({ isAdmin, currentUser, updatePlayerDebtLocally, update
                     if (error) throw error;
                     if (!data.success) throw new Error(data.message);
                 } else {
-                    // Manual settlement
+                    // Manual settlement (PIX)
                     if (debtIsPartial) {
                         const { error: updateErr } = await supabase.from('debts').update({
                             amount_brl: debtAmt - amtToPayForThisDebt
@@ -161,6 +161,26 @@ export function useDebts({ isAdmin, currentUser, updatePlayerDebtLocally, update
                             paid_at: new Date().toISOString()
                         }).eq('id', debt.id);
                         if (updateErr) throw updateErr;
+                    }
+
+                    // Register transaction for Monitor / Reports
+                    const { error: txErr } = await supabase.from('transactions').insert({
+                        user_id: userId,
+                        amount_brl: -amtToPayForThisDebt,
+                        amount_chipz: 0,
+                        description: `Liquidação de Pendura via PIX${debtIsPartial ? ' (Parcial)' : ''}`,
+                        category: 'debt_payment',
+                        type: 'debit',
+                        metadata: {
+                            debt_id: debt.id,
+                            payment_method: 'pix',
+                            is_partial: debtIsPartial,
+                            paid_amount: amtToPayForThisDebt,
+                            original_debt_amount: debtAmt
+                        }
+                    });
+                    if (txErr) {
+                        console.error('Failed to log debt payment transaction:', txErr);
                     }
                 }
                 
@@ -177,7 +197,7 @@ export function useDebts({ isAdmin, currentUser, updatePlayerDebtLocally, update
                 sender_id: currentUser.id,
                 content: isPartial
                     ? `Pagamento parcial de R$ ${payAmount.toFixed(2)} registrado. Saldo devedor atualizado para R$ ${(fullAmount - payAmount).toFixed(2)}.`
-                    : `Sua pendência no valor de R$ ${fullAmount.toFixed(2)} foi quitada (${type === 'balance' ? 'Saldo R$' : 'Baixa Manual'}).`,
+                    : `Sua pendência no valor de R$ ${fullAmount.toFixed(2)} foi quitada (${type === 'balance' ? 'Saldo R$' : 'Baixa PIX'}).`,
                 category: 'system',
                 is_read: false
             });
@@ -186,7 +206,7 @@ export function useDebts({ isAdmin, currentUser, updatePlayerDebtLocally, update
                 await supabase.from('audit_logs').insert({
                     admin_id: currentUser.id,
                     action_type: 'MANUAL_DEBT_SETTLEMENT',
-                    description: `Admin deu baixa manual/perdoou pendura de R$ ${payAmount.toFixed(2)} do jogador.`,
+                    description: `Admin deu baixa via PIX na pendura de R$ ${payAmount.toFixed(2)} do jogador.`,
                     target_user_id: userId,
                     details: { amount: payAmount, original_amount: fullAmount, is_partial: isPartial }
                 });
