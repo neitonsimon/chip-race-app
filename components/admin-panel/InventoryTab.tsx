@@ -22,7 +22,24 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
     handleCreateProduct, toggleProductStatus, deleteProduct, isLoading,
     productCategories, inventoryItems, editingProduct, setEditingProduct, handleUpdateProduct
 }) => {
-    const displayCategories = productCategories;
+    const displayCategories = React.useMemo(() => {
+        const list = [...(productCategories || [])];
+        // Ensure 'bar' is always present
+        if (!list.some(c => c.name.toLowerCase() === 'bar')) {
+            list.unshift({ id: 'bar', name: 'bar', label: 'Bar', icon: 'local_bar', active: true });
+        }
+        // Ensure currently edited product category is in the list
+        if (newProduct?.category && !list.some(c => c.name.toLowerCase() === String(newProduct.category).toLowerCase())) {
+            list.push({
+                id: newProduct.category,
+                name: newProduct.category,
+                label: String(newProduct.category).charAt(0).toUpperCase() + String(newProduct.category).slice(1),
+                icon: 'category',
+                active: true
+            });
+        }
+        return list;
+    }, [productCategories, newProduct?.category]);
 
     const onProductClick = (p: any) => {
         setEditingProduct(p);
@@ -218,7 +235,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
                                         className={`bg-black/20 border rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all cursor-pointer hover:border-primary/40 group ${editingProduct?.id === p.id ? 'border-yellow-500/50 bg-yellow-500/5' : 'border-white/5'} ${!p.active && 'opacity-60 grayscale'}`}
                                     >
                                         <div className="flex items-center gap-3 sm:gap-4">
-                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-[10px] uppercase flex-shrink-0 ${p.category === 'torneio' ? 'bg-blue-500/20 text-blue-400' : p.category === 'cash' ? 'bg-green-500/20 text-green-400' : p.category === 'bar' ? 'bg-orange-500/20 text-orange-400' : p.category === 'vip' ? 'bg-purple-500/20 text-purple-400' : 'bg-gray-500/20 text-gray-400'}`}>
+                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-[10px] uppercase flex-shrink-0 ${p.category === 'torneio' ? 'bg-blue-500/20 text-blue-400' : p.category === 'cash' ? 'bg-green-500/20 text-green-400' : p.category === 'bar' ? 'bg-orange-500/20 text-orange-400' : p.category === 'vip' ? 'bg-purple-500/20 text-purple-400' : p.category === 'jackpot' ? 'bg-amber-500/20 text-amber-400' : p.category === 'creditos_online' ? 'bg-cyan-500/20 text-cyan-400' : 'bg-gray-500/20 text-gray-400'}`}>
                                                 {p.category.substring(0, 3)}
                                             </div>
                                             <div className="min-w-0">

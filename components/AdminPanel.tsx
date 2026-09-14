@@ -74,6 +74,16 @@ function getOneTimeKeyFromNote(note: string): string | null {
     return null;
 }
 
+export const DEFAULT_PRODUCT_CATEGORIES = [
+    { id: 'bar', name: 'bar', label: 'Bar', icon: 'local_bar', active: true },
+    { id: 'torneio', name: 'torneio', label: 'Torneio', icon: 'emoji_events', active: true },
+    { id: 'cash', name: 'cash', label: 'Cash Game', icon: 'attach_money', active: true },
+    { id: 'jackpot', name: 'jackpot', label: 'Jackpot', icon: 'stars', active: true },
+    { id: 'vip', name: 'vip', label: 'VIP', icon: 'diamond', active: true },
+    { id: 'creditos_online', name: 'creditos_online', label: 'Créditos Online', icon: 'sports_esports', active: true },
+    { id: 'diversos', name: 'diversos', label: 'Diversos', icon: 'category', active: true },
+];
+
 export const AdminPanel: React.FC<AdminPanelProps> = ({ 
     onClose, currentUser, onUpdateProfile, badgeTemplates = [], isAdmin = false, 
     onCreateBadgeTemplate, onUpdateBadgeTemplate, onSendAdminMessage, onCreatePoll, onRefreshData, onSelectPlayer, onNavigate 
@@ -103,7 +113,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     const [allProducts, setAllProducts] = useState<any[]>([]); // Includes inactive
     const [inventoryItems, setInventoryItems] = useState<any[]>([]);
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
-    const [productCategories, setProductCategories] = useState<any[]>([]);
+    const [productCategories, setProductCategories] = useState<any[]>(DEFAULT_PRODUCT_CATEGORIES);
     const [editingProduct, setEditingProduct] = useState<any | null>(null);
 
     // Gift Tab state managed by useGifts
@@ -458,16 +468,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         if (data) setAllProducts(data);
     };
     const fetchProductCategories = async () => {
-        const { data } = await supabase.from('ecosystem_categories').select('id, title, icon, order').order('order', { ascending: true });
-        if (data) {
-            // Map table fields to frontend 'name/label' used by InventoryTab/OperationalTab
-            setProductCategories(data.map(c => ({
-                id: c.id,
-                name: c.id, // Using id as the internal name
-                label: c.title,
-                icon: c.icon,
-                active: true
-            })));
+        try {
+            const { data } = await supabase.from('products').select('category');
+            const knownNames = new Set(DEFAULT_PRODUCT_CATEGORIES.map(c => c.name.toLowerCase()));
+            const extraCats: any[] = [];
+            if (data) {
+                data.forEach(p => {
+                    if (p.category && !knownNames.has(p.category.toLowerCase())) {
+                        knownNames.add(p.category.toLowerCase());
+                        extraCats.push({
+                            id: p.category,
+                            name: p.category,
+                            label: p.category.charAt(0).toUpperCase() + p.category.slice(1),
+                            icon: 'category',
+                            active: true
+                        });
+                    }
+                });
+            }
+            setProductCategories([...DEFAULT_PRODUCT_CATEGORIES, ...extraCats]);
+        } catch (err) {
+            console.error('Error fetching product categories:', err);
+            setProductCategories(DEFAULT_PRODUCT_CATEGORIES);
         }
     };
     const handleAddProduct = async () => {
