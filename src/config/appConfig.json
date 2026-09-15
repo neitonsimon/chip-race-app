@@ -49,12 +49,12 @@
                 "view": "ranking"
             },
             {
-                "label": "Área VIP",
-                "view": "vip"
+                "label": "Mystery Jackpot",
+                "view": "jackpot"
             },
             {
-                "label": "Recargas & Chipz",
-                "view": "recarga"
+                "label": "Apostas Bet",
+                "view": "bet"
             },
             {
                 "label": "Criar Conta",

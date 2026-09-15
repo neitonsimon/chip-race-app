@@ -3,6 +3,7 @@ import { useApp } from '../contexts/AppContext';
 import { SpecialEventPage } from './SpecialEventPage';
 import { Hero } from './Hero';
 import { TournamentCategories } from './TournamentCategories';
+import { ChipRaceHome } from './ChipRaceHome';
 import { EventCalendar } from './EventCalendar';
 import { RankingTable } from './RankingTable';
 import { PlayerProfile } from './PlayerProfile';
@@ -263,11 +264,8 @@ export const AppRouter: React.FC = () => {
             case 'home':
             default:
                 return (
-                    <TournamentCategories
+                    <ChipRaceHome
                         isAdmin={isAdmin}
-                        categories={contentDB.categories}
-                        onUpdateCategory={updateCategory}
-                        prizeLabel={prizeLabel}
                         onNavigate={handleNavigate}
                     />
                 );
