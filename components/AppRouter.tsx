@@ -35,6 +35,7 @@ import { MysteryJackpotPage } from './MysteryJackpotPage';
 import { CashLeagueDashboard } from './CashLeagueDashboard';
 import { CashLeagueIndividual } from './CashLeagueIndividual';
 import { CvthSeason2 } from './CvthSeason2';
+import { PokerBusinessPage } from './PokerBusinessPage';
 
 export const AppRouter: React.FC = () => {
     const isMaintenance = false; // TOGGLE THIS TO DISABLE MAINTENANCE MODE
@@ -261,6 +262,8 @@ export const AppRouter: React.FC = () => {
                 return <MysteryJackpotPage onNavigate={handleNavigate} currentUser={currentUser as any} />;
             case 'cvth2':
                 return <CvthSeason2 isAdmin={isAdmin} onNavigate={handleNavigate} />;
+            case 'poker-business':
+                return <PokerBusinessPage onNavigate={handleNavigate} />;
             case 'home':
             default:
                 return (
@@ -273,8 +276,8 @@ export const AppRouter: React.FC = () => {
     };
 
     return (
-        <main className={`flex-grow pb-20 relative ${currentView === 'home' ? 'pt-4' : 'pt-20'}`}>
-            {currentView !== 'home' && (
+        <main className={`flex-grow relative ${currentView === 'poker-business' ? 'pb-0 pt-0' : currentView === 'home' ? 'pb-20 pt-4' : 'pb-20 pt-20'}`}>
+            {currentView !== 'home' && currentView !== 'poker-business' && (
                 <div className="fixed top-4 left-4 z-[999] animate-in fade-in duration-300">
                     <button
                         onClick={() => handleNavigate('home')}

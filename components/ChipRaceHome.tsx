@@ -268,6 +268,73 @@ export const ChipRaceHome: React.FC<ChipRaceHomeProps> = ({
         </header>
 
         {/* ========================================================================= */}
+        {/* DESTAQUE ESPECIAL NO TOPO: 1º POKER BUSINESS (ALTA VISIBILIDADE)        */}
+        {/* ========================================================================= */}
+        <section className="mb-6 sm:mb-8">
+          <div
+            onClick={() => navigateTo('poker-business')}
+            className="group relative rounded-3xl overflow-hidden border-2 border-[#d4af37]/60 hover:border-[#f5d77f] transition-all duration-500 cursor-pointer shadow-[0_0_30px_rgba(212,175,55,0.2)] hover:shadow-[0_0_50px_rgba(212,175,55,0.5)] transform hover:-translate-y-1 bg-[#0b0e16]"
+          >
+            {/* Cantos Dourados Laser */}
+            <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-[#d4af37] rounded-tl-2xl pointer-events-none z-30 shadow-[0_0_10px_#d4af37]"></div>
+            <div className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-[#d4af37] rounded-tr-2xl pointer-events-none z-30 shadow-[0_0_10px_#d4af37]"></div>
+            <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-[#d4af37] rounded-bl-2xl pointer-events-none z-30 shadow-[0_0_10px_#d4af37]"></div>
+            <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-[#d4af37] rounded-br-2xl pointer-events-none z-30 shadow-[0_0_10px_#d4af37]"></div>
+
+            {/* Fundo Cinematográfico Escuro & Sofisticado */}
+            <div className="relative min-h-[190px] sm:min-h-[220px] md:min-h-[230px] flex flex-col justify-center p-6 sm:p-8 md:p-10 overflow-hidden">
+              <div
+                className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105 opacity-25"
+                style={{ backgroundImage: "url('https://images.unsplash.com/photo-1511193311914-0346f16efe90?auto=format&fit=crop&w=1800&q=80')" }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#07090f] via-[#090d16]/90 to-[#07090f]/75 pointer-events-none"></div>
+              <div className="absolute -right-20 -top-20 w-80 h-80 bg-[radial-gradient(circle,rgba(212,175,55,0.15)_0%,transparent_70%)] pointer-events-none"></div>
+
+              {/* Tag Superior */}
+              <div className="flex flex-wrap items-center gap-2 mb-3 relative z-20">
+                <span className="inline-flex items-center gap-1.5 font-mono text-[10px] sm:text-xs font-bold bg-[#d4af37]/20 text-[#f5d77f] border border-[#d4af37]/50 px-3 py-1 rounded-full backdrop-blur-md shadow-[0_0_12px_rgba(212,175,55,0.3)]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37] animate-ping"></span>
+                  EVENTO ESPECIAL • 1ª EDIÇÃO
+                </span>
+                <span className="text-xs font-mono text-gray-300 hidden sm:inline-flex items-center gap-1">
+                  <span className="text-[#d4af37]">♠</span> Experiência Corporativa Privada
+                </span>
+              </div>
+
+              {/* Conteúdo Central */}
+              <div className="relative z-20 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="max-w-2xl">
+                  <h3 className="font-display font-black text-2xl sm:text-3xl md:text-4xl uppercase tracking-[0.14em] text-white leading-tight">
+                    1º POKER <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#fff5d0] via-[#e8c15a] to-[#c29b38]">BUSINESS</span>
+                  </h3>
+                  <p className="font-display font-bold text-xs sm:text-sm uppercase tracking-[0.25em] text-[#d4af37] mt-1 mb-2">
+                    Poker • Descontração • Networking
+                  </p>
+                  <div className="flex items-center gap-2 text-xs sm:text-sm font-mono text-gray-300">
+                    <span className="material-icons-outlined text-xs text-[#d4af37]">calendar_month</span>
+                    <span className="font-bold text-white">21.10.2026</span>
+                    <span>•</span>
+                    <span className="material-icons-outlined text-xs text-[#d4af37]">place</span>
+                    <span>Venâncio Aires/RS</span>
+                  </div>
+                </div>
+
+                {/* Botão de Ação */}
+                <div className="flex items-center gap-3 shrink-0">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); navigateTo('poker-business'); }}
+                    className="font-display bg-gradient-to-r from-[#d4af37] via-[#f7e2a9] to-[#b88f28] text-black font-black uppercase tracking-[0.18em] text-xs sm:text-sm px-6 sm:px-8 py-3.5 rounded-2xl transition-all duration-300 shadow-[0_0_25px_rgba(212,175,55,0.4)] group-hover:shadow-[0_0_35px_rgba(212,175,55,0.7)] group-hover:scale-105 flex items-center gap-2 cursor-pointer font-bold"
+                  >
+                    <span>CONHEÇA O EVENTO</span>
+                    <span className="material-icons-outlined text-base group-hover:translate-x-1 transition-transform font-bold">arrow_forward</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ========================================================================= */}
         {/* 2. CARD MASTER EM DESTAQUE: THE CHOSEN 30K (O CARRO-CHEFE)              */}
         {/* ========================================================================= */}
         <section className="mb-8">
@@ -352,6 +419,50 @@ export const ChipRaceHome: React.FC<ChipRaceHomeProps> = ({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+
+            {/* CARD 0: POKER BUSINESS */}
+            <div
+              onClick={() => navigateTo('poker-business')}
+              className="group relative rounded-2xl overflow-hidden border-2 border-[#d4af37]/50 hover:border-[#f5d77f] bg-[#0d101a] transition-all duration-500 hover:-translate-y-1.5 shadow-[0_0_20px_rgba(212,175,55,0.2)] hover:shadow-[0_0_35px_rgba(212,175,55,0.5)] cursor-pointer flex flex-col justify-between"
+            >
+              <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-[#d4af37] pointer-events-none z-20"></div>
+              <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-[#d4af37] pointer-events-none z-20"></div>
+
+              {/* Banner visual */}
+              <div className="relative h-44 sm:h-48 overflow-hidden">
+                <div
+                  className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
+                  style={{ backgroundImage: "url('https://images.unsplash.com/photo-1511193311914-0346f16efe90?auto=format&fit=crop&w=800&q=80')" }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0d101a] via-[#0d101a]/60 to-transparent"></div>
+                <div className="absolute top-3 left-3 bg-black/70 border border-[#d4af37]/50 px-2.5 py-1 rounded-lg backdrop-blur-md flex items-center gap-1.5">
+                  <span className="material-icons text-[#d4af37] text-sm">stars</span>
+                  <span className="text-[10px] font-display font-black tracking-widest text-[#f5d77f] uppercase">EVENTO ESPECIAL</span>
+                </div>
+              </div>
+
+              {/* Conteúdo textual */}
+              <div className="p-5 pt-0 flex flex-col flex-1 justify-between relative z-10">
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <h4 className="font-display font-black text-xl uppercase tracking-wider text-white group-hover:text-[#f5d77f] transition-colors">
+                      POKER BUSINESS
+                    </h4>
+                    <span className="text-xl text-[#d4af37] font-serif">♠</span>
+                  </div>
+                  <p className="font-body text-xs sm:text-sm text-gray-400 font-medium leading-relaxed group-hover:text-gray-200 transition-colors">
+                    Uma noite exclusiva de poker, gastronomia e networking empresarial em Venâncio Aires no dia 21 de Outubro.
+                  </p>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between">
+                  <span className="text-[10px] font-mono text-[#d4af37] uppercase tracking-wider">21.10.2026</span>
+                  <button className="font-display text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#b88f28] text-black group-hover:scale-105 transition-all shadow-[0_0_12px_rgba(212,175,55,0.4)] font-bold">
+                    CONHECER
+                  </button>
+                </div>
+              </div>
+            </div>
 
             {/* CARD 1: RANKING */}
             <div

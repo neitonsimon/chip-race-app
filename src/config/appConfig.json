@@ -16,6 +16,10 @@
             {
                 "label": "Rankings",
                 "view": "ranking"
+            },
+            {
+                "label": "Poker Business",
+                "view": "poker-business"
             }
         ]
     },
@@ -55,6 +59,10 @@
             {
                 "label": "Apostas Bet",
                 "view": "bet"
+            },
+            {
+                "label": "Poker Business",
+                "view": "poker-business"
             },
             {
                 "label": "Criar Conta",
