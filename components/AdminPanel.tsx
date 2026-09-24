@@ -17,6 +17,7 @@ import { TopUpModal } from './admin-panel/modals/TopUpModal';
 import { EditClosedCommandModal } from './admin-panel/modals/EditClosedCommandModal';
 import { ViewCommandItemsModal } from './admin-panel/modals/ViewCommandItemsModal';
 import { ReservationsTab } from './admin-panel/ReservationsTab';
+import { PokerBusinessTab } from './admin-panel/PokerBusinessTab';
 import { useCheckout } from './admin-panel/hooks/useCheckout';
 import { useTopUp } from './admin-panel/hooks/useTopUp';
 import { useDebts } from './admin-panel/hooks/useDebts';
@@ -88,7 +89,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     onClose, currentUser, onUpdateProfile, badgeTemplates = [], isAdmin = false, 
     onCreateBadgeTemplate, onUpdateBadgeTemplate, onSendAdminMessage, onCreatePoll, onRefreshData, onSelectPlayer, onNavigate 
 }) => {
-    const [activeTab, setActiveTab] = useState<'operational' | 'inventory' | 'reports' | 'launch' | 'send-gifts' | 'badges' | 'debts' | 'communications' | 'reservations' | 'events' | 'settings' | 'home-tiles'>('operational');
+    const [activeTab, setActiveTab] = useState<'operational' | 'inventory' | 'reports' | 'launch' | 'send-gifts' | 'badges' | 'debts' | 'communications' | 'reservations' | 'poker-business' | 'events' | 'settings' | 'home-tiles'>('operational');
     const [events, setEvents] = useState<any[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
     const [products, setProducts] = useState<any[]>([]);
@@ -803,6 +804,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     { id: 'debts', icon: 'receipt_long', label: 'Crédito' },
                     { id: 'communications', icon: 'campaign', label: 'Comunic.' },
                     { id: 'reservations', icon: 'support_agent', label: 'Bônus/Res.' },
+                    { id: 'poker-business', icon: 'business_center', label: 'Poker Business' },
                     { id: 'events', icon: 'celebration', label: 'Eventos' },
                     { id: 'home-tiles', icon: 'grid_view', label: 'Home Page' },
                     { id: 'settings', icon: 'settings', label: 'Site' }
@@ -826,6 +828,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         { id: 'debts', icon: 'receipt_long', label: 'Crédito' },
                         { id: 'communications', icon: 'campaign', label: 'Comunic.' },
                         { id: 'reservations', icon: 'support_agent', label: 'Bônus/Res.' },
+                        { id: 'poker-business', icon: 'business_center', label: 'Poker Business' },
                         { id: 'events', icon: 'celebration', label: 'Eventos' },
                         { id: 'home-tiles', icon: 'grid_view', label: 'Home Page' },
                         { id: 'settings', icon: 'settings', label: 'Site' }
@@ -949,6 +952,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             onRefreshData={onRefreshData}
                             onSelectPlayer={onSelectPlayer}
                             onNavigate={onNavigate}
+                        />
+                    )}
+
+                    {activeTab === 'poker-business' && isAdmin && (
+                        <PokerBusinessTab 
+                            currentUser={currentUser} 
+                            isAdmin={isAdmin}
                         />
                     )}
 

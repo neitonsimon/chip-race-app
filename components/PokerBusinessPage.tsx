@@ -239,7 +239,18 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
           </nav>
 
           {/* Top Actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <a
+              href="https://wa.me/5551992425186?text=Ol%C3%A1%2C%20gostaria%20de%20falar%20com%20o%20respons%C3%A1vel%20sobre%20o%201%C2%BA%20Poker%20Business."
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-mono text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30"
+              title="Falar no WhatsApp com o responsável: (51) 99242-5186"
+            >
+              <span className="material-icons-outlined text-sm">chat</span>
+              <span className="hidden sm:inline font-bold">Falar com Responsável</span>
+            </a>
+
             <button
               onClick={() => onNavigate('home')}
               className="text-xs font-mono text-gray-400 hover:text-white transition-colors flex items-center gap-1.5 px-3 py-2 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10"
@@ -313,7 +324,7 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
           </p>
 
           {/* Hero CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
             <button
               onClick={() => scrollToSection('inscricao')}
               className="w-full sm:w-auto font-display font-black text-sm sm:text-base uppercase tracking-[0.18em] px-8 py-4 rounded-2xl bg-gradient-to-r from-[#d4af37] via-[#f7e2a9] to-[#b88f28] text-black shadow-[0_0_35px_rgba(212,175,55,0.45)] hover:shadow-[0_0_50px_rgba(212,175,55,0.7)] hover:scale-[1.03] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer font-bold"
@@ -321,9 +332,18 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
               <span>QUERO PARTICIPAR</span>
               <span className="material-icons-outlined text-lg font-bold">arrow_forward</span>
             </button>
+            <a
+              href="https://wa.me/5551992425186?text=Ol%C3%A1%2C%20gostaria%20de%20falar%20com%20o%20respons%C3%A1vel%20sobre%20o%201%C2%BA%20Poker%20Business."
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto font-display font-bold text-xs sm:text-sm uppercase tracking-[0.16em] px-6 py-4 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 hover:text-emerald-200 transition-all backdrop-blur-md flex items-center justify-center gap-2 cursor-pointer shadow-[0_0_20px_rgba(16,185,129,0.2)]"
+            >
+              <span className="material-icons-outlined text-emerald-400 text-lg">chat</span>
+              <span>FALAR COM RESPONSÁVEL</span>
+            </a>
             <button
               onClick={() => scrollToSection('conceito')}
-              className="w-full sm:w-auto font-display font-bold text-xs sm:text-sm uppercase tracking-[0.18em] px-7 py-4 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/20 hover:border-[#d4af37]/60 text-gray-200 hover:text-white transition-all backdrop-blur-md flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full sm:w-auto font-display font-bold text-xs sm:text-sm uppercase tracking-[0.18em] px-6 py-4 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/20 hover:border-[#d4af37]/60 text-gray-200 hover:text-white transition-all backdrop-blur-md flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>COMO FUNCIONA?</span>
               <span className="material-icons-outlined text-base">expand_more</span>
@@ -1018,6 +1038,19 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
                 <p className="text-[11px] text-center text-gray-400 mt-3">
                   Depois do envio, a equipe CHIP RACE entrará em contato para confirmar a participação e orientar sobre pagamento.
                 </p>
+
+                <div className="mt-5 pt-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-400">
+                  <span>Dúvidas ou prefere atendimento direto?</span>
+                  <a
+                    href="https://wa.me/5551992425186?text=Ol%C3%A1%2C%20gostaria%20de%20falar%20com%20o%20respons%C3%A1vel%20sobre%20o%201%C2%BA%20Poker%20Business."
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/35 text-emerald-300 hover:text-emerald-200 hover:bg-emerald-500/25 font-bold transition-all text-xs"
+                  >
+                    <span className="material-icons-outlined text-sm text-emerald-400">chat</span>
+                    <span>Falar com Responsável • (51) 99242-5186</span>
+                  </a>
+                </div>
               </div>
             </form>
           )}
@@ -1068,13 +1101,22 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
             <span className="text-[#f7e2a9] font-bold">R$ 300</span>
           </div>
 
-          <div className="max-w-xs mx-auto mb-4">
+          <div className="max-w-md mx-auto mb-4 flex flex-col sm:flex-row items-center justify-center gap-3">
             <button
               onClick={() => scrollToSection('inscricao')}
-              className="w-full font-display font-black text-sm uppercase tracking-[0.2em] py-4 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#f7e2a9] to-[#b88f28] text-black shadow-[0_0_30px_rgba(212,175,55,0.4)] hover:shadow-[0_0_45px_rgba(212,175,55,0.7)] hover:scale-105 active:scale-95 transition-all cursor-pointer font-bold"
+              className="w-full sm:w-auto flex-1 font-display font-black text-sm uppercase tracking-[0.2em] py-4 px-6 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#f7e2a9] to-[#b88f28] text-black shadow-[0_0_30px_rgba(212,175,55,0.4)] hover:shadow-[0_0_45px_rgba(212,175,55,0.7)] hover:scale-105 active:scale-95 transition-all cursor-pointer font-bold"
             >
               QUERO PARTICIPAR
             </button>
+            <a
+              href="https://wa.me/5551992425186?text=Ol%C3%A1%2C%20gostaria%20de%20falar%20com%20o%20respons%C3%A1vel%20sobre%20o%201%C2%BA%20Poker%20Business."
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto font-display font-bold text-xs uppercase tracking-[0.16em] py-4 px-6 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 hover:text-emerald-200 transition-all backdrop-blur-md flex items-center justify-center gap-2 cursor-pointer shadow-[0_0_20px_rgba(16,185,129,0.2)]"
+            >
+              <span className="material-icons-outlined text-emerald-400 text-base">chat</span>
+              <span>FALAR COM RESPONSÁVEL</span>
+            </a>
           </div>
 
           <span className="text-xs font-mono text-[#f7e2a9] uppercase tracking-widest block font-bold">
@@ -1099,12 +1141,24 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
               </div>
             </div>
 
-            <button
-              onClick={() => scrollToSection('inscricao')}
-              className="font-display font-black text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#f7e2a9] to-[#b88f28] text-black shadow-[0_0_15px_rgba(212,175,55,0.4)] hover:scale-105 active:scale-95 transition-all cursor-pointer font-bold"
-            >
-              Quero Participar
-            </button>
+            <div className="flex items-center gap-2">
+              <a
+                href="https://wa.me/5551992425186?text=Ol%C3%A1%2C%20gostaria%20de%20falar%20com%20o%20respons%C3%A1vel%20sobre%20o%201%C2%BA%20Poker%20Business."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/35 text-emerald-300 hover:text-emerald-200 text-xs font-bold transition-all"
+                title="Falar no WhatsApp com o responsável: (51) 99242-5186"
+              >
+                <span className="material-icons-outlined text-sm">chat</span>
+                <span>Responsável</span>
+              </a>
+              <button
+                onClick={() => scrollToSection('inscricao')}
+                className="font-display font-black text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#f7e2a9] to-[#b88f28] text-black shadow-[0_0_15px_rgba(212,175,55,0.4)] hover:scale-105 active:scale-95 transition-all cursor-pointer font-bold"
+              >
+                Quero Participar
+              </button>
+            </div>
           </div>
         </div>
       )}
