@@ -98,8 +98,8 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
     e.preventDefault();
     setErrorMessage(null);
 
-    if (!formData.name.trim() || !formData.whatsapp.trim() || !formData.email.trim()) {
-      setErrorMessage('Por favor, preencha os campos obrigatórios (Nome, WhatsApp e E-mail).');
+    if (!formData.name.trim() || !formData.whatsapp.trim()) {
+      setErrorMessage('Por favor, preencha os campos obrigatórios (Nome e WhatsApp).');
       return;
     }
 
@@ -111,7 +111,7 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
         name: formData.name.trim(),
         company: formData.company.trim() || null,
         whatsapp: formData.whatsapp.trim(),
-        email: formData.email.trim(),
+        email: formData.email.trim() || null,
         city: formData.city.trim() || 'Venâncio Aires',
         segment: formData.segment.trim() || null,
         referral_source: formData.referralSource.trim() || null,
@@ -281,7 +281,7 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
           <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-[#16120a] border border-[#d4af37]/45 shadow-[0_0_25px_rgba(212,175,55,0.18)] mb-6 animate-in fade-in slide-in-from-top-4 duration-700">
             <span className="w-2 h-2 rounded-full bg-[#d4af37] animate-pulse"></span>
             <span className="font-display font-black text-[11px] sm:text-xs text-[#f7e2a9] uppercase tracking-[0.25em]">
-              EVENTO ESPECIAL • 1ª EDIÇÃO
+              1ª EDIÇÃO • RESTRITO A 50 CONVIDADOS
             </span>
           </div>
 
@@ -303,7 +303,7 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
             </div>
             <div className="flex items-center gap-2 bg-[#0e121a]/80 border border-[#d4af37]/35 px-4 py-2 rounded-full backdrop-blur-md shadow-[0_0_15px_rgba(0,0,0,0.5)]">
               <span className="material-icons-outlined text-[#d4af37] text-base">place</span>
-              <span className="font-bold tracking-wider text-white">VENÂNCIO AIRES — RS</span>
+              <span className="font-bold tracking-wider text-white">VARANDA • VENÂNCIO AIRES — RS</span>
             </div>
           </div>
 
@@ -431,8 +431,8 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
           <div className="lg:col-span-5 relative">
             <div className="relative rounded-3xl overflow-hidden border border-[#d4af37]/35 shadow-[0_0_40px_rgba(0,0,0,0.8)] group">
               <img
-                src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=1000&q=80"
-                alt="Empresários conversando em ambiente sofisticado"
+                src="/images/poker-business-table.jpg"
+                alt="Mesa de poker com empresários descontraídos"
                 className="w-full h-80 sm:h-96 object-cover object-center group-hover:scale-105 transition-transform duration-700"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#07080d] via-[#07080d]/40 to-transparent"></div>
@@ -441,7 +441,7 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
                   Vales do Taquari & Rio Pardo
                 </span>
                 <p className="font-display font-bold text-sm text-white uppercase tracking-wider mt-1">
-                  Pessoas interessantes, boas conversas e novas oportunidades
+                  Pessoas interessantes, boas conversas e novas oportunidades à mesa
                 </p>
               </div>
             </div>
@@ -588,24 +588,28 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
         </div>
 
         {/* Grade dos Perfis */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
           {[
             { title: 'Empresários', desc: 'Proprietários e sócios de empresas da região', icon: 'business' },
             { title: 'Empreendedores', desc: 'Criadores de projetos inovadores e negócios em expansão', icon: 'rocket_launch' },
             { title: 'Investidores', desc: 'Interessados em oportunidades de investimento e parcerias', icon: 'trending_up' },
             { title: 'Executivos', desc: 'Diretores, superintendentes e tomadores de decisão', icon: 'groups' },
             { title: 'Profissionais Liberais', desc: 'Médicos, advogados, contadores, engenheiros e consultores', icon: 'workspace_premium' },
-            { title: 'Parceiros Regionais', desc: 'Lideranças e convidados do ecossistema empresarial regional', icon: 'handshake' },
+            { title: 'Gestores Públicos', desc: 'Lideranças do setor público, secretários e administradores regionais', icon: 'account_balance' },
+            { title: 'Lideranças Regionais', desc: 'Representantes de entidades empresariais e associações', icon: 'corporate_fare' },
+            { title: 'Parceiros Regionais', desc: 'Convidados do ecossistema Taquari e Rio Pardo', icon: 'handshake' },
           ].map((item, index) => (
             <div
               key={index}
-              className="bg-[#0b0e16] border border-white/10 hover:border-[#d4af37]/45 rounded-2xl p-5 sm:p-6 transition-all duration-300 hover:bg-[#101420] shadow-md"
+              className="bg-[#0b0e16] border border-white/10 hover:border-[#d4af37]/45 rounded-2xl p-5 sm:p-6 transition-all duration-300 hover:bg-[#101420] shadow-md flex flex-col justify-between"
             >
-              <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[#d4af37] mb-4">
-                <span className="material-icons-outlined text-xl">{item.icon}</span>
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[#d4af37] mb-4">
+                  <span className="material-icons-outlined text-xl">{item.icon}</span>
+                </div>
+                <h4 className="font-display font-bold text-base sm:text-lg text-white mb-1.5">{item.title}</h4>
+                <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">{item.desc}</p>
               </div>
-              <h4 className="font-display font-bold text-base sm:text-lg text-white mb-1.5">{item.title}</h4>
-              <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">{item.desc}</p>
             </div>
           ))}
         </div>
@@ -741,38 +745,92 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
             21 DE OUTUBRO DE 2026
           </h3>
           <p className="font-display text-sm sm:text-base text-[#d4af37] tracking-widest uppercase mb-8">
-            VENÂNCIO AIRES — RS
+            VARANDA • VENÂNCIO AIRES — RS
           </p>
 
-          <div className="max-w-md mx-auto p-4 rounded-2xl bg-black/50 border border-white/10 text-xs sm:text-sm text-gray-300">
-            <div className="font-bold text-white uppercase tracking-wider mb-1 flex items-center justify-center gap-1.5">
-              <span className="material-icons-outlined text-[#d4af37] text-sm">pin_drop</span>
+          <div className="max-w-md mx-auto p-5 rounded-2xl bg-black/60 border border-white/10 text-xs sm:text-sm text-gray-300">
+            <div className="font-bold text-white uppercase tracking-wider mb-2 flex items-center justify-center gap-1.5">
+              <span className="material-icons-outlined text-[#d4af37] text-base">pin_drop</span>
               <span>LOCAL DO EVENTO</span>
             </div>
-            <p className="text-gray-300 font-semibold text-sm">
+            <p className="text-white font-display font-black text-lg tracking-wider text-gold-gradient">
+              VARANDA
+            </p>
+            <p className="text-gray-400 mt-0.5">
               Venâncio Aires — RS
             </p>
             <p className="text-[11px] text-gray-500 mt-2">
-              O local específico e orientações de credenciamento serão enviados diretamente aos participantes confirmados.
+              Orientações de acesso e credenciamento serão enviadas diretamente aos participantes confirmados.
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── ESPAÇO PARA A MÍDIA (JORNAL E RÁDIOS PRESENTES) ── */}
+      <section className="py-16 sm:py-20 relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-[#0b0e17] border border-[#d4af37]/35 rounded-3xl p-8 sm:p-12 relative overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.7)]">
+          {/* Subtle gold decorative glow */}
+          <div className="absolute top-0 right-0 w-80 h-80 bg-[radial-gradient(circle,rgba(212,175,55,0.08)_0%,transparent_70%)] pointer-events-none"></div>
+
+          <div className="text-center max-w-2xl mx-auto mb-10">
+            <div className="inline-flex items-center gap-2 text-[#d4af37] text-xs font-mono tracking-widest uppercase mb-2">
+              <span className="material-icons-outlined text-sm">campaign</span> COBERTURA & PRESTÍGIO REGIONAL
+            </div>
+            <h3 className="font-display font-black text-2xl sm:text-4xl uppercase tracking-wider text-white mb-3">
+              ESPAÇO PARA A <span className="text-gold-gradient">MÍDIA</span>
+            </h3>
+            <p className="text-gray-300 text-sm sm:text-base leading-relaxed">
+              Jornal e rádios estarão presentes no evento, trazendo ampla cobertura de imprensa, entrevistas com empresários e registro de novas oportunidades regionais.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-3xl mx-auto">
+            <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/10 hover:border-[#d4af37]/45 transition-colors flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-[#d4af37]/10 border border-[#d4af37]/35 flex items-center justify-center text-[#d4af37] shrink-0">
+                <span className="material-icons-outlined text-2xl">newspaper</span>
+              </div>
+              <div>
+                <h4 className="font-display font-bold text-base text-white uppercase tracking-wider mb-1">
+                  Jornal & Mídia Impressa
+                </h4>
+                <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">
+                  Presença confirmada de jornal regional para matérias de negócios, coluna social e registro dos participantes.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/10 hover:border-[#d4af37]/45 transition-colors flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-[#d4af37]/10 border border-[#d4af37]/35 flex items-center justify-center text-[#d4af37] shrink-0">
+                <span className="material-icons-outlined text-2xl">radio</span>
+              </div>
+              <div>
+                <h4 className="font-display font-bold text-base text-white uppercase tracking-wider mb-1">
+                  Rádios Regionais
+                </h4>
+                <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">
+                  Emissoras de rádio ao vivo com flashes de cobertura, entrevistas com convidados e repercussão no ecossistema empresarial.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* ── 14. LISTA DE CONVIDADOS / EXCLUSIVIDADE ── */}
       <section className="py-12 relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/10">
+        <div className="p-6 sm:p-8 rounded-3xl bg-[#0c0f18] border border-[#d4af37]/45 shadow-[0_0_30px_rgba(212,175,55,0.12)]">
           <span className="text-[10px] font-mono text-[#d4af37] uppercase tracking-widest block mb-1">
-            Exclusividade & Conforto
+            Exclusividade & Conforto Absoluto
           </span>
-          <h4 className="font-display font-black text-lg text-white uppercase tracking-wider mb-2">
+          <h4 className="font-display font-black text-xl sm:text-2xl text-white uppercase tracking-wider mb-2">
             EVENTO PRIVADO
           </h4>
-          <p className="text-sm text-gray-300 leading-relaxed max-w-xl mx-auto">
-            O 1º Poker Business foi pensado para um público empresarial selecionado e terá número limitado de participantes.
+          <p className="text-sm sm:text-base text-gray-300 leading-relaxed max-w-xl mx-auto mb-4">
+            O 1º Poker Business foi planejado para proporcionar máxima interação, conexões genuínas e conforto entre líderes.
           </p>
-          <div className="mt-4 inline-block px-4 py-1 rounded-full bg-[#d4af37]/15 border border-[#d4af37]/40 text-[#f7e2a9] font-mono font-bold text-xs uppercase tracking-wider">
-            VAGAS LIMITADAS
+          <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#d4af37]/20 border border-[#d4af37]/60 text-[#f7e2a9] font-display font-black text-xs sm:text-sm uppercase tracking-wider shadow-[0_0_20px_rgba(212,175,55,0.3)]">
+            <span className="w-2 h-2 rounded-full bg-[#d4af37] animate-pulse"></span>
+            EVENTO RESTRITO A 50 CONVIDADOS
           </div>
         </div>
       </section>
@@ -885,24 +943,6 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
                   />
                 </div>
 
-                {/* E-mail */}
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-300 mb-1.5">
-                    E-mail <span className="text-[#d4af37]">*</span>
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    required
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    placeholder="seu@email.com"
-                    className="w-full bg-white/5 border border-white/10 focus:border-[#d4af37] rounded-xl px-4 py-3 text-white text-sm focus:outline-none transition-colors"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 {/* Cidade */}
                 <div>
                   <label className="block text-xs font-mono uppercase tracking-wider text-gray-300 mb-1.5">
@@ -917,7 +957,9 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
                     className="w-full bg-white/5 border border-white/10 focus:border-[#d4af37] rounded-xl px-4 py-3 text-white text-sm focus:outline-none transition-colors"
                   />
                 </div>
+              </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 {/* Segmento */}
                 <div>
                   <label className="block text-xs font-mono uppercase tracking-wider text-gray-300 mb-1.5">
@@ -932,26 +974,27 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
                     className="w-full bg-white/5 border border-white/10 focus:border-[#d4af37] rounded-xl px-4 py-3 text-white text-sm focus:outline-none transition-colors"
                   />
                 </div>
-              </div>
 
-              {/* Como ficou sabendo */}
-              <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-gray-300 mb-1.5">
-                  Como ficou sabendo do evento?
-                </label>
-                <select
-                  name="referralSource"
-                  value={formData.referralSource}
-                  onChange={handleInputChange}
-                  className="w-full bg-[#0d111c] border border-white/10 focus:border-[#d4af37] rounded-xl px-4 py-3 text-white text-sm focus:outline-none transition-colors"
-                >
-                  <option value="">Selecione uma opção...</option>
-                  <option value="Indicação de Colega / Amigo">Indicação de Colega / Amigo</option>
-                  <option value="Instagram / Redes Sociais">Instagram / Redes Sociais</option>
-                  <option value="Site Chip Race">Site Chip Race</option>
-                  <option value="Grupo Empresarial / Associação">Grupo Empresarial / Associação</option>
-                  <option value="Outro">Outro</option>
-                </select>
+                {/* Como ficou sabendo */}
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-300 mb-1.5">
+                    Como ficou sabendo do evento?
+                  </label>
+                  <select
+                    name="referralSource"
+                    value={formData.referralSource}
+                    onChange={handleInputChange}
+                    className="w-full bg-[#0d111c] border border-white/10 focus:border-[#d4af37] rounded-xl px-4 py-3 text-white text-sm focus:outline-none transition-colors"
+                  >
+                    <option value="">Selecione uma opção...</option>
+                    <option value="Indicação de Colega / Amigo">Indicação de Colega / Amigo</option>
+                    <option value="Instagram / Redes Sociais">Instagram / Redes Sociais</option>
+                    <option value="Site Chip Race">Site Chip Race</option>
+                    <option value="Grupo Empresarial / Associação">Grupo Empresarial / Associação</option>
+                    <option value="Exposição em evento">Exposição em evento</option>
+                    <option value="Outro">Outro</option>
+                  </select>
+                </div>
               </div>
 
               <div className="pt-4">
@@ -1020,7 +1063,7 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
           <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs sm:text-sm font-mono text-gray-300 mb-6">
             <span>21 DE OUTUBRO DE 2026</span>
             <span className="text-[#d4af37]">•</span>
-            <span>VENÂNCIO AIRES — RS</span>
+            <span>VARANDA • VENÂNCIO AIRES — RS</span>
             <span className="text-[#d4af37]">•</span>
             <span className="text-[#f7e2a9] font-bold">R$ 300</span>
           </div>
@@ -1034,8 +1077,8 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
             </button>
           </div>
 
-          <span className="text-xs font-mono text-gray-400 uppercase tracking-widest block">
-            Vagas limitadas.
+          <span className="text-xs font-mono text-[#f7e2a9] uppercase tracking-widest block font-bold">
+            Evento restrito a 50 convidados.
           </span>
         </div>
       </section>
@@ -1051,7 +1094,7 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
                   1º Poker Business
                 </span>
                 <span className="text-[10px] font-mono text-[#d4af37] tracking-wider">
-                  21.10.2026 • R$ 300
+                  21.10.2026 • Varanda • R$ 300
                 </span>
               </div>
             </div>

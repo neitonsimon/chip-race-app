@@ -294,7 +294,7 @@ export const ChipRaceHome: React.FC<ChipRaceHomeProps> = ({
               <div className="flex flex-wrap items-center gap-2 mb-3 relative z-20">
                 <span className="inline-flex items-center gap-1.5 font-mono text-[10px] sm:text-xs font-bold bg-[#d4af37]/20 text-[#f5d77f] border border-[#d4af37]/50 px-3 py-1 rounded-full backdrop-blur-md shadow-[0_0_12px_rgba(212,175,55,0.3)]">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37] animate-ping"></span>
-                  EVENTO ESPECIAL • 1ª EDIÇÃO
+                  1ª EDIÇÃO • RESTRITO A 50 CONVIDADOS
                 </span>
                 <span className="text-xs font-mono text-gray-300 hidden sm:inline-flex items-center gap-1">
                   <span className="text-[#d4af37]">♠</span> Experiência Corporativa Privada
@@ -315,6 +315,8 @@ export const ChipRaceHome: React.FC<ChipRaceHomeProps> = ({
                     <span className="font-bold text-white">21.10.2026</span>
                     <span>•</span>
                     <span className="material-icons-outlined text-xs text-[#d4af37]">place</span>
+                    <span className="font-semibold text-white">Varanda</span>
+                    <span>·</span>
                     <span>Venâncio Aires/RS</span>
                   </div>
                 </div>
@@ -451,12 +453,12 @@ export const ChipRaceHome: React.FC<ChipRaceHomeProps> = ({
                     <span className="text-xl text-[#d4af37] font-serif">♠</span>
                   </div>
                   <p className="font-body text-xs sm:text-sm text-gray-400 font-medium leading-relaxed group-hover:text-gray-200 transition-colors">
-                    Uma noite exclusiva de poker, gastronomia e networking empresarial em Venâncio Aires no dia 21 de Outubro.
+                    Uma noite exclusiva de poker, gastronomia e networking empresarial na Varanda em Venâncio Aires no dia 21 de Outubro.
                   </p>
                 </div>
 
                 <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between">
-                  <span className="text-[10px] font-mono text-[#d4af37] uppercase tracking-wider">21.10.2026</span>
+                  <span className="text-[10px] font-mono text-[#d4af37] uppercase tracking-wider">Varanda • 21.10.2026</span>
                   <button className="font-display text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#b88f28] text-black group-hover:scale-105 transition-all shadow-[0_0_12px_rgba(212,175,55,0.4)] font-bold">
                     CONHECER
                   </button>
