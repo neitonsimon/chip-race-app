@@ -240,17 +240,6 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
 
           {/* Top Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
-            <a
-              href="https://wa.me/5551992425186?text=Ol%C3%A1%2C%20gostaria%20de%20falar%20com%20o%20respons%C3%A1vel%20sobre%20o%201%C2%BA%20Poker%20Business."
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs font-mono text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30"
-              title="Falar no WhatsApp com o responsável: (51) 99242-5186"
-            >
-              <span className="material-icons-outlined text-sm">chat</span>
-              <span className="hidden sm:inline font-bold">Falar com Responsável</span>
-            </a>
-
             <button
               onClick={() => onNavigate('home')}
               className="text-xs font-mono text-gray-400 hover:text-white transition-colors flex items-center gap-1.5 px-3 py-2 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10"
@@ -258,15 +247,6 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
             >
               <span className="material-icons-outlined text-sm">arrow_back</span>
               <span className="hidden sm:inline">Menu Principal</span>
-            </button>
-            
-            {/* Fixed CTA button on desktop */}
-            <button
-              onClick={() => scrollToSection('inscricao')}
-              className="font-display text-xs font-black uppercase tracking-[0.15em] px-4 sm:px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#f7e2a9] to-[#b88f28] text-black shadow-[0_0_20px_rgba(212,175,55,0.35)] hover:shadow-[0_0_30px_rgba(212,175,55,0.6)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 cursor-pointer font-bold"
-            >
-              <span>QUERO PARTICIPAR</span>
-              <span className="material-icons-outlined text-sm font-bold">arrow_forward</span>
             </button>
           </div>
         </div>
@@ -1080,48 +1060,6 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
           <p className="text-gray-400 text-xs sm:text-sm leading-relaxed max-w-2xl mx-auto">
             No 1º Poker Business, nosso objetivo é proporcionar uma noite diferente: poker, descontração, boa gastronomia e pessoas reunidas em torno da mesma mesa.
           </p>
-        </div>
-      </section>
-
-      {/* ── 16. CTA FINAL ── */}
-      <section className="py-20 sm:py-28 relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <div className="rounded-3xl bg-gradient-to-b from-[#111522] via-[#0c0f18] to-[#07080d] border border-[#d4af37]/45 p-8 sm:p-14 shadow-[0_0_55px_rgba(0,0,0,0.8)]">
-          <h2 className="font-display font-black text-3xl sm:text-5xl uppercase tracking-[0.1em] text-white leading-tight mb-2">
-            1º POKER <span className="text-gold-gradient">BUSINESS</span>
-          </h2>
-          <p className="font-display font-bold text-xs sm:text-sm uppercase tracking-[0.25em] text-[#d4af37] mb-6">
-            POKER • DESCONTRAÇÃO • NETWORKING
-          </p>
-
-          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs sm:text-sm font-mono text-gray-300 mb-6">
-            <span>21 DE OUTUBRO DE 2026</span>
-            <span className="text-[#d4af37]">•</span>
-            <span>VARANDA • VENÂNCIO AIRES — RS</span>
-            <span className="text-[#d4af37]">•</span>
-            <span className="text-[#f7e2a9] font-bold">R$ 300</span>
-          </div>
-
-          <div className="max-w-md mx-auto mb-4 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <button
-              onClick={() => scrollToSection('inscricao')}
-              className="w-full sm:w-auto flex-1 font-display font-black text-sm uppercase tracking-[0.2em] py-4 px-6 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#f7e2a9] to-[#b88f28] text-black shadow-[0_0_30px_rgba(212,175,55,0.4)] hover:shadow-[0_0_45px_rgba(212,175,55,0.7)] hover:scale-105 active:scale-95 transition-all cursor-pointer font-bold"
-            >
-              QUERO PARTICIPAR
-            </button>
-            <a
-              href="https://wa.me/5551992425186?text=Ol%C3%A1%2C%20gostaria%20de%20falar%20com%20o%20respons%C3%A1vel%20sobre%20o%201%C2%BA%20Poker%20Business."
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full sm:w-auto font-display font-bold text-xs uppercase tracking-[0.16em] py-4 px-6 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 hover:text-emerald-200 transition-all backdrop-blur-md flex items-center justify-center gap-2 cursor-pointer shadow-[0_0_20px_rgba(16,185,129,0.2)]"
-            >
-              <span className="material-icons-outlined text-emerald-400 text-base">chat</span>
-              <span>FALAR COM RESPONSÁVEL</span>
-            </a>
-          </div>
-
-          <span className="text-xs font-mono text-[#f7e2a9] uppercase tracking-widest block font-bold">
-            Evento restrito a 50 convidados.
-          </span>
         </div>
       </section>
 
