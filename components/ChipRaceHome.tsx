@@ -50,10 +50,6 @@ export const ChipRaceHome: React.FC<ChipRaceHomeProps> = ({
     {
       question: "O que é o Mystery Jackpot e como concorrer?",
       answer: "O Mystery Jackpot é ativado em torneios específicos onde eliminações garantem envelopes mistério com premiações imediatas em dinheiro e recompensas instantâneas depositadas no seu saldo."
-    },
-    {
-      question: "Como funcionam as apostas no Chip Race Bet?",
-      answer: "No Chip Race Bet, você pode apostar nos jogadores das mesas finais, heads-up e confrontos diretos com cotações dinâmicas calculadas com base nas probabilidades e fichas em jogo."
     }
   ];
 
@@ -408,63 +404,7 @@ export const ChipRaceHome: React.FC<ChipRaceHomeProps> = ({
         {/* 3. MESA PRINCIPAL DE CARTAS & FICHAS DE PÔQUER (GRID DE MENUS)          */}
         {/* ========================================================================= */}
         <div className="mb-10">
-          <div className="flex items-center justify-between mb-4 px-1">
-            <div className="flex items-center gap-2">
-              <span className="text-[#00e0ff] text-xl font-serif">♠</span>
-              <h3 className="font-display font-black text-lg sm:text-xl uppercase tracking-wider text-white">
-                NAVEGAÇÃO OFICIAL DA MESA
-              </h3>
-            </div>
-            <span className="text-[11px] font-mono text-gray-400 tracking-wider">
-              CIRCUITO CHIP RACE
-            </span>
-          </div>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-
-            {/* CARD 0: POKER BUSINESS */}
-            <div
-              onClick={() => navigateTo('poker-business')}
-              className="group relative rounded-2xl overflow-hidden border-2 border-[#d4af37]/50 hover:border-[#f5d77f] bg-[#0d101a] transition-all duration-500 hover:-translate-y-1.5 shadow-[0_0_20px_rgba(212,175,55,0.2)] hover:shadow-[0_0_35px_rgba(212,175,55,0.5)] cursor-pointer flex flex-col justify-between"
-            >
-              <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-[#d4af37] pointer-events-none z-20"></div>
-              <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-[#d4af37] pointer-events-none z-20"></div>
-
-              {/* Banner visual */}
-              <div className="relative h-44 sm:h-48 overflow-hidden">
-                <div
-                  className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
-                  style={{ backgroundImage: "url('https://images.unsplash.com/photo-1511193311914-0346f16efe90?auto=format&fit=crop&w=800&q=80')" }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0d101a] via-[#0d101a]/60 to-transparent"></div>
-                <div className="absolute top-3 left-3 bg-black/70 border border-[#d4af37]/50 px-2.5 py-1 rounded-lg backdrop-blur-md flex items-center gap-1.5">
-                  <span className="material-icons text-[#d4af37] text-sm">stars</span>
-                  <span className="text-[10px] font-display font-black tracking-widest text-[#f5d77f] uppercase">EVENTO ESPECIAL</span>
-                </div>
-              </div>
-
-              {/* Conteúdo textual */}
-              <div className="p-5 pt-0 flex flex-col flex-1 justify-between relative z-10">
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <h4 className="font-display font-black text-xl uppercase tracking-wider text-white group-hover:text-[#f5d77f] transition-colors">
-                      POKER BUSINESS
-                    </h4>
-                    <span className="text-xl text-[#d4af37] font-serif">♠</span>
-                  </div>
-                  <p className="font-body text-xs sm:text-sm text-gray-400 font-medium leading-relaxed group-hover:text-gray-200 transition-colors">
-                    Uma noite exclusiva de poker, gastronomia e networking empresarial na Varanda em Venâncio Aires no dia 21 de Outubro.
-                  </p>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between">
-                  <span className="text-[10px] font-mono text-[#d4af37] uppercase tracking-wider">Varanda • 21.10.2026</span>
-                  <button className="font-display text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#b88f28] text-black group-hover:scale-105 transition-all shadow-[0_0_12px_rgba(212,175,55,0.4)] font-bold">
-                    CONHECER
-                  </button>
-                </div>
-              </div>
-            </div>
 
             {/* CARD 1: RANKING */}
             <div
@@ -554,49 +494,6 @@ export const ChipRaceHome: React.FC<ChipRaceHomeProps> = ({
               </div>
             </div>
 
-            {/* CARD 3: BET */}
-            <div
-              onClick={() => navigateTo('bet')}
-              className="group relative rounded-2xl overflow-hidden border-2 border-red-500/40 hover:border-red-500 bg-[#16070a] transition-all duration-500 hover:-translate-y-1.5 shadow-[0_0_20px_rgba(239,68,68,0.15)] hover:shadow-[0_0_35px_rgba(239,68,68,0.45)] cursor-pointer flex flex-col justify-between"
-            >
-              <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-red-500 pointer-events-none z-20"></div>
-              <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-red-500 pointer-events-none z-20"></div>
-
-              {/* Banner visual de poker */}
-              <div className="relative h-44 sm:h-48 overflow-hidden">
-                <div
-                  className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
-                  style={{ backgroundImage: "url('/images/home/bet-card.jpg')" }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#16070a] via-[#16070a]/60 to-transparent"></div>
-                <div className="absolute top-3 left-3 bg-black/60 border border-red-500/40 px-2.5 py-1 rounded-lg backdrop-blur-md flex items-center gap-1.5">
-                  <span className="material-icons text-red-500 text-sm animate-pulse">local_fire_department</span>
-                  <span className="text-[10px] font-display font-black tracking-widest text-red-400 uppercase">HIGH STAKES</span>
-                </div>
-              </div>
-
-              {/* Conteúdo textual */}
-              <div className="p-5 pt-0 flex flex-col flex-1 justify-between relative z-10">
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <h4 className="font-display font-black text-xl uppercase tracking-wider text-white group-hover:text-red-400 transition-colors">
-                      BET
-                    </h4>
-                    <span className="text-xl text-red-500 font-serif">♥</span>
-                  </div>
-                  <p className="font-body text-xs sm:text-sm text-gray-400 font-medium leading-relaxed group-hover:text-gray-200 transition-colors">
-                    Aposte nos eventos da Chip Race! Palpites ao vivo, confrontos diretos Heads-Up e cotações dinâmicas nas mesas finais.
-                  </p>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between">
-                  <span className="text-[10px] font-mono text-gray-400 uppercase tracking-wider">Apostas & Odds</span>
-                  <button className="font-display text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-gradient-to-r from-red-500 to-red-700 text-white group-hover:scale-105 transition-all shadow-[0_0_12px_rgba(239,68,68,0.5)]">
-                    APOSTAR
-                  </button>
-                </div>
-              </div>
-            </div>
 
             {/* CARD 4: CALENDÁRIO */}
             <div
@@ -798,7 +695,7 @@ export const ChipRaceHome: React.FC<ChipRaceHomeProps> = ({
                       PAINEL ADM
                     </h4>
                     <p className="font-body text-xs sm:text-sm text-gray-400 font-medium leading-relaxed mt-2 group-hover:text-gray-200 transition-colors">
-                      Central de gerenciamento completo do clube: inscrições, caixas, bets, mensagens e parâmetros de torneios.
+                      Central de gerenciamento completo do clube: inscrições, caixas, mensagens e parâmetros de torneios.
                     </p>
                   </div>
 

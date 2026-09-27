@@ -57,10 +57,6 @@
                 "view": "jackpot"
             },
             {
-                "label": "Apostas Bet",
-                "view": "bet"
-            },
-            {
                 "label": "Poker Business",
                 "view": "poker-business"
             },
