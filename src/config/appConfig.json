@@ -184,7 +184,7 @@
         "qualifyingMethods": [
             {
                 "id": "rankings",
-                "title": "Rankings",
+                "title": "Ranking",
                 "desc": "A principal porta de entrada. Pontue no Live e Online para garantir sua vaga.",
                 "icon": "leaderboard",
                 "color": "text-primary",
@@ -204,23 +204,23 @@
             },
             {
                 "id": "red-omaha",
-                "title": "Last Longer",
-                "desc": "Aposte em quem vai mais longe. Uma disputa de resistência paralela ao torneio.",
+                "title": "Satélite",
+                "desc": "Classifique-se através dos torneios satélites oficiais da temporada.",
                 "icon": "timer",
                 "color": "text-secondary",
                 "badge": "bg-secondary/20 text-secondary border-secondary/40",
                 "glow": "shadow-neon-blue",
-                "rules": "\n              1. Disputa de resistência paralela realizada em torneios selecionados.\n              2. Os jogadores pagam uma inscrição extra para o Last Longer. O último jogador restante deste grupo (o que cair por último no torneio) leva a vaga.\n              3. Válido apenas para quem se inscrever no Last Longer antes do início do torneio.\n          "
+                "rules": "\n              1. Torneios Satélites oficiais realizados ao longo da temporada classificatória.\n              2. Cada satélite distribui vagas diretas para o The Chosen 30K conforme a estrutura divulgada no evento.\n              3. Vagas conquistadas via Satélite também contabilizam para o sistema de Bônus de Stack.\n          "
             },
             {
                 "id": "bet",
-                "title": "Bet",
-                "desc": "Desafios de apostas e repescagem. A última chance de entrar no THE CHOSEN 2026.",
+                "title": "Cash Game",
+                "desc": "Dispute as sessões e ligas oficiais de Cash Game e garanta sua vaga no The Chosen 30K.",
                 "icon": "casino",
                 "color": "text-cyan-500",
                 "badge": "bg-cyan-500/20 text-cyan-500 border-cyan-500/40",
                 "glow": "shadow-[0_0_20px_rgba(168,85,247,0.5)]",
-                "rules": "\n              1. Campanhas promocionais de apostas esportivas parceiras da Chip Race.\n              2. Desafios de repescagem através do \"Bet\": Sorteios de vagas entre os bolhas dos torneios Major.\n              3. Regras específicas são divulgadas a cada campanha \"Bet & Win\".\n          "
+                "rules": "\n              1. Classificação conquistada através das ligas e sessões oficiais de Cash Game da Chip Race.\n              2. Dispute as rodadas de Cash Game oficial, suba na classificação e garanta sua vaga no The Chosen 30K.\n              3. Regras específicas de pontuação e metas são definidas em cada liga/etapa de Cash Game.\n          "
             },
             {
                 "id": "get-up",
@@ -234,7 +234,7 @@
             },
             {
                 "id": "sit-n-go",
-                "title": "SNG / Sat",
+                "title": "Sit and Go",
                 "desc": "Para quem joga caro. Os campeões dos HRs mensais garantem vaga direta.",
                 "icon": "satellite_alt",
                 "color": "text-primary",
@@ -244,23 +244,23 @@
             },
             {
                 "id": "quests",
-                "title": "Quests",
-                "desc": "Missões diárias e desafios secretos que desbloqueiam vagas para o The Chosen.",
+                "title": "Mystery",
+                "desc": "Envelopes surpresa e desafios Mystery que desbloqueiam vagas para o The Chosen 30K.",
                 "icon": "explore",
                 "color": "text-primary",
                 "badge": "bg-primary/20 text-primary border-primary/40",
                 "glow": "shadow-neon-pink",
-                "rules": "\n              1. Complete missões diárias no App (ex: Jogue 50 mãos, Ganhe com AA, etc) para ganhar fragmentos.\n              2. Junte fragmentos suficientes para trocar por um Ticket The Chosen na loja do clube.\n              3. Existem \"Quests Secretas\" presenciais que são reveladas apenas durante os eventos ao vivo.\n          "
+                "rules": "\n              1. Modalidade de classificação através dos eventos e envelopes Mystery da Chip Race.\n              2. Jogadores que conquistarem o envelope ou prêmio de vaga Mystery garantem acesso ao The Chosen 30K.\n              3. Válido nos torneios e ações especiais com a dinâmica Mystery ativa.\n          "
             },
             {
                 "id": "ladies-league",
-                "title": "VIP",
-                "desc": "Torneio especial e exclusivo focado em promover a experiência VIP.",
+                "title": "Copa",
+                "desc": "Torneio especial da Copa do Mundo Chip Race que garante vaga direta no The Chosen 30K.",
                 "icon": "diamond",
                 "color": "text-primary",
                 "badge": "bg-primary/20 text-primary border-primary/40",
                 "glow": "shadow-neon-pink",
-                "rules": "\n              1. Torneio restrito a jogadores que atingiram o status VIP na plataforma ou no clube.\n              2. O evento VIP ocorre trimestralmente e distribui múltiplas vagas para o The Chosen.\n              3. Jogadores VIPs têm buy-in descontado ou freebuy dependendo do nível de fidelidade.\n          "
+                "rules": "\n              1. Competição especial da Copa do Mundo Chip Race realizada durante a temporada.\n              2. O grande campeão e os classificados definidos no regulamento da Copa garantem vaga direta para o The Chosen 30K.\n              3. Disputada em fase de grupos e eliminatórias Heads-Up.\n          "
             }
         ]
     },
@@ -463,7 +463,7 @@
         "parallelProducts": [
             {
                 "id": "last-longer",
-                "label": "Last Longer",
+                "label": "Satélite",
                 "style": "text-pink-400 border-pink-500/30 bg-pink-500/10"
             },
             {
@@ -473,7 +473,7 @@
             },
             {
                 "id": "bet",
-                "label": "Bet",
+                "label": "Cash Game",
                 "style": "text-green-400 border-green-500/30 bg-green-500/10"
             },
             {
@@ -488,7 +488,7 @@
             },
             {
                 "id": "sit-n-go",
-                "label": "Sit & Go",
+                "label": "Sit and Go",
                 "style": "text-gray-400 border-gray-500/30 bg-gray-500/10"
             }
         ]

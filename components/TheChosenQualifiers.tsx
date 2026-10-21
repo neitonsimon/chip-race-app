@@ -9,14 +9,14 @@ interface TheChosenQualifiersProps {
 }
 
 const MODES: { id: QualificationMode; label: string; icon: string; color: string }[] = [
-    { id: 'rankings', label: 'Rankings', icon: 'leaderboard', color: 'text-pink-500' },
+    { id: 'rankings', label: 'Ranking', icon: 'leaderboard', color: 'text-pink-500' },
     { id: 'jackpot', label: 'Jackpot', icon: 'attach_money', color: 'text-blue-400' },
-    { id: 'last_longer', label: 'Last Longer', icon: 'schedule', color: 'text-green-400' },
-    { id: 'bet', label: 'Bet', icon: 'casino', color: 'text-cyan-400' },
-    { id: 'bet_up', label: 'Bet Up', icon: 'psychology', color: 'text-cyan-400' },
-    { id: 'sng_sat', label: 'SnG / Sat', icon: 'layers', color: 'text-fuchsia-500' },
-    { id: 'quests', label: 'Quests', icon: 'explore', color: 'text-cyan-500' },
-    { id: 'vip', label: 'VIP', icon: 'diamond', color: 'text-pink-400' },
+    { id: 'last_longer', label: 'Satélite', icon: 'schedule', color: 'text-green-400' },
+    { id: 'bet', label: 'Cash Game', icon: 'casino', color: 'text-cyan-400' },
+    { id: 'bet_up', label: 'Get Up', icon: 'psychology', color: 'text-cyan-400' },
+    { id: 'sng_sat', label: 'Sit and Go', icon: 'layers', color: 'text-fuchsia-500' },
+    { id: 'quests', label: 'Mystery', icon: 'explore', color: 'text-cyan-500' },
+    { id: 'vip', label: 'Copa', icon: 'diamond', color: 'text-pink-400' },
 ];
 
 interface PlayerSummary {
@@ -142,8 +142,8 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
                 await supabase.from('messages').insert([{
                     user_id: selectedUserId,
                     sender: 'Chip Race',
-                    subject: '✨ Vaga Garantida: The Chosen 2026',
-                    content: `Parabéns! Você acaba de conquistar sua classificação para o capítulo final do The Chosen 2026 via ${modeLabel}. Nos vemos na grande final!`,
+                    subject: '✨ Vaga Garantida: The Chosen 30K',
+                    content: `Parabéns! Você acaba de conquistar sua classificação para o capítulo final do The Chosen 30K via ${modeLabel}. Nos vemos na grande final!`,
                     category: 'tournament',
                     is_read: false
                 }]);

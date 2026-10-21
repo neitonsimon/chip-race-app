@@ -12,7 +12,7 @@ interface FAQSectionProps {
 }
 
 const DEFAULT_FAQS: FAQItem[] = [
-    { question: "Como faço para participar do The Chosen?", answer: "Você pode participar alcançando os primeiros lugares nos Rankings, ganhando um Satélite Jackpot, ou através de um Sit & Go Satélite entre outras opções divulgadas." },
+    { question: "Como faço para participar do The Chosen?", answer: "Você pode participar conquistando sua vaga através de um dos 8 modos oficiais: Ranking, Cash Game, Jackpot, Sit and Go, Mystery, Satélite, Get Up ou Copa." },
     { question: "O que é o Ecossistema Chip Race?", answer: "É uma rede de torneios, clubes e plataformas interligadas que oferecem diversas formas de qualificação e prêmios. Inclui o QG Chip Race, Poker Online, e mais." },
     { question: "Posso transferir minha vaga?", answer: "As vagas diretas para o The Chosen são nominais e intransferíveis na maioria dos casos. Verifique o regulamento específico de cada modo." },
     { question: "Como funciona o Ranking Anual?", answer: "Acumule pontos em nossos eventos semanais, mensais e especiais ao longo do ano. Os top 10 ganham vaga direta no The Chosen." }

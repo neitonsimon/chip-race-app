@@ -45,7 +45,7 @@ export const ChipRaceHome: React.FC<ChipRaceHomeProps> = ({
     },
     {
       question: "Como posso garantir minha vaga para o The Chosen 30K?",
-      answer: "A vaga para o The Chosen 30K é conquistada pelos melhores colocados no ranking ao longo da temporada, vencedores de etapas especiais designadas e através de satélites exclusivos anunciados no calendário."
+      answer: "A vaga para o The Chosen 30K pode ser conquistada através dos 8 modos oficiais de classificação: Ranking, Cash Game, Jackpot, Sit and Go, Mystery, Satélite, Get Up e Copa."
     },
     {
       question: "O que é o Mystery Jackpot e como concorrer?",

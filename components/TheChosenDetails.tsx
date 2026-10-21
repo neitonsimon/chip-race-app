@@ -31,7 +31,7 @@ const DEFAULT_CONTENT = appConfig.initialDefaults.contentDB.details;
 // Mapeamento dos Regulamentos (Cópia fiel do conteúdo de TournamentCategories para consistência)
 const REGULATIONS_DATA: Record<string, { title: string; icon: string; color: string; rules: string }> = {
     'rank': {
-        title: 'Rankings 2026',
+        title: 'Ranking',
         icon: 'leaderboard',
         color: 'text-primary',
         rules: `
@@ -76,7 +76,7 @@ const REGULATIONS_DATA: Record<string, { title: string; icon: string; color: str
           `
     },
     'sitngo': {
-        title: 'Sit & Go Satélite',
+        title: 'Sit and Go',
         icon: 'satellite_alt',
         color: 'text-primary',
         rules: `
@@ -86,43 +86,43 @@ const REGULATIONS_DATA: Record<string, { title: string; icon: string; color: str
           `
     },
     'll': { // ID mapeado para "Last Longer" conforme App.tsx
-        title: 'Last Longer',
+        title: 'Satélite',
         icon: 'timer',
         color: 'text-secondary',
         rules: `
-  1. Disputa de resistência paralela realizada em torneios selecionados.
-  2. Os jogadores pagam uma inscrição extra para o Last Longer. O último jogador restante deste grupo (o que cair por último no torneio) leva a vaga.
-  3. Válido apenas para quem se inscrever no Last Longer antes do início do torneio.
+  1. Torneios Satélites oficiais realizados ao longo da temporada classificatória.
+  2. Cada satélite distribui vagas diretas para o The Chosen 30K conforme a estrutura divulgada no evento.
+  3. Vagas conquistadas via Satélite também contabilizam para o sistema de Bônus de Stack.
           `
     },
     'vip': { // ID mapeado para "Vip's" conforme App.tsx
-        title: "Vip's",
+        title: "Copa",
         icon: 'diamond',
         color: 'text-primary',
         rules: `
-  1. Torneio restrito a jogadores que atingiram o status VIP na plataforma ou no clube.
-  2. O evento VIP ocorre trimestralmente e distribui múltiplas vagas para o The Chosen.
-  3. Jogadores VIPs têm buy-in descontado ou freebuy dependendo do nível de fidelidade.
+  1. Competição especial da Copa do Mundo Chip Race realizada durante a temporada.
+  2. O grande campeão e os classificados definidos no regulamento da Copa garantem vaga direta para o The Chosen 30K.
+  3. Disputada em fase de grupos e eliminatórias Heads-Up.
           `
     },
     'bet': {
-        title: 'Bet',
+        title: 'Cash Game',
         icon: 'casino',
         color: 'text-cyan-500',
         rules: `
-  1. Campanhas promocionais de apostas esportivas parceiras da Chip Race.
-  2. Desafios de repescagem através do "Bet": Sorteios de vagas entre os bolhas dos torneios Major.
-  3. Regras específicas são divulgadas a cada campanha "Bet & Win".
+  1. Classificação conquistada através das ligas e sessões oficiais de Cash Game da Chip Race.
+  2. Dispute as rodadas de Cash Game oficial, suba na classificação e garanta sua vaga no The Chosen 30K.
+  3. Regras específicas de pontuação e metas são definidas em cada liga/etapa de Cash Game.
           `
     },
     'quest': {
-        title: 'Quests',
+        title: 'Mystery',
         icon: 'explore',
         color: 'text-primary',
         rules: `
-  1. Complete missões diárias no App (ex: Jogue 50 mãos, Ganhe com AA, etc) para ganhar fragmentos.
-  2. Junte fragmentos suficientes para trocar por um Ticket The Chosen na loja do clube.
-  3. Existem "Quests Secretas" presenciais que são reveladas apenas durante os eventos ao vivo.
+  1. Modalidade de classificação através dos eventos e envelopes Mystery da Chip Race.
+  2. Jogadores que conquistarem o envelope ou prêmio de vaga Mystery garantem acesso ao The Chosen 30K.
+  3. Válido nos torneios e ações especiais com a dinâmica Mystery ativa.
           `
     },
     'sat': {

@@ -55,14 +55,14 @@ export const TheChosenRegulations: React.FC<RegulationsProps> = ({ onBack, prize
                                     <p className="text-sm">
                                         Caso o jogador conquiste novas vagas através de <strong>modalidades diferentes</strong> de classificação (ex: ganhou via Ranking e depois via Jackpot), ele acumula <strong>25.000 fichas adicionais</strong> diretamente ao seu Stack Inicial para cada nova modalidade conquistada.
                                         <br />
-                                        <em className="text-gray-400 text-xs block mt-1">Exemplo: Vaga via Ranking (25k) + Vaga via Torneio Major (25k) = Inicia o dia com 50.000 fichas.</em>
+                                        <em className="text-gray-400 text-xs block mt-1">Exemplo: Vaga via Ranking (25k) + Vaga via Get Up ou Copa (25k) = Inicia o dia com 50.000 fichas.</em>
                                     </p>
                                 </div>
 
                                 <div className="bg-white/5 p-4 rounded-lg border-l-4 border-secondary">
                                     <p className="mb-2"><strong>2.3. Bônus por Reincidência (Rebuy/Add-on):</strong></p>
                                     <p className="text-sm">
-                                        Caso o jogador conquiste novas vagas dentro da <strong>mesma modalidade</strong> de classificação (ex: ganhou 2 satélites Jackpot), o bônus de <strong>25.000 fichas</strong> será aplicado exclusivamente como acréscimo ao realizar uma Recompra (Rebuy) ou Add-on durante o evento.
+                                        Caso o jogador conquiste novas vagas dentro da <strong>mesma modalidade</strong> de classificação (ex: ganhou 2 vagas em Sit and Go ou Satélite), o bônus de <strong>25.000 fichas</strong> será aplicado exclusivamente como acréscimo ao realizar uma Recompra (Rebuy) ou Add-on durante o evento.
                                         <br />
                                         <em className="text-gray-400 text-xs block mt-1">Exemplo: Ganhou 2 satélites. Inicia com 25k. Se fizer Rebuy, recebe as fichas do Rebuy + 25k de bônus extra.</em>
                                     </p>
