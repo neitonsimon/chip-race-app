@@ -25,6 +25,9 @@ interface PlayerSummary {
     qualifications: Record<QualificationMode, number>;
     totalCount: number;
     initialStack: number;
+    initialBonus: number;
+    rebuyStack: number;
+    addonStack: number;
     bonusStack: number;
 }
 
@@ -192,6 +195,9 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
                 },
                 totalCount: 0,
                 initialStack: 0,
+                initialBonus: 0,
+                rebuyStack: 0,
+                addonStack: 0,
                 bonusStack: 0
             };
         }
@@ -204,11 +210,15 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
         const totalQuals = player.totalCount;
 
         // Rules:
-        // Initial Stack: 25k + (UniqueModes - 1) * 25k
-        player.initialStack = uniqueModes > 0 ? 25 + (uniqueModes - 1) * 25 : 0;
+        // Base stacks for all qualifiers: Stack Inicial = 25k, Rebuy = 25k, Add-on = 50k
+        // Cross-category bonus (diferentes categorias): +25k per extra unique mode added to Stack Inicial
+        player.initialBonus = uniqueModes > 0 ? (uniqueModes - 1) * 25 : 0;
+        player.initialStack = uniqueModes > 0 ? 25 + player.initialBonus : 0;
 
-        // Rebuy/Addon Bonus: (Total - Unique) * 25k
+        // Same-category repeat bonus (mesma categoria): +25k per repeated mode added to Rebuy (base 25k) and Add-on (base 50k)
         player.bonusStack = (totalQuals - uniqueModes) * 25;
+        player.rebuyStack = uniqueModes > 0 ? 25 + player.bonusStack : 0;
+        player.addonStack = uniqueModes > 0 ? 50 + player.bonusStack : 0;
 
         return player;
     }).sort((a, b) => b.initialStack - a.initialStack || b.bonusStack - a.bonusStack);
@@ -253,8 +263,12 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
                                 </div>
                             </th>
                         ))}
-                        <th className="pb-4 text-center px-2 md:px-4 text-primary whitespace-nowrap">Stack</th>
-                        <th className="pb-4 text-center px-2 md:px-4 text-secondary whitespace-nowrap">Bônus</th>
+                        <th className="pb-4 text-center px-1.5 md:px-3 text-primary whitespace-nowrap">
+                            <span className="md:hidden">Inicial</span>
+                            <span className="hidden md:inline">Stack Inicial</span>
+                        </th>
+                        <th className="pb-4 text-center px-1.5 md:px-3 text-secondary whitespace-nowrap">Rebuy</th>
+                        <th className="pb-4 text-center px-1.5 md:px-3 text-amber-400 whitespace-nowrap">Add-on</th>
                         <th className="pb-4 text-right pr-4 md:pr-6 text-gray-500">
                             <span className="lg:hidden">Detalhes</span>
                             <span className="hidden lg:inline">{isAdmin ? 'Ações' : ''}</span>
@@ -264,13 +278,13 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
                 <tbody>
                     {isLoading ? (
                         <tr>
-                            <td colSpan={11} className="py-20 text-center text-gray-500 font-bold uppercase tracking-widest animate-pulse">
+                            <td colSpan={13} className="py-20 text-center text-gray-500 font-bold uppercase tracking-widest animate-pulse">
                                 Carregando dados...
                             </td>
                         </tr>
                     ) : summaries.length === 0 ? (
                         <tr>
-                            <td colSpan={11} className="py-20 text-center text-gray-500 italic">
+                            <td colSpan={13} className="py-20 text-center text-gray-500 italic">
                                 Nenhum jogador classificado ainda.
                             </td>
                         </tr>
@@ -345,17 +359,46 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
                                             );
                                         })}
 
-                                        {/* Stack Info */}
-                                        <td className="bg-white/5 backdrop-blur-md py-4 text-center border-y border-white/5 px-2">
-                                            <span className="text-sm md:text-lg lg:text-xl font-display font-black text-primary text-glow-pink">
-                                                {player.initialStack > 0 ? `${player.initialStack}k` : '-'}
-                                            </span>
+                                        {/* Stack Inicial (Base 25k + Bônus de Categorias Diferentes) */}
+                                        <td className="bg-white/5 backdrop-blur-md py-4 text-center border-y border-white/5 px-1.5 md:px-3">
+                                            <div className="flex flex-col items-center justify-center">
+                                                <span className={`text-sm md:text-lg lg:text-xl font-display font-black ${player.initialBonus > 0 ? 'text-primary text-glow-pink' : 'text-white'}`}>
+                                                    {player.initialStack}k
+                                                </span>
+                                                {player.initialBonus > 0 && (
+                                                    <span className="text-[8px] md:text-[9px] font-mono font-bold text-primary/80 uppercase tracking-tight">
+                                                        25k + {player.initialBonus}k
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
 
-                                        <td className="bg-white/5 backdrop-blur-md py-4 text-center border-y border-white/5 px-2">
-                                            <span className="text-sm md:text-base lg:text-lg font-display font-black text-secondary">
-                                                {player.bonusStack > 0 ? `+${player.bonusStack}k` : '-'}
-                                            </span>
+                                        {/* Rebuy Stack (Base 25k + Bônus de Mesma Categoria) */}
+                                        <td className="bg-white/5 backdrop-blur-md py-4 text-center border-y border-white/5 px-1.5 md:px-3">
+                                            <div className="flex flex-col items-center justify-center">
+                                                <span className={`text-sm md:text-lg lg:text-xl font-display font-black ${player.bonusStack > 0 ? 'text-secondary text-glow-blue' : 'text-gray-300'}`}>
+                                                    {player.rebuyStack}k
+                                                </span>
+                                                {player.bonusStack > 0 && (
+                                                    <span className="text-[8px] md:text-[9px] font-mono font-bold text-secondary/80 uppercase tracking-tight">
+                                                        25k + {player.bonusStack}k
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </td>
+
+                                        {/* Add-on Stack (Base 50k + Bônus de Mesma Categoria) */}
+                                        <td className="bg-white/5 backdrop-blur-md py-4 text-center border-y border-white/5 px-1.5 md:px-3">
+                                            <div className="flex flex-col items-center justify-center">
+                                                <span className={`text-sm md:text-lg lg:text-xl font-display font-black ${player.bonusStack > 0 ? 'text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.35)]' : 'text-gray-300'}`}>
+                                                    {player.addonStack}k
+                                                </span>
+                                                {player.bonusStack > 0 && (
+                                                    <span className="text-[8px] md:text-[9px] font-mono font-bold text-amber-400/80 uppercase tracking-tight">
+                                                        50k + {player.bonusStack}k
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
 
                                         {/* Mobile Expansion / Actions */}
@@ -393,7 +436,7 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
                                     {/* Expansion Detail Row */}
                                     {isExpanded && (
                                         <tr className="lg:hidden animate-in slide-in-from-top-2 duration-300">
-                                            <td colSpan={11} className="bg-white/2 backdrop-blur-md rounded-b-2xl border-x border-b border-white/5 p-4 relative z-0">
+                                            <td colSpan={13} className="bg-white/2 backdrop-blur-md rounded-b-2xl border-x border-b border-white/5 p-4 relative z-0">
                                                 <div className="grid grid-cols-4 gap-4 py-2">
                                                     {MODES.map(mode => {
                                                         const count = player.qualifications[mode.id];
@@ -402,8 +445,13 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
                                                                 <span className={`material-icons-outlined text-xl ${count > 0 ? mode.color : 'text-gray-700 opacity-20'}`}>{mode.icon}</span>
                                                                 <span className="text-[8px] font-black uppercase text-gray-500 text-center">{mode.label}</span>
                                                                 {count > 0 ? (
-                                                                    <div className="w-5 h-5 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center">
-                                                                        <span className="material-icons-outlined text-[10px] text-green-400 font-bold">check</span>
+                                                                    <div className="flex flex-col items-center gap-0.5">
+                                                                        <div className="w-5 h-5 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center">
+                                                                            <span className="material-icons-outlined text-[10px] text-green-400 font-bold">check</span>
+                                                                        </div>
+                                                                        {count > 1 && (
+                                                                            <span className="text-[8px] font-black text-secondary uppercase">+{count - 1} Bônus</span>
+                                                                        )}
                                                                     </div>
                                                                 ) : <span className="text-[10px] text-gray-800">-</span>}
                                                             </div>
@@ -431,19 +479,19 @@ export const TheChosenQualifiers: React.FC<TheChosenQualifiersProps> = ({
                     <li className="flex gap-3">
                         <span className="text-pink-500 font-black">•</span>
                         <p className="text-gray-300">
-                            <span className="text-white font-bold">Qualificação Base:</span> A classificação em qualquer um dos 8 modos garante a entrada no capítulo final com o stack inicial de <span className="text-yellow-400 font-bold">25k fichas</span>.
+                            <span className="text-white font-bold">Stacks Padrão (1ª Vaga):</span> A classificação em qualquer um dos 8 modos garante entrada no capítulo final com <span className="text-yellow-400 font-bold">25k fichas iniciais</span>, direito a Rebuy de <span className="text-yellow-400 font-bold">25k fichas</span> e Add-on de <span className="text-yellow-400 font-bold">50k fichas</span>.
                         </p>
                     </li>
                     <li className="flex gap-3">
                         <span className="text-pink-500 font-black">•</span>
                         <p className="text-gray-300">
-                            <span className="text-white font-bold">Bônus de Stack Inicial (Qualificação Cruzada):</span> Já estando classificado, uma nova classificação em um dos 7 modos restantes (diferente do primeiro) soma <span className="text-primary font-bold">+25k fichas</span> ao stack inicial.
+                            <span className="text-white font-bold">Bônus de Stack Inicial (Categorias Diferentes):</span> Cada nova classificação conquistada em uma <span className="text-white font-bold">modalidade diferente</span> soma <span className="text-primary font-bold">+25k fichas</span> diretamente na coluna <span className="text-primary font-bold">Stack Inicial</span>.
                         </p>
                     </li>
                     <li className="flex gap-3">
                         <span className="text-pink-500 font-black">•</span>
                         <p className="text-gray-300">
-                            <span className="text-white font-bold">Bônus de Rebuy/Add-on (Reincidência):</span> Uma segunda classificação no <span className="text-white font-bold">mesmo modo</span> não soma ao inicial, mas garante <span className="text-secondary font-bold">25k fichas extras</span> para serem adicionadas ao fazer Rebuy ou Add-on.
+                            <span className="text-white font-bold">Bônus de Rebuy e Add-on (Mesma Categoria):</span> Cada classificação extra conquistada na <span className="text-white font-bold">mesma modalidade</span> não altera o stack inicial, mas soma <span className="text-secondary font-bold">+25k fichas extras</span> diretamente nas colunas de <span className="text-secondary font-bold">Rebuy</span> (25k + bônus) e <span className="text-amber-400 font-bold">Add-on</span> (50k + bônus).
                         </p>
                     </li>
                 </ul>
