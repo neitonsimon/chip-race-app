@@ -308,7 +308,7 @@ export const ChipRaceHome: React.FC<ChipRaceHomeProps> = ({
                   </p>
                   <div className="flex items-center gap-2 text-xs sm:text-sm font-mono text-gray-300">
                     <span className="material-icons-outlined text-xs text-[#d4af37]">calendar_month</span>
-                    <span className="font-bold text-white">21.10.2026</span>
+                    <span className="font-bold text-white">11.11.2026</span>
                     <span>•</span>
                     <span className="material-icons-outlined text-xs text-[#d4af37]">place</span>
                     <span className="font-semibold text-white">Varanda</span>

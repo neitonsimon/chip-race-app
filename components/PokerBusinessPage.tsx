@@ -51,7 +51,7 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
       metaDesc.name = 'description';
       document.head.appendChild(metaDesc);
     }
-    metaDesc.content = "1º Poker Business em Venâncio Aires/RS. Uma noite de poker, descontração e networking para empresários e empreendedores dos Vales do Taquari e Rio Pardo. 21 de outubro de 2026.";
+    metaDesc.content = "1º Poker Business em Venâncio Aires/RS. Uma noite de poker, descontração e networking para empresários e empreendedores dos Vales do Taquari e Rio Pardo. 11 de novembro de 2026.";
 
     // Open Graph helper
     const setOgTag = (property: string, content: string) => {
@@ -65,7 +65,7 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
     };
 
     setOgTag('og:title', '1º Poker Business | CHIP RACE');
-    setOgTag('og:description', 'Uma noite de poker, descontração e networking para empresários e empreendedores dos Vales do Taquari e Rio Pardo. 21 de outubro de 2026 em Venâncio Aires/RS.');
+    setOgTag('og:description', 'Uma noite de poker, descontração e networking para empresários e empreendedores dos Vales do Taquari e Rio Pardo. 11 de novembro de 2026 em Venâncio Aires/RS.');
     setOgTag('og:type', 'website');
     setOgTag('og:url', window.location.href);
 
@@ -134,7 +134,7 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
   const openWhatsAppDirect = () => {
     const officialPhone = '5551992425186';
     const text = encodeURIComponent(
-      `Olá, equipe CHIP RACE! Gostaria de confirmar minha solicitação de participação no 1º POKER BUSINESS (21/10/2026).\n\n` +
+      `Olá, equipe CHIP RACE! Gostaria de confirmar minha solicitação de participação no 1º POKER BUSINESS (11/11/2026).\n\n` +
       `• Nome: ${formData.name || 'Convidado'}\n` +
       `• Empresa: ${formData.company || 'Não informada'}\n` +
       `• Cidade: ${formData.city || 'Venâncio Aires'}`
@@ -290,7 +290,7 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
           <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 mb-8 text-xs sm:text-sm font-mono text-gray-300">
             <div className="flex items-center gap-2 bg-[#0e121a]/80 border border-[#d4af37]/35 px-4 py-2 rounded-full backdrop-blur-md shadow-[0_0_15px_rgba(0,0,0,0.5)]">
               <span className="material-icons-outlined text-[#d4af37] text-base">calendar_today</span>
-              <span className="font-bold tracking-wider text-white">21 DE OUTUBRO DE 2026</span>
+              <span className="font-bold tracking-wider text-white">11 DE NOVEMBRO DE 2026</span>
             </div>
             <div className="flex items-center gap-2 bg-[#0e121a]/80 border border-[#d4af37]/35 px-4 py-2 rounded-full backdrop-blur-md shadow-[0_0_15px_rgba(0,0,0,0.5)]">
               <span className="material-icons-outlined text-[#d4af37] text-base">place</span>
@@ -336,16 +336,16 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
       <section className="relative z-10 -mt-12 sm:-mt-16 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           
-          {/* Destaque 1: 21 OUTUBRO */}
+          {/* Destaque 1: 11 NOVEMBRO */}
           <div className="bg-[#0c0f18]/95 border border-[#d4af37]/30 hover:border-[#d4af37]/70 rounded-2xl p-5 sm:p-6 backdrop-blur-xl shadow-[0_15px_35px_rgba(0,0,0,0.6)] transition-all group">
             <span className="text-[10px] font-mono text-[#d4af37] uppercase tracking-widest block mb-1">
               Data Marcada
             </span>
             <div className="font-display font-black text-3xl sm:text-4xl text-white group-hover:text-[#f7e2a9] transition-colors leading-none">
-              21
+              11
             </div>
             <div className="font-display font-bold text-xs sm:text-sm text-[#d4af37] tracking-wider uppercase mt-1.5">
-              OUTUBRO
+              NOVEMBRO
             </div>
           </div>
 
@@ -729,7 +729,7 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
           </div>
 
           <div className="mt-12 pt-8 border-t border-white/10 inline-flex flex-col items-center">
-            <span className="font-display font-bold text-base text-white tracking-widest uppercase">21.10.2026</span>
+            <span className="font-display font-bold text-base text-white tracking-widest uppercase">11.11.2026</span>
             <span className="font-mono text-xs text-gray-400 tracking-wider uppercase mt-1">Venâncio Aires — RS</span>
           </div>
         </div>
@@ -742,7 +742,7 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
             SAVE THE DATE
           </span>
           <h3 className="font-display font-black text-2xl sm:text-4xl text-white uppercase tracking-wider mb-2">
-            21 DE OUTUBRO DE 2026
+            11 DE NOVEMBRO DE 2026
           </h3>
           <p className="font-display text-sm sm:text-base text-[#d4af37] tracking-widest uppercase mb-8">
             VARANDA • VENÂNCIO AIRES — RS
@@ -1074,7 +1074,7 @@ export const PokerBusinessPage: React.FC<PokerBusinessPageProps> = ({ onNavigate
                   1º Poker Business
                 </span>
                 <span className="text-[10px] font-mono text-[#d4af37] tracking-wider">
-                  21.10.2026 • Varanda • R$ 300
+                  11.11.2026 • Varanda • R$ 300
                 </span>
               </div>
             </div>

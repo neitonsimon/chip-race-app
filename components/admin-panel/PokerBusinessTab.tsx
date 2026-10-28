@@ -241,7 +241,7 @@ export const PokerBusinessTab: React.FC<PokerBusinessTabProps> = ({ currentUser,
     }
     const text = encodeURIComponent(
       `Olá ${lead.name}, tudo bem? Sou da organização do 1º POKER BUSINESS (Chip Race).\n\n` +
-      `Recebemos a sua solicitação de participação para o evento no dia 21 de Outubro, no Varanda em Venâncio Aires.\n\n` +
+      `Recebemos a sua solicitação de participação para o evento no dia 11 de Novembro, no Varanda em Venâncio Aires.\n\n` +
       `Gostaria de confirmar os detalhes da sua vaga? Estamos à disposição!`
     );
     window.open(`https://wa.me/${clean}?text=${text}`, '_blank');
@@ -316,7 +316,7 @@ export const PokerBusinessTab: React.FC<PokerBusinessTabProps> = ({ currentUser,
               1º POKER <span className="bg-gradient-to-r from-[#FFF5D0] via-[#E8C15A] to-[#94711D] bg-clip-text text-transparent">BUSINESS</span>
             </h1>
             <p className="text-xs sm:text-sm font-mono text-gray-300">
-              21 de Outubro de 2026 • Varanda (Venâncio Aires — RS) • Restrito a 50 convidados
+              11 de Novembro de 2026 • Varanda (Venâncio Aires — RS) • Restrito a 50 convidados
             </p>
           </div>
 
@@ -919,7 +919,7 @@ export const PokerBusinessTab: React.FC<PokerBusinessTabProps> = ({ currentUser,
                   </span>
                   <button
                     onClick={() => {
-                      const text = `Olá! Tudo bem? Sou da organização do 1º POKER BUSINESS da CHIP RACE.\n\nRecebemos sua solicitação de participação para o nosso encontro exclusivo no dia 21 de Outubro, no Varanda em Venâncio Aires.\n\nO evento será restrito a 50 convidados, reunindo empresários e líderes da região em uma noite all-inclusive com poker recreativo, jantar e excelente networking.\n\nPodemos confirmar a sua reserva na lista oficial?`;
+                      const text = `Olá! Tudo bem? Sou da organização do 1º POKER BUSINESS da CHIP RACE.\n\nRecebemos sua solicitação de participação para o nosso encontro exclusivo no dia 11 de Novembro, no Varanda em Venâncio Aires.\n\nO evento será restrito a 50 convidados, reunindo empresários e líderes da região em uma noite all-inclusive com poker recreativo, jantar e excelente networking.\n\nPodemos confirmar a sua reserva na lista oficial?`;
                       navigator.clipboard.writeText(text);
                       showNotification('Template 1 copiado!');
                     }}
@@ -929,7 +929,7 @@ export const PokerBusinessTab: React.FC<PokerBusinessTabProps> = ({ currentUser,
                   </button>
                 </div>
                 <p className="text-xs text-gray-300 leading-relaxed font-mono whitespace-pre-line">
-                  {`Olá! Tudo bem? Sou da organização do 1º POKER BUSINESS da CHIP RACE.\n\nRecebemos sua solicitação de participação para o nosso encontro exclusivo no dia 21 de Outubro, no Varanda em Venâncio Aires.\n\nO evento será restrito a 50 convidados, reunindo empresários e líderes da região em uma noite all-inclusive com poker recreativo, jantar e excelente networking.\n\nPodemos confirmar a sua reserva na lista oficial?`}
+                  {`Olá! Tudo bem? Sou da organização do 1º POKER BUSINESS da CHIP RACE.\n\nRecebemos sua solicitação de participação para o nosso encontro exclusivo no dia 11 de Novembro, no Varanda em Venâncio Aires.\n\nO evento será restrito a 50 convidados, reunindo empresários e líderes da região em uma noite all-inclusive com poker recreativo, jantar e excelente networking.\n\nPodemos confirmar a sua reserva na lista oficial?`}
                 </p>
               </div>
 
@@ -941,7 +941,7 @@ export const PokerBusinessTab: React.FC<PokerBusinessTabProps> = ({ currentUser,
                   </span>
                   <button
                     onClick={() => {
-                      const text = `Perfeito! Sua vaga no 1º POKER BUSINESS foi pré-reservada.\n\nDetalhes da Experiência:\n• Data: 21 de Outubro de 2026\n• Local: Varanda • Venâncio Aires — RS\n• Valor: R$ 300 (All-Inclusive: Jantar + Bebidas + Torneio e Fichas de Poker)\n\nPara garantir definitivamente seu nome entre os 50 convidados, favor efetuar o pagamento via PIX:\nChave PIX: [CHAVE AQUI]\n\nAssim que realizar, nos envie o comprovante por aqui. Seja muito bem-vindo!`;
+                      const text = `Perfeito! Sua vaga no 1º POKER BUSINESS foi pré-reservada.\n\nDetalhes da Experiência:\n• Data: 11 de Novembro de 2026\n• Local: Varanda • Venâncio Aires — RS\n• Valor: R$ 300 (All-Inclusive: Jantar + Bebidas + Torneio e Fichas de Poker)\n\nPara garantir definitivamente seu nome entre os 50 convidados, favor efetuar o pagamento via PIX:\nChave PIX: [CHAVE AQUI]\n\nAssim que realizar, nos envie o comprovante por aqui. Seja muito bem-vindo!`;
                       navigator.clipboard.writeText(text);
                       showNotification('Template 2 copiado!');
                     }}
@@ -951,7 +951,7 @@ export const PokerBusinessTab: React.FC<PokerBusinessTabProps> = ({ currentUser,
                   </button>
                 </div>
                 <p className="text-xs text-gray-300 leading-relaxed font-mono whitespace-pre-line">
-                  {`Perfeito! Sua vaga no 1º POKER BUSINESS foi pré-reservada.\n\nDetalhes da Experiência:\n• Data: 21 de Outubro de 2026\n• Local: Varanda • Venâncio Aires — RS\n• Valor: R$ 300 (All-Inclusive: Jantar + Bebidas + Torneio e Fichas de Poker)\n\nPara garantir definitivamente seu nome entre os 50 convidados, favor efetuar o pagamento via PIX:\nChave PIX: [CHAVE AQUI]\n\nAssim que realizar, nos envie o comprovante por aqui. Seja muito bem-vindo!`}
+                  {`Perfeito! Sua vaga no 1º POKER BUSINESS foi pré-reservada.\n\nDetalhes da Experiência:\n• Data: 11 de Novembro de 2026\n• Local: Varanda • Venâncio Aires — RS\n• Valor: R$ 300 (All-Inclusive: Jantar + Bebidas + Torneio e Fichas de Poker)\n\nPara garantir definitivamente seu nome entre os 50 convidados, favor efetuar o pagamento via PIX:\nChave PIX: [CHAVE AQUI]\n\nAssim que realizar, nos envie o comprovante por aqui. Seja muito bem-vindo!`}
                 </p>
               </div>
 
